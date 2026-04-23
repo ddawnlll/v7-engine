@@ -1,8 +1,8 @@
-# V7 AnalysisResult Contract
+# V7 AnalysisResult Contract — Timing Extension Revision
 
 ## Purpose
 
-This document defines the **`AnalysisResult`** contract for V7.
+This document defines the revised **`AnalysisResult`** contract for V7.
 
 `AnalysisResult` is the atomic **engine-to-runtime analysis output** contract.
 
@@ -10,39 +10,39 @@ It answers one question:
 
 > What exact analysis result must the engine return so runtime can interpret, review, persist, and safely act on one evaluated market state?
 
+This revision keeps the existing V7 response direction and adds a small, explicit **entry-timing surface** so the system can distinguish:
+
+- a good directional thesis with a good current entry
+- a good directional thesis with a weak or late current entry
+- a setup that is still alive but expiring
+- a setup that is no longer meaningfully enterable
+
 This document defines **analysis output semantics only**.
-
-It does not define:
-
-- broker order payloads
-- database storage schema
-- final execution implementation
-- training labels
-- trade outcome semantics
-- promotion policy
-
-Those belong elsewhere.
 
 ---
 
 ## Core Position
 
-V7 keeps the strong V6 response principle:
+V7 keeps the strong response principle:
 
 - one request
 - one result
 - one evaluated market state
 - one explicit runtime-facing decision surface
 
-But V7 adjusts the result around five rules:
+This revision preserves:
 
 1. **the result belongs to one atomic `AnalysisRequest`**
 2. **confidence remains a first-class runtime opening field**
-3. **economic quality fields such as `expected_r` are also first-class**
+3. **economic quality fields such as `expected_r` remain first-class**
 4. **execution guidance and timing remain explicit**
 5. **degradation, fallback, and deterministic interaction remain visible**
 
-The result remains a **runtime-usable decision contract**, not a hidden model-internals dump and not a broker execution object.
+And adds one more principle:
+
+6. **current entry readiness should be explicit without turning the result into a complex execution planner**
+
+The result remains a **runtime-usable decision contract**, not a broker execution object.
 
 ---
 
@@ -58,15 +58,15 @@ That means:
 - one atomic evaluated market state
 - one engine result surface
 
-`AnalysisResult` must never silently combine multiple requests into one atomic result.
-
-If multiple symbols or multiple atomic requests are analyzed together, that belongs to:
+If multiple atomic requests are analyzed together, that belongs to:
 
 - `AnalysisBatchRequest`
 - `AnalysisBatchResult`
 - `DecisionSession`
 
 not to the atomic `AnalysisResult`.
+
+This remains aligned with the V7 request contract’s atomic rule and interval-aware-but-still-atomic scope.
 
 ---
 
@@ -93,63 +93,17 @@ not to the atomic `AnalysisResult`.
 - operational hard guards
 - final execution or no-execution
 
-`AnalysisResult` must preserve that boundary.
+The engine may say:
+- this is a valid long thesis
+- this is still enterable
+- this is already chasing
+- this setup is expiring
 
----
-
-## In Scope
-
-`AnalysisResult` defines:
-
-- result identity and request linkage
-- status and actionability
-- recommended action
-- confidence surface
-- economic decision surface
-- execution guidance
-- timing guidance
-- uncertainty and quality visibility
-- deterministic interaction visibility
-- fallback and degradation visibility
-- observability metadata
-- batch/session lineage
-
----
-
-## Out of Scope
-
-`AnalysisResult` does **not** define:
-
-- raw model internals as required runtime fields
-- full broker order instructions
-- portfolio accounting internals
-- final position sizing ownership
-- trade outcome records
-- label records
-- evaluation artifacts
-- multiprocessing strategy
-- GPU execution topology
-
----
-
-## Atomic Result Rule
-
-A valid V7 `AnalysisResult` is the result of evaluating:
-
-- **one symbol**
-- **one primary interval**
-- **one atomic request**
-- **one engine pass**
-
-This rule stays first-class.
-
-The response may include richer score surfaces and context, but it must remain atomic and audit-friendly.
+But runtime still owns the final execution decision.
 
 ---
 
 ## Top-Level Shape
-
-The semantic shape of `AnalysisResult` should be:
 
 ```text
 AnalysisResult
@@ -167,32 +121,22 @@ AnalysisResult
 └── lineage
 ```
 
-This keeps the result compact, explicit, and compatible with the request contract.
+The new timing extension lives inside `execution_guidance`.
 
 ---
 
 ## 1. Contract
-
-This section identifies the result as a versioned contract artifact.
 
 ### Required fields
 - `contract_version`
 - `response_schema_version`
 - `engine_output_version`
 
-### Purpose
-These fields make result semantics, compatibility, and evolution explicit.
-
-### Notes
-- `contract_version` tracks the request/response boundary family
-- `response_schema_version` tracks result meaning
-- `engine_output_version` tracks the engine's own output surface evolution
+No change from the prior V7 result revision.
 
 ---
 
 ## 2. Identity
-
-This section identifies the result instance and the engine instance that produced it.
 
 ### Required fields
 - `request_id`
@@ -207,30 +151,17 @@ This section identifies the result instance and the engine instance that produce
 - `calibration_artifact_version`
 - `policy_artifact_version`
 
-### Rules
-- `request_id` is mandatory because each result must point back to one request
-- identity fields must remain stable for review and replay lineage
-- artifact versions should be explicit when available
+No change from the prior V7 result revision.
 
 ---
 
 ## 3. Request Link
-
-This section makes request/result compatibility explicit.
 
 ### Recommended fields
 - `symbol`
 - `primary_interval`
 - `request_contract_version`
 - `request_kind_seen`
-
-### Purpose
-The result must clearly state which request scope it is answering.
-
-### Rules
-- these fields are compatibility and audit echoes, not a second request
-- they must match the originating request
-- runtime should be able to verify consistency
 
 ### Required consistency rules
 If present:
@@ -241,14 +172,11 @@ If present:
 - `lineage.analysis_batch_id == request.lineage.analysis_batch_id` when both exist
 - `lineage.decision_session_id == request.lineage.decision_session_id` when both exist
 
-### Design note
-This section exists so later review does not need to reconstruct basic request linkage from logs only.
+No change from the prior V7 result revision.
 
 ---
 
 ## 4. Status
-
-This section contains the stable runtime-facing status surface.
 
 ### Required fields
 - `signal_status`
@@ -271,19 +199,11 @@ This section contains the stable runtime-facing status surface.
 - `DEGRADED`
 - `FAILED`
 
-### Purpose
-Runtime should not have to infer actionability indirectly from low-level scores alone.
-
-### Rules
-- `is_actionable` must be explicit
-- `NO_TRADE` is first-class, not an absence of output
-- degraded or failed states must remain visible
+No change from the prior V7 result revision.
 
 ---
 
 ## 5. Decision
-
-This section expresses the primary action recommendation.
 
 ### Required fields
 - `recommended_action`
@@ -302,17 +222,11 @@ This section expresses the primary action recommendation.
 - `SHORT`
 - `NONE`
 
-### Rules
-- `recommended_action` is the main action surface
-- `direction` exists for compatibility and analytics
-- `NO_TRADE` must be explicit
-- the decision must correspond to the same request scope identified above
+No change from the prior V7 result revision.
 
 ---
 
 ## 6. Scores
-
-This section contains the comparative decision surface.
 
 ### Required core runtime/economic fields
 - `confidence`
@@ -334,30 +248,13 @@ This section contains the comparative decision surface.
 - `expected_hold_time`
 - `expected_edge`
 
-### Purpose
-V7 needs both:
-- a **runtime opening field**
-- an **economic quality field**
-
 ### Rules
 - `confidence` remains first-class because runtime may open trades using confidence thresholds
-- `expected_r` must also be first-class because economic quality matters
+- `expected_r` remains first-class because economic quality matters
 - `confidence` does **not** mean automatic execution by itself
-- `decision_margin` should express how clearly the chosen action beat alternatives
 - `probability` is supportive, not the only decision scalar
 
-### `confidence_kind`
-This field should make the score semantics explicit.
-
-Typical values:
-- `RAW`
-- `CALIBRATED`
-- `POLICY_CONFIDENCE`
-
-Runtime and review layers must know what kind of confidence they are reading.
-
-### Unit rule
-`expected_r` and `expected_drawdown` should use explicit **R-multiple** semantics unless another unit convention is explicitly declared.
+No change from the prior V7 result revision.
 
 ---
 
@@ -379,31 +276,85 @@ then the following fields should be present:
 
 ### Strongly recommended fields
 - `entry_zone`
+- `entry_readiness`
+- `entry_valid_for_bars`
 - `size_multiplier`
 - `risk_expression`
 - `execution_notes`
 
+### Optional timing field
+- `entry_expiry_utc`
+
 ### Purpose
+
 Execution guidance is first-class because runtime needs explicit trade-shape information, not just a direction.
+
+This revision adds a **small timing surface**. The goal is **not** to predict a perfect oracle entry timestamp. The goal is to tell runtime and review systems whether the trade is:
+
+- currently enterable
+- better to wait on
+- already chasing
+- expiring
+- likely missed
 
 ### Rules
 - this section is guidance, not broker execution ownership
 - `size_multiplier` is acceptable; absolute final sizing ownership stays outside the engine
 - if `recommended_action = NO_TRADE`, execution fields may be null or omitted where allowed
 - timing guidance must be explicit for actionable trades
+- timing fields should remain small and bounded, not a full execution planner
 
 ### Timing concepts
-Typical `time_sensitivity` concepts:
+
+#### `time_sensitivity`
 - `IMMEDIATE`
 - `STANDARD`
 - `CAN_WAIT`
 - `EXPIRING_SOON`
 
+#### `entry_readiness`
+- `READY_NOW`
+- `WAIT`
+- `CHASING`
+- `EXPIRING`
+- `MISSED`
+- `NOT_APPLICABLE`
+
+### `entry_valid_for_bars`
+
+This field expresses how many future analysis bars the current entry thesis is expected to remain valid for, under the engine’s current view.
+
+Examples:
+- `0` = valid only now or effectively expiring now
+- `1` = likely valid through one more analysis step
+- `2` = likely valid through two more analysis steps
+
+This is a bounded advisory field, not a guarantee.
+
+### Bound convention for `entry_valid_for_bars`
+
+First V7 convention:
+- legal range: **0 to 5**
+- values above `5` should not be emitted in the first contract version
+- if the engine believes the setup is valid for longer than that, cap it at `5`
+
+This keeps the field compact and comparable across strategies.
+
+### Design rule for timing extension
+
+The timing extension should remain **advisory-first** in the first rollout.
+
+That means:
+- it should be visible in the contract
+- it should be persisted and reviewed
+- runtime may log and inspect it
+- runtime does **not** have to hard-gate on it immediately
+
+This keeps complexity controlled while still making the signal measurable.
+
 ---
 
 ## 8. Uncertainty And Quality
-
-This section captures how trustworthy or fragile the decision is.
 
 ### Recommended fields
 - `uncertainty_score`
@@ -413,34 +364,11 @@ This section captures how trustworthy or fragile the decision is.
 - `is_ambiguous`
 - `quality_flags`
 
-### Purpose
-Confidence alone is not enough.
-The result must show whether the decision is clean, noisy, uncertain, or ambiguous.
-
-### Example concepts
-
-#### `uncertainty_type`
-- `EPISTEMIC`
-- `ALEATORIC`
-- `MIXED`
-- `UNKNOWN`
-
-#### `decision_quality`
-- `HIGH`
-- `MEDIUM`
-- `LOW`
-- `AMBIGUOUS`
-
-### Rules
-- ambiguity must remain visible
-- uncertainty must not be hidden behind one scalar only
-- these fields support safer review and later attribution
+No structural change from the prior V7 result revision.
 
 ---
 
 ## 9. Deterministic Interaction
-
-This section makes interaction with deterministic guidance explicit.
 
 ### Recommended fields
 - `deterministic_alignment`
@@ -450,20 +378,11 @@ This section makes interaction with deterministic guidance explicit.
 - `regime_transition_risk`
 - `constraint_level`
 
-### Purpose
-If deterministic guidance influenced result usability, that interaction must be visible.
-
-### Rules
-- no silent deterministic veto
-- no hidden suppression
-- alignment or disagreement must be reviewable
-- deterministic interaction is context, not secret authority
+No structural change from the prior V7 result revision.
 
 ---
 
 ## 10. Fallback And Degradation
-
-This section makes degraded behavior explicit.
 
 ### Required fields
 - `fallback_used`
@@ -476,22 +395,11 @@ This section makes degraded behavior explicit.
 - `is_timeout_fallback`
 - `is_schema_fallback`
 
-### Purpose
-Runtime must not reverse-engineer degraded behavior from logs alone.
-
-### Rules
-- `fallback_used` remains first-class
-- degraded decisions must remain reviewable
-- `runtime_safe_action` may explicitly suggest safe runtime handling such as:
-  - `NO_TRADE`
-  - `SKIP`
-  - `HOLD`
+No structural change from the prior V7 result revision.
 
 ---
 
 ## 11. Observability
-
-This section exposes review and audit metadata.
 
 ### Strongly recommended fields
 - `analysis_latency_ms`
@@ -504,53 +412,47 @@ This section exposes review and audit metadata.
 ### Optional field
 - `decision_payload_reference`
 
-### Purpose
-Runtime and later review flows need a short stable explanation surface without depending on a giant opaque blob.
+### `contract_strictness_used`
 
-### Rules
-- `reason_summary` should remain short and human-readable
-- large unstable diagnostics must not become required runtime dependencies
-- observability fields are helpful but must stay bounded
+This field records which contract-validation or boundary strictness mode the engine/result pipeline assumed when producing the result.
+
+Suggested values:
+- `STRICT`
+- `DEGRADED_ALLOWED`
+- `SHADOW_RELAXED`
+
+Meaning:
+- `STRICT` = full contract expectations assumed
+- `DEGRADED_ALLOWED` = degraded but still legal result path allowed
+- `SHADOW_RELAXED` = non-production comparison or shadow path with looser non-core expectations
+
+This helps review systems understand whether the result came from a strict production path or a relaxed comparison path.
 
 ---
 
 ## 12. Lineage
-
-This section connects the atomic result to broader grouped inference flows.
 
 ### Recommended fields
 - `analysis_batch_id`
 - `decision_session_id`
 - `batch_rank` (optional)
 
-### Purpose
-These fields support:
-- centralized scans
-- GPU batch inference audit
-- replay grouping
-- later event/outcome lineage
-
-### Rules
-- identity only
-- optional for atomic validity
-- must match the originating request lineage where applicable
+No structural change from the prior V7 result revision.
 
 ---
 
 ## Actionability Matrix
 
-This matrix defines the minimum runtime interpretation rules.
+| Case | `recommended_action` | `is_actionable` | `entry_readiness` | Required execution fields | Runtime default interpretation |
+|---|---|---:|---|---|---|
+| Valid long | `LONG_NOW` | true | `READY_NOW`, `WAIT`, `CHASING`, or `EXPIRING` | `entry_price`, `stop_loss`, `take_profit`, `time_sensitivity` | Eligible for execution gates |
+| Valid short | `SHORT_NOW` | true | `READY_NOW`, `WAIT`, `CHASING`, or `EXPIRING` | `entry_price`, `stop_loss`, `take_profit`, `time_sensitivity` | Eligible for execution gates |
+| Explicit skip | `NO_TRADE` | false | `NOT_APPLICABLE` | none | Do not open trade |
+| Low-confidence block | `LONG_NOW` or `SHORT_NOW` | false | optional | optional | Reviewable, not executable |
+| Degraded safe skip | any | false | optional | optional | Use `runtime_safe_action` |
+| Error/failure | any | false | optional | none | Reject for execution |
 
-| Case | `recommended_action` | `is_actionable` | Required execution fields | Runtime default interpretation |
-|---|---|---:|---|---|
-| Valid long | `LONG_NOW` | true | `entry_price`, `stop_loss`, `take_profit`, `time_sensitivity` | Eligible for execution gates |
-| Valid short | `SHORT_NOW` | true | `entry_price`, `stop_loss`, `take_profit`, `time_sensitivity` | Eligible for execution gates |
-| Explicit skip | `NO_TRADE` | false | none | Do not open trade |
-| Low-confidence block | `LONG_NOW` or `SHORT_NOW` | false | optional | Reviewable, not executable |
-| Degraded safe skip | any | false | optional | Use `runtime_safe_action` |
-| Error/failure | any | false | none | Reject for execution |
-
-This table is semantic guidance for runtime interpretation.
+This matrix is semantic guidance for runtime interpretation.
 
 ---
 
@@ -582,12 +484,14 @@ This table is semantic guidance for runtime interpretation.
 - `execution_guidance.time_sensitivity`
 
 ### Strongly recommended in first V7 result
+- `execution_guidance.entry_zone`
+- `execution_guidance.entry_readiness`
+- `execution_guidance.entry_valid_for_bars`
 - `scores.expected_drawdown`
 - `scores.decision_margin`
 - `scores.long_score`
 - `scores.short_score`
 - `scores.no_trade_score`
-- `execution_guidance.entry_zone`
 - `uncertainty_and_quality.uncertainty_score`
 - `uncertainty_and_quality.decision_quality`
 - `deterministic_interaction.deterministic_alignment`
@@ -597,35 +501,12 @@ This table is semantic guidance for runtime interpretation.
 - `lineage.decision_session_id`
 
 ### Optional for later controlled expansion
+- `execution_guidance.entry_expiry_utc`
 - richer calibration metadata
 - candidate decision lists
 - alternative action summaries
 - broader market summaries
 - specialized diagnostics
-
----
-
-## What Must Not Be In The Result
-
-To keep the contract disciplined, the following must **not** become required runtime dependencies:
-
-### 1. Multiple-request aggregation
-One atomic result must not summarize many requests.
-
-### 2. Opaque giant blobs
-Runtime must not depend on unstable diagnostics for normal operation.
-
-### 3. Hidden deterministic veto
-Suppression must never be implicit.
-
-### 4. Raw training labels
-Inference result is not a label artifact.
-
-### 5. Broker execution internals
-No raw broker order plumbing as required core fields.
-
-### 6. Portfolio engine internals
-The result may expose guidance or visibility, but not absorb full portfolio accounting logic.
 
 ---
 
@@ -642,11 +523,10 @@ At minimum, validation should check:
 - `is_actionable` is consistent with status and degradation fields
 - required execution fields exist for actionable directional trades
 - `confidence` and `expected_r` are valid numeric fields
+- `entry_valid_for_bars`, if present, is an integer in the range `0..5`
+- `entry_readiness`, if present, is a legal enum value
 - fallback fields are internally consistent
 - contract version is supported
-
-### Missing-section behavior
-If a required result section is missing or invalid, runtime should reject the result before execution handling.
 
 ---
 
@@ -655,19 +535,19 @@ If a required result section is missing or invalid, runtime should reject the re
 ```json
 {
   "contract": {
-    "contract_version": "v7-0.2",
-    "response_schema_version": "result-0.2",
-    "engine_output_version": "engine-out-0.2"
+    "contract_version": "v7-0.3",
+    "response_schema_version": "result-0.3",
+    "engine_output_version": "engine-out-0.3"
   },
   "identity": {
     "request_id": "req_123",
     "run_id": "scan_456",
     "engine_name": "v7",
-    "engine_version": "0.2.0",
+    "engine_version": "0.3.0",
     "timestamp_utc": "2026-04-05T12:00:01Z",
-    "model_artifact_version": "model-0.2",
-    "calibration_artifact_version": "calib-0.2",
-    "policy_artifact_version": "policy-0.2"
+    "model_artifact_version": "model-0.3",
+    "calibration_artifact_version": "calib-0.3",
+    "policy_artifact_version": "policy-0.3"
   },
   "request_link": {
     "symbol": "BTCUSDT",
@@ -701,7 +581,9 @@ If a required result section is missing or invalid, runtime should reject the re
     "entry_zone": [103.8, 104.3],
     "stop_loss": 101.5,
     "take_profit": 109.0,
-    "time_sensitivity": "STANDARD",
+    "time_sensitivity": "EXPIRING_SOON",
+    "entry_readiness": "CHASING",
+    "entry_valid_for_bars": 1,
     "size_multiplier": 0.75,
     "risk_expression": "MEDIUM"
   },
@@ -748,35 +630,112 @@ This example is semantic guidance, not final transport syntax.
 
 ---
 
-## Evolution Rules
+## Runtime Impact And Required Changes
 
-V7 result evolution should follow these rules:
+Yes — this revision creates **some additional runtime load**, but it should be **small and manageable** if rollout stays advisory-first.
 
-1. preserve stable runtime-facing fields whenever possible
-2. prefer additive fields over breaking renames
-3. bump `contract_version` when boundary semantics change materially
-4. bump `response_schema_version` when stable result meaning changes materially
-5. treat richer diagnostics as optional until proven stable
-6. deprecate explicitly rather than silently removing
+### What increases
 
-A stable result contract must remain evolvable.
+Runtime now has to:
+
+1. **validate two extra timing fields**
+   - `entry_readiness`
+   - `entry_valid_for_bars`
+
+2. **persist two extra fields**
+   - in event/outcome lineage or downstream review surfaces
+
+3. **surface these fields in logs/review tooling**
+   - so the team can measure whether they are useful
+
+4. **optionally incorporate them later into execution gating**
+   - but only after evidence exists
+
+### What should not happen immediately
+
+Runtime should **not** immediately become a complex timing planner.
+
+Do not add:
+- best-entry search logic
+- oracle timing backfills in runtime
+- large action-family branching
+- heavy extra control flow based on many timing states
+
+### Recommended runtime changes
+
+#### Phase 1 — Contract acceptance
+- update result validators for:
+  - `entry_readiness`
+  - `entry_valid_for_bars`
+- update persistence schemas
+- update logging/review serialization
+- no hard execution gating yet
+
+#### Phase 2 — Observability only
+- record these fields in `DecisionEvent` or related review surfaces
+- compare:
+  - `READY_NOW` vs later outcome quality
+  - `CHASING` vs later regret
+  - `EXPIRING` vs missed-opportunity patterns
+
+#### Phase 3 — Optional gating
+Only after evidence exists, allow runtime to use these in the execution eligibility layer.
+
+Examples:
+- suppress execution when `entry_readiness = MISSED`
+- weaken execution when `entry_readiness = CHASING`
+- require `entry_valid_for_bars > 0` for certain strategies
+
+### Suggested config additions
+
+If runtime later uses these fields operationally, add config-driven controls such as:
+
+- `enable_entry_timing_observability`
+- `enable_entry_readiness_gate`
+- `blocked_entry_readiness_states`
+- `min_entry_valid_for_bars`
+- `entry_timing_gate_mode`
+
+These should go through the existing unified config system, not be hardcoded.
+
+### Net runtime cost assessment
+
+#### Low cost
+- validation
+- persistence
+- logging
+- analytics
+
+#### Medium cost
+- optional gating logic
+- review tooling updates
+
+#### High cost only if you over-expand it
+- oracle-like timing planner
+- heavy multi-step action families
+- runtime-side entry optimization
+
+So the real answer is:
+
+**yes, runtime load increases slightly**
+but
+**no, it does not have to become a major runtime burden if the feature stays small and advisory-first**
 
 ---
 
 ## Final Position
 
-`AnalysisResult` in V7 should stay simple in principle:
+`AnalysisResult` in this revision should stay simple in principle:
 
 - one atomic result for one atomic request
-- explicit request linkage
-- explicit status and actionability
-- explicit recommended action
 - confidence as a first-class runtime field
 - expected R as a first-class economic field
 - explicit entry, stop, take-profit, and timing guidance
-- explicit uncertainty, degradation, and deterministic interaction
-- optional batch/session lineage
+- small explicit timing extension:
+  - `entry_readiness`
+  - `entry_valid_for_bars`
+- advisory-first rollout
 - no hidden execution-control collapse
 - no blob-heavy dependency for normal runtime use
 
-This keeps the strongest V6 response principles while aligning the result with V7’s confidence-aware, economically richer, batch-capable direction.
+This keeps the strongest V7 response principles while making current entry quality more visible without turning the contract into a complex execution planner.

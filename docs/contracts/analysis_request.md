@@ -225,6 +225,18 @@ This section uniquely identifies one request instance.
 ### Optional fields
 - `parent_decision_event_id`
 
+### `parent_decision_event_id`
+
+This field is optional because not every request is a fresh standalone evaluation.
+
+Typical uses:
+- re-evaluation of a previously recorded decision
+- watch or follow-up analysis on an existing decision lineage
+- explicit retry flows where runtime wants lineage continuity
+- shadow or comparison flows attached to an earlier event family
+
+If the request is a fresh first-pass evaluation, this field should usually be null or omitted.
+
 ### Rules
 - `request_id` must be unique
 - `timestamp_utc` is non-negotiable
@@ -428,6 +440,21 @@ This section carries structured deterministic annotations.
 - must remain visible if used
 
 Deterministic context may help the engine reason, but it must not silently redefine market truth.
+
+### Distinction from `canonical_state.context`
+
+The distinction is:
+
+- `canonical_state.context` is part of the **market-state description**
+- `deterministic_context` is a **runtime-supplied annotation layer**
+
+Examples:
+- HTF trend, volatility regime, or structure regime that describe the market belong in `canonical_state.context`
+- runtime heuristics, explicit allowed/blocked-action hints, or operational annotations belong in `deterministic_context`
+
+A good rule is:
+- if the field describes the market itself, prefer `canonical_state.context`
+- if the field describes runtime-owned interpretation aid, prefer `deterministic_context`
 
 ---
 
