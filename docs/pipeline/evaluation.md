@@ -120,6 +120,12 @@ Minimum first-phase families:
 - suppression / skip quality
 - symbol and regime slices
 
+### Ablation / Measurement Guidance
+
+First-phase evaluation should include interval-view ablation to justify complexity:
+- compare **4h-only** vs **4h + 1d** vs **4h + 1d + 1h**
+- 1h refinement must prove its value via evaluation, not assumption.
+
 ---
 
 ## Promotion Gate

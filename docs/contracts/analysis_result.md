@@ -55,8 +55,8 @@ That means:
 - one `request_id`
 - one `symbol`
 - one `primary_interval`
-- one atomic evaluated market state
-- one engine result surface
+- one atomic evaluated market state (which may include fused multi-view state like 1h and 1d)
+- one engine result surface (a fused unified decision, not an average of separate interval-specific results)
 
 If multiple atomic requests are analyzed together, that belongs to:
 
@@ -319,6 +319,8 @@ This revision adds a **small timing surface**. The goal is **not** to predict a 
 - `EXPIRING`
 - `MISSED`
 - `NOT_APPLICABLE`
+
+*Note: In first-phase V7, 1h refinement context primarily influences entry timing, time sensitivity, and `entry_readiness` fields, rather than acting as a separate primary decision family.*
 
 ### `entry_valid_for_bars`
 

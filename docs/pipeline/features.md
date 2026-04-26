@@ -49,7 +49,7 @@ That means:
 Feature design should assume:
 - primary decision interval: **4h**
 - higher-timeframe context: **1d**
-- optional future refinement: **1h**, not first-phase authority
+- first-phase refinement/timing context: **1h**
 - shared centralized multi-symbol model family
 - target universe up to **60 symbols**
 
@@ -80,14 +80,12 @@ A feature row should include:
 
 First-phase grouping should be explicit:
 
-- price geometry
-- momentum
-- volatility
-- structure
-- higher-timeframe alignment
-- time/session features
-- symbol metadata
-- quality/degradation flags
+- **4h Primary decision features**: price geometry, momentum, volatility, structure
+- **1d Higher-timeframe context features**: HTF alignment, regime, structure
+- **1h Refinement/timing/scalp-pressure features**: time sensitivity, local momentum, entry readiness (1h is refinement/context, not a separate primary decision family)
+- **Global context**: time/session features, symbol metadata, quality/degradation flags
+
+These feature groups are fused into one shared multi-view feature row direction, not separated into per-interval training universes.
 
 Do not create one giant anonymous feature blob.
 

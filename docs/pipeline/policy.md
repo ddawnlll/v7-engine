@@ -47,12 +47,12 @@ Runtime then decides whether execution is operationally allowed.
 
 ## Inputs
 
-- calibrated score surfaces
+- calibrated multi-view score surfaces (fused surfaces, not averaged interval outputs)
 - confidence
 - expected R
 - expected drawdown
 - decision margins
-- timing-supporting fields
+- timing-supporting fields (e.g., 1h refinement data, which influences timing and entry readiness more than primary direction in phase one)
 - policy config
 
 ---

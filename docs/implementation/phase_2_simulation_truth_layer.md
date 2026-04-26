@@ -60,7 +60,8 @@ Implement one simulator that evaluates long, short, and no-trade under the same 
 
 ### Implementation Tasks
 
-- [ ] Implement comparative action simulation core
+- [ ] Implement comparative action simulation core (shared module consumed by runtime and engine)
+- [ ] Support forward simulation (paper trading) and historical replay via driver
 - [ ] Support long / short / no-trade in one output family
 - [ ] Implement exit reason families
 - [ ] Implement raw no-trade comparative outputs:

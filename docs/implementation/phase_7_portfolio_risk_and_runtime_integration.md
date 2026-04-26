@@ -110,6 +110,7 @@ Primary behavioral authority for this workstream:
 
 - [ ] Implement V7 request builder
 - [ ] Implement result validator
+- [ ] Consume shared simulation core for paper trading (forward simulation) and replay
 - [ ] Enforce actionability vs execution-eligibility split
 - [ ] Preserve fallback visibility in runtime interpretation
 

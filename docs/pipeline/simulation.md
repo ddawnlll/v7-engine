@@ -45,7 +45,7 @@ This document is the base authority for:
 - initial rollout may use a smaller approved subset
 - primary decision interval: **4h**
 - higher-timeframe context: **1d**
-- optional future refinement: **1h**, not first-phase authority
+- first-phase refinement/timing context: **1h**
 
 ---
 
@@ -53,10 +53,12 @@ This document is the base authority for:
 
 V7 uses **one simulation truth layer** across:
 - labels
-- replay evaluation
-- promotion evidence
-- outcome normalization
+- out-of-sample forward evaluation
+- runtime paper trading (which is forward simulation)
+- historical replay (using a replay driver around the same engine)
+- production-side outcome normalization
 
+This simulation core is a shared engine module consumed by runtime; runtime does not own simulation truth. The simulation core should be profile/adaptor-friendly to accept both V6 and V7 inputs.
 There must not be one cost model for labels and another for evaluation.
 
 ---

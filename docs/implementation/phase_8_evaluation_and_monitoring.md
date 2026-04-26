@@ -77,12 +77,14 @@ These are starting config defaults, not final permanent policy.
 
 - [ ] Implement walk-forward evaluation run flow
 - [ ] Implement baseline vs candidate comparison
+- [ ] Implement interval-view ablation (e.g., 4h-only vs 4h+1d vs 4h+1d+1h)
 - [ ] Implement symbol/regime slice reporting
 - [ ] Implement no-trade quality reporting
 
 ### Acceptance Criteria
 
 - [ ] candidate vs baseline comparison exists
+- [ ] 1h refinement value can be proved via ablation
 - [ ] no-trade quality is measurable
 - [ ] symbol/regime slices are available
 

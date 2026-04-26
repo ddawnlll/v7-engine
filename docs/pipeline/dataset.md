@@ -73,7 +73,8 @@ A dataset row should minimally carry:
 ## First-Phase Scope
 
 - shared multi-symbol dataset
-- primary decision interval: **4h**
+- primary decision interval: **4h** (first-phase dataset rows are 4h-primary rows with 1d and 1h views embedded in the same row)
+- first-phase V7 does not create separate primary 1h and 4h model-training universes
 - target universe: up to **60 symbols**
 - initial rollout may subset symbols, but dataset design should not assume six-symbol-only permanence
 

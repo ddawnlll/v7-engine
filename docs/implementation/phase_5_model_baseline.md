@@ -73,6 +73,7 @@ Do not start with three unrelated binary classifiers in the first baseline.
 ### Implementation Tasks
 
 - [ ] Implement baseline trainer entrypoint
+- [ ] Support one shared interval-aware, multi-view model family (4h + 1d + 1h fused, not averaged independently)
 - [ ] Support multiclass action training
 - [ ] Support expected-R regression training
 - [ ] Emit stable model artifact metadata

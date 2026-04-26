@@ -184,9 +184,11 @@ Treat these as the default V7 operating assumptions unless a more specific autho
 
 - target universe up to **60 symbols**
 - initial rollout may use a smaller approved subset
+- scalp-aware not scalp-first
 - primary decision interval: **4h**
 - higher-timeframe context: **1d**
-- optional later refinement: **1h**
+- first-phase refinement/timing context: **1h** (producing one fused unified decision)
+- shared simulation core reused by runtime and replay
 - first-phase model family: **XGBoost-first**
 - first-phase calibration: **global**
 - timing extension fields:

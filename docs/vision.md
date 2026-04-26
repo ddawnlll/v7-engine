@@ -138,6 +138,7 @@ V7 is:
 * a **calibration-structural** decision system
 * a **multi-symbol-aware** engine designed for 60-symbol operation
 * a system optimized for **economic quality first**
+* a **scalp-aware, not scalp-first** system, using 1h refinement for entry timing and pressure while preserving 4h as its primary decision frame
 * a system designed to remain **editable, configurable, reviewable, and testable**
 
 ---

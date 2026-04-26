@@ -118,7 +118,8 @@ These assumptions are repeated throughout the docs and should be treated as defa
 - initial rollout may start with a smaller approved subset
 - primary decision interval: **4h**
 - higher-timeframe context: **1d**
-- optional future refinement: **1h**, not first-phase authority
+- first-phase refinement/timing context: **1h** (fused unified multi-view decision)
+- shared simulation core reused by runtime and replay
 - first-phase model family: **XGBoost-first**
 - first-phase calibration: **global**
 - timing extension:

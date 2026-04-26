@@ -130,7 +130,9 @@ Produce walk-forward training rows with preserved lineage and symbol balancing.
 ```python
 row_id
 symbol
-primary_interval
+primary_interval (e.g., 4h)
+htf_context_interval (e.g., 1d)
+refinement_interval (e.g., 1h)
 state_timestamp_utc
 dataset_family_version
 ```
@@ -138,6 +140,7 @@ dataset_family_version
 **Rationale:**
 - rows must be traceable
 - dataset family cannot be anonymous
+- single unified multi-view rows, no separate primary 1h and 4h universes
 
 #### 7.2 Split and weighting
 

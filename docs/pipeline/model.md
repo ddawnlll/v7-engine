@@ -47,10 +47,11 @@ That means:
 
 ## First-Phase Scope
 
-- one shared centralized model family
+- one shared interval-aware multi-view model family (not separate per-interval primary model families)
 - primary decision interval: **4h**
 - higher-timeframe context: **1d**
-- optional `1h` refinement is later, not first-phase authority
+- first-phase refinement/timing context: **1h**
+- 1h, 4h, and 1d are fused inside one model input or one shared model family, not treated as three independently averaged predictors
 - target universe up to **60 symbols**
 
 ---

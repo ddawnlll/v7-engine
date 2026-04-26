@@ -169,13 +169,14 @@ Below-threshold coverage should emit:
 
 Minimum first-phase families:
 - request/result validation failure rate
-- fallback / degraded rate
+- fallback / degraded rate (including 1h-missing fallback/degraded rate)
 - confidence distribution
 - expected-R distribution
 - no-trade rate
 - actionability vs execution-eligibility gap
-- symbol coverage
-- regime coverage
+- symbol and regime coverage
+- interval-view coverage integrity (e.g., 1h refinement availability rate)
+- timing-field quality by refinement presence
 - timing-extension distribution
 - outcome finality lag
 - feature drift

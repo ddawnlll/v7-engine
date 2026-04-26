@@ -40,6 +40,7 @@ Instead, runtime should be treated as:
 
 The engine stack owns:
 - market-state interpretation
+- simulation truth semantics (one shared simulation core used by both V6 and V7)
 - score generation
 - confidence
 - expected R
@@ -48,6 +49,10 @@ The engine stack owns:
 - uncertainty/degradation visibility
 
 Runtime owns:
+- orchestration, execution, persistence, and lifecycle
+- paper trading (which is simply forward simulation using the shared simulation core)
+- historical replay driver (which wraps the shared simulation core)
+- execution eligibility and safety gates
 - request assembly
 - result validation
 - execution eligibility

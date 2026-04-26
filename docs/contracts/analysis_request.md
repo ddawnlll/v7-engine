@@ -138,9 +138,9 @@ That means:
 
 Example:
 
-- primary interval = `4h`
+- primary decision interval = `4h`
 - contextual higher-timeframe view = `1d`
-- optional later refinement view = `1h`
+- first-phase refinement/timing view = `1h`
 
 This keeps the request compact while still supporting V7’s multi-view state design.
 
@@ -396,7 +396,7 @@ This section makes interval-aware context explicit.
 ### Typical views
 - `primary`
 - `higher_timeframe`
-- `optional_refinement`
+- `refinement`
 
 ### Rules
 - one view remains primary
@@ -410,10 +410,10 @@ This section makes interval-aware context explicit.
 state_views
 ├── primary: 4h
 ├── htf: 1d
-└── optional_refinement: 1h
+└── refinement: 1h
 ```
 
-This is how V7 supports multi-view analysis without collapsing the atomic request.
+This is how V7 supports multi-view analysis without collapsing the atomic request. It produces one fused decision surface, not an average of separate interval outputs.
 
 ---
 
@@ -645,7 +645,7 @@ To keep the contract disciplined, the following must **not** be embedded into `A
 Do not make one atomic request evaluate many symbols.
 
 ### 2. Multiple independent decision intervals
-Do not make one atomic request represent separate decisions for `1h`, `4h`, and `1d` at once.
+Do not make one atomic request represent separate decisions for `1h`, `4h`, and `1d` at once. An atomic request includes multiple state views but must produce one unified, primary-anchored decision, not an average of separate interval outputs.
 
 ### 3. Future outcomes
 No future prices, labels, realized results, or replay-only truth.

@@ -72,21 +72,22 @@ Exit condition:
 
 ### Phase 2 — Simulation truth layer
 Goal:
-- implement comparative simulation
+- implement comparative simulation (shared simulation core for engine and runtime)
 - implement cost model
 - implement path metrics
 - implement unresolved / invalid logic
+- explicitly support forward simulation (paper trading) and historical replay (via replay driver)
 
 Exit condition:
 - simulation scenario tests pass
-- labels, evaluation, and outcomes can share one simulation truth layer
+- labels, evaluation, runtime paper trading, and replay can share one simulation truth layer
 
 ---
 
 ### Phase 3 — Labels and features
 Goal:
 - implement label generation
-- implement canonical-state feature generation
+- implement canonical-state feature generation (including 4h primary, 1d context, and 1h refinement features)
 - implement schema/version tests
 
 Exit condition:
@@ -97,7 +98,7 @@ Exit condition:
 
 ### Phase 4 — Dataset assembly
 Goal:
-- implement walk-forward dataset construction
+- implement walk-forward dataset construction (fused multi-view rows, not separate interval universes)
 - symbol weighting / balancing
 - lineage-preserving row export
 
@@ -109,7 +110,7 @@ Exit condition:
 
 ### Phase 5 — Model and calibration
 Goal:
-- train first XGBoost baseline
+- train first XGBoost baseline (one shared interval-aware, multi-view model family)
 - produce calibration artifact
 - validate confidence surface
 - validate no-trade behavior

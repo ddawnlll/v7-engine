@@ -222,9 +222,11 @@ This layer is responsible for acquiring and storing canonical raw market data.
 The first V7 scope assumes:
 
 * Binance raw candles
-* primary interval: `4h`
+* primary decision interval: `4h`
 * higher-timeframe context: `1d`
-* optional future refinement: `1h`
+* first-phase refinement/timing context: `1h`
+* one shared interval-aware, multi-view model family (no separate primary model families per interval)
+* no averaged interval outputs; a single atomic request provides one unified decision surface
 * 60-symbol design target
 
 The first implementation may stage rollout on fewer symbols, but the architecture must be built for 60-symbol operation from the start.
@@ -302,14 +304,17 @@ It is the system’s economic truth layer.
 
 ### Core rule
 
-There is only **one simulation engine**.
+There is only **one simulation engine**, treated as a shared core truth module.
 
 That same engine is used for:
 
 * label generation
 * out-of-sample forward evaluation
-* replay outcome interpretation
+* runtime paper trading (which is forward simulation)
+* historical replay (using the same core under a replay driver)
 * production-side outcome normalization
+
+Simulation should be profile/adaptor-friendly for V6 and V7 inputs. Runtime consumes this simulation core; runtime does not own simulation truth semantics.
 
 ### Economic semantics
 
