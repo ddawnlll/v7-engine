@@ -64,13 +64,15 @@ This keeps the system compact and auditable.
 - calibration config
 - calibration family version
 
+Validation labels/outcomes used for calibration inherit runtime simulation profile/version lineage from their source datasets or evaluation adapters. Calibration does not run simulation directly except by consuming outputs produced through the approved training/evaluation adapters.
+
 ---
 
 ## Outputs
 
 A calibration artifact family should support:
 - calibrated confidence
-- calibration lineage
+- calibration lineage, including relevant simulation profile/version lineage
 - reliability metrics
 - optional mapped score surfaces
 
@@ -169,6 +171,7 @@ Key config families:
 - calibration split rules
 - fallback behavior
 - calibration publishing rules
+- simulation profile/version lineage requirements
 - recalibration thresholds
 
 ---

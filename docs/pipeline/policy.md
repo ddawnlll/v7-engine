@@ -43,6 +43,8 @@ Policy is the stage that turns calibrated surfaces into:
 
 Runtime then decides whether execution is operationally allowed.
 
+Policy does not run simulation. It consumes calibrated model outputs and configured offline evidence. Runtime simulation may later test or track policy guidance, but policy must not hide live simulation loops inside decision selection.
+
 ---
 
 ## Inputs
@@ -134,6 +136,8 @@ It should use:
 - simple bounded heuristics
 
 Do not turn policy into a complex timing optimizer.
+
+Policy thresholds may be informed by offline evaluation or Monte Carlo robustness evidence, but those settings must be expressed through the unified config system and not as hidden live simulation behavior.
 
 ---
 

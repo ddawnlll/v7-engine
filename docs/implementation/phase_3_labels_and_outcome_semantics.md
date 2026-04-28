@@ -10,7 +10,7 @@
 
 ## 1. Purpose
 
-This phase converts simulation truth into label logic and aligns that same truth with `TradeOutcome` semantics.
+This phase converts runtime simulation outputs into label logic and aligns that same simulated truth with `TradeOutcome` semantics.
 
 It solves the problem of having simulation outputs without a normalized supervised target family or lifecycle-consistent consequence language.
 
@@ -21,7 +21,7 @@ It solves the problem of having simulation outputs without a normalized supervis
 The following are already implemented / must remain stable:
 
 - [x] contracts are typed and validated
-- [x] comparative simulation truth layer exists from Phase 2
+- [x] runtime simulation engine and side-effect-free training/replay adapter outputs exist from Phase 2
 - [x] no-trade is already first-class
 
 This phase builds on top of these. Do not regress them.
@@ -30,7 +30,7 @@ This phase builds on top of these. Do not regress them.
 
 ## 3. Background & Motivation
 
-Without this phase, V7 can simulate outcomes but still fail to answer:
+Without this phase, V7 can consume runtime simulation outputs but still fail to answer:
 - what should the model learn?
 - when is no-trade correct?
 - when is a state ambiguous?
@@ -57,7 +57,7 @@ The current state has the following known issues:
 
 ### Problem / Goal
 
-Convert comparative simulation outputs into compact supervised labels.
+Convert comparative runtime simulation outputs into compact supervised labels without creating a label-only simulator.
 
 ### Implementation Tasks
 
@@ -65,6 +65,8 @@ Convert comparative simulation outputs into compact supervised labels.
 - [ ] Implement second-best action derivation
 - [ ] Implement regret outputs
 - [ ] Implement no-trade correctness outputs
+- [ ] Preserve simulation profile/version and adapter lineage on label records
+- [ ] Optionally consume Monte Carlo robustness evidence for label confidence when configured
 
 ### Acceptance Criteria
 
@@ -191,6 +193,9 @@ entry_valid_for_bars_seen
 
 - [ ] verify no unresolved simulation becomes valid training label
 - [ ] verify ambiguous states are not silently forced into directional labels
+- [ ] verify labels consume runtime simulation adapter outputs only
+- [ ] verify no label-only simulator exists
+- [ ] verify Monte Carlo evidence, if used, remains config-driven and distributional
 
 ### 9.2 Outcome audit
 

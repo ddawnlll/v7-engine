@@ -64,6 +64,7 @@ That means:
 - dataset rows from `pipeline/dataset.md`
 - feature schema version
 - label interpretation version
+- runtime simulation profile/version lineage from the dataset
 - training config
 
 ---
@@ -78,6 +79,8 @@ The trained model family should expose a stable artifact surface for:
 - expected-R-supporting surfaces where approved
 
 The external contract is the result surface, not internal training details.
+
+The model does not run simulation. It consumes datasets produced upstream from labels derived from runtime simulation outputs. Model output is scoring and guidance, not simulation execution or outcome resolution.
 
 Each scope artifact may internally model `LONG_NOW`, `SHORT_NOW`, and `NO_TRADE`. Direction heads/classes live inside each `model_scope`. Short-specific calibration or thresholding may exist inside a scope if evaluation evidence supports it and it is configured through the unified config system.
 
@@ -97,8 +100,8 @@ Every trained artifact must be versioned and traceable.
 ### 4. Compact output surface
 Model output should remain small enough to calibrate, policy-wrap, and explain.
 
-### 5. No hidden runtime semantics
-The model may support runtime decisions, but runtime still owns execution.
+### 5. No hidden runtime or simulation semantics
+The model may support runtime decisions, but runtime still owns execution and simulation execution. The model must not run paper forward simulation, historical replay, or Monte Carlo robustness mode.
 
 ---
 
@@ -177,6 +180,7 @@ Key config families:
 - training seed / reproducibility
 - target family
 - artifact publishing rules
+- runtime simulation profile/version lineage from source datasets
 - latency SLO references
 
 ---

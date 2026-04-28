@@ -35,7 +35,7 @@ It answers:
 
 ## Core Decision
 
-V7 labels are derived from the **single simulation truth layer**, not from historical runtime actions.
+V7 labels are derived from runtime simulation outputs via the deterministic training/replay adapter, not from historical runtime actions.
 
 That means:
 - labels are market-first
@@ -43,13 +43,13 @@ That means:
 - labels are comparative
 - no-trade is first-class
 
-Label horizons are `model_scope`-specific. Swing labels, scalp labels, and aggressive-scalp immediate-continuation labels are not interchangeable. Each `model_scope` chooses its own configured simulation/horizon profile through the shared simulation engine.
+Label horizons are `model_scope`-specific. Swing labels, scalp labels, and aggressive-scalp immediate-continuation labels are not interchangeable. Each `model_scope` chooses its own configured simulation/horizon profile through the runtime-hosted simulation engine.
 
 ---
 
 ## Inputs
 
-- simulation outputs from `pipeline/simulation.md`
+- runtime simulation outputs from the training/replay adapter
 - simulation family versions
 - `model_scope`
 - horizon family / `label_horizon_family`
@@ -98,7 +98,7 @@ may exist in future comparative families, but are not first-phase authority.
 A skipped live trade can still label as a high-quality long if the market path says so.
 
 ### 2. No unresolved labels
-If simulation is unresolved, the label must stay unresolved.
+If runtime simulation output is unresolved or invalidated, the label must stay unresolved/invalid and must not become a final supervised label.
 
 ### 3. No hidden hindsight leakage
 Labels must only use the approved future window and simulation rules.
@@ -114,6 +114,12 @@ Clean +1R and chaotic +1R do not have to label identically if path quality rules
 
 ### 7. Scope-specific horizons
 Do not use swing labels for `SCALP` model training, scalp labels for `SWING` model training, or either for `AGGRESSIVE_SCALP`. Aggressive scalp labels require stricter immediate-continuation / very-short-horizon and cost-aware semantics.
+
+### 8. No label-only simulator
+Labels must not call live runtime execution and must not implement a separate label-only simulator. They consume side-effect-free runtime simulation outputs and preserve simulation profile/version lineage.
+
+### 9. Monte Carlo evidence is optional
+Monte Carlo robustness evidence may support robust labels or label-confidence fields only when configured through the unified config system. It remains distributional evidence, not a final realized label by itself.
 
 ---
 
@@ -217,12 +223,14 @@ Key config families:
 - path quality thresholds
 - ambiguity threshold
 - invalid / ambiguous label filtering rules
+- optional Monte Carlo label-confidence usage, if enabled
 
 ---
 
 ## Interfaces
 
 Upstream:
+- `runtime/simulation_engine.md`
 - `pipeline/simulation.md`
 
 Downstream:

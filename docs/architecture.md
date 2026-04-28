@@ -30,7 +30,7 @@ The system is designed around the following idea:
 **one market-state pipeline**
 → **one shared training platform**
 → **mode-scoped model families**
-→ **one simulation truth layer**
+→ **one runtime-hosted simulation truth layer**
 → **one label/evaluation language per `model_scope`**
 → **one explicit policy layer per selected scope**
 → **one runtime integration boundary with a `scope_router`**
@@ -57,16 +57,19 @@ It is optimized for producing a system that is economically honest, easier to re
 
 ## Core Architectural Rules
 
-### 1. One simulation truth layer
+### 1. Runtime-hosted simulation truth layer
 
-The same simulation logic defines:
+The same runtime-hosted simulation engine defines simulated truth for:
 
-* label generation
-* forward evaluation
+* label generation through side-effect-free training/replay adapters
+* forward evaluation through evaluation replay adapters
+* paper forward simulation
+* historical replay driver outputs
 * trade outcome interpretation
-* cost-aware trade resolution
+* cost-aware simulated trade resolution
+* Monte Carlo robustness mode when configured
 
-There must not be separate semantics for labeling and backtesting.
+Runtime owns simulation execution. The model does not own simulation, and the pipeline consumes simulation output rather than reimplementing a simulator. There must not be separate label-only or backtest-only simulator semantics.
 
 ### 2. One canonical market-state language
 
@@ -105,7 +108,7 @@ Each concern should have one primary implementation module.
 
 Examples:
 
-* simulation → one simulation module family
+* simulation → one runtime-hosted simulation engine with side-effect-free adapters
 * labels → one label module family
 * features → one feature module family
 * thresholds → one policy module family
@@ -309,23 +312,24 @@ It is the system’s economic truth layer.
 
 ### Outputs
 
-* simulated action outcomes
+* simulated action outcomes from the runtime simulation engine
 * normalized trade-outcome records
 * economic-quality metrics
 
 ### Core rule
 
-There is only **one simulation engine**, treated as a shared core truth module.
+There is only **one runtime-hosted simulation engine**, treated as the shared simulated-truth module.
 
 That same engine is used for:
 
-* label generation
-* out-of-sample forward evaluation
-* runtime paper trading (which is forward simulation)
-* historical replay (using the same core under a replay driver)
+* label generation through side-effect-free training/replay adapters
+* out-of-sample forward evaluation through evaluation replay adapters
+* runtime paper trading as paper forward simulation
+* historical replay using a runtime historical replay driver
 * production-side outcome normalization
+* Monte Carlo robustness mode when configured
 
-Simulation should be profile/adaptor-friendly for V6 and V7 inputs. Runtime consumes this simulation core; runtime does not own simulation truth semantics.
+Simulation should be profile/adaptor-friendly for V6 and V7 inputs. Runtime owns simulation execution/hosting. The model does not own simulation, and pipeline stages consume simulation outputs.
 
 ### Economic semantics
 
@@ -735,8 +739,8 @@ When V7 components disagree, the truth hierarchy is:
 
 This hierarchy matters.
 
-The model does not define truth by itself.
-The simulation and realized outcome layer define truth.
+The model does not define truth by itself and does not run simulation.
+Runtime-hosted simulation defines simulated truth; live/paper execution lifecycle defines execution truth. Outcomes must distinguish them.
 
 ---
 
@@ -749,7 +753,7 @@ The repository should be organized around:
 * one core config path
 * one CLI entrypoint
 * one data path
-* one simulation engine
+* one runtime-hosted simulation engine
 * one label path
 * one feature path
 * one dataset path
@@ -834,7 +838,7 @@ After those are done, implementation should begin with:
 * raw data ingestion
 * raw data validation
 * snapshot builder
-* simulation engine
+* runtime-hosted simulation engine
 * label generation
 * feature generation
 * dataset assembly

@@ -65,6 +65,8 @@ Implement walk-forward and comparative evaluation around the baseline candidate 
 
 Evaluation is per `model_scope`; promotion of `SWING` does not promote `SCALP` or `AGGRESSIVE_SCALP`.
 
+Evaluation uses the runtime historical replay driver or evaluation replay adapter. It must not implement a separate backtest-only simulator.
+
 ### Default promotion thresholds
 
 First implementation defaults:
@@ -77,11 +79,13 @@ These are starting config defaults, not final permanent policy.
 
 ### Implementation Tasks
 
-- [ ] Implement walk-forward evaluation run flow
+- [ ] Implement walk-forward evaluation run flow over runtime replay/evaluation adapter outputs
 - [ ] Implement baseline vs candidate comparison
 - [ ] Implement interval-view ablation (e.g., 4h-only vs 4h+1d vs 4h+1d+1h)
 - [ ] Implement symbol/regime slice reporting
 - [ ] Implement no-trade quality reporting
+- [ ] Implement Monte Carlo robustness reporting here if not completed in Phase 2
+- [ ] Preserve replay/Monte Carlo evidence as non-live-eligibility evidence unless release policy explicitly allows escalation
 
 ### Acceptance Criteria
 
@@ -101,6 +105,8 @@ These are starting config defaults, not final permanent policy.
 Measure post-run and post-deployment lifecycle quality.
 
 Monitoring must aggregate by `model_scope`, including fallback/degraded rate, realized outcome, calibration drift, and harmful symbol-side cohorts.
+
+Monitoring must also track runtime simulation unresolved/invalidated rate, replay/paper divergence where measurable, simulation profile/version coverage, adapter failure rate, and Monte Carlo robustness drift when configured.
 
 ### Baseline ownership rule
 
@@ -185,11 +191,14 @@ A move from advisory-only to timing hard-gate is allowed only if:
 - [ ] fallback/degradation aggregation test
 - [ ] actionability vs execution-eligibility gap test
 - [ ] outcome lag metric test
+- [ ] simulation unresolved/invalidated aggregation test
+- [ ] adapter failure aggregation test
 
 ### 8.3 Drift / timing tests
 
 - [ ] PSI-style feature drift aggregation test
 - [ ] timing usefulness aggregation test
+- [ ] Monte Carlo robustness aggregation test when configured
 - [ ] baseline update logic test
 
 ---

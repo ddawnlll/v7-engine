@@ -31,6 +31,7 @@ It is not a second architecture spec.
 - `contracts/trade_outcome.md`
 
 ### 4. Runtime authority
+- `runtime/simulation_engine.md`
 - `runtime/runtime_integration.md`
 - `runtime/fallback_policy.md`
 - `runtime/deployment_safety.md`
@@ -85,7 +86,7 @@ V7 is not a greenfield reset.
 It is a disciplined extension of the best V6 decisions:
 
 - atomic contract family
-- one simulation truth layer
+- runtime-hosted simulation engine / one simulated-truth layer
 - market-first labeling
 - centralized multi-symbol architecture
 - compact, LLM-readable docs and modules
@@ -124,7 +125,8 @@ These assumptions are repeated throughout the docs and should be treated as defa
   - `SWING`: `primary_interval` **4h**, `context_intervals` **1d**, `refinement_intervals` **1h**
   - `SCALP`: `primary_interval` **15m**, `context_intervals` **1h**, `refinement_intervals` **5m**
   - `AGGRESSIVE_SCALP`: `primary_interval` **1m** or **3m**, `context_intervals` **5m + 15m**
-- shared simulation core reused by runtime and replay with scope-specific profiles
+- runtime hosts the simulation engine; training/evaluation consume it through side-effect-free adapters with scope-specific profiles
+- Monte Carlo robustness mode runs on top of the runtime simulation engine and is not live execution truth
 - first-phase model algorithm family: **XGBoost-first** inside scope-specific artifacts
 - first-phase calibration: **global within scope**
 - timing extension:
@@ -140,7 +142,7 @@ These assumptions are repeated throughout the docs and should be treated as defa
 ### Locked here
 Do not casually change:
 - atomic request/result/event/outcome boundaries
-- one simulation truth layer
+- runtime-hosted simulation engine / one simulated-truth layer
 - no-trade as first-class action
 - confidence + expected-R dual surface
 - event/outcome lifecycle ownership

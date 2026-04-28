@@ -40,7 +40,6 @@ Instead, runtime should be treated as:
 
 The engine stack owns:
 - market-state interpretation
-- simulation truth semantics (one shared simulation core used by both V6 and V7)
 - score generation
 - confidence
 - expected R
@@ -50,8 +49,10 @@ The engine stack owns:
 
 Runtime owns:
 - orchestration, execution, persistence, and lifecycle
-- paper trading (which is simply forward simulation using the shared simulation core)
-- historical replay driver (which wraps the shared simulation core)
+- runtime-hosted simulation engine execution
+- paper trading as paper forward simulation
+- historical replay driver orchestration around the runtime simulation engine
+- side-effect-free training/replay and evaluation simulation adapters
 - execution eligibility and safety gates
 - request assembly
 - result validation
@@ -98,6 +99,8 @@ This ordering matters.
 
 Runtime must not skip the event layer.
 
+Simulation execution is runtime-owned. Model inference returns scoring and guidance; it does not run simulation. Runtime simulation may later test or track result guidance such as entry, stop, take-profit, and timing assumptions.
+
 ---
 
 ## Runtime Responsibilities
@@ -133,6 +136,9 @@ Runtime applies operational gates before order placement.
 
 ### 6. Outcome lifecycle
 Runtime creates or updates `TradeOutcome` as lifecycle information becomes available.
+
+### 7. Simulation hosting
+Runtime hosts and runs the runtime simulation engine for paper forward simulation, historical replay, training/replay adapters, evaluation replay adapters, and Monte Carlo robustness mode. Adapter paths must be deterministic and side-effect-free and must not call live exchange, broker, or mutable account-state behavior.
 
 ---
 
@@ -314,6 +320,21 @@ This keeps runtime load manageable while making the signal measurable. fileci
 
 ---
 
+## Runtime Simulation Integration
+
+Runtime owns simulation execution and must preserve a hard boundary between live execution side effects and simulated truth.
+
+Required runtime simulation modes:
+- paper forward simulation
+- historical replay driver
+- training/replay adapter
+- evaluation replay adapter
+- Monte Carlo robustness mode when configured
+
+V6 and V7 may both use the runtime simulation engine through versioned `V6 simulation profile` and `V7 simulation profile` adapters. Monte Carlo robustness may be invoked by runtime/evaluation paths, not by model inference directly.
+
+---
+
 ## Result Validation Checklist
 
 Before runtime uses a result, it should validate:
@@ -437,6 +458,7 @@ These are the minimum practical changes needed.
 
 ### Request side
 - support V7 request shape, including `requested_trade_mode` / `model_scope`
+- support runtime simulation profile lineage where request context is used by replay/training adapters
 - support `canonical_state`
 - support batch/session lineage
 - preserve request versions
@@ -456,8 +478,8 @@ These are the minimum practical changes needed.
 - create V7 `TradeOutcome`
 - include batch/session lineage
 - include optional `evaluation_run_id`
-- include optional `simulation_run_id`
-- include cost/simulation lineage if available
+- include optional `simulation_run_id`, `replay_run_id`, and `monte_carlo_run_id` where applicable
+- include runtime simulation profile/version and cost/simulation lineage if available
 
 ### Observability side
 - log actionability and execution eligibility separately

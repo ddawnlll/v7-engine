@@ -28,12 +28,14 @@ The following are already documented and must remain stable:
 - [x] V7 pipeline authority docs exist
 - [x] Runtime integration, fallback, and deployment-safety direction exist
 - [x] Atomic request/result/event/outcome boundaries are already defined
-- [x] One simulation truth layer is already the authoritative direction
+- [x] Runtime-hosted simulation engine / one simulated-truth layer is already the authoritative direction
 
 This plan builds on top of those decisions.
 Do not regress them during implementation.
 
 Resolved model strategy: V7 uses one shared training framework with separate `model_scope` artifacts for `SWING`, `SCALP`, and `AGGRESSIVE_SCALP`; it must not train one universal model across those scopes. Each activated scope must satisfy its own data, model, calibration, evaluation, and release gates.
+
+Resolved simulation strategy: runtime owns simulation execution. Phase 2 standardizes the runtime simulation engine, profiles, side-effect-free adapters, historical replay driver, and Monte Carlo robustness mode; it must not build a greenfield model-side or pipeline-owned simulator.
 
 ---
 
@@ -48,7 +50,7 @@ The old risk was:
 
 The correct approach is:
 - bootstrap repo and typed surfaces first
-- implement truth layer before model family
+- standardize the runtime-hosted simulation/truth layer before model family
 - integrate runtime after policy/portfolio/risk semantics are concrete
 - defer release complexity until evidence exists
 
@@ -73,7 +75,7 @@ The full implementation sequence is:
 
 1. **Phase 0 — Repo Alignment & Foundations**
 2. **Phase 1 — Contracts & Validation**
-3. **Phase 2 — Simulation Truth Layer**
+3. **Phase 2 — Runtime Simulation, Replay & Monte Carlo Layer**
 4. **Phase 3 — Labels & Outcome Semantics**
 5. **Phase 4 — Features & Dataset**
 6. **Phase 5 — Model Baseline**
@@ -137,7 +139,7 @@ Not allowed:
 V7 implementation is not considered complete until all of the following are true:
 
 - [ ] typed contract surfaces exist and validate correctly
-- [ ] one simulation truth layer powers labels, evaluation, and outcomes
+- [ ] runtime simulation engine powers labels, evaluation, outcomes, replay, paper forward simulation, and Monte Carlo robustness mode through side-effect-free adapters
 - [ ] feature and dataset surfaces are leakage-safe
 - [ ] one shared training framework trains and loads separate activated `model_scope` artifacts correctly
 - [ ] confidence surface is calibrated or explicitly downgraded
@@ -151,7 +153,7 @@ V7 implementation is not considered complete until all of the following are true
 These success criteria are satisfied by phase definition-of-done gates:
 
 - contracts → Phase 1 DoD
-- simulation truth → Phase 2 DoD
+- runtime simulation truth/adapters → Phase 2 DoD
 - labels/outcomes → Phase 3 DoD
 - features/dataset → Phase 4 DoD
 - baseline model → Phase 5 DoD
@@ -202,7 +204,7 @@ Phase 9 remains the prerequisite for expansion.
 ### 10.1 Phase Relationships
 - Phase 0: make the repo safe to build in
 - Phase 1: make contracts real
-- Phase 2: make truth real
+- Phase 2: make runtime simulation, replay adapters, and Monte Carlo robustness real
 - Phase 3: make labels/outcomes consistent
 - Phase 4: make training rows valid
 - Phase 5: make the first model real
@@ -214,4 +216,4 @@ Phase 9 remains the prerequisite for expansion.
 ### 10.2 Key Takeaway
 
 V7 should be built from truth upward, not from runtime downward.
-If simulation, labels, and evaluation are wrong, later runtime polish only hides broken semantics.
+If runtime simulation adapters, labels, and evaluation are wrong, later runtime polish only hides broken semantics.

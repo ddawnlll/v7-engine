@@ -60,6 +60,8 @@ The current state has the following known issues:
 
 Train the first XGBoost-family baseline suite or staged `model_scope` artifact.
 
+Model training does not run simulation. It consumes datasets built from runtime simulation-derived labels and preserves simulation/training lineage in candidate artifacts.
+
 ### Multi-output strategy
 
 First implementation default:
@@ -76,7 +78,7 @@ Do not start with three unrelated binary classifiers in the first baseline.
 - [ ] Support separate `model_scope` artifacts under one shared training framework (`SWING` 4h+1d+1h first if staged; `SCALP` and `AGGRESSIVE_SCALP` later as separate artifacts)
 - [ ] Support multiclass action training
 - [ ] Support expected-R regression training
-- [ ] Emit stable model artifact metadata
+- [ ] Emit stable model artifact metadata, including source simulation profile/version lineage
 
 ### Acceptance Criteria
 
@@ -189,6 +191,8 @@ The ownership rule is:
 
 - [ ] verify training input dataset family version is recorded
 - [ ] verify unresolved/invalid rows were excluded correctly
+- [ ] verify runtime simulation profile/version lineage is recorded
+- [ ] verify model training path does not call simulation, live exchange, broker, or mutable runtime account state
 
 ### 9.2 Hyperparameter audit
 

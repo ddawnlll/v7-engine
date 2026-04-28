@@ -83,7 +83,7 @@ Only after:
 Before a V7 candidate is live-eligible, all of these should be true:
 
 - request/result/event/outcome contract flow is valid
-- one simulation truth layer is in use
+- runtime-hosted simulation engine / simulated-truth layer is in use
 - candidate clears evaluation gate
 - confidence surface is calibrated or explicitly treated as uncalibrated
 - no-trade quality is reviewed

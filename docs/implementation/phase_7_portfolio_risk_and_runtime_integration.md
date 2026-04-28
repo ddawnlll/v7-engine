@@ -113,7 +113,7 @@ Primary behavioral authority for this workstream:
 - [ ] Implement runtime `scope_router` for `requested_trade_mode` / `model_scope`
 - [ ] Validate scope-compatible artifact, calibration, and policy bundles
 - [ ] Implement visible `scope_mismatch` fallback behavior
-- [ ] Consume shared simulation core for paper trading (forward simulation) and replay
+- [ ] Consume the runtime-hosted simulation engine for paper forward simulation and historical replay
 - [ ] Enforce actionability vs execution-eligibility split
 - [ ] Preserve fallback visibility in runtime interpretation
 

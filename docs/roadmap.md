@@ -70,17 +70,19 @@ Exit condition:
 
 ---
 
-### Phase 2 — Simulation truth layer
+### Phase 2 — Runtime simulation, replay, and Monte Carlo layer
 Goal:
-- implement comparative simulation (shared simulation core for engine and runtime)
-- implement cost model
-- implement path metrics
-- implement unresolved / invalid logic
-- explicitly support forward simulation (paper trading) and historical replay (via replay driver)
+- standardize the existing runtime-hosted simulation engine interface
+- separate pure simulation paths from live execution side effects
+- add/confirm `V6 simulation profile` and `V7 simulation profile` adapters
+- add deterministic training/replay and evaluation adapters
+- standardize paper forward simulation and historical replay driver behavior
+- add or plan Monte Carlo robustness mode on top of the runtime simulation engine
 
 Exit condition:
-- simulation scenario tests pass
-- labels, evaluation, runtime paper trading, and replay can share one simulation truth layer
+- runtime simulation scenario tests pass
+- training/evaluation adapters are side-effect-free
+- labels, evaluation, paper forward simulation, historical replay, outcomes, and Monte Carlo robustness mode consume the same runtime simulation engine semantics
 
 ---
 
@@ -91,7 +93,7 @@ Goal:
 - implement schema/version tests
 
 Exit condition:
-- deterministic feature/label rows can be produced from canonical state
+- deterministic feature/label rows can be produced from canonical state and runtime simulation adapter outputs
 - leakage and ambiguity tests pass
 
 ---
@@ -110,7 +112,7 @@ Exit condition:
 
 ### Phase 5 — Model and calibration
 Goal:
-- train first XGBoost model-suite baseline or staged scope baseline under one shared training framework
+- train first XGBoost model-suite baseline or staged scope baseline under one shared training framework without model-side simulation
 - `SWING` may be implemented first, with `SCALP` and `AGGRESSIVE_SCALP` added as separate artifacts under the same framework
 - produce calibration artifacts per scope
 - validate confidence surface per scope
@@ -245,12 +247,12 @@ The first credible V7 release should be able to do all of these:
 - produce valid atomic result
 - create decision event
 - create/update trade outcome
-- run one simulation truth layer
+- run the runtime-hosted simulation engine through paper/replay adapters
 - generate labels/features/datasets
 - train a scope-compatible baseline model suite or staged activated scope artifact
 - calibrate each activated scope artifact
 - apply compact policy
-- paper or replay evaluate it safely
+- paper or replay evaluate it safely through the runtime simulation engine
 - monitor degradation and coverage
 
 If it cannot do these, it is not yet a complete V7 slice.
@@ -263,7 +265,7 @@ The first implementation milestone should demonstrate:
 
 - contract-family correctness
 - no hidden degraded paths
-- one simulation truth layer shared by labels and evaluation
+- runtime-hosted simulation engine shared by labels, evaluation, replay, paper, outcomes, and Monte Carlo robustness mode through side-effect-free adapters
 - no-trade quality is measurable
 - confidence is calibrated or visibly uncalibrated
 - event/outcome lifecycle is traceable

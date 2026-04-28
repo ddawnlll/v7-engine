@@ -4,23 +4,24 @@
 
 ## Purpose
 
-Defines the single authoritative simulation truth layer for V7.
+Defines the simulation semantics and output contract that the V7 pipeline consumes from the runtime-hosted simulation engine.
 
 It answers:
 
-> Given one decision-time state and a future price path, how should V7 compute long, short, and no-trade consequences under one consistent economic model?
+> Given one decision-time state and a future price path, what normalized runtime simulation output should labels, evaluation, replay, and outcomes consume?
 
-This document is the base authority for:
+Runtime simulation ownership is defined in `docs/runtime/simulation_engine.md`. This document defines pipeline consumption semantics for:
 - labeling
 - evaluation
 - replay projection
 - `TradeOutcome` normalization
+- Monte Carlo robustness evidence where configured
 
 ---
 
 ## In Scope
 
-- long / short / no-trade comparative simulation
+- long / short / no-trade comparative simulation outputs
 - stop, target, and time-exit semantics
 - fee and slippage application
 - path-aware metrics
@@ -36,6 +37,7 @@ This document is the base authority for:
 - model architecture
 - broker order logic
 - runtime execution plumbing
+- implementing or hosting the simulation engine
 
 ---
 
@@ -43,7 +45,7 @@ This document is the base authority for:
 
 - target universe: **60 symbols**
 - initial rollout may use a smaller approved subset
-- one shared simulation engine supports multiple `model_scope` profiles; it must not hardcode one horizon family for all scopes
+- one runtime-hosted simulation engine supports multiple `model_scope` profiles; it must not hardcode one horizon family for all scopes
 - `SWING`: `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`, swing horizon profile
 - `SCALP`: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`, scalp horizon profile
 - `AGGRESSIVE_SCALP`: `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, micro refinement where applicable, immediate-continuation / very short horizon profile
@@ -52,17 +54,19 @@ This document is the base authority for:
 
 ## Core Decision
 
-V7 uses **one simulation truth layer** across:
-- labels
-- out-of-sample forward evaluation
-- runtime paper trading (which is forward simulation)
-- historical replay (using a replay driver around the same engine)
+V7 uses one **runtime-hosted simulation engine** across:
+- labels through a deterministic training/replay adapter
+- out-of-sample forward evaluation through an evaluation replay adapter
+- runtime paper trading as paper forward simulation
+- historical replay through a runtime historical replay driver
 - production-side outcome normalization
+- Monte Carlo robustness mode when configured
 
-This simulation core is a shared engine module consumed by runtime; runtime does not own simulation truth. The simulation core should be profile/adaptor-friendly to accept both V6 and V7 inputs.
-There must not be one cost model for labels and another for evaluation.
+Runtime owns simulation execution. The model does not own simulation, and the pipeline does not reimplement simulation. The pipeline consumes normalized runtime simulation outputs and defines how those outputs become labels, evaluation evidence, datasets, and outcome interpretations.
 
-Simulation profiles may be selected per `model_scope` / `trade_mode` through the unified config system. `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` may use different horizon, stop/target, fee, cost, and slippage profiles, while still using the same shared engine implementation and versioned profile semantics.
+There must not be one cost model for labels and another for evaluation, and there must not be a label-only or backtest-only simulator.
+
+Simulation profiles may be selected per `model_scope` / `trade_mode` through the unified config system. `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` may use different horizon, stop/target, fee, cost, and slippage profiles, while still using the same runtime simulation engine with versioned `V6 simulation profile` and `V7 simulation profile` adapters where needed.
 
 ---
 
@@ -81,6 +85,8 @@ Optional inputs:
 - execution assumption family
 - entry timing annotation
 - replay mode metadata
+- `simulation_run_id` / `replay_run_id`
+- `monte_carlo_run_id` when Monte Carlo robustness mode is configured
 
 ---
 
@@ -133,6 +139,15 @@ If the future window is incomplete, the simulation result must remain unresolved
 
 ### 6. Version everything that changes meaning
 Meaningful changes to stop/target/cost/horizon semantics must bump simulation-family versions.
+
+### 7. Runtime-hosted ownership
+Pipeline code standardizes consumption of the runtime simulation engine. It must not implement a separate simulator for labels, evaluation, or models.
+
+### 8. Side-effect-free adapters
+Training/replay and evaluation adapters must be deterministic and side-effect-free. They must not call live exchange, broker, order-placement, or mutable runtime account-state paths.
+
+### 9. Monte Carlo robustness mode
+Monte Carlo robustness mode runs on top of the runtime simulation engine and produces distributional evidence. It is not live execution truth and does not replace paper forward simulation or historical replay.
 
 ---
 
@@ -211,6 +226,8 @@ If simulation cannot be resolved:
 ## Config Surface
 
 Key config families:
+- runtime simulation profile / adapter selection
+- `V6 simulation profile` / `V7 simulation profile`
 - `model_scope` / `trade_mode` simulation profile selection
 - horizon family / `label_horizon_family`
 - stop family
@@ -219,6 +236,7 @@ Key config families:
 - fee model
 - slippage model
 - validity window rules
+- Monte Carlo robustness mode enablement and perturbation families, if used
 
 All of these must use the unified config system described in `docs/v7/configuration.md`.
 
@@ -239,7 +257,9 @@ Downstream:
 
 ## Test Requirements
 
-Minimum simulation tests:
+Minimum simulation consumption tests:
+- runtime simulation output schema is consumed deterministically
+- training/replay adapter is side-effect-free
 - stop hit first
 - target hit first
 - time exit
@@ -248,10 +268,11 @@ Minimum simulation tests:
 - unresolved window stays unresolved
 - invalidation after irrecoverable missing data
 - entry timing annotation does not silently change canonical entry in first phase
+- Monte Carlo robustness output remains distributional evidence, not realized outcome truth
 
 ---
 
 ## Final Position
 
-Simulation is the economic truth core of V7.
-If this layer is inconsistent, every downstream layer becomes untrustworthy.
+The runtime simulation engine is the economic simulated-truth core of V7.
+This pipeline document keeps downstream consumption consistent; if consumption semantics drift, labels, evaluation, and outcomes become untrustworthy.

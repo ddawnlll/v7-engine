@@ -58,6 +58,7 @@ That means monitoring should track not only scores, but also:
 - `TradeOutcome`
 - calibration artifacts
 - runtime logs / metrics
+- runtime simulation / replay adapter metrics
 - monitoring config
 
 ---
@@ -184,6 +185,11 @@ Minimum first-phase families by `model_scope`:
 - interval-view coverage integrity by scope
 - timing-field quality by refinement presence
 - timing-extension distribution
+- runtime simulation unresolved/invalidated rate
+- replay/paper divergence where measurable
+- simulation profile/version coverage
+- side-effect-free adapter failure rate
+- Monte Carlo robustness drift when configured
 - outcome finality lag
 - feature drift
 
@@ -221,6 +227,9 @@ Key config families:
 - baseline retention rules
 - feature-drift thresholds
 - outcome-lag thresholds
+- simulation profile/version coverage thresholds
+- adapter failure thresholds
+- Monte Carlo robustness drift thresholds, if enabled
 
 ---
 
@@ -246,6 +255,8 @@ Minimum monitoring tests:
 - actionability vs execution-eligibility gap measurable
 - timing extension aggregation works
 - outcome lag metrics correct
+- simulation unresolved/invalidated and adapter failure aggregation works
+- Monte Carlo robustness drift aggregation works when configured
 - feature drift aggregation works
 - baseline replacement logic works
 

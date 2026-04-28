@@ -20,6 +20,7 @@ The shared platform includes:
 - raw data store
 - canonical state / snapshot builder
 - shared runtime-hosted simulation engine
+- deterministic training/replay adapter for runtime simulation outputs
 - feature and label infrastructure
 - training runner
 - artifact registry
@@ -33,6 +34,8 @@ The model families are mode-scoped:
 - `AGGRESSIVE_SCALP`
 
 Each `model_scope` owns its own dataset family, `primary_interval`, `context_intervals`, `refinement_intervals`, `label_horizon_family`, cost/slippage profile, feature schema variant where needed, calibration artifact, thresholds / policy settings, evaluation report, and model artifact.
+
+Training does not implement simulation and does not call model-side simulation. Candidate artifacts are trained from datasets whose labels and outcome fields are derived from the runtime simulation engine through deterministic, side-effect-free training/replay adapters.
 
 ---
 
@@ -81,6 +84,12 @@ Do not:
 
 Intervals may be used as context views inside a scope. They are not independent mode outputs to average.
 
+Simulation anti-patterns:
+- do not implement a separate training simulator
+- do not call live exchange, broker, order-placement, or mutable runtime account-state paths from training
+- do not let the model run simulation during training or inference
+- do not treat Monte Carlo robustness mode as a replacement for runtime simulation ownership
+
 ---
 
 ## Artifact Lifecycle
@@ -97,6 +106,8 @@ Default rule:
 
 Do not promote one `model_scope` because another scope passed evaluation.
 
+Monte Carlo robustness outputs may enrich evaluation evidence, label confidence, or dataset lineage only when configured through the unified config system. They remain distributional evidence from the runtime simulation engine, not live execution truth.
+
 ---
 
 ## Interfaces
@@ -105,6 +116,7 @@ Upstream:
 - `pipeline/dataset.md`
 - `pipeline/labels.md`
 - `pipeline/features.md`
+- `runtime/simulation_engine.md`
 - `pipeline/simulation.md`
 
 Downstream:

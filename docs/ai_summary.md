@@ -23,7 +23,7 @@ V7 is a centralized, market-first, simulation-native trading system designed to 
 - calibration-aware
 - explicit about runtime vs engine ownership
 - easy for humans and LLMs to edit safely
-- driven by one simulation truth layer
+- driven by one runtime-hosted simulation engine / simulated-truth layer
 - controlled through one unified config surface
 - built on one shared training platform with separate `model_scope` artifacts for `SWING`, `SCALP`, and `AGGRESSIVE_SCALP`
 
@@ -43,24 +43,25 @@ If you need the main authority docs, read them in this order:
 5. `contracts/analysis_result.md` — engine-to-runtime output
 6. `contracts/decision_event.md` — normalized lifecycle record
 7. `contracts/trade_outcome.md` — normalized consequence record
-8. `runtime/runtime_integration.md` — runtime boundary behavior
-9. `runtime/fallback_policy.md` — allowed degradation and fallback
-10. `runtime/deployment_safety.md` — rollout and live-safety gates
-11. `pipeline/training.md` — shared training platform and model-scope strategy
-12. `pipeline/simulation.md` — simulation truth layer
-13. `pipeline/labels.md` — label semantics
-14. `pipeline/features.md` — canonical-state feature semantics
-15. `pipeline/dataset.md` — dataset lineage and splits
-16. `pipeline/model.md` — first-phase model family
-17. `pipeline/calibration.md` — calibrated confidence surfaces
-18. `pipeline/policy.md` — decision policy
-19. `pipeline/portfolio.md` — cross-symbol portfolio handling
-20. `pipeline/risk.md` — hard and soft risk gates
-21. `pipeline/evaluation.md` — promotion evidence
-22. `pipeline/monitoring.md` — post-deploy health and drift
-23. `v7_llm_rules.md` — LLM working rules
-24. `v7_doc_writing_guide.md` — doc-writing rules
-25. `roadmap.md` — implementation order
+8. `runtime/simulation_engine.md` — runtime-hosted simulation ownership
+9. `runtime/runtime_integration.md` — runtime boundary behavior
+10. `runtime/fallback_policy.md` — allowed degradation and fallback
+11. `runtime/deployment_safety.md` — rollout and live-safety gates
+12. `pipeline/training.md` — shared training platform and model-scope strategy
+13. `pipeline/simulation.md` — runtime simulation output semantics
+14. `pipeline/labels.md` — label semantics
+15. `pipeline/features.md` — canonical-state feature semantics
+16. `pipeline/dataset.md` — dataset lineage and splits
+17. `pipeline/model.md` — first-phase model family
+18. `pipeline/calibration.md` — calibrated confidence surfaces
+19. `pipeline/policy.md` — decision policy
+20. `pipeline/portfolio.md` — cross-symbol portfolio handling
+21. `pipeline/risk.md` — hard and soft risk gates
+22. `pipeline/evaluation.md` — promotion evidence
+23. `pipeline/monitoring.md` — post-deploy health and drift
+24. `v7_llm_rules.md` — LLM working rules
+25. `v7_doc_writing_guide.md` — doc-writing rules
+26. `roadmap.md` — implementation order
 
 ---
 
@@ -87,6 +88,7 @@ The implementation plans expect `src/v7/` to be created later in Phase 0.
 - `docs/contracts/trade_outcome.md` — normalized consequence record
 
 ### Runtime docs
+- `docs/runtime/simulation_engine.md` — runtime-hosted simulation ownership
 - `docs/runtime/runtime_integration.md` — runtime boundary behavior
 - `docs/runtime/fallback_policy.md` — allowed degradation and fallback
 - `docs/runtime/deployment_safety.md` — rollout and live-safety gates
@@ -131,7 +133,7 @@ V7 is built as a layered system:
 
 - raw market data
 - canonical state construction
-- one simulation truth layer
+- one runtime-hosted simulation engine / simulated-truth layer
 - label and feature generation per `model_scope`
 - dataset assembly per `model_scope`
 - model training through shared infrastructure with separate scope artifacts
@@ -194,7 +196,8 @@ Treat these as the default V7 operating assumptions unless a more specific autho
 - `SWING`: `primary_interval` **4h**, `context_intervals` **1d**, `refinement_intervals` **1h**
 - `SCALP`: `primary_interval` **15m**, `context_intervals` **1h**, `refinement_intervals` **5m**
 - `AGGRESSIVE_SCALP`: `primary_interval` **1m** or **3m**, `context_intervals` **5m + 15m**
-- shared simulation core reused by runtime and replay with scope-specific profiles
+- runtime hosts simulation; training/evaluation/labels consume runtime simulation outputs through side-effect-free adapters
+- Monte Carlo robustness mode runs on top of runtime simulation and is diagnostic/distributional, not live execution truth
 - first-phase model algorithm family: **XGBoost-first** inside scope-specific artifacts
 - first-phase calibration: **global within scope**
 - timing extension fields:
@@ -207,7 +210,7 @@ Treat these as the default V7 operating assumptions unless a more specific autho
 
 ## Simulation Truth Layer
 
-`pipeline/simulation.md` is the economic truth layer.
+`runtime/simulation_engine.md` owns simulation execution. `pipeline/simulation.md` defines the simulation output semantics consumed by pipeline stages.
 
 It defines how V7 should compare:
 
@@ -233,6 +236,8 @@ under the same cost-aware rules.
 
 ### Important rule
 There must not be one truth surface for labels and a different truth surface for evaluation.
+
+Runtime owns simulation execution. The model produces scoring/guidance only; it does not run simulation. Training, labels, evaluation, paper, replay, and Monte Carlo consume the runtime simulation engine through versioned profiles/adapters.
 
 ---
 

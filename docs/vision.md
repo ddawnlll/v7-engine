@@ -13,7 +13,7 @@ It defines what V7 is, why it exists, what success means, what design principles
 
 ## One-Sentence Definition
 
-**V7 is a centralized, market-first, simulation-native learned trading engine that optimizes economic quality first, uses calibrated decision outputs, and evaluates long / short / no-trade actions through one unified forward-simulation truth layer.**
+**V7 is a centralized, market-first, simulation-native learned trading engine that optimizes economic quality first, uses calibrated decision outputs, and evaluates long / short / no-trade actions through one runtime-hosted forward-simulation truth layer.**
 
 ---
 
@@ -134,7 +134,7 @@ V7 is:
 * a **contract-compatible** learned trading engine
 * a **centralized** system designed for multi-symbol operation
 * a **market-first** learning system
-* a **simulation-native** system where one forward simulation engine defines labeling and evaluation truth
+* a **simulation-native** system where the runtime-hosted simulation engine defines simulated truth for labeling and evaluation through side-effect-free adapters
 * a **calibration-structural** decision system
 * a **multi-symbol-aware** engine designed for 60-symbol operation
 * a system optimized for **economic quality first**
@@ -191,7 +191,7 @@ This boundary remains explicit, versioned, and testable.
 V7 introduces one central truth layer:
 
 * canonical market-state construction
-* unified forward simulation
+* runtime-hosted unified forward simulation
 * unified outcome semantics
 * unified cost model
 
@@ -282,7 +282,7 @@ They must not define the truth that V7 learns.
 
 V7’s most important architectural rule is:
 
-**one simulation engine defines the truth for labeling, evaluation, and production outcome interpretation.**
+**one runtime-hosted simulation engine defines simulated truth for labeling, evaluation, and production outcome interpretation.**
 
 This means the following must share one logic surface:
 
@@ -348,7 +348,7 @@ This means:
 * symbol-aware model inputs or evaluation slices
 * symbol-level calibration and error analysis
 * cross-symbol correlation awareness in the decision policy
-* centralized forward simulation and reporting
+* runtime-hosted forward simulation and centralized reporting
 * batch-oriented inference design where practical
 
 V7 must not be mentally designed as 60 isolated single-symbol engines.
@@ -426,7 +426,7 @@ Deterministic context is support, not sovereignty.
 
 V7 candidates are promoted only through out-of-sample economic evidence.
 
-A candidate may be promoted only if forward simulation shows:
+A candidate may be promoted only if runtime-hosted forward simulation / replay evidence shows:
 
 * positive expectancy R across meaningful out-of-sample periods
 * acceptable drawdown behavior
@@ -448,7 +448,7 @@ That means:
 * fewer hidden policies
 * one central configuration root
 * one primary CLI entrypoint
-* one simulation truth layer
+* one runtime-hosted simulation truth layer
 * simpler threshold policy
 * modular feature and label extensions
 * minimal required documentation
@@ -541,7 +541,7 @@ The first V7 design phase is about:
 
 * defining the right success criteria
 * defining the right contracts
-* defining the unified simulation truth layer
+* defining runtime-hosted simulation output semantics
 * defining the centralized architecture
 * defining modularity and configuration rules
 * creating a system that can reach economic quality faster

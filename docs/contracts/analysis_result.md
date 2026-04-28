@@ -44,6 +44,8 @@ And adds one more principle:
 
 The result remains a **runtime-usable decision contract**, not a broker execution object.
 
+It is also not a simulation execution object. The result may include entry, stop, take-profit, expected-R, and timing guidance. Runtime simulation may later test or track those assumptions, but the result itself is engine guidance, not a simulated outcome or replay loop.
+
 ---
 
 ## Request Compatibility Rule
@@ -519,6 +521,7 @@ This matrix is semantic guidance for runtime interpretation.
 ### Optional for later controlled expansion
 - `execution_guidance.entry_expiry_utc`
 - richer calibration metadata
+- offline/evaluation-derived Monte Carlo summary references, only if explicitly authorized and clearly marked as diagnostic
 - candidate decision lists
 - alternative action summaries
 - broader market summaries
@@ -738,6 +741,8 @@ Do not add:
 - oracle timing backfills in runtime
 - large action-family branching
 - heavy extra control flow based on many timing states
+- model-side simulation loops
+- Monte Carlo robustness execution inside normal model inference
 
 ### Recommended runtime changes
 

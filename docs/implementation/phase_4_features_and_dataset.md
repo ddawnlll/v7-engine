@@ -21,7 +21,7 @@ It solves the problem that truth and labels may exist, but training rows are not
 The following are already implemented / must remain stable:
 
 - [x] contracts exist
-- [x] simulation truth exists
+- [x] runtime simulation adapter outputs exist
 - [x] label and outcome semantics are aligned
 - [x] feature and dataset docs already define first-phase assumptions
 
@@ -137,6 +137,9 @@ refinement_intervals
 label_horizon_family
 cost_model
 slippage_model
+simulation_profile_version
+simulation_run_id / replay_run_id where used
+monte_carlo_run_id where configured
 state_timestamp_utc
 dataset_family_version
 ```
@@ -145,6 +148,8 @@ dataset_family_version
 - rows must be traceable
 - dataset family cannot be anonymous
 - scope-specific multi-view rows; no mixing of `model_scope`, primary clock, or label horizon across supervised datasets
+- labels come from runtime simulation adapter outputs
+- dataset assembly must not call live execution, broker, exchange, or mutable account-state paths
 
 #### 7.2 Split and weighting
 
@@ -211,6 +216,9 @@ First implementation default:
 
 - [ ] verify fold windows match documented defaults or explicit config override
 - [ ] verify row lineage is preserved end to end
+- [ ] verify simulation profile/version and adapter lineage are preserved
+- [ ] verify replay/Monte Carlo run IDs are preserved when used
+- [ ] verify dataset assembly has no live execution side effects
 
 ### 9.3 Balance audit
 

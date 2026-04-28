@@ -42,6 +42,8 @@ But V7 extends the outcome object in five ways:
 
 The result is still a **normalized lifecycle object**, not a fill object and not a raw label blob.
 
+`TradeOutcome` may reference real execution truth, paper forward simulation, historical replay, or other simulated truth. These must remain distinguishable in lineage. Monte Carlo evidence is diagnostic/distributional and is not the same as an actual realized outcome.
+
 ---
 
 ## Relationship To The Contract Family
@@ -257,6 +259,9 @@ This section preserves the causal lineage from decision to outcome.
 - `risk_policy_version`
 - `evaluation_run_id`
 - `simulation_run_id`
+- `replay_run_id`
+- `monte_carlo_run_id`
+- `simulation_profile_version`
 
 ### Expected concepts
 
@@ -279,8 +284,10 @@ This section answers:
 ### Rules
 - lineage must be explicit
 - `model_scope`, artifact, calibration, and policy lineage must remain scope-compatible when present
+- simulated outcome lineage and live execution lineage must remain distinguishable
+- Monte Carlo run lineage must not be interpreted as actual realized outcome lineage
 - hidden generation assumptions are not allowed
-- `evaluation_run_id` and `simulation_run_id` are optional, but when present they must remain stable and searchable
+- `evaluation_run_id`, `simulation_run_id`, `replay_run_id`, and `monte_carlo_run_id` are optional, but when present they must remain stable and searchable
 
 ---
 
@@ -700,6 +707,9 @@ The outcome may **not** rewrite what the system knew at decision time.
 ### Optional for controlled expansion
 - `lineage.evaluation_run_id`
 - `lineage.simulation_run_id`
+- `lineage.replay_run_id`
+- `lineage.monte_carlo_run_id`
+- `lineage.simulation_profile_version`
 - richer portfolio-relative metrics
 - richer specialist comparison metadata
 - broader market-relative context
@@ -777,7 +787,7 @@ At minimum, validation should check:
 - pending outcomes do not masquerade as final
 - outcome source and live/paper/replay lineage do not contradict each other
 - quality and interpretation labels remain legal for the given resolution state
-- `evaluation_run_id` and `simulation_run_id`, if present, are well-formed and consistent with lineage context
+- `evaluation_run_id`, `simulation_run_id`, `replay_run_id`, and `monte_carlo_run_id`, if present, are well-formed and consistent with lineage context
 
 ### Important rule
 Validation must protect the system from silently training on:

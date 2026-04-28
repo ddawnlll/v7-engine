@@ -43,6 +43,8 @@ But V7 tightens and extends it in four ways:
 
 The request remains an **analysis boundary**, not a portfolio controller or execution object.
 
+It also is not a simulation execution request for the model. Normal inference requests may include fields needed for runtime routing and model inference, but they must not ask the model to run simulation. Simulation/replay/training adapters may build deterministic runtime simulation inputs from request/state lineage, but that simulation path is runtime-owned and side-effect-free.
+
 ---
 
 ## Role In The System
@@ -95,6 +97,7 @@ The request remains an **analysis boundary**, not a portfolio controller or exec
 - position sizing instructions
 - capital allocation instructions
 - future outcomes
+- simulation execution loops or future simulation payloads
 - labels
 - realized PnL or realized R
 - event storage schema
@@ -664,8 +667,8 @@ Do not make one atomic request evaluate many symbols.
 ### 2. Multiple independent decision intervals
 Do not make one atomic request represent separate decisions for `1h`, `4h`, and `1d` at once. An atomic request includes multiple state views but must produce one unified, primary-anchored decision, not an average of separate interval outputs.
 
-### 3. Future outcomes
-No future prices, labels, realized results, or replay-only truth.
+### 3. Future outcomes or simulation loops
+No future prices, labels, realized results, replay-only truth, or model-owned simulation execution loops.
 
 ### 4. Execution commands
 No order placement instructions, leverage commands, or broker mutation payloads.

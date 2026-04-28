@@ -42,6 +42,8 @@ Dataset rows are built from:
 
 No row is valid without traceable upstream lineage.
 
+Label truth comes from runtime simulation outputs through side-effect-free adapters. Dataset assembly must not call live execution, broker, exchange, or mutable account-state paths.
+
 ---
 
 ## Inputs
@@ -70,7 +72,9 @@ A dataset row should minimally carry:
 - label version / interpretation version
 - `label_horizon_family`
 - cost model / slippage model identifiers
-- simulation family version
+- simulation family/profile version
+- `simulation_run_id` / `replay_run_id` where used
+- `monte_carlo_run_id` where configured
 - dataset family version
 
 ---
@@ -106,6 +110,9 @@ Do not random-shuffle across time in a way that breaks evaluation realism.
 
 ### 6. Preserve lineage
 Every row should be traceable back to source versions.
+
+### 7. Runtime simulation lineage
+Dataset manifests must include the runtime simulation profile/version and adapter lineage used to derive labels. Replay and Monte Carlo run IDs should be preserved when used.
 
 ---
 
@@ -147,6 +154,8 @@ Bump `dataset_family_version` when any of the following changes materially:
 - label interpretation meaning
 - simulation family meaning
 - symbol-universe policy
+- runtime simulation profile/version lineage
+- replay / Monte Carlo run ID preservation where used
 - split family meaning
 
 Do not bump for cosmetic filename or storage-path changes only.
@@ -183,6 +192,8 @@ Do not silently coerce partial rows into full rows.
 ## Config Surface
 
 Key config families:
+- runtime simulation profile/version lineage
+- replay / Monte Carlo run ID preservation where used
 - split family
 - walk-forward windows
 - allowed symbol universe

@@ -15,7 +15,7 @@ It answers:
 ## In Scope
 
 - walk-forward evaluation
-- forward simulation evaluation
+- evaluation over runtime simulation / replay outputs
 - symbol/regime breakdowns
 - calibration quality
 - no-trade quality
@@ -58,8 +58,10 @@ Evaluation is per `model_scope`. `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` each r
 - trained artifacts
 - calibration artifacts
 - policy behavior
-- replay outcomes
-- live/paper outcomes where available
+- runtime replay outputs from the historical replay driver
+- paper forward simulation outcomes where available
+- live execution outcomes where available
+- Monte Carlo robustness outputs when configured
 - evaluation config
 
 ---
@@ -108,6 +110,15 @@ A global metric can hide severe concentration of failure.
 ### 5. Replay and live should stay comparable
 Do not create incompatible evaluation languages.
 
+### 6. Runtime simulation source
+Evaluation consumes runtime simulation/replay outputs. Historical replay uses the runtime simulation engine through the historical replay driver or evaluation replay adapter. Evaluation must not implement a separate backtest-only simulator.
+
+### 7. Monte Carlo robustness mode
+Monte Carlo robustness mode is an evaluation tool on top of the runtime simulation engine. When configured, it may report expected-R distribution, downside risk, target-before-stop probability, stop-before-target probability, tail risk, and confidence stability.
+
+### 8. Replay and Monte Carlo are not live eligibility by themselves
+Replay evidence and Monte Carlo evidence may support candidate review, but they do not automatically grant live eligibility.
+
 ---
 
 ## Recommended Metric Families
@@ -121,6 +132,7 @@ Minimum first-phase families by `model_scope`:
 - calibration error
 - confidence bucket quality
 - path quality summaries
+- Monte Carlo robustness summaries when configured
 - suppression / skip quality
 - symbol-side harmful cohort by scope
 - symbol and regime slices
@@ -196,6 +208,8 @@ Key config families:
 - slice breakdown rules
 - baseline retention rules
 - replay vs live evidence policy
+- Monte Carlo robustness mode and reporting families, if enabled
+- runtime simulation profile/version coverage requirements
 
 ---
 

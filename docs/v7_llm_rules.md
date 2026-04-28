@@ -31,7 +31,7 @@ The main rule is simple:
 
 This matches the current V7 direction:
 - centralized architecture
-- one simulation truth layer
+- one runtime-hosted simulation engine / simulated-truth layer
 - one central config loader
 - low repetition docs
 - AI-first readability
