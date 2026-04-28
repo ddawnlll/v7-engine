@@ -110,6 +110,9 @@ Primary behavioral authority for this workstream:
 
 - [ ] Implement V7 request builder
 - [ ] Implement result validator
+- [ ] Implement runtime `scope_router` for `requested_trade_mode` / `model_scope`
+- [ ] Validate scope-compatible artifact, calibration, and policy bundles
+- [ ] Implement visible `scope_mismatch` fallback behavior
 - [ ] Consume shared simulation core for paper trading (forward simulation) and replay
 - [ ] Enforce actionability vs execution-eligibility split
 - [ ] Preserve fallback visibility in runtime interpretation
@@ -161,6 +164,8 @@ TradeOutcome
 - [ ] `DecisionEvent` is created after valid normalized result
 - [ ] `TradeOutcome` can be created as pending and updated later
 - [ ] fallback / suppression signals survive into lifecycle objects
+- [ ] `DecisionEvent` / `TradeOutcome` persist `model_scope` lineage where relevant
+- [ ] runtime can run separate configured scans per scope without averaging scope outputs
 
 ---
 

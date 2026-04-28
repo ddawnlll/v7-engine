@@ -25,6 +25,7 @@ V7 is a centralized, market-first, simulation-native trading system designed to 
 - easy for humans and LLMs to edit safely
 - driven by one simulation truth layer
 - controlled through one unified config surface
+- built on one shared training platform with separate `model_scope` artifacts for `SWING`, `SCALP`, and `AGGRESSIVE_SCALP`
 
 V7 is not a greenfield reset.
 It is a disciplined consolidation of the strongest V6 ideas.
@@ -45,20 +46,21 @@ If you need the main authority docs, read them in this order:
 8. `runtime/runtime_integration.md` — runtime boundary behavior
 9. `runtime/fallback_policy.md` — allowed degradation and fallback
 10. `runtime/deployment_safety.md` — rollout and live-safety gates
-11. `pipeline/simulation.md` — simulation truth layer
-12. `pipeline/labels.md` — label semantics
-13. `pipeline/features.md` — canonical-state feature semantics
-14. `pipeline/dataset.md` — dataset lineage and splits
-15. `pipeline/model.md` — first-phase model family
-16. `pipeline/calibration.md` — calibrated confidence surfaces
-17. `pipeline/policy.md` — decision policy
-18. `pipeline/portfolio.md` — cross-symbol portfolio handling
-19. `pipeline/risk.md` — hard and soft risk gates
-20. `pipeline/evaluation.md` — promotion evidence
-21. `pipeline/monitoring.md` — post-deploy health and drift
-22. `v7_llm_rules.md` — LLM working rules
-23. `v7_doc_writing_guide.md` — doc-writing rules
-24. `roadmap.md` — implementation order
+11. `pipeline/training.md` — shared training platform and model-scope strategy
+12. `pipeline/simulation.md` — simulation truth layer
+13. `pipeline/labels.md` — label semantics
+14. `pipeline/features.md` — canonical-state feature semantics
+15. `pipeline/dataset.md` — dataset lineage and splits
+16. `pipeline/model.md` — first-phase model family
+17. `pipeline/calibration.md` — calibrated confidence surfaces
+18. `pipeline/policy.md` — decision policy
+19. `pipeline/portfolio.md` — cross-symbol portfolio handling
+20. `pipeline/risk.md` — hard and soft risk gates
+21. `pipeline/evaluation.md` — promotion evidence
+22. `pipeline/monitoring.md` — post-deploy health and drift
+23. `v7_llm_rules.md` — LLM working rules
+24. `v7_doc_writing_guide.md` — doc-writing rules
+25. `roadmap.md` — implementation order
 
 ---
 
@@ -91,6 +93,7 @@ The implementation plans expect `src/v7/` to be created later in Phase 0.
 
 ### Pipeline docs
 - `docs/pipeline/simulation.md` — truth layer
+- `docs/pipeline/training.md` — shared training platform and model-scope strategy
 - `docs/pipeline/labels.md` — label semantics
 - `docs/pipeline/features.md` — canonical-state features
 - `docs/pipeline/dataset.md` — dataset lineage and splits
@@ -129,9 +132,9 @@ V7 is built as a layered system:
 - raw market data
 - canonical state construction
 - one simulation truth layer
-- label and feature generation
-- dataset assembly
-- model training
+- label and feature generation per `model_scope`
+- dataset assembly per `model_scope`
+- model training through shared infrastructure with separate scope artifacts
 - calibration
 - policy
 - portfolio interpretation
@@ -158,6 +161,8 @@ V7 has one atomic lifecycle contract family:
 
 ### Semantic rule
 - one symbol
+- one `model_scope`
+- one `requested_trade_mode`
 - one primary interval
 - one evaluated market state
 - one request
@@ -184,13 +189,14 @@ Treat these as the default V7 operating assumptions unless a more specific autho
 
 - target universe up to **60 symbols**
 - initial rollout may use a smaller approved subset
-- scalp-aware not scalp-first
-- primary decision interval: **4h**
-- higher-timeframe context: **1d**
-- first-phase refinement/timing context: **1h** (producing one fused unified decision)
-- shared simulation core reused by runtime and replay
-- first-phase model family: **XGBoost-first**
-- first-phase calibration: **global**
+- one shared training platform, not one universal model
+- model scopes: `SWING`, `SCALP`, `AGGRESSIVE_SCALP`
+- `SWING`: `primary_interval` **4h**, `context_intervals` **1d**, `refinement_intervals` **1h**
+- `SCALP`: `primary_interval` **15m**, `context_intervals` **1h**, `refinement_intervals` **5m**
+- `AGGRESSIVE_SCALP`: `primary_interval` **1m** or **3m**, `context_intervals` **5m + 15m**
+- shared simulation core reused by runtime and replay with scope-specific profiles
+- first-phase model algorithm family: **XGBoost-first** inside scope-specific artifacts
+- first-phase calibration: **global within scope**
 - timing extension fields:
   - `entry_readiness`
   - `entry_valid_for_bars`
@@ -272,7 +278,7 @@ Key ideas:
 
 Key ideas:
 - XGBoost-first
-- one shared centralized model family
+- shared centralized training infrastructure with separate scope-compatible model artifacts
 - compact output surface
 - candidate artifacts are not automatically promoted
 - runtime ownership stays outside the model
@@ -354,6 +360,8 @@ Engine owns:
 - recommended action
 - timing guidance
 - uncertainty / degradation visibility
+
+Runtime owns `scope_router` selection before inference. The model produces `LONG_NOW`, `SHORT_NOW`, or `NO_TRADE` only inside the selected `model_scope`; V7 must not average independent `SWING` / `SCALP` / `AGGRESSIVE_SCALP` outputs.
 
 Runtime should not be rewritten first.
 It should be integrated incrementally to the V7 contract family.

@@ -33,6 +33,8 @@ The following are already documented and must remain stable:
 This plan builds on top of those decisions.
 Do not regress them during implementation.
 
+Resolved model strategy: V7 uses one shared training framework with separate `model_scope` artifacts for `SWING`, `SCALP`, and `AGGRESSIVE_SCALP`; it must not train one universal model across those scopes. Each activated scope must satisfy its own data, model, calibration, evaluation, and release gates.
+
 ---
 
 ## 3. Background & Motivation
@@ -137,7 +139,7 @@ V7 implementation is not considered complete until all of the following are true
 - [ ] typed contract surfaces exist and validate correctly
 - [ ] one simulation truth layer powers labels, evaluation, and outcomes
 - [ ] feature and dataset surfaces are leakage-safe
-- [ ] one shared baseline model trains and loads correctly
+- [ ] one shared training framework trains and loads separate activated `model_scope` artifacts correctly
 - [ ] confidence surface is calibrated or explicitly downgraded
 - [ ] policy emits compact normalized decisions
 - [ ] portfolio and risk blocks are explicit

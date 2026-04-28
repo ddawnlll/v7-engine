@@ -46,11 +46,10 @@ That means:
 
 ## First-Phase Scope
 
-Feature design should assume:
-- primary decision interval: **4h**
-- higher-timeframe context: **1d**
-- first-phase refinement/timing context: **1h**
-- shared centralized multi-symbol model family
+Feature design should assume shared feature infrastructure with schema variants where needed by `model_scope`:
+- `SWING`: `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`
+- `SCALP`: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`
+- `AGGRESSIVE_SCALP`: `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, micro refinement where applicable
 - target universe up to **60 symbols**
 
 ---
@@ -72,7 +71,7 @@ A feature row should include:
 - feature schema version
 - missing/degraded flags
 - symbol identity features where approved
-- interval identity features where approved
+- `model_scope` / interval identity features where approved
 
 ---
 
@@ -80,12 +79,12 @@ A feature row should include:
 
 First-phase grouping should be explicit:
 
-- **4h Primary decision features**: price geometry, momentum, volatility, structure
-- **1d Higher-timeframe context features**: HTF alignment, regime, structure
-- **1h Refinement/timing/scalp-pressure features**: time sensitivity, local momentum, entry readiness (1h is refinement/context, not a separate primary decision family)
+- **Scope primary decision features**: price geometry, momentum, volatility, structure on the scope `primary_interval`
+- **Context interval features**: HTF alignment, regime, structure for the scope `context_intervals`
+- **Refinement interval features**: timing pressure, local momentum, and entry-readiness support for the scope `refinement_intervals`
 - **Global context**: time/session features, symbol metadata, quality/degradation flags
 
-These feature groups are fused into one shared multi-view feature row direction, not separated into per-interval training universes.
+For example, `SWING` uses 4h + 1d + 1h, `SCALP` uses 15m + 1h + 5m, and `AGGRESSIVE_SCALP` uses 1m/3m + 5m/15m context. These views are context within one selected scope, not independently averaged interval predictors.
 
 Do not create one giant anonymous feature blob.
 
@@ -108,8 +107,8 @@ Missing or degraded context should surface as flags, not as silent zeros.
 ### 5. Keep first phase boring
 Prefer explicit, interpretable features over complex opaque constructions.
 
-### 6. Shared model bias
-Features should support a shared model family, not per-symbol handcrafted pipelines.
+### 6. Scope-compatible schemas
+Features should support shared infrastructure and multi-symbol learning within a `model_scope`, not per-symbol handcrafted pipelines. Feature schemas may vary by `model_scope` where needed, and features do not decide the scope; runtime `scope_router` and config choose the scope before inference.
 
 ---
 

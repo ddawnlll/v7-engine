@@ -67,6 +67,7 @@ Implement the four core lifecycle objects as explicit typed structures.
 - [ ] Implement `AnalysisResult`
 - [ ] Implement `DecisionEvent`
 - [ ] Implement `TradeOutcome`
+- [ ] Add explicit contract fields for `requested_trade_mode`, `model_scope`, `primary_interval`, `context_intervals`, `refinement_intervals`, `label_horizon_family`, `artifact_id`, and `calibration_artifact_id` where documented
 
 ### Typed implementation rule
 
@@ -100,6 +101,8 @@ Ensure invalid lifecycle objects fail early and clearly.
 
 - [ ] Add structural validators for each contract
 - [ ] Add consistency validators for request/result/event/outcome linkage
+- [ ] Add `model_scope` / `requested_trade_mode` compatibility validation
+- [ ] Add scope-compatible artifact and calibration lineage validation
 - [ ] Add enum and numeric bound validation
 - [ ] Add timing-extension field validation for `AnalysisResult`
 
@@ -115,6 +118,7 @@ First-phase timing validation should enforce:
 
 - [ ] invalid objects fail before downstream use
 - [ ] consistency mismatches raise clear errors
+- [ ] `scope_mismatch` fails clearly or routes to documented safe degraded behavior before inference/execution
 - [ ] timing extension fields are bounded and legal
 
 ---
@@ -178,6 +182,8 @@ First-phase default:
 - [ ] request/result linkage validation
 - [ ] result/event linkage validation
 - [ ] event/outcome linkage validation
+- [ ] `requested_trade_mode` / `model_scope` mismatch validation
+- [ ] non-scope-compatible artifact/calibration validation
 
 ### 8.3 Round-trip tests
 
@@ -202,6 +208,8 @@ First-phase default:
 
 - [ ] verify invalid objects cannot bypass validators
 - [ ] verify version fields are present and test-covered
+- [ ] verify `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` examples round-trip with correct scope fields
+- [ ] verify scope mismatch cannot silently fall through to another artifact
 
 ### 9.3 Boundary audit
 

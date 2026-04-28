@@ -61,10 +61,15 @@ A dataset row should minimally carry:
 - feature vector
 - target fields
 - symbol
-- primary interval
+- `model_scope`
+- `primary_interval`
+- `context_intervals`
+- `refinement_intervals`
 - timestamp
 - feature schema version
 - label version / interpretation version
+- `label_horizon_family`
+- cost model / slippage model identifiers
 - simulation family version
 - dataset family version
 
@@ -72,11 +77,13 @@ A dataset row should minimally carry:
 
 ## First-Phase Scope
 
-- shared multi-symbol dataset
-- primary decision interval: **4h** (first-phase dataset rows are 4h-primary rows with 1d and 1h views embedded in the same row)
-- first-phase V7 does not create separate primary 1h and 4h model-training universes
+- shared dataset infrastructure, separate dataset family per `model_scope`
 - target universe: up to **60 symbols**
 - initial rollout may subset symbols, but dataset design should not assume six-symbol-only permanence
+- `SWING` dataset: `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`, swing `label_horizon_family`
+- `SCALP` dataset: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`, scalp `label_horizon_family`
+- `AGGRESSIVE_SCALP` dataset: `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, micro refinement where applicable, immediate-continuation / very short `label_horizon_family`
+- cost and slippage model profiles are selected per scope through the unified config system
 
 ---
 
@@ -85,8 +92,8 @@ A dataset row should minimally carry:
 ### 1. Temporal correctness
 No future leakage across training / validation / test splits.
 
-### 2. Shared-family rows
-Rows should support a shared model family across symbols.
+### 2. Scope-family rows
+Rows should support shared training infrastructure across symbols within a `model_scope`. Rows from `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` must not be mixed into one supervised dataset or one universal training target.
 
 ### 3. Symbol balance matters
 Do not let a few high-frequency symbols dominate silently.
@@ -113,7 +120,7 @@ Default first-phase preference:
 - attach inverse-frequency symbol weights
 - only cap rows if a symbol massively dominates the corpus
 
-This keeps the shared model multi-symbol without letting BTC/ETH-like symbols silently own the objective.
+This keeps each scope-specific multi-symbol model family from letting BTC/ETH-like symbols silently own the objective.
 
 ---
 
@@ -135,6 +142,7 @@ Do not default to IID-style random train/test splits.
 ## Dataset Versioning Rule
 
 Bump `dataset_family_version` when any of the following changes materially:
+- `model_scope`, `primary_interval`, or `label_horizon_family` meaning
 - feature schema meaning
 - label interpretation meaning
 - simulation family meaning

@@ -40,6 +40,8 @@ Monitoring must observe both:
 - model quality surfaces
 - system lifecycle surfaces
 
+Monitoring must track `model_scope` as a first-class dimension before scope-level promotion or live enablement.
+
 That means monitoring should track not only scores, but also:
 - degradation
 - fallback
@@ -167,15 +169,19 @@ Below-threshold coverage should emit:
 
 ## Recommended Monitoring Families
 
-Minimum first-phase families:
+Minimum first-phase families by `model_scope`:
+- decision counts by scope
+- realized outcome by scope
 - request/result validation failure rate
-- fallback / degraded rate (including 1h-missing fallback/degraded rate)
+- fallback / degraded rate by scope
+- calibration drift by scope
 - confidence distribution
 - expected-R distribution
 - no-trade rate
 - actionability vs execution-eligibility gap
+- symbol-side harmful cohort by scope
 - symbol and regime coverage
-- interval-view coverage integrity (e.g., 1h refinement availability rate)
+- interval-view coverage integrity by scope
 - timing-field quality by refinement presence
 - timing-extension distribution
 - outcome finality lag

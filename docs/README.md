@@ -37,6 +37,7 @@ It is not a second architecture spec.
 
 ### 5. Pipeline authority
 - `pipeline/simulation.md`
+- `pipeline/training.md`
 - `pipeline/labels.md`
 - `pipeline/features.md`
 - `pipeline/dataset.md`
@@ -89,6 +90,7 @@ It is a disciplined extension of the best V6 decisions:
 - centralized multi-symbol architecture
 - compact, LLM-readable docs and modules
 - explicit runtime vs engine ownership
+- runtime `scope_router` selects `model_scope` before inference; no averaged scope outputs
 
 ---
 
@@ -116,12 +118,15 @@ These assumptions are repeated throughout the docs and should be treated as defa
 
 - target universe up to **60 symbols**
 - initial rollout may start with a smaller approved subset
-- primary decision interval: **4h**
-- higher-timeframe context: **1d**
-- first-phase refinement/timing context: **1h** (fused unified multi-view decision)
-- shared simulation core reused by runtime and replay
-- first-phase model family: **XGBoost-first**
-- first-phase calibration: **global**
+- shared training platform, not one universal model
+- first model scopes: `SWING`, `SCALP`, and `AGGRESSIVE_SCALP`
+- scope defaults:
+  - `SWING`: `primary_interval` **4h**, `context_intervals` **1d**, `refinement_intervals` **1h**
+  - `SCALP`: `primary_interval` **15m**, `context_intervals` **1h**, `refinement_intervals` **5m**
+  - `AGGRESSIVE_SCALP`: `primary_interval` **1m** or **3m**, `context_intervals` **5m + 15m**
+- shared simulation core reused by runtime and replay with scope-specific profiles
+- first-phase model algorithm family: **XGBoost-first** inside scope-specific artifacts
+- first-phase calibration: **global within scope**
 - timing extension:
   - `entry_readiness`
   - `entry_valid_for_bars`
@@ -140,7 +145,7 @@ Do not casually change:
 - confidence + expected-R dual surface
 - event/outcome lifecycle ownership
 - batch/session lineage approach
-- shared-model first phase
+- shared training platform with separate `model_scope` artifacts
 
 ### Delegated elsewhere
 Do not duplicate these in README:

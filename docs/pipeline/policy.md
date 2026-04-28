@@ -47,13 +47,13 @@ Runtime then decides whether execution is operationally allowed.
 
 ## Inputs
 
-- calibrated multi-view score surfaces (fused surfaces, not averaged interval outputs)
+- calibrated score surfaces from one selected `model_scope` (context views may be fused inside the scope, but scope outputs are not averaged)
 - confidence
 - expected R
 - expected drawdown
 - decision margins
 - timing-supporting fields (e.g., 1h refinement data, which influences timing and entry readiness more than primary direction in phase one)
-- policy config
+- `model_scope`-specific policy config from the unified config system
 
 ---
 
@@ -97,6 +97,15 @@ First phase action family:
 - `LONG_NOW`
 - `SHORT_NOW`
 - `NO_TRADE`
+
+### 6. Scope-specific thresholds
+Policy thresholds are `model_scope`-specific. `SCALP` and `AGGRESSIVE_SCALP` may require stricter no-trade, cost, and slippage gates than `SWING`, but all such settings must live in the unified config system as first-phase defaults or configured overrides.
+
+### 7. No scope averaging
+Policy consumes one selected scope output. Runtime `scope_router` chooses the scope before policy execution; policy must not average `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` outputs.
+
+### 8. Scope mismatch
+If the result artifact or request scope is incompatible, policy/runtime handling must reject, emit `NO_TRADE`, or use the existing rejection vocabulary such as `REJECT_SCOPE_MISMATCH` where available.
 
 ---
 
@@ -143,7 +152,7 @@ Key config families:
 - minimum confidence
 - minimum expected R
 - drawdown limits at policy stage
-- no-trade thresholds
+- `model_scope`-specific no-trade thresholds
 - timing extension enablement
 - timing heuristic thresholds
 

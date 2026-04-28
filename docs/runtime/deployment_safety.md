@@ -124,6 +124,8 @@ A model family may be:
 - evaluation-promoted and shadow-eligible
 - evaluation-promoted and live-eligible
 
+Eligibility is per `model_scope`: `SWING` live eligibility does not imply `SCALP` live eligibility, and `SCALP` live eligibility does not imply `AGGRESSIVE_SCALP` live eligibility.
+
 Do not collapse evaluation promotion and live eligibility into one gate.
 
 ---
@@ -166,7 +168,7 @@ Kill switch activation must not look like an unexplained drop in activity.
 
 ## Rollback Rules
 
-Rollback must be able to revert:
+Rollback must be able to revert compatible artifact bundles per `model_scope`:
 - promoted model family
 - promoted calibration family
 - promoted policy family where relevant

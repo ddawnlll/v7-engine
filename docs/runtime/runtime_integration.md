@@ -60,6 +60,9 @@ Runtime owns:
 - event creation
 - outcome attachment
 - operational safeguards
+- `scope_router` selection from `requested_trade_mode` / `model_scope`
+- model artifact selection and scope compatibility validation
+- blocking or downgrading `scope_mismatch` to visible safe behavior
 
 This preserves the V7 boundary discipline already established by the request/result/event/outcome family. fileciteturn20file1 fileciteturn33file0 fileciteturn21file0 fileciteturn27file0
 
@@ -73,6 +76,8 @@ The normalized V7 runtime flow should be:
 Market/Data State
 → Request Builder
 → AnalysisRequest
+→ Scope Router (`requested_trade_mode` / `model_scope`)
+→ Scope-Compatible Artifact Selection
 → Engine
 → AnalysisResult
 → Result Validator
@@ -172,6 +177,8 @@ Runtime request builder should:
 - preserve `request_kind`
 - keep `canonical_state` authoritative
 - keep timing-free future leakage out of the request
+- include `requested_trade_mode`, `model_scope`, `primary_interval`, `context_intervals`, and `refinement_intervals`
+- ensure one request targets one selected scope rather than asking all scopes to compete
 
 This remains aligned with the V7 request contract. fileciteturn20file1
 
@@ -198,6 +205,8 @@ That means runtime should use:
 - `degraded_reason`
 
 Runtime may interpret and gate these fields, but must not silently replace them.
+
+Runtime must also persist `model_scope`, `trade_mode`, artifact lineage, and calibration lineage in `DecisionEvent` / `TradeOutcome` where relevant. Runtime may run separate configured scans per scope, but it must not ask all model scopes for outputs and average them.
 
 This follows the revised V7 result contract, where confidence remains first-class, expected R remains first-class, and timing extension fields are advisory-first. fileciteturn33file0
 
@@ -310,6 +319,7 @@ This keeps runtime load manageable while making the signal measurable. fileci
 Before runtime uses a result, it should validate:
 
 - request linkage is consistent
+- `requested_trade_mode`, `model_scope`, and artifact lineage are scope-compatible
 - `recommended_action` and `direction` are consistent
 - `is_actionable` is legal for the given status
 - `confidence` is present and valid
@@ -426,7 +436,7 @@ Do not hardcode these in business logic.
 These are the minimum practical changes needed.
 
 ### Request side
-- support V7 request shape
+- support V7 request shape, including `requested_trade_mode` / `model_scope`
 - support `canonical_state`
 - support batch/session lineage
 - preserve request versions

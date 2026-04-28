@@ -49,6 +49,8 @@ It must also be judged by:
 - path quality
 - regret-aware comparative behavior
 
+Evaluation is per `model_scope`. `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` each require separate evaluation reports, configured metrics/gates, and promotion evidence. Do not promote one scope because another scope passed evaluation.
+
 ---
 
 ## Inputs
@@ -110,21 +112,27 @@ Do not create incompatible evaluation languages.
 
 ## Recommended Metric Families
 
-Minimum first-phase families:
-- realized R
+Minimum first-phase families by `model_scope`:
+- net expectancy / realized R after cost by scope
+- stop-first rate by scope
+- short-side expectancy by scope
 - average and distributional regret
-- no-trade correctness
+- no-trade correctness / no-trade quality by scope
 - calibration error
 - confidence bucket quality
 - path quality summaries
 - suppression / skip quality
+- symbol-side harmful cohort by scope
 - symbol and regime slices
 
 ### Ablation / Measurement Guidance
 
-First-phase evaluation should include interval-view ablation to justify complexity:
-- compare **4h-only** vs **4h + 1d** vs **4h + 1d + 1h**
-- 1h refinement must prove its value via evaluation, not assumption.
+First-phase evaluation should include interval-view ablation within each scope to justify complexity, for example:
+- `SWING`: compare **4h-only** vs **4h + 1d** vs **4h + 1d + 1h**
+- `SCALP`: compare **15m-only** vs **15m + 1h** vs **15m + 1h + 5m**
+- `AGGRESSIVE_SCALP`: compare the configured micro primary view against 5m/15m context variants
+
+A refinement interval must prove its value via evaluation, not assumption.
 
 ---
 
@@ -146,8 +154,8 @@ Threshold values live in config, not hardcoded in this document.
 ## Baseline Policy
 
 Evaluation compares candidates against:
-1. the current promoted baseline model family
-2. the last accepted evaluation baseline for the same evaluation family
+1. the current promoted baseline model family for the same `model_scope`
+2. the last accepted evaluation baseline for the same scope and evaluation family
 
 When a candidate is promoted:
 - it becomes the new promoted baseline

@@ -43,9 +43,10 @@ This document is the base authority for:
 
 - target universe: **60 symbols**
 - initial rollout may use a smaller approved subset
-- primary decision interval: **4h**
-- higher-timeframe context: **1d**
-- first-phase refinement/timing context: **1h**
+- one shared simulation engine supports multiple `model_scope` profiles; it must not hardcode one horizon family for all scopes
+- `SWING`: `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`, swing horizon profile
+- `SCALP`: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`, scalp horizon profile
+- `AGGRESSIVE_SCALP`: `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, micro refinement where applicable, immediate-continuation / very short horizon profile
 
 ---
 
@@ -60,6 +61,8 @@ V7 uses **one simulation truth layer** across:
 
 This simulation core is a shared engine module consumed by runtime; runtime does not own simulation truth. The simulation core should be profile/adaptor-friendly to accept both V6 and V7 inputs.
 There must not be one cost model for labels and another for evaluation.
+
+Simulation profiles may be selected per `model_scope` / `trade_mode` through the unified config system. `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` may use different horizon, stop/target, fee, cost, and slippage profiles, while still using the same shared engine implementation and versioned profile semantics.
 
 ---
 
@@ -208,7 +211,8 @@ If simulation cannot be resolved:
 ## Config Surface
 
 Key config families:
-- horizon family
+- `model_scope` / `trade_mode` simulation profile selection
+- horizon family / `label_horizon_family`
 - stop family
 - target family
 - time-exit family

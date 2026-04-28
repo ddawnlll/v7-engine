@@ -58,7 +58,7 @@ The current state has the following known issues:
 
 ### Problem / Goal
 
-Produce a calibration artifact that maps baseline model outputs into safer confidence surfaces.
+Produce calibration artifacts per `model_scope` that map scope-compatible model outputs into safer confidence surfaces.
 
 ### Calibration-slice rule
 
@@ -89,6 +89,7 @@ Recalibration is required when:
 - [ ] calibration artifact exists for the baseline candidate
 - [ ] raw vs calibrated confidence remains explicit
 - [ ] stale/missing calibration can be detected
+- [ ] calibration artifact is scope-compatible and rejected on `scope_mismatch`
 
 ---
 
@@ -122,6 +123,7 @@ First implementation rule:
 - [ ] `recommended_action` is explicit
 - [ ] `NO_TRADE` is selected positively, not by accident
 - [ ] confidence-only cannot override failed economic gate
+- [ ] policy thresholds are selected per `model_scope` and no averaged scope outputs are used
 
 ---
 

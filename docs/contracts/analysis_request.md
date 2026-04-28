@@ -126,23 +126,29 @@ The atomic request remains audit-friendly and replay-friendly.
 
 ---
 
-## Interval Rule
+## Scope And Interval Rule
 
-V7 `AnalysisRequest` is **interval-aware**, but still atomic.
+V7 `AnalysisRequest` is **scope-aware** and **interval-aware**, but still atomic.
 
 That means:
 
-- the request has **one primary decision interval**
-- the request may include **additional contextual state views**
+- one request targets exactly one `model_scope`
+- the request carries `requested_trade_mode` and the selected/declared `model_scope`
+- the request has **one `primary_interval`** for that scope
+- the request may include `context_intervals` and `refinement_intervals` as contextual state views
+- the request may carry `label_horizon_family` in training/evaluation or replay context for lineage, but runtime inference must not use it as future truth
+- the request does **not** ask all scopes to compete
 - the request does **not** represent multiple independent decision intervals in one atomic object
 
-Example:
+First recommended scopes:
 
-- primary decision interval = `4h`
-- contextual higher-timeframe view = `1d`
-- first-phase refinement/timing view = `1h`
+- `SWING`: `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`, `label_horizon_family` swing horizon
+- `SCALP`: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`, `label_horizon_family` scalp horizon
+- `AGGRESSIVE_SCALP`: `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, `refinement_intervals` `1m/3m` micro context where applicable, `label_horizon_family` immediate continuation / very short horizon
 
-This keeps the request compact while still supporting V7’s multi-view state design.
+The runtime `scope_router` chooses the scope before model inference. If `requested_trade_mode` and `model_scope` are incompatible, runtime/result handling must reject the request/result or downgrade to safe no-trade behavior as a visible `scope_mismatch`.
+
+This keeps the request compact while still supporting V7’s multi-view state design within one selected scope.
 
 ---
 
@@ -250,8 +256,15 @@ This section defines what instrument and operating mode the request belongs to.
 
 ### Required fields
 - `symbol`
+- `requested_trade_mode`
+- `model_scope`
 - `primary_interval`
 - `analysis_mode`
+
+### Strongly recommended fields
+- `context_intervals`
+- `refinement_intervals`
+- `label_horizon_family` where relevant to training/evaluation/replay lineage
 
 ### Optional fields
 - `exchange`
@@ -261,8 +274,10 @@ This section defines what instrument and operating mode the request belongs to.
 - `symbol_class`
 
 ### Rules
-- `symbol` and `primary_interval` remain first-class required fields
-- the scope is descriptive only
+- `symbol`, `requested_trade_mode`, `model_scope`, and `primary_interval` remain first-class required fields
+- one request targets one model scope and does not make all scopes compete
+- `primary_interval` and `label_horizon_family` must be compatible with `model_scope`
+- the scope is descriptive/routing input only
 - these fields do not turn the request into a ranking request
 
 ---
@@ -616,6 +631,8 @@ These fields support:
 - `identity.request_id`
 - `identity.timestamp_utc`
 - `scope.symbol`
+- `scope.requested_trade_mode`
+- `scope.model_scope`
 - `scope.primary_interval`
 - `scope.analysis_mode`
 - `canonical_state`
@@ -671,7 +688,9 @@ No multiprocessing or GPU-worker details in the request contract.
 At minimum, validation should check:
 
 - required fields exist
-- `symbol`, `primary_interval`, and `analysis_mode` are valid
+- `symbol`, `requested_trade_mode`, `model_scope`, `primary_interval`, and `analysis_mode` are valid
+- `requested_trade_mode` is compatible with `model_scope`
+- `primary_interval`, `context_intervals`, `refinement_intervals`, and any `label_horizon_family` are compatible with `model_scope`
 - `timestamp_utc` is present and parseable
 - contract versions are supported
 - `canonical_state` is present and structurally valid
@@ -703,7 +722,12 @@ Fallback policy belongs in runtime policy docs, not in this contract.
   },
   "scope": {
     "symbol": "BTCUSDT",
+    "requested_trade_mode": "SWING",
+    "model_scope": "SWING",
     "primary_interval": "4h",
+    "context_intervals": ["1d"],
+    "refinement_intervals": ["1h"],
+    "label_horizon_family": "swing_horizon",
     "analysis_mode": "live",
     "exchange": "BINANCE",
     "market_type": "PERP"
@@ -791,6 +815,52 @@ Fallback policy belongs in runtime policy docs, not in this contract.
 ```
 
 This example is semantic guidance, not final transport syntax.
+
+### Scope Variant Examples
+
+These compact examples show only the scope-specific fields that differ by `model_scope`; all other request sections keep the same atomic contract shape.
+
+```json
+{
+  "scope": {
+    "symbol": "BTCUSDT",
+    "requested_trade_mode": "SCALP",
+    "model_scope": "SCALP",
+    "primary_interval": "15m",
+    "context_intervals": ["1h"],
+    "refinement_intervals": ["5m"],
+    "label_horizon_family": "scalp_horizon",
+    "analysis_mode": "live"
+  },
+  "state_views": {
+    "primary": "15m",
+    "higher_timeframe": "1h",
+    "refinement": "5m"
+  }
+}
+```
+
+```json
+{
+  "scope": {
+    "symbol": "BTCUSDT",
+    "requested_trade_mode": "AGGRESSIVE_SCALP",
+    "model_scope": "AGGRESSIVE_SCALP",
+    "primary_interval": "1m",
+    "context_intervals": ["5m", "15m"],
+    "refinement_intervals": ["1m"],
+    "label_horizon_family": "immediate_continuation_short_horizon",
+    "analysis_mode": "live"
+  },
+  "state_views": {
+    "primary": "1m",
+    "context": ["5m", "15m"],
+    "refinement": "1m"
+  }
+}
+```
+
+A request with `requested_trade_mode = "SCALP"` and `model_scope = "SWING"` is a `scope_mismatch` and must not be routed silently to either artifact family.
 
 ---
 

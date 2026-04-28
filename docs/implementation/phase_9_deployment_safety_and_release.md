@@ -61,6 +61,8 @@ The current state has the following known issues:
 
 Implement the controlled progression from replay to paper to shadow to live-eligible.
 
+Release eligibility is per `model_scope`; do not infer `SCALP` safety from `SWING` success or `AGGRESSIVE_SCALP` safety from `SCALP` success.
+
 ### Release authority rule
 
 First implementation default:
@@ -95,7 +97,8 @@ Guarantee that unsafe runtime authority can be stopped and reverted.
 
 ### Rollback bundle rule
 
-Active release authority is a **bundle**:
+Active release authority is a **scope-compatible bundle**:
+- `model_scope`
 - model artifact family
 - calibration artifact family
 - policy artifact family

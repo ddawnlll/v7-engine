@@ -148,8 +148,12 @@ If later lineage-level comparison metadata is added, identity remains the source
 - `decision_session_id` (nullable)
 
 ### Strongly recommended fields
+- `model_scope`
+- `trade_mode`
 - `model_artifact_version`
+- `artifact_id`
 - `calibration_artifact_version`
+- `calibration_artifact_id`
 - `policy_artifact_version`
 
 ### Optional fields
@@ -168,6 +172,8 @@ No structural change.
 
 ### Required fields
 - `symbol`
+- `model_scope`
+- `trade_mode`
 - `primary_interval`
 - `analysis_mode`
 
@@ -348,6 +354,8 @@ The event must preserve consistency with the originating request and result.
 ### Required consistency
 - `identity.request_id == request.identity.request_id == result.identity.request_id`
 - `scope.symbol == request.scope.symbol`
+- `scope.model_scope == request.scope.model_scope`
+- `scope.trade_mode == request.scope.requested_trade_mode` when both are present
 - `scope.primary_interval == request.scope.primary_interval`
 - `scope.analysis_mode == request.scope.analysis_mode`
 - `decision_summary.recommended_action == result.decision.recommended_action`

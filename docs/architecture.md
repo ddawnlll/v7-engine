@@ -28,11 +28,12 @@ V7 is a **centralized, simulation-native, contract-first trading engine** built 
 The system is designed around the following idea:
 
 **one market-state pipeline**
+→ **one shared training platform**
+→ **mode-scoped model families**
 → **one simulation truth layer**
-→ **one label/evaluation language**
-→ **one decision engine**
-→ **one explicit policy layer**
-→ **one runtime integration boundary**
+→ **one label/evaluation language per `model_scope`**
+→ **one explicit policy layer per selected scope**
+→ **one runtime integration boundary with a `scope_router`**
 
 The architecture is intentionally smaller and more centralized than V6.
 
@@ -85,10 +86,18 @@ The runtime and the engine interact only through explicit contracts:
 V7 uses one primary Python codebase.
 Platform differences are handled at the compute backend and deployment level, not by forking the system logic.
 
-### 5. One primary baseline model family
+### 5. One shared training platform, multiple mode-scoped model families
 
-The first V7 implementation uses **XGBoost** as the primary model family.
-This is a deliberate architectural choice for speed, simplicity, portability, and economic iteration.
+V7 uses one shared training platform, not one universal model for all trade modes.
+The first V7 implementation uses **XGBoost** as the primary algorithm family within separate mode-scoped artifact families.
+
+Canonical first scopes:
+- `SWING`
+- `SCALP`
+- `AGGRESSIVE_SCALP`
+
+Each `model_scope` owns its own dataset family, `primary_interval`, `context_intervals`, `refinement_intervals`, `label_horizon_family`, cost/slippage profile, feature schema variant where needed, calibration artifact, policy thresholds, evaluation report, and model artifact.
+Shared infrastructure remains common: raw data store, canonical state/snapshot builder, shared runtime-hosted simulation engine, training runner, artifact registry, evaluation framework, runtime router, and unified config system.
 
 ### 6. One concern, one primary module
 
@@ -222,11 +231,13 @@ This layer is responsible for acquiring and storing canonical raw market data.
 The first V7 scope assumes:
 
 * Binance raw candles
-* primary decision interval: `4h`
-* higher-timeframe context: `1d`
-* first-phase refinement/timing context: `1h`
-* one shared interval-aware, multi-view model family (no separate primary model families per interval)
-* no averaged interval outputs; a single atomic request provides one unified decision surface
+* one shared training platform, not one universal model
+* separate first model scopes:
+  * `SWING`: `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`, `label_horizon_family` swing horizon, `trade_mode` `SWING`
+  * `SCALP`: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`, `label_horizon_family` scalp horizon, `trade_mode` `SCALP`
+  * `AGGRESSIVE_SCALP`: `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, `refinement_intervals` `1m/3m` micro context where applicable, `label_horizon_family` immediate continuation / very short horizon, `trade_mode` `AGGRESSIVE_SCALP`
+* intervals may be context views inside a scope, but `primary_interval` and `label_horizon_family` must not mix across scopes
+* no averaged mode outputs; the runtime `scope_router` selects the scope before inference using `requested_trade_mode` / `model_scope`
 * 60-symbol design target
 
 The first implementation may stage rollout on fewer symbols, but the architecture must be built for 60-symbol operation from the start.
@@ -586,6 +597,10 @@ The engine owns:
 * contract fields remain versioned and visible
 * `DecisionEvent` and `TradeOutcome` remain first-class lifecycle objects
 * runtime orchestration must not become the hidden source of configuration truth
+* runtime selects a `model_scope` before inference through the `scope_router`
+* runtime must validate `requested_trade_mode` / `model_scope` compatibility and reject or downgrade `scope_mismatch` to safe no-trade behavior
+* runtime must not ask `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` artifacts to compete by averaging outputs
+* a model only decides `LONG_NOW` / `SHORT_NOW` / `NO_TRADE` inside its assigned scope; a `SWING` model must not emit `SCALP` trades, and a `SCALP` model must not emit `AGGRESSIVE_SCALP` trades
 
 ---
 

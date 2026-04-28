@@ -47,9 +47,10 @@ Raw model scores alone are not enough.
 ## First-Phase Scope
 
 First phase calibration policy:
-- **global calibration first**
+- **global-within-scope calibration first**
+- calibration is per `model_scope` / artifact family
 - no per-symbol calibration first phase
-- no per-primary-interval calibration family first phase
+- no per-primary-interval calibration family inside a scope first phase
 - symbol/regime breakdowns may be evaluated, but not automatically turned into separate calibration families
 
 This keeps the system compact and auditable.
@@ -88,6 +89,9 @@ No calibration family should be considered authoritative without explicit reliab
 
 ### 4. No hidden semantic changes
 If calibration changes the meaning of exposed confidence, that must be versioned.
+
+### 5. Scope-compatible only
+A `SWING` calibration artifact must not be reused for `SCALP`, and a `SCALP` calibration artifact must not be reused for `AGGRESSIVE_SCALP`. Calibration artifacts are scope-compatible only; `scope_mismatch` must fail validation or degrade explicitly to a safe result.
 
 ---
 
@@ -130,7 +134,7 @@ No ad hoc per-symbol calibration sprawl.
 ## Calibration Artifact Lifetime
 
 Default rule:
-- a calibration artifact is valid only for the model artifact family it was built for
+- a calibration artifact is valid only for the scope-compatible model artifact family it was built for
 - if the model artifact changes materially, a new calibration artifact is required
 - stale calibration may be used only through an explicit fallback policy and must remain visible
 

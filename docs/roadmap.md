@@ -86,8 +86,8 @@ Exit condition:
 
 ### Phase 3 — Labels and features
 Goal:
-- implement label generation
-- implement canonical-state feature generation (including 4h primary, 1d context, and 1h refinement features)
+- implement label generation by `model_scope`
+- implement canonical-state feature generation for scope defaults (`SWING` 4h/1d/1h, `SCALP` 15m/1h/5m, `AGGRESSIVE_SCALP` 1m-or-3m with 5m/15m context)
 - implement schema/version tests
 
 Exit condition:
@@ -98,7 +98,7 @@ Exit condition:
 
 ### Phase 4 — Dataset assembly
 Goal:
-- implement walk-forward dataset construction (fused multi-view rows, not separate interval universes)
+- implement walk-forward dataset construction with separate dataset families by `model_scope` and no mixing of primary clocks or label horizons
 - symbol weighting / balancing
 - lineage-preserving row export
 
@@ -110,14 +110,15 @@ Exit condition:
 
 ### Phase 5 — Model and calibration
 Goal:
-- train first XGBoost baseline (one shared interval-aware, multi-view model family)
-- produce calibration artifact
-- validate confidence surface
-- validate no-trade behavior
+- train first XGBoost model-suite baseline or staged scope baseline under one shared training framework
+- `SWING` may be implemented first, with `SCALP` and `AGGRESSIVE_SCALP` added as separate artifacts under the same framework
+- produce calibration artifacts per scope
+- validate confidence surface per scope
+- validate no-trade behavior per scope
 
 Exit condition:
-- candidate model family produces stable calibrated outputs
-- model + calibration smoke/evaluation tests pass
+- each activated `model_scope` candidate produces stable calibrated outputs
+- model + calibration smoke/evaluation tests pass per activated scope
 
 Note:
 This phase produces **candidate** artifacts, not automatically promoted artifacts.
@@ -126,7 +127,7 @@ This phase produces **candidate** artifacts, not automatically promoted artifact
 
 ### Phase 6 — Policy / portfolio / risk
 Goal:
-- implement policy surface
+- implement policy surface per `model_scope`
 - implement portfolio suppression
 - implement risk hard guards
 - keep timing extension advisory-first
@@ -154,38 +155,40 @@ Exit condition:
 
 ---
 
-### Phase 8 — Deployment safety
+### Phase 8 — Evaluation and monitoring
 Goal:
-- paper mode
-- shadow mode where required
-- deployment safety gates
-- rollback and kill switch hardening
+- candidate vs baseline comparison per `model_scope`
+- walk-forward review per `model_scope`
+- calibration review per `model_scope`
+- no-trade review per `model_scope`
+- monitoring by `model_scope`, including fallback/degraded rate, calibration drift, and harmful symbol-side cohorts
+- promotion gate per `model_scope`
+
+Exit condition:
+- promotion is evidence-based rather than subjective
+- baseline update rules are implemented per scope
+- evaluation/monitoring distinguishes activated scopes and does not infer one scope's safety from another
+
+---
+
+### Phase 9 — Deployment safety
+Goal:
+- paper mode per `model_scope`
+- shadow mode where required per `model_scope`
+- deployment safety gates per `model_scope`
+- rollback and kill switch hardening with compatible scope artifact bundles
 
 Exit condition:
 - rollout gates from `runtime/deployment_safety.md` are testable
 - rollback and kill switch tests pass
-
-### Shadow-mode rule
-Shadow mode is optional for general experimentation.
-For the **first live-eligible V7 release**, shadow should be treated as required unless release authority explicitly waives it.
-
----
-
-### Phase 9 — Evaluation and promotion discipline
-Goal:
-- candidate vs baseline comparison
-- walk-forward review
-- calibration review
-- no-trade review
-- promotion gate
-
-Exit condition:
-- promotion is evidence-based rather than subjective
-- baseline update rules are implemented
 - release gate distinguishes:
   - candidate
   - paper-eligible
   - live-eligible
+
+### Shadow-mode rule
+Shadow mode is optional for general experimentation.
+For the **first live-eligible V7 release**, shadow should be treated as required unless release authority explicitly waives it.
 
 ---
 
@@ -244,8 +247,8 @@ The first credible V7 release should be able to do all of these:
 - create/update trade outcome
 - run one simulation truth layer
 - generate labels/features/datasets
-- train one shared baseline model
-- calibrate it
+- train a scope-compatible baseline model suite or staged activated scope artifact
+- calibrate each activated scope artifact
 - apply compact policy
 - paper or replay evaluate it safely
 - monitor degradation and coverage

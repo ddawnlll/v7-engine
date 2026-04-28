@@ -43,14 +43,18 @@ That means:
 - labels are comparative
 - no-trade is first-class
 
+Label horizons are `model_scope`-specific. Swing labels, scalp labels, and aggressive-scalp immediate-continuation labels are not interchangeable. Each `model_scope` chooses its own configured simulation/horizon profile through the shared simulation engine.
+
 ---
 
 ## Inputs
 
 - simulation outputs from `pipeline/simulation.md`
 - simulation family versions
-- horizon family
+- `model_scope`
+- horizon family / `label_horizon_family`
 - cost family
+- slippage family
 - comparative family rules
 
 ---
@@ -107,6 +111,9 @@ A correct no-trade must be labelable and evaluable.
 
 ### 6. Path matters
 Clean +1R and chaotic +1R do not have to label identically if path quality rules say otherwise.
+
+### 7. Scope-specific horizons
+Do not use swing labels for `SCALP` model training, scalp labels for `SWING` model training, or either for `AGGRESSIVE_SCALP`. Aggressive scalp labels require stricter immediate-continuation / very-short-horizon and cost-aware semantics.
 
 ---
 

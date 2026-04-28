@@ -63,6 +63,8 @@ The current state has the following known issues:
 
 Implement walk-forward and comparative evaluation around the baseline candidate and later candidates.
 
+Evaluation is per `model_scope`; promotion of `SWING` does not promote `SCALP` or `AGGRESSIVE_SCALP`.
+
 ### Default promotion thresholds
 
 First implementation defaults:
@@ -97,6 +99,8 @@ These are starting config defaults, not final permanent policy.
 ### Problem / Goal
 
 Measure post-run and post-deployment lifecycle quality.
+
+Monitoring must aggregate by `model_scope`, including fallback/degraded rate, realized outcome, calibration drift, and harmful symbol-side cohorts.
 
 ### Baseline ownership rule
 

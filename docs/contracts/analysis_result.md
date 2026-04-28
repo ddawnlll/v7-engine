@@ -54,9 +54,11 @@ That means:
 
 - one `request_id`
 - one `symbol`
+- one `model_scope`
+- one `trade_mode`
 - one `primary_interval`
-- one atomic evaluated market state (which may include fused multi-view state like 1h and 1d)
-- one engine result surface (a fused unified decision, not an average of separate interval-specific results)
+- one atomic evaluated market state with contextual views inside that selected scope
+- one engine result surface produced by one scope-compatible artifact, not an average of `SWING` / `SCALP` / `AGGRESSIVE_SCALP` outputs
 
 If multiple atomic requests are analyzed together, that belongs to:
 
@@ -147,8 +149,12 @@ No change from the prior V7 result revision.
 ### Recommended fields
 - `run_id`
 - `trace_id`
+- `model_scope`
+- `trade_mode`
 - `model_artifact_version`
+- `artifact_id`
 - `calibration_artifact_version`
+- `calibration_artifact_id`
 - `policy_artifact_version`
 
 No change from the prior V7 result revision.
@@ -159,13 +165,19 @@ No change from the prior V7 result revision.
 
 ### Recommended fields
 - `symbol`
+- `model_scope`
+- `trade_mode`
 - `primary_interval`
+- `context_intervals`
+- `label_horizon_family`
 - `request_contract_version`
 - `request_kind_seen`
 
 ### Required consistency rules
 If present:
 - `request_link.symbol == request.scope.symbol`
+- `request_link.model_scope == request.scope.model_scope`
+- `request_link.trade_mode == request.scope.requested_trade_mode` when both are present
 - `request_link.primary_interval == request.scope.primary_interval`
 - `identity.request_id == request.identity.request_id`
 - `request_link.request_contract_version == request.contract.contract_version`
@@ -216,6 +228,8 @@ No change from the prior V7 result revision.
 - `LONG_NOW`
 - `SHORT_NOW`
 - `NO_TRADE`
+
+The action family is interpreted inside the selected `model_scope` only. A `SWING` result may recommend `LONG_NOW`, `SHORT_NOW`, or `NO_TRADE` for `SWING`; it must not emit a `SCALP` trade. A `scope_mismatch` or non-scope-compatible artifact must be rejected or explicitly downgraded to safe no-trade behavior.
 
 #### `direction`
 - `LONG`
@@ -520,7 +534,8 @@ At minimum, validation should check:
 
 - required sections and fields exist
 - `request_id` exists and matches an originating request
-- `symbol` and `primary_interval` in `request_link`, if present, match the originating request
+- `symbol`, `model_scope`, `trade_mode`, and `primary_interval` in `request_link`, if present, match the originating request
+- `artifact_id` and `calibration_artifact_id`, if present, are scope-compatible with `model_scope`
 - `recommended_action` and `direction` are internally consistent
 - `is_actionable` is consistent with status and degradation fields
 - required execution fields exist for actionable directional trades
@@ -547,13 +562,20 @@ At minimum, validation should check:
     "engine_name": "v7",
     "engine_version": "0.3.0",
     "timestamp_utc": "2026-04-05T12:00:01Z",
+    "model_scope": "SWING",
+    "trade_mode": "SWING",
+    "artifact_id": "v7_swing_model_candidate_001",
     "model_artifact_version": "model-0.3",
     "calibration_artifact_version": "calib-0.3",
     "policy_artifact_version": "policy-0.3"
   },
   "request_link": {
     "symbol": "BTCUSDT",
+    "model_scope": "SWING",
+    "trade_mode": "SWING",
     "primary_interval": "4h",
+    "context_intervals": ["1d"],
+    "label_horizon_family": "swing_horizon",
     "request_contract_version": "v7-0.2",
     "request_kind_seen": "live_scan"
   },
@@ -629,6 +651,60 @@ At minimum, validation should check:
 ```
 
 This example is semantic guidance, not final transport syntax.
+
+### Scope Variant Examples
+
+These compact examples show only the fields that differ by selected scope; a full result still follows the same contract shape and must include normal status, decision, scores, guidance, fallback, observability, and lineage sections.
+
+```json
+{
+  "identity": {
+    "request_id": "req_scalp_123",
+    "model_scope": "SCALP",
+    "trade_mode": "SCALP",
+    "artifact_id": "v7_scalp_model_candidate_001",
+    "calibration_artifact_id": "v7_scalp_calibration_candidate_001"
+  },
+  "request_link": {
+    "symbol": "BTCUSDT",
+    "model_scope": "SCALP",
+    "trade_mode": "SCALP",
+    "primary_interval": "15m",
+    "context_intervals": ["1h"],
+    "label_horizon_family": "scalp_horizon"
+  },
+  "decision": {
+    "recommended_action": "NO_TRADE",
+    "direction": "NONE"
+  }
+}
+```
+
+```json
+{
+  "identity": {
+    "request_id": "req_aggressive_scalp_123",
+    "model_scope": "AGGRESSIVE_SCALP",
+    "trade_mode": "AGGRESSIVE_SCALP",
+    "artifact_id": "v7_aggressive_scalp_model_candidate_001",
+    "calibration_artifact_id": "v7_aggressive_scalp_calibration_candidate_001"
+  },
+  "request_link": {
+    "symbol": "BTCUSDT",
+    "model_scope": "AGGRESSIVE_SCALP",
+    "trade_mode": "AGGRESSIVE_SCALP",
+    "primary_interval": "1m",
+    "context_intervals": ["5m", "15m"],
+    "label_horizon_family": "immediate_continuation_short_horizon"
+  },
+  "decision": {
+    "recommended_action": "SHORT_NOW",
+    "direction": "SHORT"
+  }
+}
+```
+
+These variants are not alternative competing outputs for the same atomic request. Runtime may run separate configured scans by scope, but each result is produced by one selected, scope-compatible artifact.
 
 ---
 

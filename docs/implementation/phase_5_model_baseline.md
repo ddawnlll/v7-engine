@@ -10,7 +10,7 @@
 
 ## 1. Purpose
 
-This phase trains the first shared V7 baseline model family and produces candidate artifacts.
+This phase trains the first V7 model-suite baseline or staged activated `model_scope` baseline and produces candidate artifacts.
 
 It exists to prove that the V7 dataset can support a stable, shared, multi-symbol decision model before calibration and policy logic are layered on top.
 
@@ -37,7 +37,7 @@ The prior risk would be:
 - per-symbol model fragmentation
 - no candidate artifact discipline
 
-The correct first approach is one boring shared baseline.
+The correct first approach is a boring shared training framework with separate scope-compatible artifacts. `SWING` may be implemented first; `SCALP` and `AGGRESSIVE_SCALP` may be added later as separate artifacts under the same framework. Do not train one universal model across all scopes.
 
 ---
 
@@ -58,7 +58,7 @@ The current state has the following known issues:
 
 ### Problem / Goal
 
-Train one shared first-phase XGBoost-family baseline.
+Train the first XGBoost-family baseline suite or staged `model_scope` artifact.
 
 ### Multi-output strategy
 
@@ -73,7 +73,7 @@ Do not start with three unrelated binary classifiers in the first baseline.
 ### Implementation Tasks
 
 - [ ] Implement baseline trainer entrypoint
-- [ ] Support one shared interval-aware, multi-view model family (4h + 1d + 1h fused, not averaged independently)
+- [ ] Support separate `model_scope` artifacts under one shared training framework (`SWING` 4h+1d+1h first if staged; `SCALP` and `AGGRESSIVE_SCALP` later as separate artifacts)
 - [ ] Support multiclass action training
 - [ ] Support expected-R regression training
 - [ ] Emit stable model artifact metadata
@@ -278,4 +278,4 @@ The ownership rule is:
 ### 13.2 Key Takeaway
 
 Phase 5 is not about proving V7 is finished.
-It is about proving the first shared model family can exist as a serious candidate.
+It is about proving the first scope-compatible model artifact or model-suite baseline can exist as a serious candidate under the shared training framework.

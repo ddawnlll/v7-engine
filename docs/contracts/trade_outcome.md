@@ -232,8 +232,12 @@ This section preserves the causal lineage from decision to outcome.
 ### Strongly recommended fields
 - `analysis_batch_id`
 - `decision_session_id`
+- `model_scope`
+- `trade_mode`
 - `model_artifact_version`
+- `artifact_id`
 - `calibration_artifact_version`
+- `calibration_artifact_id`
 - `policy_artifact_version`
 - `cost_model_version`
 - `fee_model_version`
@@ -268,11 +272,13 @@ This section answers:
 - what kind of outcome is this?
 - did it come from live execution, paper execution, replay, or labeling?
 - which engine and request family produced the original decision?
+- which `model_scope` / `trade_mode` and scope-compatible artifacts produced it?
 - under which simulation and cost semantics was it resolved?
 - in which batch/session/run grouping did it occur?
 
 ### Rules
 - lineage must be explicit
+- `model_scope`, artifact, calibration, and policy lineage must remain scope-compatible when present
 - hidden generation assumptions are not allowed
 - `evaluation_run_id` and `simulation_run_id` are optional, but when present they must remain stable and searchable
 

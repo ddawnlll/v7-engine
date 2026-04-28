@@ -58,6 +58,9 @@ Examples:
 - missing calibration artifact
 - stale policy artifact
 - unavailable portfolio context family
+- missing `model_scope` artifact
+- incompatible or non-scope-compatible artifact
+- `scope_mismatch` between request, artifact, calibration, or policy
 
 ### 3. Runtime context degradation
 Examples:
@@ -128,6 +131,9 @@ Allowed:
 
 Not allowed:
 - silently forcing directional action from incomplete surfaces
+- silently falling back from one `model_scope` to another without explicit configured authority and visible safe behavior
+
+A missing or incompatible `model_scope` artifact is an explicit fallback/failure condition. If configured fallback exists, it must be visible and safe, usually `NO_TRADE` or `SKIP`.
 
 ### Runtime side
 Allowed:

@@ -130,9 +130,13 @@ Produce walk-forward training rows with preserved lineage and symbol balancing.
 ```python
 row_id
 symbol
-primary_interval (e.g., 4h)
-htf_context_interval (e.g., 1d)
-refinement_interval (e.g., 1h)
+model_scope (SWING | SCALP | AGGRESSIVE_SCALP)
+primary_interval (e.g., 4h for SWING, 15m for SCALP, 1m/3m for AGGRESSIVE_SCALP)
+context_intervals
+refinement_intervals
+label_horizon_family
+cost_model
+slippage_model
 state_timestamp_utc
 dataset_family_version
 ```
@@ -140,7 +144,7 @@ dataset_family_version
 **Rationale:**
 - rows must be traceable
 - dataset family cannot be anonymous
-- single unified multi-view rows, no separate primary 1h and 4h universes
+- scope-specific multi-view rows; no mixing of `model_scope`, primary clock, or label horizon across supervised datasets
 
 #### 7.2 Split and weighting
 

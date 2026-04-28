@@ -14,10 +14,10 @@ It answers:
 
 ## In Scope
 
-- first-phase model family choice
-- artifact outputs
+- first-phase model algorithm choice
+- mode-scoped artifact outputs
 - training target family
-- shared-model policy
+- shared training infrastructure policy
 - model lineage requirements
 - overfitting control
 - publishing flow
@@ -36,22 +36,25 @@ It answers:
 
 ## Core Decision
 
-First-phase V7 is **XGBoost-first**.
+First-phase V7 is **XGBoost-first** within separate `model_scope` artifact families.
 
 That means:
 - start with compact, explicit, tabular-friendly learning
 - do not begin with large deep architectures
 - do not create per-symbol model families in first phase
+- use one shared training infrastructure, not one universal model across swing/scalp/aggressive-scalp rows
+- produce scope-compatible artifacts such as `v7_swing_model`, `v7_scalp_model`, and `v7_aggressive_scalp_model`
 
 ---
 
 ## First-Phase Scope
 
-- one shared interval-aware multi-view model family (not separate per-interval primary model families)
-- primary decision interval: **4h**
-- higher-timeframe context: **1d**
-- first-phase refinement/timing context: **1h**
-- 1h, 4h, and 1d are fused inside one model input or one shared model family, not treated as three independently averaged predictors
+- one shared training platform
+- separate mode-scoped model families/artifacts:
+  - `v7_swing_model`: `model_scope` `SWING`, `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`, swing `label_horizon_family`
+  - `v7_scalp_model`: `model_scope` `SCALP`, `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`, scalp `label_horizon_family`
+  - `v7_aggressive_scalp_model`: `model_scope` `AGGRESSIVE_SCALP`, `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, micro refinement where applicable, immediate-continuation / very short `label_horizon_family`
+- interval views are fused inside the selected scope, not averaged across independent scope outputs
 - target universe up to **60 symbols**
 
 ---
@@ -76,15 +79,17 @@ The trained model family should expose a stable artifact surface for:
 
 The external contract is the result surface, not internal training details.
 
+Each scope artifact may internally model `LONG_NOW`, `SHORT_NOW`, and `NO_TRADE`. Direction heads/classes live inside each `model_scope`. Short-specific calibration or thresholding may exist inside a scope if evaluation evidence supports it and it is configured through the unified config system.
+
 ---
 
 ## Rules
 
-### 1. Shared model first
-Do not create one model per symbol in first phase.
+### 1. Shared infrastructure first
+Do not create one model per symbol in first phase. Use the shared training runner, artifact registry, evaluation framework, and unified config system across all scopes.
 
-### 2. Shared decision interval first
-Do not create a separate primary model family per interval in first phase.
+### 2. Scope separation first
+Do not train one universal model across `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` rows. Do not mix primary clocks or label horizons across scopes. The first architectural separation is mode/scope, not direction.
 
 ### 3. Stable artifact lineage
 Every trained artifact must be versioned and traceable.
@@ -203,6 +208,6 @@ Minimum model tests:
 
 ## Final Position
 
-The first V7 model should be boring, shared, and measurable.
+The first V7 model suite should be boring, scope-compatible, and measurable.
 The job of phase one is not architecture novelty.
 It is reliable economic decision surfaces.
