@@ -1,0 +1,80 @@
+{
+  "contractVersion": "2.5.1",
+  "executionBackend": "postgres",
+  "project": {
+    "name": "v7-alphaforge-xgb",
+    "rootPath": ".",
+    "type": "repo",
+    "tags": ["v7", "alpha", "xgboost", "p0.5", "lib"]
+  },
+  "planExecution": {
+    "phase": "P0.5",
+    "title": "Shared Lib Foundation",
+    "mode": "autonomous",
+    "maxParallelWorkspaces": 4,
+    "scheduling": {
+      "continuous": true,
+      "slotCount": 4,
+      "priorityStrategy": "critical_path_first"
+    },
+    "stateBackend": "postgres",
+    "jsonFallbackEnabled": true,
+    "autoCommit": true,
+    "autoPush": false
+  },
+  "workspaces": [
+    {
+      "id": "ws_lib_skeleton",
+      "title": "lib/ skeleton",
+      "description": "Create lib/ with market_data/, indicators/, costs/, time/ subpackages",
+      "criticalPath": true,
+      "dependsOn": [],
+      "timeoutMinutes": 30,
+      "hardStops": ["lib_import_boundary_violation"]
+    },
+    {
+      "id": "ws_binance_service",
+      "title": "Shared Binance Market Data Service",
+      "description": "Implement client, klines service, funding service, market_data_service, contracts, quality in lib/market_data/",
+      "criticalPath": true,
+      "dependsOn": ["ws_lib_skeleton"],
+      "timeoutMinutes": 120,
+      "hardStops": ["direct_binance_call_outside_lib"]
+    },
+    {
+      "id": "ws_indicators",
+      "title": "Indicators (ATR, returns, vol, rolling)",
+      "description": "Pure math functions in lib/indicators/",
+      "criticalPath": false,
+      "dependsOn": ["ws_lib_skeleton"],
+      "timeoutMinutes": 60,
+      "hardStops": []
+    },
+    {
+      "id": "ws_costs_time",
+      "title": "Costs + Time utilities",
+      "description": "Fee/slippage in lib/costs/, interval/fold helpers in lib/time/",
+      "criticalPath": false,
+      "dependsOn": ["ws_lib_skeleton"],
+      "timeoutMinutes": 60,
+      "hardStops": []
+    },
+    {
+      "id": "ws_tests",
+      "title": "Import boundary + primitive tests",
+      "description": "Test that lib/ does not import v7/alphaforge, and primitives are correct",
+      "criticalPath": false,
+      "dependsOn": ["ws_binance_service", "ws_indicators", "ws_costs_time"],
+      "timeoutMinutes": 60,
+      "hardStops": ["lib_import_boundary_violation", "shared_everything_mistake"]
+    }
+  ],
+  "validation": {
+    "requiredChecks": [
+      "test_lib_import_boundary",
+      "test_binance_client_in_lib_not_v7",
+      "test_atr_correctness",
+      "test_fold_generator_temporal_correctness"
+    ]
+  }
+}

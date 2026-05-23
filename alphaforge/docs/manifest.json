@@ -1,22 +1,35 @@
 {
   "model_name": "V7 AlphaForge XGB",
   "model_slug": "v7_alphaforge_xgb",
+  "package_version": "v1.2_shared_lib_authority",
+  "previous_version": "v1.1_review_hardened",
+  "added_phase": "P0.5 Shared Lib Foundation",
   "generated": "2026-05-23",
-  "phase_count": 10,
+  "phase_count": 11,
   "phases": [
     {
       "id": "P0",
       "title": "Repo Alignment & Alpha Foundations",
       "depends_on": [],
-      "next": "P1",
+      "next": "P0.5",
       "contract": "execution_contracts/P0__contract.json",
       "plan": "phase_plans/P0__repo_alignment_and_alpha_foundations.md"
+    },
+    {
+      "id": "P0.5",
+      "title": "Shared Lib Foundation",
+      "depends_on": [
+        "P0"
+      ],
+      "next": "P1",
+      "contract": "execution_contracts/P0_5__contract.json",
+      "plan": "../../lib/docs/phase_plans/P0_5__shared_lib_foundation.md"
     },
     {
       "id": "P1",
       "title": "Contracts & Alpha Data Contract",
       "depends_on": [
-        "P0"
+        "P0.5"
       ],
       "next": "P2",
       "contract": "execution_contracts/P1__contract.json",
@@ -26,9 +39,10 @@
       "id": "P2",
       "title": "Runtime Simulation Adapter & R-Label Engine",
       "depends_on": [
-        "P1"
+        "P1",
+        "P0.5"
       ],
-      "next": "P3",
+      "next": "P4",
       "contract": "execution_contracts/P2__contract.json",
       "plan": "phase_plans/P2__runtime_simulation_adapter_and_r-label_engine.md"
     },
@@ -36,7 +50,8 @@
       "id": "P3",
       "title": "Multi-Timeframe Feature Engine & Unsupervised Context",
       "depends_on": [
-        "P1"
+        "P1",
+        "P0.5"
       ],
       "next": "P4",
       "contract": "execution_contracts/P3__contract.json",
@@ -47,7 +62,8 @@
       "title": "Dataset Assembly, Walk-Forward Splits & Label QA",
       "depends_on": [
         "P2",
-        "P3"
+        "P3",
+        "P0.5"
       ],
       "next": "P5",
       "contract": "execution_contracts/P4__contract.json",
@@ -77,7 +93,8 @@
       "id": "P7",
       "title": "V7 Policy, Portfolio & Risk Integration",
       "depends_on": [
-        "P6"
+        "P6",
+        "P0.5"
       ],
       "next": "P8",
       "contract": "execution_contracts/P7__contract.json",
@@ -106,26 +123,39 @@
       "plan": "phase_plans/P9__deployment,_monitoring,_drift,_promotion_and_rollback.md"
     }
   ],
-  "package_version": "v1.1_review_hardened",
-  "review_hardening": {
-    "fold_scoped_anomaly_fitting": true,
-    "regime_override_visibility": true,
-    "symbol_encoding_future_proofing": true,
-    "scalp_interval_authority": "SCALP primary=1h/context=4h/refinement=15m"
+  "lib_scope": {
+    "principle": "Only primitives with nearly identical usage between v7 and alphaforge",
+    "includes": [
+      "lib/market_data/ (Binance client, klines, funding, contracts, quality)",
+      "lib/indicators/ (ATR, returns, volatility, rolling)",
+      "lib/costs/ (fees, slippage)",
+      "lib/time/ (intervals, folds)"
+    ],
+    "excludes": [
+      "Regime enums/detectors (different semantics per system)",
+      "R-multiple computation (V7=ATR truth, research=fixed%)",
+      "IO utilities (different per system)",
+      "Generic serialization (premature abstraction)",
+      "Cache abstractions (different per system)",
+      "Adapters (owned by v7/ and alphaforge/)"
+    ]
   },
   "files": [
     "ai_summary__v7_alphaforge_xgb.md",
     "hardening_review_fixes.md",
+    "changelog_v1_1_to_v1_2.md",
     "model_name_recommendation.md",
     "phase_index.md",
     "phase_plans_combined.md",
     "README.md",
     "source_alignment.md",
+    "../../lib/docs/README.md",
+    "../../lib/docs/market_data.md",
     "checklists/execution_checklist.md",
     "configs/v7_alpha_defaults.json",
     "diagrams/architecture_mermaid.md",
-    "diagrams/label_generation_mermaid.md",
     "execution_contracts/P0__contract.json",
+    "execution_contracts/P0_5__contract.json",
     "execution_contracts/P1__contract.json",
     "execution_contracts/P2__contract.json",
     "execution_contracts/P3__contract.json",
@@ -137,6 +167,7 @@
     "execution_contracts/P9__contract.json",
     "manifest.json",
     "phase_plans/P0__repo_alignment_and_alpha_foundations.md",
+    "../../lib/docs/phase_plans/P0_5__shared_lib_foundation.md",
     "phase_plans/P1__contracts_and_alpha_data_contract.md",
     "phase_plans/P2__runtime_simulation_adapter_and_r-label_engine.md",
     "phase_plans/P3__multi-timeframe_feature_engine_and_unsupervised_context.md",
@@ -148,6 +179,7 @@
     "phase_plans/P9__deployment,_monitoring,_drift,_promotion_and_rollback.md",
     "schemas/feature_schema_v1.json",
     "schemas/label_schema_v1.json",
-    "schemas/prediction_schema_v1.json"
+    "schemas/prediction_schema_v1.json",
+    "../../lib/docs/schemas/market_data_result_schema_v1.json"
   ]
 }

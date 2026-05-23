@@ -3,24 +3,41 @@
 ```mermaid
 flowchart TD
     A[20 Symbol Universe] --> B[Multi-Timeframe Klines]
-    B --> C[Canonical State Builder]
-    C --> D[Shared Feature Engine]
-    D --> E[Unsupervised Context Layer]
-    D --> F[V7 Simulation Label Adapter]
-    E --> G[Mode-Specific Datasets]
-    F --> G
-    G --> H1[SWING XGBoost Bundle]
-    G --> H2[SCALP XGBoost Bundle]
-    G --> H3[AGGRESSIVE XGBoost Bundle]
-    H1 --> I[Calibration & Reliability]
-    H2 --> I
-    H3 --> I
-    I --> J[Alpha Score Builder]
-    J --> K[V7 Decision Engine]
-    K --> L[Policy / Portfolio / Risk]
-    L --> M[Execution or NO_TRADE]
-```
+    
+    subgraph LIB["lib/ — Shared Primitives"]
+        B --> MDS[market_data/binance\nBinanceMarketDataService]
+        MDS --> KS[Standard Kline Schema\nQuality Reports]
+        IND[indicators\nATR, Returns, Volatility]
+        COST[costs\nFees, Slippage]
+        TIME[time\nIntervals, Folds]
+    end
 
+    subgraph V7["v7/ — Semantic Authority"]
+        KS --> CS[Canonical State Builder]
+        CS --> FEAT[Feature Engine]
+        IND --> FEAT
+        COST --> SIM[Simulation + Labels]
+        TIME --> DS[Dataset Assembly]
+        FEAT --> DS
+        SIM --> DS
+        
+        DS --> MODELS[SWING / SCALP / AGGRESSIVE\nXGBoost Bundles]
+        MODELS --> CAL[Calibration]
+        CAL --> POLICY[Policy Gates]
+        POLICY --> EXEC[Execution or NO_TRADE]
+    end
+
+    subgraph AF["alphaforge/ — Training Authority"]
+        KS --> AF_FEAT[Features]
+        IND --> AF_FEAT
+        COST --> AF_LAB[Labels]
+        TIME --> AF_DS[Dataset]
+        AF_FEAT --> AF_DS
+        AF_LAB --> AF_DS
+        AF_DS --> AF_MODEL[XGBoost Training]
+        AF_MODEL --> AF_EVAL[Evaluation]
+    end
+```
 
 ## Review-hardened anomaly lineage
 

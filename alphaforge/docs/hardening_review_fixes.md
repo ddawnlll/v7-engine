@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This addendum closes the four implementation-discipline gaps identified during architecture review. These are not optional improvements. They are hard invariants for the executable phase plans, schemas, config defaults, and Pi contracts.
+This addendum closes the implementation-discipline gaps identified during architecture review. These are not optional improvements. They are hard invariants for the executable phase plans, schemas, config defaults, and Pi contracts.
 
 ## H1 — Fold-Scoped Anomaly Fitting
 
@@ -56,14 +56,44 @@ Rules:
 - Simulation profile, label horizon family, dataset assembly, feature builder, and inference router must resolve intervals from central config only.
 - Hardcoded interval literals in code are forbidden outside tests and config fixtures.
 
+## H5 — Shared Lib Foundation (Focused)
+
+A minimal `lib/` directory exists for primitives that are **nearly identical usage** between `v7/` and `alphaforge/`. 
+
+### Scope
+
+**In lib/:**
+- `lib/market_data/binance/` — Binance HTTP client, klines/funding service, standard schema
+- `lib/indicators/` — ATR, returns, volatility, rolling window (pure math)
+- `lib/costs/` — Fee %, slippage estimation (basic formulas)
+- `lib/time/` — Interval conversion, fold generation (temporal logic)
+
+**Not in lib/:**
+- Regime enums/detectors — V7 uses for policy, alphaforge uses for features. Different semantics.
+- R-multiple — V7 = ATR+mode truth; research = fixed%. Different things.
+- IO utilities, generic serialization, cache abstractions — each system differs.
+- Adapters — owned by v7/ and alphaforge/ respectively.
+
+### Rules
+
+- `lib/` is NOT V7 and NOT AlphaForge. Only shared primitives.
+- Moving a primitive to `lib/` does NOT move V7 semantic authority to `lib/`.
+- `lib/` must NOT import `v7.*` or `alphaforge.*`.
+- Direct Binance API calls from `v7/` or `alphaforge/` are FORBIDDEN.
+- No V7 simulation truth, policy logic, or alphaforge fold-fitting in `lib/`.
+- V7 regime influence must be visible in `AnalysisResult.deterministic_interaction`.
+- Semantic changes to shared primitives affecting labels/evaluation must bump version lineage.
+
 ## Implementation Status
 
 These fixes are incorporated into:
 
 - `ai_summary__v7_alphaforge_xgb.md`
+- `lib/docs/README.md`
+- `lib/docs/market_data.md`
 - `configs/v7_alpha_defaults.json`
-- `schemas/feature_schema_v1.json`
-- `schemas/prediction_schema_v1.json`
-- `phase_plans/P0` through `P9` where relevant
-- `execution_contracts/P0` through `P9` safety hard stops and workspace criteria
+- `lib/docs/schemas/market_data_result_schema_v1.json`
+- `phase_plans/P0_5__shared_lib_foundation.md`
+- `execution_contracts/P0_5__contract.json`
 - `checklists/execution_checklist.md`
+- `manifest.json`

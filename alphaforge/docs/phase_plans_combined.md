@@ -2,11 +2,10 @@
 
 Generated from individual phase plan files.
 
-
-
 ---
 
-<!-- SOURCE: P0__repo_alignment_and_alpha_foundations.md -->
+
+<!-- SOURCE: phase_plans/P0__repo_alignment_and_alpha_foundations.md -->
 
 # P0 — Repo Alignment & Alpha Foundations
 
@@ -1128,10 +1127,94 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 * [ ] SCALP primary interval is `1h`; `15m` is SCALP refinement and AGGRESSIVE_SCALP primary only.
 * [ ] Config includes anomaly fit scope, symbol encoding family, and regime visibility settings.
 
+---
+
+
+<!-- SOURCE: phase_plans/P0_5__shared_lib_foundation.md -->
+
+# P0.5 — Shared Lib Foundation (Focused)
+
+# Part 1 — Phase Plan
+
+## 0. TL;DR
+
+**Phase:** `P0.5`
+**One-line goal:** Create a minimal `lib/` with only the primitives that are **nearly identical usage** between v7 and alphaforge: Binance data fetching, pure math indicators, basic cost formulas, and time utilities.
+**Scope rule:** If a primitive is used differently by v7 vs alphaforge, it stays in its owning package. `lib/` is curated, not comprehensive.
+**Blast radius:** `lib/`, `lib/docs/`, existing data utilities that should be migrated.
+**Done when:** All acceptance criteria pass.
 
 ---
 
-<!-- SOURCE: P1__contracts_and_alpha_data_contract.md -->
+## 1. Header
+
+| Field | Value |
+|---|---|
+| Phase | `P0.5` |
+| Title | `Shared Lib Foundation (Focused)` |
+| Status | `Planned` |
+| Last updated | `2026-05-23` |
+| Primary focus | `Minimal lib/ for truly shared primitives only` |
+| Product-code changes | `Allowed` |
+
+---
+
+## 2. What Goes in lib/
+
+| Module | Contents | Why Shared |
+|---|---|---|
+| `market_data/binance/` | Binance HTTP client, klines service, funding service, market data service | Raw data fetching is identical |
+| `market_data/contracts.py` | KlineRecord, MarketDataResult, DataQualityReport | Standard schema shared by both systems |
+| `market_data/quality.py` | Gap/duplicate detection | Same quality rules |
+| `indicators/atr.py` | `compute_atr()` | Pure math, identical |
+| `indicators/returns.py` | Log/simple returns | Pure math, identical |
+| `indicators/volatility.py` | Rolling std, range-based vol | Pure math, identical |
+| `indicators/rolling.py` | Generic rolling window | Utility, identical |
+| `costs/fees.py` | Maker/taker fee estimation | Basic formulas, identical |
+| `costs/slippage.py` | `get_slippage()` | Basic estimation, identical |
+| `time/intervals.py` | Interval string ↔ minutes | Utility, identical |
+| `time/folds.py` | `generate_folds()` | Temporal walk-forward, identical |
+
+## 3. What Does NOT Go in lib/
+
+| Thing | Reason |
+|---|---|
+| Regime enums/detectors | V7 uses for policy; alphaforge uses for features. Different semantics. |
+| R-multiple | V7 = ATR+mode truth; research = fixed%. Not the same thing. |
+| IO utilities | Each system writes output differently. |
+| Generic serialization | Premature. Add when needed. |
+| Cache abstractions | Each system caches differently. |
+| Adapters | Owned by v7 and alphaforge respectively. |
+
+## 4. Dependency
+
+| Phase | Depends On |
+|---|---|
+| P0.5 | P0 |
+
+Downstream phases that use lib primitives (P1's data contracts, P2's simulation, P3's features, P4's dataset) now depend on P0.5.
+
+## 5. Acceptance Criteria
+
+- `lib/` skeleton exists with only the modules listed above
+- Binance client does NOT live in v7 or alphaforge — it's in `lib/market_data/binance/`
+- Pure math functions (ATR, returns, vol) live in `lib/indicators/` not in any system package
+- Fee/slippage estimation lives in `lib/costs/` not in simulation or labels
+- Fold generation lives in `lib/time/` not in dataset assembly
+- No regime, risk, IO, or adapter logic lives in lib/
+- Import-boundary test passes: `lib/` must NOT import v7 or alphaforge
+- Docs clearly state what's shared and what's not (this file + lib/README.md)
+
+## 6. Hard Stops
+
+- `direct_binance_call_outside_lib` — Binance API call from v7/ or alphaforge/
+- `lib_import_boundary_violation` — lib/ imports v7 or alphaforge
+- `shared_everything_mistake` — putting regime, risk, IO, or adapters in lib/
+
+---
+
+
+<!-- SOURCE: phase_plans/P1__contracts_and_alpha_data_contract.md -->
 
 # P1 — Contracts & Alpha Data Contract
 
@@ -2244,10 +2327,10 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 * [ ] Decision lifecycle contract supports regime reason codes and constraint levels.
 * [ ] Symbol encoding family and symbol universe version are explicit schema fields.
 
-
 ---
 
-<!-- SOURCE: P2__runtime_simulation_adapter_and_r-label_engine.md -->
+
+<!-- SOURCE: phase_plans/P2__runtime_simulation_adapter_and_r-label_engine.md -->
 
 # P2 — Runtime Simulation Adapter & R-Label Engine
 
@@ -3359,10 +3442,10 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 * [ ] Label horizon family uses mode config rather than hardcoded interval literals.
 * [ ] SCALP simulation profile asserts primary=1h/context=4h/refinement=15m.
 
-
 ---
 
-<!-- SOURCE: P3__multi-timeframe_feature_engine_and_unsupervised_context.md -->
+
+<!-- SOURCE: phase_plans/P3__multi-timeframe_feature_engine_and_unsupervised_context.md -->
 
 # P3 — Multi-Timeframe Feature Engine & Unsupervised Context
 
@@ -4496,10 +4579,10 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 * [ ] Symbol one-hot encoding is implemented as `symbol_one_hot_v1`, explicitly marked as an MVP encoding family.
 * [ ] SCALP feature builder reads primary=1h/context=4h/refinement=15m from config.
 
-
 ---
 
-<!-- SOURCE: P4__dataset_assembly,_walk-forward_splits_and_label_qa.md -->
+
+<!-- SOURCE: phase_plans/P4__dataset_assembly,_walk-forward_splits_and_label_qa.md -->
 
 # P4 — Dataset Assembly, Walk-Forward Splits & Label QA
 
@@ -5613,10 +5696,10 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 * [ ] Dataset QA reports anomaly lineage coverage and leakage-check failures.
 * [ ] Mode datasets remain separate; SCALP dataset uses config-resolved primary=1h.
 
-
 ---
 
-<!-- SOURCE: P5__xgboost_hybrid_model_training.md -->
+
+<!-- SOURCE: phase_plans/P5__xgboost_hybrid_model_training.md -->
 
 # P5 — XGBoost Hybrid Model Training
 
@@ -6748,10 +6831,10 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 * [ ] Symbol encoding family is recorded in artifact metadata.
 * [ ] Expanding beyond the approved 20-symbol universe requires schema or encoding-family version bump and retraining.
 
-
 ---
 
-<!-- SOURCE: P6__calibration,_reliability_and_alpha_score_builder.md -->
+
+<!-- SOURCE: phase_plans/P6__calibration,_reliability_and_alpha_score_builder.md -->
 
 # P6 — Calibration, Reliability & Alpha Score Builder
 
@@ -7863,10 +7946,10 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 * [ ] Alpha score builder does not hide regime threshold multipliers.
 * [ ] Calibration artifacts remain per mode and compatible with the feature/anomaly lineage used during training.
 
-
 ---
 
-<!-- SOURCE: P7__v7_policy,_portfolio_and_risk_integration.md -->
+
+<!-- SOURCE: phase_plans/P7__v7_policy,_portfolio_and_risk_integration.md -->
 
 # P7 — V7 Policy, Portfolio & Risk Integration
 
@@ -8999,10 +9082,10 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 * [ ] Any direction block is visible as `regime_blocked_direction`.
 * [ ] Silent deterministic vetoes are forbidden.
 
-
 ---
 
-<!-- SOURCE: P8__evaluation,_backtest,_paper_and_shadow_validation.md -->
+
+<!-- SOURCE: phase_plans/P8__evaluation,_backtest,_paper_and_shadow_validation.md -->
 
 # P8 — Evaluation, Backtest, Paper & Shadow Validation
 
@@ -10129,10 +10212,10 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 * [ ] Evaluation reports regime-forced no-trade share vs model-preferred no-trade share.
 * [ ] Interval consistency test verifies SCALP primary=1h throughout simulation, labels, datasets, and inference.
 
-
 ---
 
-<!-- SOURCE: P9__deployment,_monitoring,_drift,_promotion_and_rollback.md -->
+
+<!-- SOURCE: phase_plans/P9__deployment,_monitoring,_drift,_promotion_and_rollback.md -->
 
 # P9 — Deployment, Monitoring, Drift, Promotion & Rollback
 
@@ -11268,3 +11351,6 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 * [ ] Monitoring exposes regime-forced vs model-preferred no-trade rates.
 * [ ] Symbol universe changes are blocked unless feature schema or encoding-family version changes are approved.
 * [ ] Promotion gate fails if any interval mismatch or anomaly leakage check fails.
+
+---
+

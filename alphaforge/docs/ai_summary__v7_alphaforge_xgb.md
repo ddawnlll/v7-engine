@@ -7,7 +7,9 @@ It is written for LLM implementation agents, Pi autonomous execution, and engine
 It consolidates the conversation decisions, the V7 architecture rules, the V7 mode-specific simulation semantics, and the v2.5.1 implementation-plan execution format.
 
 **Generated:** 2026-05-23
-**Review hardening version:** `v1.1_review_hardened`
+**Package version:** `v1.2_shared_lib_authority`
+**Review hardening version:** `v1.2_shared_lib_authority`
+**Previous version:** `v1.1_review_hardened`
 **Recommended model/system name:** `V7 AlphaForge XGB`
 **Artifact slug:** `v7_alphaforge_xgb`
 **Model family:** XGBoost-first hybrid supervised alpha model
@@ -108,6 +110,53 @@ V7 R-Alpha XGB        # most explicit about R-multiple training
 15. Regime and deterministic policy influence must be visible in AnalysisResult, DecisionEvent, monitoring, and review surfaces.
 16. SCALP interval authority is config-driven: primary=1h, context=4h, refinement=15m. Any SCALP primary=15m mention is invalid unless it refers to AGGRESSIVE_SCALP or SCALP refinement.
 17. Symbol one-hot encoding is an MVP constraint, not a permanent design; encoding-family changes must be feature-layer swaps with explicit version bumps.
+
+---
+
+## 4A. SHARED LIB ARCHITECTURE (FOCUSED)
+
+A minimal `lib/` directory exists for primitives that are **nearly identical usage** between `v7/` and `alphaforge/`. Nothing goes here unless it's genuinely reusable as-is.
+
+### 4A.1 What's in lib/
+
+| Module | Contents | Why Shared |
+|---|---|---|
+| `lib/market_data/binance/` | Binance HTTP client, klines/funding service | Raw data fetching is identical |
+| `lib/market_data/contracts.py` | KlineRecord, MarketDataResult | Standard schema |
+| `lib/market_data/quality.py` | Gap/duplicate detection | Same quality logic |
+| `lib/indicators/` | ATR, returns, volatility, rolling window | Pure math, identical |
+| `lib/costs/` | Fee %, slippage estimation | Basic formulas, identical |
+| `lib/time/` | Interval conversion, fold generation | Temporal logic, identical |
+
+### 4A.2 What's NOT in lib/
+
+| Thing | Reason |
+|---|---|
+| Regime enums/detectors | V7 uses for policy; alphaforge uses for features. Different semantics. |
+| R-multiple | V7 = ATR+mode truth; research = fixed%. Not the same. |
+| IO utilities | Each system writes output differently. |
+| Generic serialization | Premature abstraction. |
+| Cache abstractions | Each system caches differently. |
+| Adapters | Owned by v7 and alphaforge respectively. |
+
+### 4A.3 Key Invariants
+
+- `lib/` is NOT V7. `lib/` is NOT AlphaForge. Only shared primitives.
+- Moving a primitive to `lib/` does NOT move V7 semantic authority to `lib/`.
+- `lib/` must NOT import `v7.*` or `alphaforge.*`.
+- Direct Binance API calls from `v7/` or `alphaforge/` are FORBIDDEN.
+- No V7 simulation truth, policy logic, or alphaforge fold-fitting in `lib/`.
+- Fixed-percent R helper is research-only, NOT V7 truth.
+
+### 4A.4 Shared Lib Extraction Phase
+
+Shared lib extraction is **P0.5** and must precede P1.
+
+### 4A.5 Hard Stops
+
+- `direct_binance_call_outside_lib`
+- `lib_import_boundary_violation`
+- `shared_everything_mistake` (putting regime/risk/IO/adapters in lib/)
 
 ---
 

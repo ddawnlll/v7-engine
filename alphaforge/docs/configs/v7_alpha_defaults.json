@@ -1,24 +1,16 @@
 {
   "model_name": "V7 AlphaForge XGB",
   "model_slug": "v7_alphaforge_xgb",
+  "package_version": "v1.2_shared_lib_authority",
   "universe_size_mvp": 20,
   "modes": {
     "SWING": {
       "primary_interval": "4h",
       "context_interval": "1d",
       "refinement_interval": "1h",
-      "max_holding_bars": [
-        12,
-        30
-      ],
-      "stop_atr": [
-        2.0,
-        2.5
-      ],
-      "target_atr": [
-        2.0,
-        3.0
-      ],
+      "max_holding_bars": [12, 30],
+      "stop_atr": [2.0, 2.5],
+      "target_atr": [2.0, 3.0],
       "ambiguity_gap_R": 0.2,
       "min_action_edge_R": 0.35,
       "no_trade_tendency": "LOW"
@@ -27,18 +19,9 @@
       "primary_interval": "1h",
       "context_interval": "4h",
       "refinement_interval": "15m",
-      "max_holding_bars": [
-        3,
-        12
-      ],
-      "stop_atr": [
-        1.5,
-        2.0
-      ],
-      "target_atr": [
-        1.5,
-        2.0
-      ],
+      "max_holding_bars": [3, 12],
+      "stop_atr": [1.5, 2.0],
+      "target_atr": [1.5, 2.0],
       "ambiguity_gap_R": 0.1,
       "min_action_edge_R": 0.15,
       "no_trade_tendency": "MEDIUM"
@@ -47,18 +30,9 @@
       "primary_interval": "15m",
       "context_interval": "1h",
       "refinement_interval": "5m",
-      "max_holding_bars": [
-        1,
-        5
-      ],
-      "stop_atr": [
-        1.0,
-        1.5
-      ],
-      "target_atr": [
-        1.0,
-        1.5
-      ],
+      "max_holding_bars": [1, 5],
+      "stop_atr": [1.0, 1.5],
+      "target_atr": [1.0, 1.5],
       "ambiguity_gap_R": 0.05,
       "min_action_edge_R": 0.08,
       "no_trade_tendency": "HIGH"
@@ -81,7 +55,7 @@
     "kill_switch_required": true,
     "rollback_bundle_scope": "per_mode"
   },
-  "review_hardening_version": "v1.1_review_hardened",
+  "review_hardening_version": "v1.2_shared_lib_authority",
   "interval_authority": {
     "resolve_from_config_only": true,
     "hardcoded_intervals_forbidden_outside_tests": true,
@@ -105,6 +79,24 @@
     "scalp_primary_interval": "1h",
     "scalp_15m_meaning": "SCALP refinement interval and AGGRESSIVE_SCALP primary interval only"
   },
+  "shared_lib": {
+    "version": "v1.0",
+    "scope": "focused",
+    "principle": "Only primitives with nearly identical usage between v7 and alphaforge",
+    "includes": [
+      "market_data/ (Binance client, klines, schema)",
+      "indicators/ (ATR, returns, volatility)",
+      "costs/ (fees, slippage)",
+      "time/ (intervals, folds)"
+    ],
+    "excludes": ["regime", "risk", "io", "serialization", "cache", "adapters"],
+    "import_boundary": {
+      "lib_must_not_import_v7": true,
+      "lib_must_not_import_alphaforge": true,
+      "v7_binance_only_through_lib": true,
+      "alphaforge_binance_only_through_lib": true
+    }
+  },
   "anomaly_context": {
     "enabled": true,
     "role": "auxiliary_feature_only",
@@ -124,11 +116,7 @@
   "regime_policy_visibility": {
     "regime_modifiers_allowed": true,
     "silent_regime_veto_forbidden": true,
-    "required_constraint_levels": [
-      "ADVISORY",
-      "SOFT_BLOCK",
-      "HARD_BLOCK"
-    ],
+    "required_constraint_levels": ["ADVISORY", "SOFT_BLOCK", "HARD_BLOCK"],
     "required_reason_codes": [
       "regime_gate_forced_no_trade",
       "regime_blocked_direction",

@@ -1,0 +1,49 @@
+{
+  "schema_name": "market_data_result_schema_v1",
+  "schema_version": "1.0.0",
+  "description": "Standardized market data fetch result from Shared Market Data Service",
+  "fields": {
+    "symbol": {"type": "string", "required": true},
+    "interval": {"type": "string", "required": true},
+    "records": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/kline_record"},
+      "required": true
+    },
+    "quality": {"$ref": "#/definitions/data_quality_report", "required": true}
+  },
+  "definitions": {
+    "kline_record": {
+      "type": "object",
+      "required": ["symbol", "timestamp", "open", "high", "low", "close", "volume", "interval", "source", "is_closed"],
+      "properties": {
+        "symbol": {"type": "string"},
+        "timestamp": {"type": "integer"},
+        "open": {"type": "number"},
+        "high": {"type": "number"},
+        "low": {"type": "number"},
+        "close": {"type": "number"},
+        "volume": {"type": "number"},
+        "quote_volume": {"type": "number"},
+        "trade_count": {"type": "integer"},
+        "taker_buy_volume": {"type": "number"},
+        "taker_buy_quote_volume": {"type": "number"},
+        "interval": {"type": "string"},
+        "source": {"type": "string"},
+        "is_closed": {"type": "boolean"}
+      }
+    },
+    "data_quality_report": {
+      "type": "object",
+      "required": ["total_expected", "total_received", "gap_count", "is_complete"],
+      "properties": {
+        "total_expected": {"type": "integer"},
+        "total_received": {"type": "integer"},
+        "gap_count": {"type": "integer"},
+        "duplicate_count": {"type": "integer"},
+        "is_complete": {"type": "boolean"},
+        "warnings": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}
