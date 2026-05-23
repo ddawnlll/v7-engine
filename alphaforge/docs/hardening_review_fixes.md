@@ -60,7 +60,7 @@ Rules:
 
 These fixes are incorporated into:
 
-- `AI_SUMMARY__V7_ALPHAFORGE_XGB.md`
+- `ai_summary__v7_alphaforge_xgb.md`
 - `configs/v7_alpha_defaults.json`
 - `schemas/feature_schema_v1.json`
 - `schemas/prediction_schema_v1.json`
