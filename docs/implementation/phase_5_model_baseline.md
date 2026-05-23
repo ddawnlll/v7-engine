@@ -1,285 +1,193 @@
+# Phase 5 — XGBoost Hybrid Model Baseline (Planned)
 
-# Phase 5 — Model Baseline (Planned)
-
-**Status:** Planned
-**Owner:** Model training track
-**Last updated:** 2026-04-24
+**Status:** Planned  
+**Owner:** Model training track  
+**Last updated:** 2026-05-23  
 **Delivery status:** Not started
 
 ---
 
 ## 1. Purpose
 
-This phase trains the first V7 model-suite baseline or staged activated `model_scope` baseline and produces candidate artifacts.
+Train the first V7 hybrid model baseline and publish candidate artifacts.
 
-It exists to prove that the V7 dataset can support a stable, shared, multi-symbol decision model before calibration and policy logic are layered on top.
-
----
-
-## 2. What Carried Over / What Must Stay Stable
-
-The following are already implemented / must remain stable:
-
-- [x] dataset rows are intended to be leakage-safe
-- [x] first-phase model family is documented as XGBoost-first
-- [x] no-trade remains first-class in outputs
-
-This phase builds on top of these. Do not regress them.
+This phase proves that V7 can train a compact, shared, scope-compatible, multi-symbol model family that produces both action probabilities and economic-quality estimates.
 
 ---
 
-## 3. Background & Motivation
+## 2. Stable Rules
 
-Starting with a simple shared baseline is deliberate.
-
-The prior risk would be:
-- deep architecture expansion too early
-- per-symbol model fragmentation
-- no candidate artifact discipline
-
-The correct first approach is a boring shared training framework with separate scope-compatible artifacts. `SWING` may be implemented first; `SCALP` and `AGGRESSIVE_SCALP` may be added later as separate artifacts under the same framework. Do not train one universal model across all scopes.
+- First-phase model family is XGBoost-first.
+- Do not begin with large deep architectures.
+- Do not create one model per symbol in first phase.
+- Do not train one universal artifact across incompatible `model_scope` values.
+- Phase 5 produces candidate artifacts only, not live authority.
+- Model training consumes datasets. It does not run simulation.
 
 ---
 
-## 4. Current Failure State / Known Blockers
+## 3. Workstream A — Hybrid Baseline Trainer
 
-The current state has the following known issues:
+### First implementation model suite
 
-- `baseline model family` = documented, not implemented
-- `candidate artifact` = may not yet exist as a stable publishable state
-- `training reproducibility` = may not yet be enforced
-- `early stopping behavior` = may not yet be implemented
+Use one artifact bundle per activated `model_scope`.
 
----
+Default first baseline inside each scope:
 
-## 5. Workstream A — Baseline Trainer
+1. **Action classifier**
+   - XGBoost multiclass classifier
+   - target: `best_action_label`
+   - classes: `LONG_NOW`, `SHORT_NOW`, `NO_TRADE`
+   - output: `action_probabilities`
 
-**Status:** New
+2. **Long expected-R regressor**
+   - XGBoost regressor
+   - target: `expected_r_target_long`
+   - output: `expected_r_long`
 
-### Problem / Goal
+3. **Short expected-R regressor**
+   - XGBoost regressor
+   - target: `expected_r_target_short`
+   - output: `expected_r_short`
 
-Train the first XGBoost-family baseline suite or staged `model_scope` artifact.
+Optional first-phase regressors only if target quality is adequate:
 
-Model training does not run simulation. It consumes datasets built from runtime simulation-derived labels and preserves simulation/training lineage in candidate artifacts.
+- long/short adverse-R regressors
+- long/short cost-adjusted-R regressors
 
-### Multi-output strategy
+### Explicit non-goals
 
-First implementation default:
-- one **multiclass classifier** for `LONG_NOW`, `SHORT_NOW`, `NO_TRADE`
-- one **scalar regressor** for `expected_r`
-
-The classifier owns action probabilities.
-The regressor owns expected-R estimation.
-Do not start with three unrelated binary classifiers in the first baseline.
+- Do not start with three unrelated binary classifiers.
+- Do not make regression the only decision source.
+- Do not let expected-R regressors directly bypass policy.
+- Do not bundle incompatible scopes in one model.
 
 ### Implementation Tasks
 
-- [ ] Implement baseline trainer entrypoint
-- [ ] Support separate `model_scope` artifacts under one shared training framework (`SWING` 4h+1d+1h first if staged; `SCALP` and `AGGRESSIVE_SCALP` later as separate artifacts)
-- [ ] Support multiclass action training
-- [ ] Support expected-R regression training
-- [ ] Emit stable model artifact metadata, including source simulation profile/version lineage
+- [ ] Implement hybrid trainer entrypoint.
+- [ ] Train multiclass action classifier.
+- [ ] Train long expected-R regressor.
+- [ ] Train short expected-R regressor.
+- [ ] Support target validity masks.
+- [ ] Support sample weights.
+- [ ] Emit model-suite metadata and lineage.
 
 ### Acceptance Criteria
 
-- [ ] first candidate model trains successfully
-- [ ] output artifact loads for inference
-- [ ] artifact metadata preserves lineage
+- [ ] action classifier trains successfully.
+- [ ] long/short expected-R regressors train successfully.
+- [ ] artifact bundle loads for inference.
+- [ ] metadata preserves dataset, feature, label, and simulation lineage.
 
 ---
 
-## 6. Workstream B — Reproducibility & Early Stopping
+## 4. Workstream B — Reproducibility & Early Stopping
 
-**Status:** New
+Default early stopping metrics:
 
-### Problem / Goal
+- classifier: `mlogloss`
+- expected-R regressors: `rmse`
 
-Prevent unstable training behavior and unbounded overfitting.
+Required hyperparameter surfaces:
 
-### Early stopping defaults
-
-First implementation default:
-- classifier early stopping metric: `mlogloss`
-- expected-R regressor early stopping metric: `rmse`
-
-These may be config-overridden later, but phase-one implementation should not leave them undefined.
-
-### Implementation Tasks
-
-- [ ] Wire explicit seed / reproducibility controls
-- [ ] Implement validation-based early stopping
-- [ ] Wire the minimum hyperparameter surface
-- [ ] Preserve training-run record for each attempt
+- `max_depth`
+- `n_estimators`
+- `learning_rate`
+- `min_child_weight`
+- `subsample`
+- `colsample_bytree`
+- `reg_alpha`
+- `reg_lambda`
+- `early_stopping_rounds`
+- objective/metric by head
 
 ### Acceptance Criteria
 
-- [ ] early stopping works on validation slice
-- [ ] hyperparameters are config-driven
-- [ ] training runs are traceable and reproducible enough for review
+- [ ] fixed seed behavior is traceable.
+- [ ] early stopping works per head.
+- [ ] hyperparameters are config-driven.
 
 ---
 
-## 7. Workstream C — Candidate Artifact Publishing
+## 5. Workstream C — Candidate Artifact Publishing
 
-**Status:** New
-
-### Problem / Goal
-
-Separate successful training from promotable release authority.
-
-#### 7.1 Candidate publishing
+Artifact bundle should include:
 
 ```python
+model_scope
+action_classifier_artifact
+expected_r_long_regressor_artifact
+expected_r_short_regressor_artifact
+optional_risk_regressor_artifacts
+feature_schema_version
+label_interpretation_version
+simulation_profile_version
+training_dataset_version
+head_metrics
+training_run_id
 status = "candidate"
-```
-
-**Rationale:**
-- training success is not the same as live eligibility
-- later phases need artifacts to calibrate/evaluate
-
-#### 7.2 Promotion ownership
-
-```python
 promotable = False
 ```
 
-The ownership rule is:
-- Phase 5 produces **candidate** artifacts only
-- Phase 8 may mark a candidate **evaluation-promotable**
-- Phase 9 may mark an evaluation-promotable candidate **live-eligible**
+Publishing rule:
+
+- Phase 5 may publish a candidate artifact bundle.
+- Phase 8 may mark it evaluation-promotable.
+- Phase 9 may mark it live-eligible.
 
 ### Acceptance Criteria
 
-- [ ] successful training creates candidate artifacts only
-- [ ] failed runs do not publish promotable artifacts
-- [ ] publish vs promote is visible in run metadata
+- [ ] successful training creates candidate artifacts only.
+- [ ] failed training does not publish promotable state.
+- [ ] publish vs promote is visible.
 
 ---
 
-## 8. Workstream D — Test Coverage
+## 6. Workstream D — Test Coverage
 
-**Status:** New
-**Required before:** Phase 6 calibration
+Minimum tests:
 
-### 8.1 Training smoke tests
-
-- [ ] small training run completes
-- [ ] trained artifact can be loaded
-- [ ] inference over sample rows works
-
-### 8.2 Reproducibility tests
-
-- [ ] fixed-seed repeatability sanity test
-- [ ] early stopping path test
-- [ ] hyperparameter config path test
-
-### 8.3 Output validation
-
-- [ ] multiclass action outputs exist
-- [ ] expected-R regressor output exists
-- [ ] candidate artifact metadata is preserved
-- [ ] failed run does not publish promotable state
+- small training run completes
+- artifact bundle loads
+- inference over sample rows works
+- classifier probabilities exist
+- long expected-R output exists
+- short expected-R output exists
+- target validity masks are respected
+- early stopping path works
+- fixed-seed sanity test
+- failed run does not publish promotable state
 
 ---
 
-## 9. Workstream E — Pre-Run Audit Checklist
+## 7. Pre-Run Audit
 
-**Status:** New
-**Must complete before:** first real candidate training run
+Before first real candidate training:
 
-### 9.1 Dataset audit
+- [ ] dataset family version is recorded
+- [ ] unresolved/invalid rows were excluded or masked correctly
+- [ ] regression target validity masks are present
+- [ ] model training path does not call simulation or live execution
+- [ ] required hyperparameter surfaces exist
+- [ ] latency targets are recorded
 
-- [ ] verify training input dataset family version is recorded
-- [ ] verify unresolved/invalid rows were excluded correctly
-- [ ] verify runtime simulation profile/version lineage is recorded
-- [ ] verify model training path does not call simulation, live exchange, broker, or mutable runtime account state
+Recommended first implementation latency targets:
 
-### 9.2 Hyperparameter audit
-
-- [ ] verify config contains required hyperparameter surface
-- [ ] verify early stopping metrics and rounds are set
-
-### 9.3 Latency audit
-
-- [ ] verify atomic inference target is recorded with a first implementation default (recommended p95 <= 50 ms on target serving worker)
-- [ ] verify batch scan target is recorded with a first implementation default (recommended p95 <= 5 s for 60-symbol scan on target worker)
+- atomic inference p95 <= 50 ms on target serving worker
+- 60-symbol scan p95 <= 5 s on target serving worker
 
 ---
 
-## 10. Combined Implementation Order
+## 8. Definition of Done
 
-1. Complete Workstream A — Baseline Trainer
-2. Implement Workstream B — Reproducibility & Early Stopping
-3. Apply Workstream C — Candidate Artifact Publishing
-4. Run Workstream E — Pre-Run Audit
-5. Implement Workstream D — Test Coverage
-6. Execute first candidate training run
-7. Evaluate results against acceptance criteria
-
-### Acceptance Criteria for First Combined Run
-
-- [ ] one shared baseline candidate is trained
-- [ ] artifact can load for inference
-- [ ] early stopping and seed handling work
-- [ ] candidate artifact lineage is visible
+- [ ] hybrid trainer exists.
+- [ ] classifier and regressors train.
+- [ ] candidate artifact bundle exists.
+- [ ] output strategy is explicit.
+- [ ] tests pass.
 
 ---
 
-## 11. Definition of Done
+## 9. What Phase 6 Inherits
 
-### 11.1 Model layer
-
-- [x] first-phase model family choice is documented
-- [ ] baseline trainer exists
-- [ ] candidate artifact emission exists
-
-### 11.2 Artifact layer
-
-- [ ] artifact metadata is preserved
-- [ ] publish vs promote distinction exists
-- [ ] failed runs do not create promotable state
-
-### 11.3 Candidate health
-
-- [ ] one baseline candidate trains successfully
-- [ ] outputs are stable enough for calibration input
-- [ ] multiclass + expected-R strategy is implemented explicitly
-
-### 11.4 Test layer
-
-- [ ] smoke tests pass
-- [ ] reproducibility tests pass
-- [ ] output validation tests pass
-
----
-
-## 12. What Phase 6 Inherits
-
-### 12.1 Capability expansion themes
-
-- one trained baseline candidate
-- reproducible training surface
-- candidate artifact lineage
-- explicit model-output strategy
-
-### 12.2 Phase Boundary
-
-- Phase 6 is calibration and policy work.
-- Phase 5 is the prerequisite.
-- Do not start Phase 6 work until Phase 5 definition of done is fully satisfied.
-
----
-
-## 13. Compact Mental Model
-
-### 13.1 Phase Relationships
-
-- Phase 4: rows became valid
-- Phase 5: baseline model is trained
-- Phase 6: outputs become calibrated decisions
-- Phase 7: runtime consumes them safely
-
-### 13.2 Key Takeaway
-
-Phase 5 is not about proving V7 is finished.
-It is about proving the first scope-compatible model artifact or model-suite baseline can exist as a serious candidate under the shared training framework.
+Phase 6 inherits a candidate bundle with raw action probabilities and raw expected-R surfaces that must be calibrated, reliability-reviewed, and policy-wrapped before runtime use.

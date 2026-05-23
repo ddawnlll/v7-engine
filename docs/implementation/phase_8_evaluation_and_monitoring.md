@@ -1,308 +1,205 @@
+# Phase 8 — Hybrid Evaluation & Monitoring (Planned)
 
-# Phase 8 — Evaluation & Monitoring (Planned)
-
-**Status:** Planned
-**Owner:** Evaluation / observability track
-**Last updated:** 2026-04-24
+**Status:** Planned  
+**Owner:** Evaluation / observability track  
+**Last updated:** 2026-05-23  
 **Delivery status:** Not started
 
 ---
 
 ## 1. Purpose
 
-This phase proves whether V7 is actually good, stable, and observable enough to promote further.
+Prove whether V7's hybrid model, calibration, policy, runtime flow, and monitoring surfaces are economically useful and operationally trustworthy.
 
-It solves the problem that a system can now run, but still may not be economically good, calibration-safe, or operationally trustworthy.
-
----
-
-## 2. What Carried Over / What Must Stay Stable
-
-The following are already implemented / must remain stable:
-
-- [x] simulation truth exists
-- [x] baseline candidate exists
-- [x] calibration/policy surfaces exist
-- [x] runtime lifecycle objects are created
-- [x] evaluation and monitoring docs already define the quality families
-
-This phase builds on top of these. Do not regress them.
+A working system is not automatically a good system. This phase supplies evidence.
 
 ---
 
-## 3. Background & Motivation
+## 2. Stable Rules
 
-Without this phase:
-- promotion becomes subjective
-- timing extension usefulness stays unknown
-- drift remains invisible
-- no-trade quality remains unproven
-- baseline comparisons remain weak
-
-This phase turns V7 into an evidence-driven system.
-
----
-
-## 4. Current Failure State / Known Blockers
-
-The current state has the following known issues:
-
-- `walk-forward evaluation outputs` = may not yet exist
-- `baseline comparison` = may not yet exist
-- `calibration quality monitoring` = may not yet be live
-- `feature drift monitoring` = may not yet exist
-- `timing extension usefulness evidence` = may not yet exist
+- Evaluation is economic-quality-first.
+- No-trade quality matters.
+- Calibration quality matters.
+- Expected-R reliability matters.
+- Symbol/regime breakdowns are mandatory.
+- Promotion is per `model_scope`.
+- Replay/paper/live evidence must stay comparable.
 
 ---
 
-## 5. Workstream A — Evaluation Core
+## 3. Workstream A — Hybrid Evaluation Core
 
-**Status:** New
+Evaluate candidates against baseline using:
 
-### Problem / Goal
+### Economic metrics
 
-Implement walk-forward and comparative evaluation around the baseline candidate and later candidates.
+- realized R
+- average R
+- distributional R
+- profit factor
+- max drawdown / adverse excursion
+- regret
+- no-trade correctness
+- missed opportunity
+- saved loss
+- path quality
 
-Evaluation is per `model_scope`; promotion of `SWING` does not promote `SCALP` or `AGGRESSIVE_SCALP`.
+### Classification metrics
 
-Evaluation uses the runtime historical replay driver or evaluation replay adapter. It must not implement a separate backtest-only simulator.
+- action confusion matrix
+- directional precision/recall where meaningful
+- no-trade precision/recall
+- calibrated confidence buckets
+- class distribution stability
 
-### Default promotion thresholds
+### Regression metrics
 
-First implementation defaults:
-- candidate mean realized-R must improve over baseline by at least `+0.10`
-- candidate calibration error must not worsen by more than `0.01`
-- candidate no-trade correctness must not degrade by more than `1.0%`
-- no critical safety regression is allowed
+- expected-R MAE / RMSE
+- signed expected-R bias
+- long/short separate expected-R error
+- predicted-R bucket realized-R quality
+- rank correlation between predicted expected-R and realized R
+- expected-R gate quality
 
-These are starting config defaults, not final permanent policy.
+### Ablation metrics
 
-### Implementation Tasks
-
-- [ ] Implement walk-forward evaluation run flow over runtime replay/evaluation adapter outputs
-- [ ] Implement baseline vs candidate comparison
-- [ ] Implement interval-view ablation (e.g., 4h-only vs 4h+1d vs 4h+1d+1h)
-- [ ] Implement symbol/regime slice reporting
-- [ ] Implement no-trade quality reporting
-- [ ] Implement Monte Carlo robustness reporting here if not completed in Phase 2
-- [ ] Preserve replay/Monte Carlo evidence as non-live-eligibility evidence unless release policy explicitly allows escalation
+- 4h-only
+- 4h + 1d
+- 4h + 1d + 1h
+- classifier-only policy vs hybrid policy
+- probability gate only vs probability + expected-R gate
 
 ### Acceptance Criteria
 
-- [ ] candidate vs baseline comparison exists
-- [ ] 1h refinement value can be proved via ablation
-- [ ] no-trade quality is measurable
-- [ ] symbol/regime slices are available
+- [ ] candidate vs baseline comparison exists.
+- [ ] hybrid surface quality is measurable.
+- [ ] no-trade quality is measurable.
+- [ ] interval-view and hybrid-policy ablations exist.
 
 ---
 
-## 6. Workstream B — Monitoring Core
+## 4. Workstream B — Promotion Evidence
 
-**Status:** New
+Default first implementation promotion thresholds:
 
-### Problem / Goal
+- candidate mean realized-R improves over baseline by at least `+0.10`
+- calibration error does not worsen by more than `0.01`
+- no-trade correctness does not degrade by more than `1.0%`
+- expected-R rank quality is non-negative and above configured minimum
+- no critical safety regression
 
-Measure post-run and post-deployment lifecycle quality.
+These are config defaults, not permanent policy.
 
-Monitoring must aggregate by `model_scope`, including fallback/degraded rate, realized outcome, calibration drift, and harmful symbol-side cohorts.
-
-Monitoring must also track runtime simulation unresolved/invalidated rate, replay/paper divergence where measurable, simulation profile/version coverage, adapter failure rate, and Monte Carlo robustness drift when configured.
-
-### Baseline ownership rule
-
-Monitoring baselines are updated when a candidate becomes **evaluation-promotable**.
-Retain:
-- current promoted baseline
-- immediately previous promoted baseline
-
-Default retention:
-- at least one full evaluation cycle
-- recommended minimum 30 days of retained comparability metadata
-
-### Implementation Tasks
-
-- [ ] Implement confidence / expected-R distribution monitoring
-- [ ] Implement fallback/degraded-rate monitoring
-- [ ] Implement actionability vs execution-eligibility gap monitoring
-- [ ] Implement outcome finality lag monitoring
+Promotion should never rely on one scalar.
 
 ### Acceptance Criteria
 
-- [ ] lifecycle health signals exist
-- [ ] fallback/degradation are measurable
-- [ ] outcome lag is measurable
+- [ ] promotion gate uses economic, calibration, no-trade, and expected-R evidence.
+- [ ] incomplete slices are marked incomplete.
+- [ ] per-scope promotion is enforced.
 
 ---
 
-## 7. Workstream C — Drift & Timing Evidence
+## 5. Workstream C — Monitoring Core
 
-**Status:** New
+Monitoring must aggregate by `model_scope` and track:
 
-### Problem / Goal
+- confidence distribution
+- expected-R distribution
+- realized-R by predicted-R bucket
+- fallback/degraded rate
+- actionability vs execution-eligibility gap
+- no-trade rate
+- outcome finality lag
+- feature drift
+- symbol/regime coverage
+- harmful symbol-side cohorts
+- simulation unresolved/invalidated rate
+- replay/paper divergence where measurable
+- timing-extension usefulness
 
-Measure whether feature drift and timing extension signals are operationally meaningful.
+### Acceptance Criteria
 
-#### 7.1 Feature drift defaults
+- [ ] lifecycle health signals exist.
+- [ ] fallback/degradation are measurable.
+- [ ] expected-R drift or degradation is observable.
+- [ ] outcome lag is measurable.
+
+---
+
+## 6. Workstream D — Drift & Timing Evidence
+
+Default drift families:
 
 ```python
 continuous_feature_drift = "PSI"
 missingness_shift = "absolute_rate_delta"
 symbol_mix_shift = "total_variation_distance"
+expected_r_distribution_shift = "bucket_delta"
 ```
 
-**Rationale:**
-- shared multi-symbol model quality can decay invisibly without drift measurement
+Timing gate promotion rule:
 
-#### 7.2 Timing usefulness rule
+Timing remains advisory-only unless:
 
-```python
-min_windows = 3
-min_samples_per_state = 500
-required_realized_r_gap = 0.25
-```
-
-A move from advisory-only to timing hard-gate is allowed only if:
 - at least 3 consecutive evaluation windows agree
 - each relevant timing state has enough samples
-- `CHASING` or `MISSED` underperform `READY_NOW` by at least `0.25R` on average
+- `CHASING` or `MISSED` materially underperform `READY_NOW`
 - coverage loss stays within configured tolerance
 
 ### Acceptance Criteria
 
-- [ ] feature drift metrics exist
-- [ ] timing usefulness metrics exist
-- [ ] timing gating can remain off or be justified by evidence later
+- [ ] feature drift metrics exist.
+- [ ] expected-R drift metrics exist.
+- [ ] timing usefulness can be assessed.
 
 ---
 
-## 8. Workstream D — Test Coverage
+## 7. Workstream E — Test Coverage
 
-**Status:** New
-**Required before:** release-readiness assessment
+Minimum tests:
 
-### 8.1 Evaluation tests
-
-- [ ] walk-forward integrity test
-- [ ] baseline comparison test
-- [ ] no-trade metric test
-
-### 8.2 Monitoring tests
-
-- [ ] fallback/degradation aggregation test
-- [ ] actionability vs execution-eligibility gap test
-- [ ] outcome lag metric test
-- [ ] simulation unresolved/invalidated aggregation test
-- [ ] adapter failure aggregation test
-
-### 8.3 Drift / timing tests
-
-- [ ] PSI-style feature drift aggregation test
-- [ ] timing usefulness aggregation test
-- [ ] Monte Carlo robustness aggregation test when configured
-- [ ] baseline update logic test
+- walk-forward integrity
+- baseline comparison
+- no-trade metric
+- calibration metric
+- expected-R metric
+- predicted-R bucket aggregation
+- classifier-only vs hybrid policy ablation
+- fallback/degradation aggregation
+- actionability/execution gap
+- outcome lag metric
+- feature drift aggregation
+- timing usefulness aggregation
+- baseline update logic
 
 ---
 
-## 9. Workstream E — Pre-Run / Pre-Deploy Audit Checklist
+## 8. Pre-Deploy Audit
 
-**Status:** New
-**Must complete before:** Phase 9 deployment safety/release
+Before Phase 9:
 
-### 9.1 Baseline audit
-
-- [ ] verify promoted baseline reference exists
-- [ ] verify previous baseline retention works
-
-### 9.2 Evaluation audit
-
-- [ ] verify promotion gate metrics are computed from real outputs
-- [ ] verify incomplete slices do not masquerade as healthy evidence
-
-### 9.3 Monitoring audit
-
-- [ ] verify timing-extension evidence is visible
-- [ ] verify feature drift evidence is visible
-- [ ] verify kill-switch readiness metrics can be consumed later
+- [ ] promoted baseline reference exists
+- [ ] previous baseline retention works
+- [ ] promotion gate metrics are computed from real outputs
+- [ ] incomplete slices do not count as healthy evidence
+- [ ] expected-R reliability evidence is visible
+- [ ] timing-extension evidence is visible
+- [ ] feature drift evidence is visible
 
 ---
 
-## 10. Combined Implementation Order
+## 9. Definition of Done
 
-1. Complete Workstream A — Evaluation Core
-2. Implement Workstream B — Monitoring Core
-3. Apply Workstream C — Drift & Timing Evidence
-4. Run Workstream E — Pre-Run Audit
-5. Implement Workstream D — Test Coverage
-6. Execute evaluation/monitoring suite
-7. Evaluate results against acceptance criteria
-
-### Acceptance Criteria for First Combined Run
-
-- [ ] candidate vs baseline evaluation works
-- [ ] no-trade, calibration, and slice metrics are present
-- [ ] lifecycle monitoring signals are present
-- [ ] timing usefulness can be assessed empirically
+- [ ] walk-forward evaluation exists.
+- [ ] baseline comparison exists.
+- [ ] hybrid metrics exist.
+- [ ] monitoring signals exist.
+- [ ] promotion evidence is objective.
+- [ ] tests pass.
 
 ---
 
-## 11. Definition of Done
+## 10. What Phase 9 Inherits
 
-### 11.1 Evaluation layer
-
-- [x] evaluation semantics are documented
-- [ ] walk-forward evaluation exists
-- [ ] baseline comparison exists
-- [ ] no-trade quality reporting exists
-
-### 11.2 Monitoring layer
-
-- [ ] lifecycle health signals exist
-- [ ] fallback/degradation signals exist
-- [ ] outcome lag monitoring exists
-
-### 11.3 Candidate health
-
-- [ ] feature drift is measurable
-- [ ] timing usefulness is measurable
-- [ ] promotion evidence is no longer subjective
-- [ ] baseline update logic is explicit
-
-### 11.4 Test layer
-
-- [ ] evaluation tests pass
-- [ ] monitoring tests pass
-- [ ] drift/timing tests pass
-
----
-
-## 12. What Phase 9 Inherits
-
-### 12.1 Capability expansion themes
-
-- candidate vs baseline evidence
-- lifecycle monitoring
-- timing usefulness evidence
-- drift visibility
-- promotion inputs
-
-### 12.2 Phase Boundary
-
-- Phase 9 is deployment safety and release-readiness work.
-- Phase 8 is the prerequisite.
-- Do not start Phase 9 work until Phase 8 definition of done is fully satisfied.
-
----
-
-## 13. Compact Mental Model
-
-### 13.1 Phase Relationships
-
-- Phase 7: runtime flow became real
-- Phase 8: quality and drift become measurable
-- Phase 9: release safety becomes enforceable
-- Post-Phase 9: broader iteration and optimization begin
-
-### 13.2 Key Takeaway
-
-A working system is not yet a trustworthy system.
-This phase is where V7 earns evidence, not just functionality.
+Phase 9 inherits evidence about economic quality, confidence reliability, expected-R reliability, no-trade quality, drift, and runtime lifecycle health.

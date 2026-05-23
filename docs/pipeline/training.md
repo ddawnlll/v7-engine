@@ -4,130 +4,186 @@
 
 ## Purpose
 
-Defines the V7 training strategy after the model-scope decision.
+Defines the first-phase training flow for the V7 hybrid supervised model.
 
 It answers:
 
-> How should V7 train multiple trade-mode model families without duplicating the training platform or collapsing all modes into one universal target?
+> Given valid temporal datasets, how should V7 train classification and regression heads without leakage or promotion shortcuts?
 
 ---
 
 ## Core Decision
 
-V7 uses **one shared training platform**, not one universal model.
+V7 training is **hybrid supervised training**.
 
-The shared platform includes:
-- raw data store
-- canonical state / snapshot builder
-- shared runtime-hosted simulation engine
-- deterministic training/replay adapter for runtime simulation outputs
-- feature and label infrastructure
-- training runner
-- artifact registry
-- evaluation framework
-- runtime router
-- unified config system
+It trains:
 
-The model families are mode-scoped:
-- `SWING`
-- `SCALP`
-- `AGGRESSIVE_SCALP`
+- classification heads for action selection
+- regression heads for economic quality
+- calibration artifacts for runtime-facing confidence
 
-Each `model_scope` owns its own dataset family, `primary_interval`, `context_intervals`, `refinement_intervals`, `label_horizon_family`, cost/slippage profile, feature schema variant where needed, calibration artifact, thresholds / policy settings, evaluation report, and model artifact.
-
-Training does not implement simulation and does not call model-side simulation. Candidate artifacts are trained from datasets whose labels and outcome fields are derived from the runtime simulation engine through deterministic, side-effect-free training/replay adapters.
+Training does not decide live execution eligibility. It produces candidate artifacts for evaluation.
 
 ---
 
-## First-Phase Training Strategy
+## Training Diagram
 
-### `SWING`
-- `primary_interval`: `4h`
-- `context_intervals`: `1d`
-- `refinement_intervals`: `1h`
-- `label_horizon_family`: swing horizon
-- `trade_mode`: `SWING`
-- cost/slippage profile: configured swing profile
-- artifact family: `v7_swing_model`
-
-### `SCALP`
-- `primary_interval`: `15m`
-- `context_intervals`: `1h`
-- `refinement_intervals`: `5m`
-- `label_horizon_family`: scalp horizon
-- `trade_mode`: `SCALP`
-- cost/slippage profile: configured scalp profile
-- artifact family: `v7_scalp_model`
-
-### `AGGRESSIVE_SCALP`
-- `primary_interval`: `1m` or `3m`
-- `context_intervals`: `5m` + `15m`
-- `refinement_intervals`: `1m/3m` micro context where applicable
-- `label_horizon_family`: immediate continuation / very short horizon
-- `trade_mode`: `AGGRESSIVE_SCALP`
-- cost/slippage profile: configured aggressive-scalp profile
-- artifact family: `v7_aggressive_scalp_model`
-
-All scope defaults and profiles must be supplied through the unified config system as first-phase defaults or configured overrides, not hardcoded behavior.
-
----
-
-## Anti-Patterns
-
-Do not:
-- train one universal model across `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` rows
-- mix primary clocks across scopes in one supervised target
-- mix `label_horizon_family` across scopes
-- average independent `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` outputs
-- let a `SWING` model emit `SCALP` trades
-- let a `SCALP` model emit `AGGRESSIVE_SCALP` trades
-
-Intervals may be used as context views inside a scope. They are not independent mode outputs to average.
-
-Simulation anti-patterns:
-- do not implement a separate training simulator
-- do not call live exchange, broker, order-placement, or mutable runtime account-state paths from training
-- do not let the model run simulation during training or inference
-- do not treat Monte Carlo robustness mode as a replacement for runtime simulation ownership
+```text
+Canonical Market State
+      ↓
+Feature Engineering
+      ↓
+Simulation Truth
+      ↓
+Hybrid Labels
+      ├── Classification labels
+      └── Regression labels
+      ↓
+Temporal Dataset / Walk-Forward Folds
+      ↓
+XGBoost Hybrid Training
+      ├── Classifier heads
+      │   ├── P(LONG_NOW)
+      │   ├── P(SHORT_NOW)
+      │   └── P(NO_TRADE)
+      └── Regressor heads
+          ├── E[R | LONG_NOW]
+          ├── E[R | SHORT_NOW]
+          ├── expected adverse pressure
+          └── cost-adjusted expectancy
+      ↓
+Calibration Fit
+      ↓
+Policy Evaluation
+      ↓
+Candidate Artifact
+      ↓
+Walk-Forward / Economic Evaluation
+      ↓
+Promotion Review
+```
 
 ---
 
-## Artifact Lifecycle
+## Training Inputs
 
-Training may produce:
-- candidate artifacts
-- evaluation-promotable artifacts
-- live-eligible artifacts
+- train split
+- validation split
+- optional holdout/test tail
+- feature schema version
+- classification targets
+- regression targets
+- sample weights
+- training config
 
-Default rule:
-- training produces candidate artifacts only
-- evaluation determines whether a scope artifact becomes evaluation-promotable
-- deployment safety determines whether a scope artifact becomes live-eligible
+---
 
-Do not promote one `model_scope` because another scope passed evaluation.
+## Training Outputs
 
-Monte Carlo robustness outputs may enrich evaluation evidence, label confidence, or dataset lineage only when configured through the unified config system. They remain distributional evidence from the runtime simulation engine, not live execution truth.
+- model artifact
+- classification head metrics
+- regression head metrics
+- calibration artifact or calibration requirement record
+- feature importance summaries
+- target coverage summaries
+- training lineage record
+- candidate publish status
+
+---
+
+## Rules
+
+1. Training rows must be temporally valid.
+2. Calibration rows must not be the same rows used for core model fitting.
+3. Classification and regression heads may use different valid row subsets.
+4. Sample weighting must be explicit and reproducible.
+5. Early stopping is default.
+6. No unresolved or invalid labels in strict training.
+7. No candidate promotion during training.
+8. Failed target heads degrade explicitly; they are not silently omitted.
+
+---
+
+## Objective Families
+
+### Classification objectives
+
+- action multi-class objective, or
+- separate binary objectives for long, short, and no-trade
+
+The chosen family must be config-declared and reflected in artifact metadata.
+
+### Regression objectives
+
+Approved first-phase regression objectives include:
+
+- squared error for expected R
+- absolute error for robust expected R variants
+- quantile-style objectives where supported and explicitly versioned
+
+Target clipping or transformation must be versioned.
+
+---
+
+## Validation During Training
+
+Training should track:
+
+- classification log loss / AUC / precision by action
+- no-trade classification quality
+- regression MAE/RMSE by target
+- expected-R sign quality
+- economic monotonicity checks by predicted bucket
+- symbol/regime coverage
+
+Training metrics are not promotion evidence by themselves. They are candidate-quality diagnostics.
+
+---
+
+## Config Surface
+
+Key config families:
+
+- model family
+- target head enablement
+- objectives
+- hyperparameters
+- early stopping
+- sample weights
+- target clipping/transformation
+- calibration split
+- artifact publishing rules
 
 ---
 
 ## Interfaces
 
 Upstream:
+
 - `pipeline/dataset.md`
-- `pipeline/labels.md`
-- `pipeline/features.md`
-- `runtime/simulation_engine.md`
-- `pipeline/simulation.md`
+- `pipeline/model.md`
 
 Downstream:
-- `pipeline/model.md`
+
 - `pipeline/calibration.md`
 - `pipeline/evaluation.md`
-- `runtime/runtime_integration.md`
+
+---
+
+## Test Requirements
+
+Minimum tests:
+
+- train classifier heads
+- train regression heads
+- head-specific row filtering works
+- early stopping works
+- calibration split is separate
+- artifact metadata includes all target heads
+- failed head handling is explicit
 
 ---
 
 ## Final Position
 
-V7 centralizes the training platform and separates the model scopes.
-That is the resolved balance: shared infrastructure, separate scope-compatible artifacts.
+V7 training should be simple, temporal, and evidence-generating. It trains the hybrid model; it does not prove profitability by itself.

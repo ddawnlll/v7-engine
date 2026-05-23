@@ -1,174 +1,171 @@
+# V7 Hybrid Master Implementation Plan
 
-# V7 Master Implementation Plan
-
-**Status:** Planned
-**Owner:** V7 implementation track
-**Last updated:** 2026-04-24
+**Status:** Planned  
+**Owner:** V7 implementation track  
+**Last updated:** 2026-05-23  
 **Delivery status:** Not started
 
 ---
 
 ## 1. Purpose
 
-This document defines the full implementation sequence for V7 from current repo state to first live-eligible release readiness.
+This document defines the implementation sequence for V7 after the architecture decision to make the first learned system a **hybrid supervised trading model**.
 
 It answers:
 
-> In what exact order should V7 be built so that contracts, truth layer, learning pipeline, runtime integration, and deployment safety become correct without creating rework or hidden coupling?
+> In what order should V7 be built so that simulation truth, hybrid labels, hybrid model outputs, calibration, policy, runtime integration, and release safety stay aligned?
 
-This document is a sequencing authority, not a second architecture document.
-
----
-
-## 2. What Must Stay Stable
-
-The following are already documented and must remain stable:
-
-- [x] V7 contract family semantics exist
-- [x] V7 pipeline authority docs exist
-- [x] Runtime integration, fallback, and deployment-safety direction exist
-- [x] Atomic request/result/event/outcome boundaries are already defined
-- [x] Runtime-hosted simulation engine / one simulated-truth layer is already the authoritative direction
-
-This plan builds on top of those decisions.
-Do not regress them during implementation.
-
-Resolved model strategy: V7 uses one shared training framework with separate `model_scope` artifacts for `SWING`, `SCALP`, and `AGGRESSIVE_SCALP`; it must not train one universal model across those scopes. Each activated scope must satisfy its own data, model, calibration, evaluation, and release gates.
-
-Resolved simulation strategy: runtime owns simulation execution. Phase 2 standardizes the runtime simulation engine, profiles, side-effect-free adapters, historical replay driver, and Monte Carlo robustness mode; it must not build a greenfield model-side or pipeline-owned simulator.
+This is a sequencing authority. It does not replace the pipeline authority docs.
 
 ---
 
-## 3. Background & Motivation
+## 2. Stable Decisions
 
-The repo now has enough design authority to stop expanding semantics and start implementing a coherent slice.
+These decisions remain stable and must not be regressed:
 
-The old risk was:
-- implementing runtime first
-- training before truth-layer lock
-- creating model artifacts before labels/evaluation semantics were stable
-
-The correct approach is:
-- bootstrap repo and typed surfaces first
-- standardize the runtime-hosted simulation/truth layer before model family
-- integrate runtime after policy/portfolio/risk semantics are concrete
-- defer release complexity until evidence exists
+- V7 is contract-first and uses the atomic lifecycle family: `AnalysisRequest`, `AnalysisResult`, `DecisionEvent`, `TradeOutcome`.
+- V7 uses one simulation truth layer for labels, evaluation, replay, paper forward simulation, and outcome normalization.
+- V7 is XGBoost-first for the first implementation phase.
+- V7 remains centralized, multi-symbol aware, and runtime/engine separated.
+- Runtime owns request assembly, validation, lifecycle persistence, execution eligibility, and operational safety.
+- Engine owns market-state interpretation, model scoring, calibrated confidence, expected-R surfaces, recommended action, timing guidance, and visible degradation state.
+- The first-phase action family remains compact: `LONG_NOW`, `SHORT_NOW`, `NO_TRADE`.
 
 ---
 
-## 4. Current Failure State / Known Blockers
+## 3. Resolved Hybrid Model Strategy
 
-The current state has the following known issues:
+V7 first implementation uses an **XGBoost-first hybrid supervised decision model**.
 
-- `src/v7/*` = missing or partial — authoritative docs exist but implementation surfaces may not
-- `contracts` = documented, not necessarily implemented as typed runtime objects
-- `simulation truth` = documented, not yet guaranteed in code
-- `runtime integration` = documented, not yet guaranteed in code
-- `config surface` = required by all phases, not yet guaranteed as one implemented V7-resolved system
-- `promotion / release authority` = referenced by later phases, not yet guaranteed as executable process
+The first baseline is not pure classification and not pure regression.
+
+It consists of:
+
+1. **Classification surface**
+   - action probabilities for `LONG_NOW`, `SHORT_NOW`, `NO_TRADE`
+   - primary owner of action selection probability
+
+2. **Regression surface**
+   - `expected_r_long`
+   - `expected_r_short`
+   - optional first-phase risk/economic regressors where supported:
+     - `expected_adverse_r_long`
+     - `expected_adverse_r_short`
+     - `expected_cost_adjusted_r_long`
+     - `expected_cost_adjusted_r_short`
+
+3. **Policy surface**
+   - calibrated probability + expected-R + risk gates
+   - explicit no-trade selection
+   - timing guidance remains advisory-first
+
+### Scope rule
+
+V7 uses one shared training framework with separate `model_scope` artifacts when multiple scopes are activated:
+
+- `SWING`
+- `SCALP`
+- `AGGRESSIVE_SCALP`
+
+Do not train one universal artifact across incompatible scopes. Each activated scope must satisfy its own dataset, model, calibration, evaluation, and release gates.
+
+First implementation may stage `SWING` first.
 
 ---
 
-## 5. Phase Sequence
+## 4. Revised Phase Sequence
 
-The full implementation sequence is:
-
-1. **Phase 0 — Repo Alignment & Foundations**
-2. **Phase 1 — Contracts & Validation**
+1. **Phase 0 — Repo Alignment & Hybrid Foundations**
+2. **Phase 1 — Contracts & Hybrid Validation**
 3. **Phase 2 — Runtime Simulation, Replay & Monte Carlo Layer**
-4. **Phase 3 — Labels & Outcome Semantics**
-5. **Phase 4 — Features & Dataset**
-6. **Phase 5 — Model Baseline**
-7. **Phase 6 — Calibration & Policy**
+4. **Phase 3 — Hybrid Labels & Outcome Semantics**
+5. **Phase 4 — Features & Hybrid Dataset**
+6. **Phase 5 — XGBoost Hybrid Model Baseline**
+7. **Phase 6 — Calibration, Expected-R Reliability & Policy**
 8. **Phase 7 — Portfolio, Risk & Runtime Integration**
-9. **Phase 8 — Evaluation & Monitoring**
+9. **Phase 8 — Hybrid Evaluation & Monitoring**
 10. **Phase 9 — Deployment Safety & Release Readiness**
 
+The phase order stays close to the original plan, but Phase 1, 3, 4, 5, 6, 8, and 9 now explicitly understand the hybrid output surface.
+
 ---
 
-## 6. Phase Dependency Rules
+## 5. Hard Dependencies
 
-### Hard dependencies
-- Phase 1 depends on Phase 0
-- Phase 2 depends on Phase 1
-- Phase 3 depends on Phase 2
-- Phase 4 depends on Phases 2 and 3
-- Phase 5 depends on Phase 4
-- Phase 6 depends on Phase 5
-- Phase 7 depends on Phase 6
-- Phase 8 depends on Phases 5, 6, and 7
-- Phase 9 depends on Phase 8
+- Phase 1 depends on Phase 0.
+- Phase 2 depends on Phase 1.
+- Phase 3 depends on Phase 2.
+- Phase 4 depends on Phases 2 and 3.
+- Phase 5 depends on Phase 4.
+- Phase 6 depends on Phase 5.
+- Phase 7 depends on Phase 6.
+- Phase 8 depends on Phases 5, 6, and 7.
+- Phase 9 depends on Phase 8.
 
-### Soft iteration loops
-Allowed iteration loops:
+Do not train before simulation truth and hybrid labels exist.
+
+---
+
+## 6. Soft Iteration Loops
+
+Allowed loops:
+
 - Phase 5 ↔ Phase 6
 - Phase 6 ↔ Phase 8
 - Phase 7 ↔ Phase 8
 
-### Loop criteria
-These loops are not “retry whenever it feels bad.”
-They are triggered only when a defined acceptance gate fails.
+### Phase 5 ↔ Phase 6 triggers
 
-#### Phase 5 ↔ Phase 6
-Go back from calibration/policy to model baseline only when one of these is true:
-- calibration error stays above the configured maximum on at least 2 consecutive folds
-- no-trade distribution becomes structurally pathological after calibration/policy wrapping
-- expected-R surface quality is too weak for policy to produce stable actionable decisions
+Return from policy/calibration to model only when:
 
-#### Phase 6 ↔ Phase 8
-Go back from evaluation to calibration/policy only when one of these is true:
-- candidate fails promotion thresholds due primarily to calibration or policy behavior
-- timing advisory outputs show no measurable usefulness across the required evaluation windows
-- confidence vs expected-R conflict handling causes unacceptable no-trade or false-action behavior
+- classification calibration error remains above threshold across repeated folds
+- expected-R regression error or rank quality is too weak for policy gates
+- probability and expected-R surfaces strongly conflict in a way policy cannot stabilize
+- no-trade distribution becomes structurally pathological after calibration and policy wrapping
 
-#### Phase 7 ↔ Phase 8
-Go back from evaluation to runtime integration only when one of these is true:
-- actionability vs execution-eligibility gap is materially larger than configured tolerance
-- fallback or degraded paths dominate beyond configured runtime-health thresholds
-- lifecycle objects are correct in shape but wrong in sequencing or propagation
+### Phase 6 ↔ Phase 8 triggers
 
-Not allowed:
-- skipping Phase 2 and training first
-- implementing live runtime authority before Phase 8 evidence
-- expanding model/policy semantics before contract compatibility exists
+Return from evaluation to calibration/policy when:
+
+- promotion failure is primarily caused by threshold/policy behavior
+- expected-R gate blocks too many profitable trades or allows too many negative expectancy trades
+- confidence vs expected-R conflict handling causes unacceptable false-action or over-no-trade behavior
+- timing advisory outputs show no measurable value across required windows
+
+### Phase 7 ↔ Phase 8 triggers
+
+Return from evaluation to runtime integration when:
+
+- actionability vs execution-eligibility gap is above tolerance
+- fallback/degraded paths dominate beyond runtime-health thresholds
+- lifecycle objects carry hybrid outputs incorrectly
+- portfolio/risk suppression hides or loses expected-R/probability context
 
 ---
 
 ## 7. Global Success Criteria
 
-V7 implementation is not considered complete until all of the following are true:
+V7 implementation is complete only when:
 
-- [ ] typed contract surfaces exist and validate correctly
-- [ ] runtime simulation engine powers labels, evaluation, outcomes, replay, paper forward simulation, and Monte Carlo robustness mode through side-effect-free adapters
-- [ ] feature and dataset surfaces are leakage-safe
-- [ ] one shared training framework trains and loads separate activated `model_scope` artifacts correctly
-- [ ] confidence surface is calibrated or explicitly downgraded
-- [ ] policy emits compact normalized decisions
-- [ ] portfolio and risk blocks are explicit
-- [ ] runtime creates events and outcomes correctly
-- [ ] evaluation compares candidate vs baseline credibly
-- [ ] deployment safety gates, rollback, and kill switch are testable
-
-### Evidence mapping
-These success criteria are satisfied by phase definition-of-done gates:
-
-- contracts → Phase 1 DoD
-- runtime simulation truth/adapters → Phase 2 DoD
-- labels/outcomes → Phase 3 DoD
-- features/dataset → Phase 4 DoD
-- baseline model → Phase 5 DoD
-- calibration/policy → Phase 6 DoD
-- runtime integration → Phase 7 DoD
-- evaluation/monitoring → Phase 8 DoD
-- release safety → Phase 9 DoD
-
-A global success criterion is not considered satisfied until its owning phase definition of done is fully satisfied.
+- typed contracts validate hybrid outputs correctly
+- runtime simulation powers labels, evaluation, outcomes, replay, paper forward simulation, and Monte Carlo robustness through side-effect-free adapters
+- labels include both classification targets and regression targets
+- datasets preserve target lineage and exclude unresolved/invalid rows by default
+- feature and dataset surfaces are leakage-safe
+- the hybrid XGBoost baseline trains and loads scope-compatible artifacts
+- calibrated confidence is available or explicitly downgraded
+- expected-R reliability is measured and visible
+- policy emits compact normalized decisions using probability + expected-R + risk gates
+- portfolio and risk blocks are explicit
+- runtime persists hybrid score snapshots in decision lifecycle records
+- evaluation compares candidate vs baseline economically and by hybrid-surface quality
+- deployment safety gates, rollback bundles, and kill switch are testable
 
 ---
 
 ## 8. Document Index
 
-Read the per-phase plans in this order:
+Read the revised phase docs in this order:
 
 - `phase_0_repo_alignment_and_foundations.md`
 - `phase_1_contracts_and_validation.md`
@@ -183,37 +180,26 @@ Read the per-phase plans in this order:
 
 ---
 
-## 9. Post-Phase 9 Direction
+## 9. Compact Mental Model
 
-After Phase 9, V7 moves into controlled expansion work.
+V7 should be built from truth upward:
 
-That includes:
-- optimization of promoted families
-- broader symbol-universe activation
-- timing-gate promotion only if Phase 8 evidence supports it
-- advanced portfolio/risk sophistication only after the first safe live-eligible slice exists
-- optional deeper model-family experimentation
+```text
+runtime simulation truth
+      ↓
+hybrid labels and regression targets
+      ↓
+leakage-safe features and dataset rows
+      ↓
+XGBoost action classifier + expected-R regressors
+      ↓
+calibration and expected-R reliability
+      ↓
+policy gates
+      ↓
+portfolio/risk/runtime lifecycle
+      ↓
+evaluation, monitoring, and release safety
+```
 
-Post-Phase 9 does **not** create a new contract family automatically.
-Phase 9 remains the prerequisite for expansion.
-
----
-
-## 10. Compact Mental Model
-
-### 10.1 Phase Relationships
-- Phase 0: make the repo safe to build in
-- Phase 1: make contracts real
-- Phase 2: make runtime simulation, replay adapters, and Monte Carlo robustness real
-- Phase 3: make labels/outcomes consistent
-- Phase 4: make training rows valid
-- Phase 5: make the first model real
-- Phase 6: make decision surfaces operational
-- Phase 7: make runtime consume them correctly
-- Phase 8: prove quality and drift behavior
-- Phase 9: prove release safety
-
-### 10.2 Key Takeaway
-
-V7 should be built from truth upward, not from runtime downward.
-If runtime simulation adapters, labels, and evaluation are wrong, later runtime polish only hides broken semantics.
+If simulation, labels, or hybrid result contracts are wrong, later runtime polish only hides broken semantics.

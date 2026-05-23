@@ -12,88 +12,59 @@ It answers:
 
 ---
 
-## In Scope
-
-- hard risk guards
-- soft risk guards
-- cooldowns
-- exposure hard stops
-- risk interpretation visibility
-
----
-
-## Out of Scope
-
-- model scoring
-- calibration logic
-- portfolio ranking logic
-- broker fill accounting
-
----
-
 ## Core Decision
 
-Risk is a separate stage from:
-- model
-- calibration
-- policy
-- portfolio
+Risk is separate from model, calibration, policy, and portfolio.
 
-This separation matters because:
-- a trade can be economically attractive
-- yet still not be operationally safe
+A trade can be economically attractive and still operationally unsafe.
 
 ---
 
 ## Inputs
 
 - candidate decision
+- policy interpretation
 - portfolio interpretation
 - account/exposure state
+- result freshness
+- degradation flags
 - risk config
 
 ---
 
 ## Outputs
 
-Risk stage should minimally produce:
+Risk stage produces:
+
 - pass / block / degrade
 - risk interpretation
 - explicit block reason
-- cooldown or exposure reason where relevant
-
----
-
-## Rules
-
-### 1. No hidden risk veto
-If risk blocks a decision, downstream records must show that.
-
-### 2. Hard guards stay hard
-Do not let soft model enthusiasm override hard operational limits.
-
-### 3. Keep risk readable
-First phase should prefer small explicit rules over complex dynamic systems.
-
-### 4. Separate engine actionability from operational safety
-A decision may be actionable yet not executable.
+- cooldown reason where relevant
+- exposure reason where relevant
+- stale/degraded-result reason where relevant
 
 ---
 
 ## Stage Order
 
 First-phase order:
+
 1. policy
 2. portfolio
 3. risk
 4. runtime execution eligibility
 
-If both portfolio and risk would block:
-- preserve both signals if available
-- treat risk as the final hard gate
-- set the primary suppression reason to risk when the block is risk-hard
+If both portfolio and risk block, preserve both signals when available. Treat risk as the final hard gate when the block is risk-hard.
 
-This keeps `portfolio_blocked` and `risk_blocked` compatible downstream.
+---
+
+## Rules
+
+1. No hidden risk veto.
+2. Hard guards stay hard.
+3. Model confidence and expected R cannot override operational limits.
+4. Keep risk readable.
+5. Separate economic actionability from execution eligibility.
 
 ---
 
@@ -101,79 +72,71 @@ This keeps `portfolio_blocked` and `risk_blocked` compatible downstream.
 
 - global kill switch
 - cooldown after loss / major event
-- exposure hard limits
-- duplicate-position protection
-- stale-result safety handling
-- degraded-result safe action rules
-
----
-
-## Hard Guard Families
-
-At minimum, config must define:
 - max gross exposure
 - max per-symbol exposure
 - max cluster exposure
-- stale-result rejection threshold
-- duplicate-position rules
-- cooldown trigger family
-
-This document does not hardcode final numeric values, but these guard families must exist.
+- duplicate-position protection
+- stale-result rejection
+- degraded-result safe action rules
+- minimum account/context integrity requirements
 
 ---
 
 ## Cooldown Rule
 
-First-phase cooldown should be configurable by:
-- triggering event family
-- cooldown duration in bars or minutes
-- scope:
-  - global
-  - symbol-local
-  - direction-local
+Cooldown is configurable by:
 
-Default examples belong in config, not here.
+- trigger family
+- duration in bars or minutes
+- scope: global, symbol-local, direction-local
+
+Default numeric values belong in config.
 
 ---
 
-## Duplicate Position Protection
+## Duplicate Protection
 
-First-phase duplicate protection should at least detect:
+Detect at minimum:
+
 - same symbol, same direction, existing open position
-- same symbol, same direction, already accepted decision in the same batch/session where policy forbids duplication
-
-The exact duplicate family must be config-driven and explicit.
+- same symbol, same direction, already accepted decision in the same batch/session where duplication is forbidden
 
 ---
 
-## Failure / Fallback
+## Degraded Result Handling
+
+If classification surfaces are valid but regression surfaces are degraded, policy may already select no-trade. If such a result reaches risk, risk must still see the degradation flag.
 
 If risk context is unavailable:
+
 - degrade explicitly
-- prefer safe non-execution behavior when required by policy
+- prefer safe non-execution when required by config
 
 ---
 
 ## Config Surface
 
 Key config families:
+
 - kill-switch settings
 - cooldown rules
 - exposure hard limits
-- degraded-result handling
+- stale-result limits
+- degraded-result behavior
 - duplicate protection rules
-
-These integrate with `docs/v7/runtime/runtime_integration.md` and `docs/v7/configuration.md`.
+- minimum context requirements
 
 ---
 
 ## Interfaces
 
 Upstream:
+
 - `pipeline/portfolio.md`
 - `runtime/runtime_integration.md`
 
 Downstream:
+
 - `contracts/decision_event.md`
 - `contracts/trade_outcome.md`
 - runtime execution eligibility
@@ -182,17 +145,18 @@ Downstream:
 
 ## Test Requirements
 
-Minimum risk tests:
+Minimum tests:
+
 - hard block visibility
 - cooldown behavior
 - duplicate protection
-- degraded-result safe handling
+- stale result block
+- degraded result handling
 - actionability vs execution-eligibility separation
-- portfolio-before-risk ordering is preserved
+- portfolio-before-risk ordering preserved
 
 ---
 
 ## Final Position
 
-Risk is the final safety layer before execution eligibility.
-It must stay explicit, conservative, and auditable.
+Risk is the final safety layer before execution eligibility. It must stay explicit, conservative, and auditable.

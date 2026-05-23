@@ -1,289 +1,191 @@
+# Phase 6 — Calibration, Expected-R Reliability & Policy (Planned)
 
-# Phase 6 — Calibration & Policy (Planned)
-
-**Status:** Planned
-**Owner:** Decision-surface track
-**Last updated:** 2026-04-24
+**Status:** Planned  
+**Owner:** Decision-surface track  
+**Last updated:** 2026-05-23  
 **Delivery status:** Not started
 
 ---
 
 ## 1. Purpose
 
-This phase turns raw model outputs into calibrated, policy-shaped decision surfaces that match `AnalysisResult`.
+Turn raw hybrid model outputs into calibrated, policy-shaped decision surfaces that match `AnalysisResult`.
 
-It exists because runtime should not consume raw model scores directly as if they were final economic decisions.
-
----
-
-## 2. What Carried Over / What Must Stay Stable
-
-The following are already implemented / must remain stable:
-
-- [x] one baseline candidate model exists from Phase 5
-- [x] confidence and expected-R surfaces are already core V7 semantics
-- [x] no-trade must remain first-class
-- [x] timing extension remains advisory-first in first phase
-
-This phase builds on top of these. Do not regress them.
+Runtime must not consume raw classifier probabilities or raw expected-R values as final decisions.
 
 ---
 
-## 3. Background & Motivation
+## 2. Stable Rules
 
-Without this phase:
-- confidence remains uncalibrated
-- raw scores leak into runtime
-- no-trade semantics become weak fallback
-- timing fields remain undefined in production flow
-
-This phase creates the compact decision layer V7 actually wants.
+- Confidence must be calibrated or explicitly downgraded.
+- Expected-R estimates must be reliability-reviewed before policy uses them aggressively.
+- No-trade remains explicit.
+- A directional trade needs both probability support and economic support.
+- Timing extension remains advisory-first.
 
 ---
 
-## 4. Current Failure State / Known Blockers
+## 3. Workstream A — Classification Calibration Artifact
 
-The current state has the following known issues:
+Produce calibration artifacts per `model_scope` for the action classifier.
 
-- `calibration artifact` = may not yet exist
-- `confidence_kind` = may not yet be operationally truthful
-- `policy selection` = may not yet choose long/short/no-trade explicitly
-- `entry_readiness` = may not yet be computed anywhere
+Calibration-slice default:
 
----
-
-## 5. Workstream A — Calibration Artifact
-
-**Status:** New
-
-### Problem / Goal
-
-Produce calibration artifacts per `model_scope` that map scope-compatible model outputs into safer confidence surfaces.
-
-### Calibration-slice rule
-
-Default fold usage:
 - training window: model fit
 - first half of validation window: early stopping / model selection
 - second half of validation window: calibration fit
-- optional holdout tail: untouched for later evaluation
+- optional holdout tail: untouched for evaluation
 
-Do not fit calibration on the same rows used to fit the model core.
+Calibration outputs:
 
-### Recalibration rule
-
-Recalibration is required when:
-- model artifact family changes
-- calibration config changes materially
-- Phase 8 monitoring shows calibration drift beyond threshold
-
-### Implementation Tasks
-
-- [ ] Implement calibration training flow
-- [ ] Implement calibration artifact loading
-- [ ] Preserve calibration lineage
-- [ ] Support raw-confidence fallback visibility
+- calibrated action probabilities
+- calibrated confidence
+- `confidence_kind`
+- reliability metrics
+- calibration lineage
 
 ### Acceptance Criteria
 
-- [ ] calibration artifact exists for the baseline candidate
-- [ ] raw vs calibrated confidence remains explicit
-- [ ] stale/missing calibration can be detected
-- [ ] calibration artifact is scope-compatible and rejected on `scope_mismatch`
+- [ ] calibration artifact exists.
+- [ ] raw vs calibrated confidence is explicit.
+- [ ] stale/missing calibration is detectable.
+- [ ] calibration artifact is scope-compatible.
 
 ---
 
-## 6. Workstream B — Decision Policy Core
+## 4. Workstream B — Expected-R Reliability Review
 
-**Status:** New
+Expected-R regressors do not need probability calibration, but they do need reliability evidence.
 
-### Problem / Goal
+Minimum review metrics:
 
-Turn calibrated surfaces into normalized decisions.
+- MAE / RMSE by fold
+- signed bias by fold
+- rank correlation between predicted expected-R and realized R
+- bucketed realized-R by predicted-R bucket
+- long/short separate quality
+- symbol/regime slices
 
-### Conflict rule
+Reliability outputs:
+
+- `expected_r_kind`
+- `expected_r_reliability_grade`
+- per-head error summaries
+- fallback/downgrade reason if unreliable
+
+### Acceptance Criteria
+
+- [ ] expected-R reliability summary exists.
+- [ ] unreliable expected-R can be downgraded visibly.
+- [ ] policy can distinguish trusted vs degraded expected-R.
+
+---
+
+## 5. Workstream C — Decision Policy Core
+
+Policy consumes:
+
+- calibrated action probabilities
+- confidence
+- decision margin
+- expected-R by action
+- expected-R reliability state
+- expected drawdown/adverse estimates where available
+- policy config
 
 First implementation rule:
-- a directional trade is actionable only if **both**
-  - confidence gate passes
-  - expected-R gate passes
-- if confidence passes but expected-R fails, select `NO_TRADE`
-- if expected-R passes but confidence fails, select `NO_TRADE`
-- review-only downgrade is allowed only if explicitly configured
 
-### Implementation Tasks
+A directional action is actionable only if:
 
-- [ ] Implement long/short/no-trade selection
-- [ ] Implement confidence gate
-- [ ] Implement expected-R gate
-- [ ] Implement tie-break/no-trade margin rules
+- confidence gate passes
+- action probability beats no-trade by configured margin
+- expected-R gate passes
+- drawdown/adverse gate passes if enabled
+- expected-R surface is not degraded beyond configured tolerance
+
+If confidence passes but expected-R fails: select `NO_TRADE`.
+
+If expected-R passes but confidence fails: select `NO_TRADE`.
+
+If long/short are too close: select `NO_TRADE`.
 
 ### Acceptance Criteria
 
-- [ ] `recommended_action` is explicit
-- [ ] `NO_TRADE` is selected positively, not by accident
-- [ ] confidence-only cannot override failed economic gate
-- [ ] policy thresholds are selected per `model_scope` and no averaged scope outputs are used
+- [ ] `recommended_action` is explicit.
+- [ ] confidence-only cannot override failed economic gate.
+- [ ] expected-R-only cannot override failed confidence gate.
+- [ ] `NO_TRADE` is selected positively.
 
 ---
 
-## 7. Workstream C — Timing Advisory Surface
+## 6. Workstream D — Timing Advisory Surface
 
-**Status:** New
-
-### Problem / Goal
-
-Compute the first-phase advisory timing fields without turning policy into a timing planner.
-
-#### 7.1 Timing outputs
+Compute advisory fields:
 
 ```python
 entry_readiness
 entry_valid_for_bars
 ```
 
-**Rationale:**
-- runtime and review need timing visibility
-- first phase should keep timing bounded and advisory
+First phase bounded enum:
 
-#### 7.2 Timing derivation rule
+- `READY_NOW`
+- `WAIT`
+- `CHASING`
+- `EXPIRING`
+- `MISSED`
 
-Default bounded heuristic:
-- `READY_NOW` if current price is inside entry zone and time sensitivity is not expiring-critical
-- `WAIT` if current price is near but not yet inside preferred zone and `CAN_WAIT` is allowed
-- `CHASING` if price has moved beyond the favorable side of the entry zone by configured chase distance
-- `EXPIRING` if still near entry but `EXPIRING_SOON`
-- `MISSED` if price is materially outside acceptable entry bounds or expected validity has collapsed
-- `entry_valid_for_bars` uses bounded integer range `0–5`
+`entry_valid_for_bars` range: `0–5`.
+
+Timing is policy-derived from score surfaces, entry-zone geometry, and simple bounded heuristics. It is not a first-phase learned primary target.
 
 ### Acceptance Criteria
 
-- [ ] `entry_readiness` can be emitted
-- [ ] `entry_valid_for_bars` is bounded and valid
-- [ ] timing outputs remain advisory-first
+- [ ] timing fields are emitted where applicable.
+- [ ] values are bounded and legal.
+- [ ] timing hard-gating remains disabled by default.
 
 ---
 
-## 8. Workstream D — Test Coverage
+## 7. Workstream E — Test Coverage
 
-**Status:** New
-**Required before:** Phase 7 runtime integration
+Minimum tests:
 
-### 8.1 Calibration tests
-
-- [ ] calibration artifact load test
-- [ ] raw vs calibrated distinction test
-- [ ] fallback visibility test
-
-### 8.2 Policy tests
-
-- [ ] long vs short vs no-trade selection test
-- [ ] expected-R gate test
-- [ ] confidence vs expected-R conflict test
-
-### 8.3 Timing tests
-
-- [ ] `entry_readiness` legality test
-- [ ] `entry_valid_for_bars` bound test
-- [ ] advisory-first behavior test
+- calibration artifact load
+- raw vs calibrated confidence distinction
+- missing/stale calibration fallback visibility
+- expected-R reliability metrics
+- expected-R degraded policy behavior
+- long/short/no-trade selection
+- confidence vs expected-R conflict
+- no-trade positive selection
+- timing legality and bounds
 
 ---
 
-## 9. Workstream E — Pre-Run Audit Checklist
+## 8. Pre-Run Audit
 
-**Status:** New
-**Must complete before:** runtime integration
+Before Phase 7:
 
-### 9.1 Calibration audit
-
-- [ ] verify calibration used a separate calibration-eligible slice
-- [ ] verify calibration artifact is tied to the correct model family
-
-### 9.2 Policy audit
-
-- [ ] verify no-trade is explicitly selectable
-- [ ] verify confidence vs expected-R conflict rule is documented in code/tests
-
-### 9.3 Timing audit
-
-- [ ] verify timing outputs are not treated as mandatory learned targets
-- [ ] verify gating on timing is still disabled by default
+- [ ] calibration used separate calibration-eligible rows
+- [ ] expected-R reliability summary exists
+- [ ] no-trade is explicitly selectable
+- [ ] confidence vs expected-R conflict rules are test-covered
+- [ ] raw expected-R cannot be treated as trusted when degraded
+- [ ] timing hard gate is disabled by default
 
 ---
 
-## 10. Combined Implementation Order
+## 9. Definition of Done
 
-1. Complete Workstream A — Calibration Artifact
-2. Implement Workstream B — Decision Policy Core
-3. Apply Workstream C — Timing Advisory Surface
-4. Run Workstream E — Pre-Run Audit
-5. Implement Workstream D — Test Coverage
-6. Execute calibration/policy test suite
-7. Evaluate results against acceptance criteria
-
-### Acceptance Criteria for First Combined Run
-
-- [ ] calibrated confidence surface exists
-- [ ] policy emits valid long/short/no-trade decisions
-- [ ] timing fields are present and bounded where applicable
-- [ ] raw confidence is never silently mislabeled as calibrated
+- [ ] classifier confidence is calibrated or visibly downgraded.
+- [ ] expected-R reliability is measured.
+- [ ] policy uses probability + expected-R + risk gates.
+- [ ] `AnalysisResult`-compatible output exists.
+- [ ] tests pass.
 
 ---
 
-## 11. Definition of Done
+## 10. What Phase 7 Inherits
 
-### 11.1 Calibration layer
-
-- [x] calibration semantics are documented
-- [ ] calibration artifact exists
-- [ ] calibration lineage exists
-
-### 11.2 Policy layer
-
-- [ ] explicit decision selection exists
-- [ ] no-trade is explicit
-- [ ] confidence + expected-R gating exists
-
-### 11.3 Candidate health
-
-- [ ] timing advisory surface exists without hard gating by default
-- [ ] `AnalysisResult`-compatible surface can be produced
-- [ ] calibration split and recalibration triggers are implemented
-
-### 11.4 Test layer
-
-- [ ] calibration tests pass
-- [ ] policy tests pass
-- [ ] timing tests pass
-
----
-
-## 12. What Phase 7 Inherits
-
-### 12.1 Capability expansion themes
-
-- calibrated confidence
-- normalized engine decision surface
-- advisory timing fields
-- policy-ready `AnalysisResult` semantics
-
-### 12.2 Phase Boundary
-
-- Phase 7 is portfolio/risk/runtime integration work.
-- Phase 6 is the prerequisite.
-- Do not start Phase 7 work until Phase 6 definition of done is fully satisfied.
-
----
-
-## 13. Compact Mental Model
-
-### 13.1 Phase Relationships
-
-- Phase 5: candidate model exists
-- Phase 6: scores become decisions
-- Phase 7: runtime consumes decisions
-- Phase 8: quality and drift are proven
-
-### 13.2 Key Takeaway
-
-This phase is where model outputs stop being “interesting numbers” and become actual decision surfaces the rest of V7 can consume.
+Phase 7 inherits a normalized hybrid decision surface that runtime can validate, persist, suppress, and convert into lifecycle records.

@@ -4,237 +4,211 @@
 
 ## Purpose
 
-Defines how V7 converts simulation truth into normalized training and evaluation labels.
+Defines how V7 converts simulation truth into normalized supervised targets.
 
 It answers:
 
-> Given one simulated comparative outcome family, what supervised targets should later systems consume?
-
----
-
-## In Scope
-
-- market-first label generation
-- long / short / no-trade comparative labels
-- regret-aware labels
-- path-quality-aware labels
-- unresolved / invalid label handling
-- ambiguity handling
-
----
-
-## Out of Scope
-
-- feature extraction
-- dataset splitting
-- model architecture
-- runtime gating
-- broker execution behavior
+> Given one simulated comparative outcome family, what classification and regression targets should the model consume?
 
 ---
 
 ## Core Decision
 
-V7 labels are derived from runtime simulation outputs via the deterministic training/replay adapter, not from historical runtime actions.
+V7 labels are derived from the single simulation truth layer.
 
-That means:
-- labels are market-first
-- labels are cost-aware
-- labels are comparative
-- no-trade is first-class
+The first-phase label design is explicitly **hybrid**:
 
-Label horizons are `model_scope`-specific. Swing labels, scalp labels, and aggressive-scalp immediate-continuation labels are not interchangeable. Each `model_scope` chooses its own configured simulation/horizon profile through the runtime-hosted simulation engine.
+- classification labels define action preference
+- regression labels define economic quality and risk
+
+Labels are market-first, cost-aware, comparative, and no-trade aware.
 
 ---
 
 ## Inputs
 
-- runtime simulation outputs from the training/replay adapter
-- simulation family versions
-- `model_scope`
-- horizon family / `label_horizon_family`
+- comparative simulation output
+- simulation-family version
+- horizon family
 - cost family
-- slippage family
-- comparative family rules
+- path-quality family
+- label interpretation config
 
 ---
 
 ## Outputs
 
-A normalized label record should minimally include:
+A normalized label record should include:
 
-- best action
-- second-best action
-- realized R for best action
-- regret relative to best action
-- no-trade correctness signals
-- path quality family
-- label validity status
-- label interpretation version
+### Classification label fields
+
+- `best_action_label`
+- `second_best_action_label`
+- `long_success_label`
+- `short_success_label`
+- `no_trade_quality_label`
+- `skip_was_correct`
+- `label_validity`
+- `ambiguity_reason`
+
+### Regression label fields
+
+- `long_realized_r_net`
+- `short_realized_r_net`
+- `long_realized_r_gross`
+- `short_realized_r_gross`
+- `long_cost_r`
+- `short_cost_r`
+- `long_mae_r`
+- `short_mae_r`
+- `long_mfe_r`
+- `short_mfe_r`
+- `regret_r`
+- `saved_loss_score`
+- `missed_opportunity_score`
+- `path_quality_score`
+
+### Lineage fields
+
+- `label_interpretation_version`
+- `simulation_family_version`
+- `cost_model_version`
+- `horizon_family_version`
 
 ---
 
-## First-Phase Label Family
-
-First phase should optimize for a compact action family:
+## First-Phase Action Family
 
 - `LONG_NOW`
 - `SHORT_NOW`
 - `NO_TRADE`
 
-Do **not** expand the action family aggressively in first phase.
+Do not expand the first-phase primary action family with wait/scale/exit actions.
 
-Possible later timing variants such as:
-- `WAIT_1_BAR_LONG`
-- `WAIT_1_BAR_SHORT`
-
-may exist in future comparative families, but are not first-phase authority.
+Timing fields may be derived for analysis, but they are not first-phase primary learned targets.
 
 ---
 
-## Rules
+## Classification Label Semantics
 
-### 1. Do not learn runtime history as truth
-A skipped live trade can still label as a high-quality long if the market path says so.
+### `best_action_label`
 
-### 2. No unresolved labels
-If runtime simulation output is unresolved or invalidated, the label must stay unresolved/invalid and must not become a final supervised label.
+The action with the best net economic outcome after costs, subject to ambiguity rules.
 
-### 3. No hidden hindsight leakage
-Labels must only use the approved future window and simulation rules.
+### `long_success_label`
 
-### 4. Comparative labels only
-The system must know not only what was good, but what was better than alternatives.
+A binary or ternary target describing whether the long outcome clears the configured minimum acceptable R and path-quality thresholds.
 
-### 5. No-trade is explicit
-A correct no-trade must be labelable and evaluable.
+### `short_success_label`
 
-### 6. Path matters
-Clean +1R and chaotic +1R do not have to label identically if path quality rules say otherwise.
+Same as long, but for short.
 
-### 7. Scope-specific horizons
-Do not use swing labels for `SCALP` model training, scalp labels for `SWING` model training, or either for `AGGRESSIVE_SCALP`. Aggressive scalp labels require stricter immediate-continuation / very-short-horizon and cost-aware semantics.
+### `no_trade_quality_label`
 
-### 8. No label-only simulator
-Labels must not call live runtime execution and must not implement a separate label-only simulator. They consume side-effect-free runtime simulation outputs and preserve simulation profile/version lineage.
+Labels no-trade as correct, missed opportunity, saved loss, or ambiguous depending on comparative outcomes.
 
-### 9. Monte Carlo evidence is optional
-Monte Carlo robustness evidence may support robust labels or label-confidence fields only when configured through the unified config system. It remains distributional evidence, not a final realized label by itself.
+---
+
+## Regression Label Semantics
+
+Regression labels are not optional decoration. They are first-class profitability targets.
+
+They allow the model to learn:
+
+- how much a long may be worth
+- how much a short may be worth
+- how bad adverse movement may be
+- how much cost erodes expectancy
+- whether no-trade avoided loss or missed opportunity
+
+Regression labels should be used by model heads, evaluation, and policy gates.
 
 ---
 
 ## Ambiguity Rule
 
-V7 must support an explicit ambiguous label state.
+If the gap between the best and second-best action is below the configured ambiguity threshold:
 
-### First-phase convention
-If the gap between the best and second-best comparative actions is below the configured ambiguity threshold, emit:
-- `label_validity = AMBIGUOUS`
-- `best_action_label = AMBIGUOUS_STATE`
+- set `label_validity = AMBIGUOUS`
+- set `best_action_label = AMBIGUOUS_STATE`
+- preserve regression targets if valid
+- exclude from strict action-classification training by default unless config explicitly allows soft-label use
 
-Do **not** force an artificial winner when the comparative gap is too small.
+Do not force artificial action winners.
 
-### Config requirement
-The ambiguity threshold must be config-driven.
-Recommended first-phase interpretation:
-- compare best and second-best action quality in R-space
-- use a small non-zero ambiguity margin
+---
+
+## Unresolved / Invalid Rule
+
+If simulation is unresolved:
+
+- label remains unresolved
+- strict supervised training excludes the row
+
+If simulation is invalidated:
+
+- label is invalid
+- invalidity reason is preserved
+- strict supervised training excludes the row
+
+No silent coercion.
 
 ---
 
 ## Path Quality Buckets
 
-First-phase path quality buckets:
+First-phase buckets:
+
 - `HIGH`
 - `MEDIUM`
 - `LOW`
 
-Default mapping uses `path_quality_score` from simulation:
+Default mapping:
+
 - `HIGH` if `path_quality_score >= 0.70`
 - `MEDIUM` if `0.40 <= path_quality_score < 0.70`
 - `LOW` if `path_quality_score < 0.40`
 
-These defaults are config-overridable but must remain versioned.
+Thresholds are config-driven and versioned.
 
 ---
 
 ## `skip_was_correct` Rule
 
-First-phase convention:
 `skip_was_correct = true` when:
-- `best_action_label = NO_TRADE`, or
-- both directional actions fail to exceed the configured minimum acceptable realized-R threshold, or
-- the saved-loss score exceeds the configured saved-loss threshold and no-trade is the preferred comparative outcome
 
-This must remain config-driven and explicit.
-
----
-
-## Timing Extension Policy
-
-The result contract may expose:
-- `entry_readiness`
-- `entry_valid_for_bars`
-
-These are **not first-phase learned primary targets**.
-
-First phase policy:
-- keep them advisory / derived
-- measure them against later outcomes
-- only promote them to learned targets with explicit evidence
-
-This avoids unnecessary target explosion.
-
----
-
-## Label Families
-
-Recommended first-phase label outputs:
-- `best_action_label`
-- `counterfactual_best_action`
-- `regret_r`
-- `skip_was_correct`
-- `saved_loss_score`
-- `missed_opportunity_score`
-- `path_quality_bucket`
-- `label_validity`
-
-Keep the label family compact and explicit.
-
----
-
-## Failure / Fallback
-
-If a state cannot produce a valid label:
-- mark invalid
-- preserve reason
-- exclude from strict supervised training unless explicitly allowed by dataset config
-
-No silent coercion.
+- best action is `NO_TRADE`, or
+- both directional actions fail the minimum acceptable realized-R threshold, or
+- saved-loss score exceeds the configured threshold and no-trade is preferred
 
 ---
 
 ## Config Surface
 
 Key config families:
+
 - label interpretation version
-- regret thresholds
-- no-trade correctness thresholds
-- path quality thresholds
+- minimum acceptable R
 - ambiguity threshold
-- invalid / ambiguous label filtering rules
-- optional Monte Carlo label-confidence usage, if enabled
+- no-trade correctness thresholds
+- saved-loss threshold
+- missed-opportunity threshold
+- path-quality thresholds
+- invalid/ambiguous filtering policy
+- regression target clipping policy
 
 ---
 
 ## Interfaces
 
 Upstream:
-- `runtime/simulation_engine.md`
+
 - `pipeline/simulation.md`
 
 Downstream:
+
 - `pipeline/dataset.md`
+- `pipeline/model.md`
 - `pipeline/evaluation.md`
 - `contracts/trade_outcome.md`
 
@@ -242,18 +216,19 @@ Downstream:
 
 ## Test Requirements
 
-Minimum label tests:
-- correct best-action assignment
-- correct no-trade assignment
+Minimum tests:
+
+- best-action assignment
+- long/short success labels
+- no-trade quality labels
+- regression R targets match simulation output
+- cost-adjusted R targets match cost model
 - unresolved simulation yields unresolved label
 - ambiguity threshold emits ambiguous label
-- regret is consistent with comparative outcome
-- path-quality buckets are deterministic
-- `skip_was_correct` matches configured thresholds
+- invalid rows preserve invalidity reason
 
 ---
 
 ## Final Position
 
-Labels are not a substitute for outcomes.
-They are one normalized interpretation of simulation truth for training and evaluation.
+Labels are not the model and not the outcome itself. They are one versioned interpretation of simulation truth for supervised learning. In V7, they must support both action classification and economic regression.

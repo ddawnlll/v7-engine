@@ -1,159 +1,122 @@
-
 # Phase 9 — Deployment Safety & Release Readiness (Planned)
 
-**Status:** Planned
-**Owner:** Release / runtime safety track
-**Last updated:** 2026-04-24
+**Status:** Planned  
+**Owner:** Release / runtime safety track  
+**Last updated:** 2026-05-23  
 **Delivery status:** Not started
 
 ---
 
 ## 1. Purpose
 
-This phase turns a functioning and measured V7 system into a release-ready system with safety gates, rollback, and controlled rollout modes.
+Turn a functioning and measured V7 hybrid system into a release-ready system with safety gates, rollback, kill switch, and controlled rollout modes.
 
-It solves the problem that good evaluation is not the same as safe operational authority.
-
----
-
-## 2. What Carried Over / What Must Stay Stable
-
-The following are already implemented / must remain stable:
-
-- [x] contract family exists
-- [x] runtime lifecycle exists
-- [x] evaluation and monitoring evidence exist from Phase 8
-- [x] fallback and deployment-safety docs define the target behavior
-
-This phase builds on top of these. Do not regress them.
+Good evaluation is not the same as safe operational authority.
 
 ---
 
-## 3. Background & Motivation
+## 2. Stable Rules
 
-Without this phase:
-- live eligibility stays ambiguous
-- rollback may exist only in theory
-- kill switch may not be proven
-- promoted models may not be operationally safe
-
-This phase closes that gap.
+- Release eligibility is per `model_scope`.
+- Candidate artifact, evaluation-promotable artifact, and live-eligible authority are distinct.
+- Shadow is required for first live-eligible release unless explicitly waived.
+- Hybrid artifact bundles must rollback as compatible bundles.
+- Timing remains advisory-first unless Phase 8 evidence and config approve gating.
 
 ---
 
-## 4. Current Failure State / Known Blockers
+## 3. Workstream A — Rollout Modes
 
-The current state has the following known issues:
+Implement:
 
-- `paper / shadow / live progression` = may not yet be enforced
-- `kill switch` = may not yet be proven in flow
-- `rollback` = may not yet preserve dependency compatibility
-- `live-eligibility gate` = may not yet exist as executable logic
-- `release authority` = may still be manual and under-specified
+- replay-only
+- paper
+- shadow
+- live-eligible
 
----
+Release authority rule:
 
-## 5. Workstream A — Rollout Modes
-
-**Status:** New
-
-### Problem / Goal
-
-Implement the controlled progression from replay to paper to shadow to live-eligible.
-
-Release eligibility is per `model_scope`; do not infer `SCALP` safety from `SWING` success or `AGGRESSIVE_SCALP` safety from `SCALP` success.
-
-### Release authority rule
-
-First implementation default:
 - one named release owner
 - one named runtime/control reviewer
 - shadow waiver requires both approvals plus written rationale in release record
 
-This replaces vague “higher-level release policy” wording with a concrete minimum rule.
-
-### Implementation Tasks
-
-- [ ] Implement rollout mode config/control surface
-- [ ] Implement paper mode guarantees
-- [ ] Implement shadow mode guarantees
-- [ ] Implement live-eligibility gating surface
-
 ### Acceptance Criteria
 
-- [ ] replay, paper, shadow, and live-eligible are distinguishable in code/config
-- [ ] first live-eligible path requires shadow unless explicit release authority waives it
-- [ ] execution authority changes by mode are explicit
+- [ ] rollout modes are distinguishable in code/config.
+- [ ] first live-eligible path requires shadow unless waived.
+- [ ] execution authority changes by mode are explicit.
 
 ---
 
-## 6. Workstream B — Kill Switch & Rollback
+## 4. Workstream B — Hybrid Bundle Rollback
 
-**Status:** New
+Active release authority is a scope-compatible bundle:
 
-### Problem / Goal
+```python
+model_scope
+action_classifier_artifact
+expected_r_long_regressor_artifact
+expected_r_short_regressor_artifact
+optional_risk_regressor_artifacts
+calibration_artifact
+expected_r_reliability_artifact
+policy_artifact
+feature_schema_version
+label_interpretation_version
+simulation_profile_version
+```
 
-Guarantee that unsafe runtime authority can be stopped and reverted.
+Rollback must restore a compatible bundle. Do not permit partial activation of incompatible classifier/regressor/calibration/policy combinations.
 
-### Rollback bundle rule
+### Acceptance Criteria
 
-Active release authority is a **scope-compatible bundle**:
-- `model_scope`
-- model artifact family
-- calibration artifact family
-- policy artifact family
+- [ ] rollback restores complete hybrid bundle.
+- [ ] incompatible partial activation is rejected.
+- [ ] rollback lineage is preserved.
 
-Rollback must restore a compatible bundle.
-Do not permit partial activation of incompatible model/calibration/policy combinations.
+---
 
-### Kill-switch lifecycle rule
+## 5. Workstream C — Kill Switch & Execution Disable
 
 While kill switch is active:
+
 - requests may still be built
 - results may still be recorded if policy allows
-- `DecisionEvent` creation must remain available
-- execution must be blocked
-- `TradeOutcome` must remain compatible with non-execution or unavailable execution outcome
-
-### Implementation Tasks
-
-- [ ] Implement global kill switch
-- [ ] Implement execution disable without losing lifecycle visibility
-- [ ] Implement rollback of active promoted authority
-- [ ] Preserve dependency-compatible rollback across model/calibration/policy bundles
+- `DecisionEvent` creation remains available
+- execution is blocked
+- `TradeOutcome` remains compatible with non-execution or unavailable execution outcome
 
 ### Acceptance Criteria
 
-- [ ] kill switch blocks execution
-- [ ] lifecycle recording remains intact during kill-switch activation
-- [ ] rollback changes forward active authority safely
-- [ ] rollback preserves dependency compatibility
+- [ ] kill switch blocks execution.
+- [ ] lifecycle recording remains intact.
+- [ ] non-execution outcome semantics remain valid.
 
 ---
 
-## 7. Workstream C — Release Gate & Safety Audit
+## 6. Workstream D — Live-Eligibility Gate
 
-**Status:** New
-
-### Problem / Goal
-
-Make live authority conditional on explicit gates rather than intuition.
-
-#### 7.1 Release gate inputs
+Live eligibility requires:
 
 ```python
 evaluation_pass = True
+hybrid_surface_quality_pass = True
 monitoring_baseline_ready = True
 fallback_policy_ready = True
 kill_switch_ready = True
 rollback_ready = True
+bundle_compatibility_pass = True
 ```
 
-**Rationale:**
-- release readiness must be testable
-- live eligibility is stricter than candidate or paper eligibility
+Hybrid-specific checks:
 
-#### 7.2 Timing extension gate
+- calibrated confidence is present or explicitly downgraded by policy
+- expected-R reliability is above configured minimum or policy downgrades expected-R use
+- no classifier/regressor artifact mismatch
+- no stale calibration artifact
+- no stale expected-R reliability artifact
+
+Timing gate default:
 
 ```python
 entry_timing_gate_enabled = False
@@ -161,135 +124,64 @@ entry_timing_gate_enabled = False
 
 ### Acceptance Criteria
 
-- [ ] live-eligibility gate is explicit and executable
-- [ ] release gate distinguishes evaluation promotion from live authority
-- [ ] timing extension remains observability-first unless evidence and config allow escalation
+- [ ] live-eligibility gate is executable.
+- [ ] hybrid artifact consistency is enforced.
+- [ ] release gate distinguishes evaluation promotion from live authority.
 
 ---
 
-## 8. Workstream D — Test Coverage
+## 7. Workstream E — Test Coverage
 
-**Status:** New
-**Required before:** first live-eligible release attempt
+Minimum tests:
 
-### 8.1 Rollout tests
-
-- [ ] paper mode test
-- [ ] shadow mode test
-- [ ] live-eligibility rejection test
-
-### 8.2 Safety control tests
-
-- [ ] kill-switch test
-- [ ] rollback test
-- [ ] dependency-compatible rollback test
-
-### 8.3 Gate tests
-
-- [ ] incomplete candidate rejected from live eligibility
-- [ ] baseline requirement enforced
-- [ ] timing extension hard-gate remains disabled by default
-- [ ] kill-switch lifecycle-recording behavior remains intact
+- paper mode
+- shadow mode
+- live-eligibility rejection
+- kill switch
+- rollback
+- dependency-compatible hybrid rollback
+- incomplete candidate rejected from live eligibility
+- stale calibration rejected or downgraded
+- stale expected-R reliability rejected or downgraded
+- timing hard-gate disabled by default
+- kill-switch lifecycle recording behavior
 
 ---
 
-## 9. Workstream E — Pre-Run / Pre-Deploy Audit Checklist
+## 8. Pre-Deploy Audit
 
-**Status:** New
-**Must complete before:** first live-eligible release attempt
+Before first live-eligible release attempt:
 
-### 9.1 Safety audit
-
-- [ ] verify kill switch is operational end to end
-- [ ] verify rollback path is operational end to end
-
-### 9.2 Evidence audit
-
-- [ ] verify evaluation gate passed on real candidate evidence
-- [ ] verify monitoring baseline is designated and retained
-
-### 9.3 Release audit
-
-- [ ] verify release authority is named and documented
-- [ ] verify live eligibility is distinct from candidate promotion
-- [ ] verify rollback bundle compatibility is preserved
+- [ ] kill switch operational end to end
+- [ ] rollback operational end to end
+- [ ] evaluation gate passed on real candidate evidence
+- [ ] hybrid-surface quality gate passed
+- [ ] monitoring baseline designated and retained
+- [ ] release authority named and documented
+- [ ] live eligibility distinct from candidate promotion
+- [ ] rollback bundle compatibility preserved
 
 ---
 
-## 10. Combined Implementation Order
+## 9. Definition of Done
 
-1. Complete Workstream A — Rollout Modes
-2. Implement Workstream B — Kill Switch & Rollback
-3. Apply Workstream C — Release Gate & Safety Audit
-4. Run Workstream E — Pre-Deploy Audit
-5. Implement Workstream D — Test Coverage
-6. Execute deployment-safety suite
-7. Evaluate results against acceptance criteria
-
-### Acceptance Criteria for First Combined Run
-
-- [ ] rollout modes behave distinctly
-- [ ] kill switch and rollback work
-- [ ] live-eligibility gate rejects incomplete candidates
-- [ ] release safety is test-backed rather than assumed
+- [ ] rollout mode controls exist.
+- [ ] live-eligibility gate exists.
+- [ ] kill switch works.
+- [ ] hybrid rollback bundle compatibility is enforced.
+- [ ] release authority is documented and test-backed.
+- [ ] tests pass.
 
 ---
 
-## 11. Definition of Done
+## 10. What Comes After Phase 9
 
-### 11.1 Gate layer
+After Phase 9, V7 can expand carefully:
 
-- [x] deployment-safety semantics are documented
-- [ ] rollout mode controls exist
-- [ ] live-eligibility gate exists
+- broader symbol-universe activation
+- additional scopes
+- specialist/model-family experiments
+- timing-gate promotion if evidence supports it
+- advanced portfolio/risk only after first safe live-eligible slice
 
-### 11.2 Safety layer
-
-- [ ] kill switch exists and works
-- [ ] rollback exists and works
-- [ ] dependency-compatible rollback is enforced
-
-### 11.3 Candidate health
-
-- [ ] paper / shadow / live distinctions are explicit
-- [ ] release authority is documented and test-backed
-- [ ] monitoring baseline designation/retention is wired into release flow
-
-### 11.4 Test layer
-
-- [ ] rollout tests pass
-- [ ] safety-control tests pass
-- [ ] gate tests pass
-
----
-
-## 12. What Comes After Phase 9
-
-### 12.1 Capability expansion themes
-
-- safe live-eligible V7 slice
-- evidence-backed promotion discipline
-- operational safety controls
-- stable baseline for later optimization
-
-### 12.2 Phase Boundary
-
-- Post-Phase 9 work is optimization, expansion, and productization.
-- Phase 9 is the prerequisite.
-- Do not start advanced expansion work until Phase 9 definition of done is fully satisfied.
-
----
-
-## 13. Compact Mental Model
-
-### 13.1 Phase Relationships
-
-- Phase 7: runtime lifecycle became real
-- Phase 8: evidence and drift became measurable
-- Phase 9: safe authority becomes possible
-- Post-Phase 9: optimization starts
-
-### 13.2 Key Takeaway
-
-A system that cannot be stopped safely is not ready for live authority.
-Phase 9 is the final proof that V7 is not only smart enough to act, but safe enough to be allowed to act.
+Post-Phase 9 expansion must not create a new contract family automatically.

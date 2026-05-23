@@ -2,866 +2,369 @@
 
 ## Purpose
 
-This document defines the system architecture for **V7**.
+This document defines the revised V7 system architecture.
 
-It explains how V7 is structured end to end, how data and decisions flow through the system, which parts are authoritative, which parts are platform-specific, and which architectural rules must remain true as the implementation grows.
+V7 is a centralized, simulation-native, contract-first trading system built around one economic truth layer and one hybrid supervised decision engine.
 
-This is an **architecture document**, not a low-level implementation spec.
-It defines the stable system shape and the relationships between the major components.
+The architecture is optimized for:
 
-This document is written primarily for **LLM code agents and AI-assisted engineering workflows**.
-It therefore prioritizes:
-
-* explicit ownership boundaries
-* low repetition
-* dense constraints
-* modularity rules
-* configuration rules
-* stable vs replaceable component clarity
+1. economic quality
+2. simulation consistency
+3. calibration reliability
+4. multi-symbol clarity
+5. editability
+6. centralized configuration
 
 ---
 
 ## Architectural Summary
 
-V7 is a **centralized, simulation-native, contract-first trading engine** built around one economic truth layer.
+```text
+one market-state pipeline
+→ one simulation truth layer
+→ one label/evaluation language
+→ one hybrid supervised model
+→ one explicit policy layer
+→ one portfolio layer
+→ one risk gate
+→ one runtime boundary
+```
 
-The system is designed around the following idea:
+The first learned model is not pure classification and not pure regression.
 
-**one market-state pipeline**
-→ **one shared training platform**
-→ **mode-scoped model families**
-→ **one runtime-hosted simulation truth layer**
-→ **one label/evaluation language per `model_scope`**
-→ **one explicit policy layer per selected scope**
-→ **one runtime integration boundary with a `scope_router`**
+It is a **classification-first hybrid profitability model**:
 
-The architecture is intentionally smaller and more centralized than V6.
-
----
-
-## Primary Architectural Goal
-
-The architecture exists to optimize the following, in order:
-
-1. economic quality
-2. simulation consistency
-3. calibration reliability
-4. multi-symbol operational clarity
-5. editability and implementation speed
-6. centralized configuration simplicity
-
-The architecture is not optimized for maximum subsystem richness.
-It is optimized for producing a system that is economically honest, easier to reason about, faster to improve, and cheaper to modify.
+- classification heads estimate action suitability
+- regression heads estimate economic quality
+- calibration makes the model outputs operationally safer
+- policy combines those surfaces into one final recommendation
 
 ---
 
 ## Core Architectural Rules
 
-### 1. Runtime-hosted simulation truth layer
+### 1. One simulation truth layer
 
-The same runtime-hosted simulation engine defines simulated truth for:
-
-* label generation through side-effect-free training/replay adapters
-* forward evaluation through evaluation replay adapters
-* paper forward simulation
-* historical replay driver outputs
-* trade outcome interpretation
-* cost-aware simulated trade resolution
-* Monte Carlo robustness mode when configured
-
-Runtime owns simulation execution. The model does not own simulation, and the pipeline consumes simulation output rather than reimplementing a simulator. There must not be separate label-only or backtest-only simulator semantics.
+The same simulation logic defines labels, replay evaluation, paper/live outcome interpretation, no-trade quality, regret, and cost-aware trade resolution.
 
 ### 2. One canonical market-state language
 
-Live inference, replay, dataset generation, and evaluation must all use the same snapshot/state language.
+Live inference, replay, dataset generation, and evaluation use the same state language.
 
-### 3. One explicit contract boundary
+### 3. One explicit contract family
 
-The runtime and the engine interact only through explicit contracts:
+Runtime and engine communicate through:
 
-* `AnalysisRequest`
-* `AnalysisResult`
-* `DecisionEvent`
-* `TradeOutcome`
+- `AnalysisRequest`
+- `AnalysisResult`
+- `DecisionEvent`
+- `TradeOutcome`
 
-### 4. One primary codebase
+### 4. One primary model family first
 
-V7 uses one primary Python codebase.
-Platform differences are handled at the compute backend and deployment level, not by forking the system logic.
+First phase is **XGBoost-first** for speed, portability, tabular strength, and transparent iteration.
 
-### 5. One shared training platform, multiple mode-scoped model families
+### 5. Hybrid model outputs are first-class
 
-V7 uses one shared training platform, not one universal model for all trade modes.
-The first V7 implementation uses **XGBoost** as the primary algorithm family within separate mode-scoped artifact families.
+The model artifact must expose both:
 
-Canonical first scopes:
-- `SWING`
-- `SCALP`
-- `AGGRESSIVE_SCALP`
+- action probability / classification surfaces
+- expected economic quality / regression surfaces
 
-Each `model_scope` owns its own dataset family, `primary_interval`, `context_intervals`, `refinement_intervals`, `label_horizon_family`, cost/slippage profile, feature schema variant where needed, calibration artifact, policy thresholds, evaluation report, and model artifact.
-Shared infrastructure remains common: raw data store, canonical state/snapshot builder, shared runtime-hosted simulation engine, training runner, artifact registry, evaluation framework, runtime router, and unified config system.
+### 6. Runtime is not the model
 
-### 6. One concern, one primary module
-
-Each concern should have one primary implementation module.
-
-Examples:
-
-* simulation → one runtime-hosted simulation engine with side-effect-free adapters
-* labels → one label module family
-* features → one feature module family
-* thresholds → one policy module family
-* evaluation → one evaluation module family
-
-A change in one concern should not require a system-wide rewrite.
+Runtime owns orchestration, persistence, safety, fallback, and execution eligibility. The model produces decision evidence, not operational permission.
 
 ### 7. One central configuration root
 
-V7 must have one authoritative configuration loader and one centralized configuration root.
-Sub-configs may be modular, but behavior must not be scattered across hidden operational surfaces.
+All behavior must route through the unified config system. No hidden shell-script semantics or local config mutation should become the real authority.
 
 ---
 
-## Modularity and Configuration Principles
+## Top-Level Layers
 
-This section is a hard architectural constraint.
-
-### Modularity rule
-
-A change in one concern should ideally require editing:
-
-* one primary module
-* one config surface
-* one test surface
-
-not five subsystems.
-
-### Replaceable internals rule
-
-V7 internals should be replaceable behind stable contracts.
-
-That means:
-
-* contracts remain stable longer than implementation modules
-* model family can change without redesigning runtime
-* label policy can evolve without rewriting event semantics
-* threshold policy can evolve without breaking request/result contracts
-
-### Configuration rule
-
-V7 must be centrally configurable.
-
-This means:
-
-* one authoritative config loader
-* modular sub-configs by concern
-* no hidden config mutation through ad hoc scripts
-* no behavior controlled only by shell wrappers or local hacks
-* no second orchestration system becoming the real source of truth
-
-### CLI rule
-
-V7 must be **CLI-first**, not Makefile-first.
-
-This means:
-
-* one primary Python CLI entrypoint
-* one standard invocation path for research and operations
-* helper scripts may exist, but they do not define the system
-
-### AI-editability rule
-
-The architecture must be easy for LLM code agents to modify safely.
-
-That means:
-
-* local changes should stay local
-* constraints must be explicit
-* stable and unstable surfaces must be obvious
-* documents and modules should be easy to map one-to-one
+1. raw market data
+2. canonical state construction
+3. simulation and outcome truth
+4. labels and features
+5. dataset and split
+6. hybrid model and calibration
+7. decision policy
+8. portfolio interpretation
+9. risk gating
+10. runtime lifecycle
+11. evaluation and monitoring
 
 ---
 
-## Top-Level System Shape
+## 1. Raw Market Data
 
-V7 has eight top-level architectural layers:
+Responsibilities:
 
-1. **Raw market data layer**
-2. **State construction layer**
-3. **Simulation and outcome layer**
-4. **Label and feature layer**
-5. **Dataset and split layer**
-6. **Model and calibration layer**
-7. **Decision policy layer**
-8. **Runtime and lifecycle layer**
+- acquire raw candle history
+- store canonical raw history
+- validate gaps, duplicates, corruption, and timestamp order
+- expose consistent historical windows
 
-These layers are described below.
+First-phase assumptions:
 
----
+- Binance candles
+- primary decision interval: 4h
+- higher-timeframe context: 1d
+- refinement/timing context: 1h
+- target universe: up to 60 symbols
 
-## 1. Raw Market Data Layer
+Rules:
 
-This layer is responsible for acquiring and storing canonical raw market data.
-
-### Responsibilities
-
-* download raw candles from Binance
-* store canonical raw history
-* validate structural integrity
-* detect gaps, duplicates, and invalid rows
-* expose consistent access to historical windows
-
-### Inputs
-
-* Binance kline data
-
-### Outputs
-
-* canonical raw candle storage
-* raw data quality reports
-
-### Rules
-
-* raw data is stored as source-of-truth history
-* no external indicator feeds are downloaded
-* no derived features are stored as source-of-truth market input
-* missing or corrupted history is flagged explicitly
-* raw data logic stays isolated from feature logic
-
-### Initial data scope
-
-The first V7 scope assumes:
-
-* Binance raw candles
-* one shared training platform, not one universal model
-* separate first model scopes:
-  * `SWING`: `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`, `label_horizon_family` swing horizon, `trade_mode` `SWING`
-  * `SCALP`: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`, `label_horizon_family` scalp horizon, `trade_mode` `SCALP`
-  * `AGGRESSIVE_SCALP`: `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, `refinement_intervals` `1m/3m` micro context where applicable, `label_horizon_family` immediate continuation / very short horizon, `trade_mode` `AGGRESSIVE_SCALP`
-* intervals may be context views inside a scope, but `primary_interval` and `label_horizon_family` must not mix across scopes
-* no averaged mode outputs; the runtime `scope_router` selects the scope before inference using `requested_trade_mode` / `model_scope`
-* 60-symbol design target
-
-The first implementation may stage rollout on fewer symbols, but the architecture must be built for 60-symbol operation from the start.
+- raw data remains source-of-truth history
+- no derived features are stored as raw truth
+- missing/corrupted history is explicit
 
 ---
 
-## 2. State Construction Layer
+## 2. Canonical State Construction
 
-This layer builds the canonical market state used everywhere in V7.
+Responsibilities:
 
-### Responsibilities
+- build one canonical state for one symbol and decision timestamp
+- attach 4h primary, 1d context, and 1h refinement views
+- attach volatility, regime, symbol metadata, quality, and freshness metadata
+- provide identical semantics to live, replay, dataset, and evaluation
 
-* construct the canonical snapshot/state object for one market state
-* compute derived local state from raw candles
-* attach regime, volatility, and quality metadata
-* expose identical state semantics to live, replay, training, and evaluation
+Rules:
 
-### Inputs
-
-* raw candles
-* system configuration
-* optional runtime execution context
-
-### Outputs
-
-* canonical market state / snapshot
-
-### State contents
-
-The canonical market state includes:
-
-* recent raw candle windows
-* higher-timeframe context
-* derived local state
-* volatility and regime context
-* data-quality and freshness metadata
-* symbol and interval identity
-* optional runtime execution context
-
-### Rules
-
-* state construction must be deterministic for the same input history
-* live and replay must use the same builder logic
-* deterministic annotations may exist as context, but they are not the source of truth
-* adding a new state feature should be a local change in the state/feature layer, not a runtime rewrite
+- deterministic for the same input
+- no future bars
+- no runtime-only hidden side channel
+- missingness is explicit
 
 ---
 
-## 3. Simulation and Outcome Layer
+## 3. Simulation and Outcome Truth
 
-This is the most important layer in V7.
+Simulation is the economic truth core.
 
-It is the system’s economic truth layer.
+It compares:
 
-### Responsibilities
+- `LONG_NOW`
+- `SHORT_NOW`
+- `NO_TRADE`
 
-* simulate long / short / no-trade outcomes from a candidate state
-* apply cost-aware trade semantics
-* resolve stop / target / time-exit behavior
-* compute realized and comparative action quality
-* produce normalized outcome records
+for the same state and future path under the same stop, target, horizon, fee, and slippage semantics.
 
-### Inputs
+It computes:
 
-* canonical market states
-* future candle path
-* cost model
-* stop / target / horizon policy
+- realized R
+- fee/slippage adjusted R
+- MFE / MAE
+- path quality
+- regret
+- saved-loss and missed-opportunity scores
+- resolution status
 
-### Outputs
+Rules:
 
-* simulated action outcomes from the runtime simulation engine
-* normalized trade-outcome records
-* economic-quality metrics
-
-### Core rule
-
-There is only **one runtime-hosted simulation engine**, treated as the shared simulated-truth module.
-
-That same engine is used for:
-
-* label generation through side-effect-free training/replay adapters
-* out-of-sample forward evaluation through evaluation replay adapters
-* runtime paper trading as paper forward simulation
-* historical replay using a runtime historical replay driver
-* production-side outcome normalization
-* Monte Carlo robustness mode when configured
-
-Simulation should be profile/adaptor-friendly for V6 and V7 inputs. Runtime owns simulation execution/hosting. The model does not own simulation, and pipeline stages consume simulation outputs.
-
-### Economic semantics
-
-This layer computes:
-
-* realized return
-* realized R
-* fees paid
-* slippage cost
-* hold duration
-* MFE / MAE
-* path quality
-* counterfactual best action
-* regret and missed-opportunity measures
-
-### Rules
-
-* cost modeling must be explicit
-* stop/target/time-exit semantics must be versioned
-* labeling and evaluation must share identical semantics
-* no separate backtesting truth is allowed
-* simulation rule changes should be localized to the simulation layer and versioned clearly
+- one simulation engine
+- labels and evaluation share semantics
+- no unresolved simulation becomes a final training label
+- simulation-family version changes when meaning changes
 
 ---
 
-## 4. Label and Feature Layer
+## 4. Labels and Features
 
-This layer transforms simulated and state information into model-ready training data.
+Labels are derived from simulation truth.
 
-### Responsibilities
+Classification labels answer:
 
-* generate action-comparative labels
-* generate label quality flags
-* compute model feature columns from state
-* keep feature generation modular and minimal
+> Which action is preferable?
 
-### Labeling approach
+Regression labels answer:
 
-V7 uses **action-comparative, net-cost labels**.
+> How profitable, risky, or costly is the action?
 
-For each candidate state, V7 compares:
+Features are derived from canonical state only.
 
-* `LONG_NOW`
-* `SHORT_NOW`
-* `NO_TRADE`
+Rules:
 
-under the same simulation semantics.
-
-The primary question is:
-
-> Which action produced the best net economic outcome under the same cost-aware simulation rules?
-
-### Primary labels
-
-The initial architecture assumes the following label families:
-
-* `best_action_label`
-* `best_action_r`
-* `second_best_action`
-* `action_gap_r`
-* `path_quality_label`
-* `outcome_quality_label`
-* `label_quality`
-* `is_ambiguous`
-* `is_good_no_trade`
-
-### Feature approach
-
-The first V7 implementation is **XGBoost-first**, so the feature layer is explicit and modular.
-
-Feature families may include:
-
-* price returns and momentum
-* volatility and range structure
-* volume and participation features
-* higher-timeframe alignment features
-* symbol-aware metadata features
-* regime and transition features
-* data-quality flags where appropriate
-
-### Rules
-
-* labels are market-first, not legacy-engine-first
-* labels are cost-aware
-* features are derived locally
-* feature generation is modular and easily extensible
-* adding a new feature should require minimal architectural change
-* adding a new label family should remain a local change inside the labeling layer plus config and tests
+- no future leakage
+- explicit feature schema versioning
+- explicit label interpretation versioning
+- compact, interpretable first-phase features
+- shared multi-symbol model bias
 
 ---
 
-## 5. Dataset and Split Layer
+## 5. Dataset and Split
 
-This layer assembles trainable datasets and temporal evaluation splits.
+Datasets are temporal and lineage-preserving.
 
-### Responsibilities
+Rows contain:
 
-* build datasets from states, labels, and features
-* apply quality filters and weighting
-* build temporal train / validation / test partitions
-* support walk-forward evaluation
-* produce dataset manifests and dataset reports
+- symbol
+- primary interval
+- timestamp
+- feature vector
+- classification targets
+- regression targets
+- simulation lineage
+- label lineage
+- feature schema lineage
 
-### Inputs
+Rules:
 
-* canonical states
-* labels
-* features
-
-### Outputs
-
-* train/validation/test datasets
-* walk-forward fold definitions
-* dataset metadata and reports
-
-### Rules
-
-* time order is never violated
-* no random split is used for the primary trading evaluation path
-* walk-forward or future-relative evaluation is required
-* label quality and data quality can influence sample inclusion or weights
-* split behavior must remain config-driven, not hardcoded across many modules
-
-### Initial split posture
-
-The architecture supports:
-
-* temporal train / validation / test splits
-* expanding-window walk-forward evaluation
-* future-relative holdouts
+- no random IID primary split
+- walk-forward evaluation first
+- unresolved or invalid labels excluded by default
+- ambiguous rows are explicitly handled
+- symbol weighting prevents silent dominance
 
 ---
 
-## 6. Model and Calibration Layer
+## 6. Hybrid Model and Calibration
 
-This layer trains the learned decision engine.
+The first-phase learned system is:
 
-### Primary model family
+> **XGBoost-first hybrid supervised model**
 
-The initial V7 model family is:
+Recommended artifact shape:
 
-* **XGBoost**
+```text
+shared feature matrix
+    ├── classification surfaces
+    │   ├── P(LONG_NOW)
+    │   ├── P(SHORT_NOW)
+    │   └── P(NO_TRADE)
+    └── regression surfaces
+        ├── E[R | LONG_NOW]
+        ├── E[R | SHORT_NOW]
+        ├── expected adverse pressure / drawdown
+        └── cost-adjusted expectancy
+```
 
-This is a deliberate design choice.
+Calibration then maps raw classification scores into reliable probability/confidence surfaces.
 
-### Why XGBoost-first
+Rules:
 
-* fast iteration
-* strong tabular baseline
-* simpler production behavior
-* portable artifacts across Linux ROCm and macOS CPU
-* lower implementation and debugging complexity
-* easier alignment with explicit features and explicit policy
-
-### Responsibilities
-
-* train model artifacts
-* score long / short / no-trade decisions
-* export portable model artifacts
-* support CPU and ROCm-based execution paths where appropriate
-* fit and apply calibration
-
-### Calibration
-
-Calibration is a first-class structural component.
-
-The model layer must support:
-
-* calibrated decision outputs
-* symbol-aware calibration where justified
-* regime-aware calibration where justified
-* calibration diagnostics and reliability reporting
-
-### Rules
-
-* thresholds operate on calibrated scores, not raw scores
-* artifacts must be portable across supported platforms
-* feature schema and model artifact versioning are mandatory
-* calibration quality is part of model readiness, not a later optional add-on
-* model family changes must not require rewriting the rest of the architecture
+- XGBoost classifiers and regressors are both allowed
+- raw scores are not runtime confidence
+- regression heads are economic evidence, not direct execution permission
+- model family can change without rewriting runtime contracts
 
 ---
 
-## 7. Decision Policy Layer
+## 7. Decision Policy
 
-This layer turns calibrated scores into actual economic decisions.
+Policy turns calibrated and economic surfaces into a normalized decision.
 
-### Responsibilities
+A directional action must pass:
 
-* apply explicit thresholds
-* compare long / short / no-trade outputs
-* enforce decision margins
-* enforce edge filters
-* enforce risk and exposure filters
-* prepare execution-relevant recommendations
+- probability/confidence gate
+- no-trade comparison gate
+- expected-R gate
+- cost-adjusted expectancy gate
+- adverse-pressure/drawdown gate
+- decision-margin gate
 
-### Initial policy shape
-
-The first V7 policy should remain simple and explicit.
-
-Typical decision gates include:
-
-* `long_threshold`
-* `short_threshold`
-* `no_trade_threshold`
-* `decision_margin`
-* `minimum_edge`
-* optional regime filters
-* optional cooldown or exposure constraints
-
-### Portfolio-aware controls
-
-Because V7 is designed for 60-symbol operation, the policy layer must eventually support:
-
-* cross-symbol correlation awareness
-* cluster exposure limits
-* drawdown budget awareness
-* no-trade preference in low-edge or high-risk environments
-
-### Rules
-
-* policy remains explicit and reviewable
-* policy is simpler than V6 selector-heavy logic
-* hidden selector complexity is avoided unless it shows clear economic benefit
-* calibrated reliability is more important than raw score magnitude
-* policy changes should be local to the policy layer plus config and tests
+If the evidence is weak, contradictory, degraded, or ambiguous, policy selects `NO_TRADE` explicitly.
 
 ---
 
-## 8. Runtime and Lifecycle Layer
+## 8. Portfolio Interpretation
 
-This layer integrates V7 into the operational system.
+Portfolio handles cross-symbol competition after single-candidate policy outputs exist.
 
-### Responsibilities
+It may:
 
-* assemble requests
-* run model inference
-* produce typed results
-* record decision events
-* record and later resolve trade outcomes
-* manage artifacts, promotion, rollback, and health
+- pass
+- suppress
+- down-rank
+- annotate
 
-### Runtime role
+First phase stays lightweight. It is not a full optimizer.
 
-Runtime remains the operational shell.
-It still owns:
+Rules:
 
-* scheduling
-* orchestration
-* persistence
-* execution control
-* fallback safety
-* operator interfaces
-
-### Engine role
-
-The engine owns:
-
-* market-state interpretation
-* calibrated action scoring
-* uncertainty-aware output
-* action recommendation
-
-### Rules
-
-* runtime and engine remain separated
-* no hidden fallback is allowed
-* degraded behavior is explicit
-* contract fields remain versioned and visible
-* `DecisionEvent` and `TradeOutcome` remain first-class lifecycle objects
-* runtime orchestration must not become the hidden source of configuration truth
-* runtime selects a `model_scope` before inference through the `scope_router`
-* runtime must validate `requested_trade_mode` / `model_scope` compatibility and reject or downgrade `scope_mismatch` to safe no-trade behavior
-* runtime must not ask `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` artifacts to compete by averaging outputs
-* a model only decides `LONG_NOW` / `SHORT_NOW` / `NO_TRADE` inside its assigned scope; a `SWING` model must not emit `SCALP` trades, and a `SCALP` model must not emit `AGGRESSIVE_SCALP` trades
+- portfolio is not model training
+- no hidden portfolio veto
+- concentration and cluster controls are explicit
 
 ---
 
-## Platform Support Architecture
+## 9. Risk Gate
 
-V7 must support multiple platforms without fragmenting the system logic.
+Risk is the final safety layer before execution eligibility.
 
-### Supported platform roles
+It handles:
 
-#### 1. Linux + ROCm AMD GPU
+- kill switch
+- exposure hard limits
+- duplicate protection
+- cooldowns
+- stale/degraded result handling
 
-This is the **authoritative training and benchmark platform**.
+Rules:
 
-Use cases:
-
-* primary model training
-* heavy inference benchmarking
-* authoritative performance and promotion evidence
-* GPU-accelerated experimentation where supported
-
-#### 2. macOS + CPU
-
-This is a **first-class development and inference platform**.
-
-Use cases:
-
-* local development
-* debugging
-* simulation and dataset building
-* local model training where practical
-* artifact loading and inference validation
-
-#### 3. Android + CPU
-
-This is an **optional future inference-only deployment target**.
-
-Use cases:
-
-* thin client inference consumption
-* lightweight local signal evaluation if later required
-
-It is not part of the first V7 core implementation.
-
-### Platform rules
-
-* Linux + ROCm defines the authoritative benchmark and final training environment
-* macOS must support the full core pipeline on CPU
-* artifacts must be portable across Linux ROCm and macOS CPU
-* core business logic remains platform-agnostic
-* only compute backend and deployment surfaces vary by platform
+- hard guards stay hard
+- model confidence cannot override operational safety
+- risk blocks must be visible in lifecycle records
 
 ---
 
-## Model Portability Rule
+## 10. Runtime Lifecycle
 
-The system must support cross-platform model artifact usage.
+Runtime owns:
 
-### Required portability behavior
+- request assembly
+- result validation
+- event creation
+- execution eligibility
+- persistence
+- outcome lifecycle
+- fallback visibility
+- rollback and operational safety
 
-* a model trained on Linux ROCm must be loadable on macOS CPU
-* feature schema must remain identical across platforms
-* artifact formats must use portable model serialization
-* platform-specific Python pickling is not considered a portable artifact strategy
+Engine owns:
 
-### Initial implication
-
-The XGBoost-first architecture is preferred partly because it simplifies this portability story.
-
----
-
-## Inference Topology
-
-V7 is designed for centralized multi-symbol operation.
-
-### Long-term inference posture
-
-Where practical, inference should support batched multi-symbol processing rather than treating the system as many disconnected single-symbol engines.
-
-### Initial implementation posture
-
-The initial contract may still evaluate one market state per request, but the architecture must remain consistent with a centralized multi-symbol research and execution worldview.
-
-This means:
-
-* symbol-aware evaluation
-* centralized reporting
-* cross-symbol risk controls
-* no design assumptions that prevent future batching
+- hybrid model scoring
+- calibrated decision evidence
+- expected-R surfaces
+- recommended action
+- timing guidance
+- degradation visibility
 
 ---
 
-## Components That Remain From V6
+## Truth Hierarchy
 
-V7 keeps the following architectural ideas from V6:
+When components disagree, the hierarchy is:
 
-* explicit runtime–engine contract boundary
-* request / result / event / outcome separation
-* market-first labeling principle
-* live/replay parity requirement
-* no-trade as a first-class action
-* explicit fallback visibility
-* validation and promotion discipline
-* no silent deterministic veto
+1. simulation truth
+2. realized market outcome truth
+3. contract truth
+4. runtime interpretation truth
+5. model explanation
 
-These remain correct.
-
----
-
-## Components V7 Reduces or Removes
-
-V7 deliberately reduces or removes the following V6 tendencies:
-
-* transition-heavy V4 + V5 + V6 structural stacking
-* selector-heavy threshold logic
-* excessive operator-surface complexity as a substitute for economic clarity
-* confidence-first reasoning without structural calibration alignment
-* architecture sprawl that slows research and implementation
-* feature and policy changes that require wide system edits
-* configuration scattered across multiple operational layers
-
----
-
-## Authoritative Truth Hierarchy
-
-When V7 components disagree, the truth hierarchy is:
-
-1. **simulation truth**
-2. **market outcome truth**
-3. **contract truth**
-4. **runtime interpretation truth**
-5. **model score explanation**
-
-This hierarchy matters.
-
-The model does not define truth by itself and does not run simulation.
-Runtime-hosted simulation defines simulated truth; live/paper execution lifecycle defines execution truth. Outcomes must distinguish them.
-
----
-
-## Repository Design Direction
-
-The implementation should remain centralized and small.
-
-The repository should be organized around:
-
-* one core config path
-* one CLI entrypoint
-* one data path
-* one runtime-hosted simulation engine
-* one label path
-* one feature path
-* one dataset path
-* one model path
-* one evaluation path
-
-The system should not require many overlapping orchestration surfaces.
-
-### Recommended configuration shape
-
-V7 should use:
-
-* one authoritative config loader
-* one merged runtime config object
-* modular config files by concern
-
-Examples of concern boundaries:
-
-* base/system
-* symbols and universe
-* simulation
-* labels
-* features
-* model
-* policy
-* evaluation
-
-The architecture should support modular config files without losing one central source of truth.
-
----
-
-## Documentation Philosophy
-
-V7 should avoid document sprawl.
-
-The architecture must be understandable from a small set of central files:
-
-* `vision.md`
-* `architecture.md`
-* `contracts.md`
-* `ai_summary.md`
-* `simulation.md`
-* `model_policy.md`
-* `roadmap.md`
-* `llm_rules.md`
-
-Everything else should remain implementation detail or generated operational output unless genuinely necessary.
-
-### AI-first documentation rule
-
-Documents should be written so that LLM code agents can:
-
-* extract constraints quickly
-* identify ownership quickly
-* identify stable interfaces quickly
-* avoid making forbidden changes
-
-This means architecture documents should prefer:
-
-* explicit lists
-* short sections
-* low narrative repetition
-* high constraint density
-
----
-
-## Immediate Next Architectural Steps
-
-After this document is accepted, the next architectural documents should define:
-
-1. `contracts.md`
-2. `ai_summary.md`
-3. `simulation.md`
-4. `model_policy.md`
-5. `roadmap.md`
-6. `llm_rules.md`
-
-After those are done, implementation should begin with:
-
-* config
-* CLI
-* raw data ingestion
-* raw data validation
-* snapshot builder
-* runtime-hosted simulation engine
-* label generation
-* feature generation
-* dataset assembly
-* XGBoost baseline training
-* calibration
-* decision policy
-* forward evaluation
+The model does not define truth by itself.
 
 ---
 
 ## Bottom Line
 
-The V7 architecture is intentionally simple at its core:
+V7 is intentionally simple at the system level:
 
-**raw market data**
-→ **canonical market state**
-→ **unified simulation truth**
-→ **action-comparative labels and explicit features**
-→ **temporal datasets**
-→ **XGBoost-first calibrated model**
-→ **explicit decision policy**
-→ **runtime integration through stable contracts**
+```text
+raw data
+→ canonical state
+→ simulation truth
+→ labels/features
+→ temporal dataset
+→ XGBoost-first hybrid model
+→ calibration
+→ policy
+→ portfolio
+→ risk
+→ runtime contracts
+```
 
-This architecture exists for one reason:
-
-**to make economic truth central, system behavior explicit, configuration centralized, and iteration speed high enough that V7 can improve faster than V6 without repeating V6’s structural drag.**
+The purpose is to make economic truth central, behavior explicit, and iteration fast without repeating V6's structural drag.

@@ -4,52 +4,44 @@
 
 ## Purpose
 
-Defines how V7 assembles training and evaluation datasets from state, features, and labels.
+Defines how V7 assembles training and evaluation datasets from canonical state, features, simulation outputs, and labels.
 
 It answers:
 
-> Given canonical state, features, and labels, how should V7 build temporally correct datasets for training and evaluation?
-
----
-
-## In Scope
-
-- dataset row assembly
-- split rules
-- walk-forward families
-- symbol coverage policy
-- dataset lineage and versions
-
----
-
-## Out of Scope
-
-- feature engineering rules
-- simulation rules
-- model internals
-- runtime execution rules
+> How should V7 build temporally correct datasets for hybrid supervised training and economic evaluation?
 
 ---
 
 ## Core Decision
 
-Dataset rows are built from:
+A valid V7 dataset row contains:
 
 - canonical state lineage
 - feature row
-- label row
+- classification labels
+- regression labels
+- simulation lineage
 - version lineage
 
 No row is valid without traceable upstream lineage.
 
-Label truth comes from runtime simulation outputs through side-effect-free adapters. Dataset assembly must not call live execution, broker, exchange, or mutable account-state paths.
+---
+
+## First-Phase Scope
+
+- shared multi-symbol dataset
+- primary decision interval: 4h
+- 1d and 1h views embedded in the same row
+- target universe up to 60 symbols
+- initial rollout may subset symbols, but dataset design must not assume six-symbol permanence
 
 ---
 
 ## Inputs
 
 - feature rows
-- label rows
+- normalized label records
+- simulation outputs
 - request/result/event/outcome lineage where relevant
 - dataset config
 - split config
@@ -61,145 +53,130 @@ Label truth comes from runtime simulation outputs through side-effect-free adapt
 A dataset row should minimally carry:
 
 - feature vector
-- target fields
+- classification target fields
+- regression target fields
+- sample weights
 - symbol
-- `model_scope`
-- `primary_interval`
-- `context_intervals`
-- `refinement_intervals`
+- primary interval
 - timestamp
 - feature schema version
-- label version / interpretation version
-- `label_horizon_family`
-- cost model / slippage model identifiers
-- simulation family/profile version
-- `simulation_run_id` / `replay_run_id` where used
-- `monte_carlo_run_id` where configured
+- label interpretation version
+- simulation family version
 - dataset family version
+- row validity status
+- exclusion reason where applicable
 
 ---
 
-## First-Phase Scope
+## Target Families
 
-- shared dataset infrastructure, separate dataset family per `model_scope`
-- target universe: up to **60 symbols**
-- initial rollout may subset symbols, but dataset design should not assume six-symbol-only permanence
-- `SWING` dataset: `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`, swing `label_horizon_family`
-- `SCALP` dataset: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`, scalp `label_horizon_family`
-- `AGGRESSIVE_SCALP` dataset: `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, micro refinement where applicable, immediate-continuation / very short `label_horizon_family`
-- cost and slippage model profiles are selected per scope through the unified config system
+### Classification targets
+
+- `best_action_label`
+- `long_success_label`
+- `short_success_label`
+- `no_trade_quality_label`
+
+### Regression targets
+
+- `long_realized_r_net`
+- `short_realized_r_net`
+- `long_mae_r`
+- `short_mae_r`
+- `long_mfe_r`
+- `short_mfe_r`
+- `regret_r`
+- `saved_loss_score`
+- `missed_opportunity_score`
+- optional clipped/normalized target variants
+
+Regression targets may use clipping/winsorization, but target transformation must be versioned and reversible enough for evaluation interpretation.
 
 ---
 
 ## Rules
 
-### 1. Temporal correctness
-No future leakage across training / validation / test splits.
-
-### 2. Scope-family rows
-Rows should support shared training infrastructure across symbols within a `model_scope`. Rows from `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` must not be mixed into one supervised dataset or one universal training target.
-
-### 3. Symbol balance matters
-Do not let a few high-frequency symbols dominate silently.
-
-### 4. Unresolved rows stay out
-Unresolved or invalid labels should not silently join strict supervised training.
-
-### 5. Split by time first
-Do not random-shuffle across time in a way that breaks evaluation realism.
-
-### 6. Preserve lineage
-Every row should be traceable back to source versions.
-
-### 7. Runtime simulation lineage
-Dataset manifests must include the runtime simulation profile/version and adapter lineage used to derive labels. Replay and Monte Carlo run IDs should be preserved when used.
+1. Temporal correctness: no future leakage across train/validation/test.
+2. Shared-family rows: support one shared model family across symbols.
+3. Symbol balance matters: no silent dominance by high-row-count symbols.
+4. Unresolved rows stay out of strict supervised training by default.
+5. Ambiguous rows are explicit and excluded from hard action-classification training by default.
+6. Split by time first, not IID random shuffle.
+7. Preserve lineage for every row.
+8. Classification and regression target availability are tracked separately.
 
 ---
 
 ## Symbol Balancing Rule
 
-First-phase balancing should use one of two approved mechanisms:
-- inverse-frequency sample weights by symbol, or
-- capped per-symbol row contribution before training export
+Approved first-phase mechanisms:
 
-Default first-phase preference:
+- inverse-frequency sample weights by symbol
+- capped per-symbol row contribution before export
+
+Default preference:
+
 - preserve full row set
 - attach inverse-frequency symbol weights
-- only cap rows if a symbol massively dominates the corpus
-
-This keeps each scope-specific multi-symbol model family from letting BTC/ETH-like symbols silently own the objective.
+- cap only when a symbol massively dominates the corpus
 
 ---
 
 ## Recommended Split Strategy
 
 First-phase walk-forward convention:
-- **6 folds**
-- minimum train window: **12 months**
-- validation window per fold: **2 months**
-- optional short holdout/test tail after validation: **1 month**
+
+- 6 folds
+- minimum train window: 12 months
+- validation window per fold: 2 months
+- optional holdout/test tail after validation: 1 month
 - advance window by validation length
 
-These are first-phase defaults and may be config-overridden.
+No IID-style random split for primary evaluation.
 
-Do not default to IID-style random train/test splits.
+---
+
+## Partial Target Policy
+
+Rows may have valid classification targets but invalid regression targets, or the opposite.
+
+Default behavior:
+
+- strict model training uses only rows valid for the target head being trained
+- row validity is head-specific
+- excluded rows preserve exclusion reason
+- no silent target imputation for labels
 
 ---
 
 ## Dataset Versioning Rule
 
 Bump `dataset_family_version` when any of the following changes materially:
-- `model_scope`, `primary_interval`, or `label_horizon_family` meaning
+
 - feature schema meaning
 - label interpretation meaning
 - simulation family meaning
+- target transformation policy
 - symbol-universe policy
-- runtime simulation profile/version lineage
-- replay / Monte Carlo run ID preservation where used
 - split family meaning
+- row validity policy
 
 Do not bump for cosmetic filename or storage-path changes only.
-
----
-
-## Partial Row Policy
-
-If a row is incomplete:
-- mark invalid
-- preserve reason
-- exclude from strict supervised training by default
-
-“Explicitly allowed” means:
-- a documented config flag exists
-- the downstream training mode is designed for partial rows
-- the run record preserves that exception
-
-No silent partial-row inclusion.
-
----
-
-## Failure / Fallback
-
-If a row is incomplete:
-- mark invalid
-- preserve reason
-- exclude from strict training unless explicitly allowed
-
-Do not silently coerce partial rows into full rows.
 
 ---
 
 ## Config Surface
 
 Key config families:
-- runtime simulation profile/version lineage
-- replay / Monte Carlo run ID preservation where used
+
 - split family
 - walk-forward windows
 - allowed symbol universe
 - row validity rules
-- minimum label completeness rules
-- balancing / weighting rules
+- classification target inclusion rules
+- regression target inclusion rules
+- balancing/weighting rules
+- target clipping/transformation rules
 - partial-row exception policy
 
 ---
@@ -207,28 +184,33 @@ Key config families:
 ## Interfaces
 
 Upstream:
+
 - `pipeline/features.md`
 - `pipeline/labels.md`
 
 Downstream:
+
 - `pipeline/model.md`
+- `pipeline/training.md`
 - `pipeline/evaluation.md`
 
 ---
 
 ## Test Requirements
 
-Minimum dataset tests:
-- no train/test temporal leakage
+Minimum tests:
+
+- no temporal leakage
 - unresolved labels excluded correctly
+- ambiguous rows handled correctly
+- classification/regression validity tracked separately
 - row lineage preserved
 - symbol weighting reproducible
 - walk-forward folds reproducible
-- dataset-family bump triggers behave correctly
+- dataset-family version bump triggers work
 
 ---
 
 ## Final Position
 
-Dataset quality is not just “enough rows.”
-It is temporally valid, lineage-valid, and evaluation-valid row construction.
+Dataset quality is not just row count. V7 requires temporally valid, lineage-valid, target-valid row construction for both classification and regression heads.

@@ -12,118 +12,94 @@ It answers:
 
 ---
 
-## In Scope
-
-- multi-symbol comparison
-- exposure concentration
-- correlation / cluster pressure
-- portfolio-aware suppression or down-ranking
-- portfolio interpretation visibility
-
----
-
-## Out of Scope
-
-- model training
-- calibration logic
-- hard account risk ledgers
-- broker execution plumbing
-
----
-
 ## Core Decision
 
 V7 is designed for a centralized multi-symbol world.
-That means portfolio logic is a first-class stage, but it should stay lightweight in first phase.
+
+Portfolio logic is first-class but lightweight in first phase. It is not the model and not a full optimizer.
 
 ---
 
 ## First-Phase Scope
 
-- target universe up to **60 symbols**
+- target universe up to 60 symbols
 - initial rollout may use a smaller subset
-- portfolio layer may:
-  - pass
-  - suppress
-  - down-rank
-  - annotate
-
-It should **not** become a full optimizer in first phase.
+- portfolio layer may pass, suppress, down-rank, or annotate
+- portfolio layer should not become a full optimizer in first phase
 
 ---
 
 ## Inputs
 
-- candidate results from policy stage
+- policy-approved candidate results
+- action probabilities
+- expected R by action
+- confidence
 - current portfolio context
 - exposure state
-- symbol cluster / correlation metadata
+- symbol cluster/correlation metadata
 - portfolio config
 
 ---
 
 ## Outputs
 
-Portfolio stage should minimally produce:
-- pass / suppress decision
+Portfolio stage produces:
+
+- pass / suppress / down-rank / annotate
 - portfolio interpretation
 - suppression reason if blocked
-- optional ranking metadata
-
-These later surface in:
-- `DecisionEvent`
-- `TradeOutcome`
-
----
-
-## Rules
-
-### 1. Portfolio is not the model
-Do not push cross-symbol capital logic into the model family in first phase.
-
-### 2. Keep portfolio layer explicit
-A blocked trade should say it was portfolio-blocked.
-
-### 3. No hidden veto
-Suppression must remain visible downstream.
-
-### 4. Lightweight first phase
-Prefer simple concentration and cluster rules before advanced optimization.
-
----
-
-## Cluster Definition
-
-First-phase cluster families may use:
-- approved manual groupings, or
-- stable correlation-based groups computed offline and versioned
-
-Do not compute ad hoc runtime clusters without a versioned grouping family.
-
-The cluster family used must be traceable in config or lineage.
+- ranking metadata where relevant
+- portfolio pressure score where configured
 
 ---
 
 ## Ranking Rule
 
 When multiple candidates compete, first-phase ranking should use:
+
 1. policy-approved actionability
 2. expected-R quality
-3. confidence as secondary ordering
-4. portfolio pressure adjustments
-5. deterministic tie-break by symbol order only as last resort
+3. cost-adjusted expectancy
+4. confidence as secondary ordering
+5. portfolio pressure adjustments
+6. deterministic tie-break by symbol order only as last resort
 
 Use suppression instead of down-ranking when:
-- a hard portfolio cap is already exceeded, or
+
+- a hard portfolio cap is exceeded
 - cluster concentration would breach configured limits
+- portfolio context is degraded and config requires safe non-execution
+
+---
+
+## Rules
+
+1. Portfolio is not the model.
+2. Portfolio suppression must be visible.
+3. Portfolio should not hide risk vetoes.
+4. Lightweight first phase.
+5. Regression expected-R can inform ranking, but cannot override hard caps.
+
+---
+
+## Cluster Definition
+
+First-phase cluster families may use:
+
+- approved manual groupings
+- stable correlation-based groups computed offline and versioned
+
+Do not compute ad hoc runtime clusters without a versioned grouping family.
 
 ---
 
 ## Portfolio Context Unavailable Rule
 
 If portfolio context is unavailable:
+
 - degrade explicitly
-- default first-phase behavior is **safe non-execution** unless config explicitly allows a lighter fallback
+- default first-phase behavior is safe non-execution unless config explicitly allows lighter fallback
 
 Do not silently assume zero portfolio pressure.
 
@@ -131,51 +107,47 @@ Do not silently assume zero portfolio pressure.
 
 ## DecisionEvent Mapping
 
-`DecisionEvent.runtime_interpretation.portfolio_blocked = true` when the portfolio stage returns:
-- `SUPPRESSED`, or
+Set `DecisionEvent.runtime_interpretation.portfolio_blocked = true` when the portfolio stage returns:
+
+- `SUPPRESSED`
 - `BLOCKED`
 
 Down-ranked but still admissible candidates should not set `portfolio_blocked = true`.
 
-This keeps event semantics explicit.
-
 ---
 
-## Recommended First-Phase Controls
+## Recommended Controls
 
 - max simultaneous positions
 - cluster exposure caps
 - symbol concentration caps
 - drawdown-state pressure modifiers
 - optional per-session ranking limits
-
----
-
-## Failure / Fallback
-
-If portfolio context is unavailable:
-- degrade explicitly
-- do not silently assume zero portfolio pressure if that assumption is unsafe
+- duplicate candidate suppression before risk gate where configured
 
 ---
 
 ## Config Surface
 
 Key config families:
+
 - max open positions
 - exposure caps
 - cluster grouping rules
 - portfolio suppression thresholds
 - ranking family
+- portfolio context fallback behavior
 
 ---
 
 ## Interfaces
 
 Upstream:
+
 - `pipeline/policy.md`
 
 Downstream:
+
 - `pipeline/risk.md`
 - `contracts/decision_event.md`
 - `contracts/trade_outcome.md`
@@ -184,16 +156,17 @@ Downstream:
 
 ## Test Requirements
 
-Minimum portfolio tests:
+Minimum tests:
+
 - concentration suppression works
 - cluster suppression is visible
-- rank vs suppress behavior is deterministic
+- rank vs suppress is deterministic
+- expected-R influences ranking only within allowed caps
 - `portfolio_blocked` mapping is correct
-- portfolio context absence degrades visibly
+- unavailable context degrades visibly
 
 ---
 
 ## Final Position
 
-Portfolio logic exists to keep a good single-trade decision from becoming a bad multi-symbol portfolio decision.
-It should stay explicit and lightweight in first phase.
+Portfolio logic keeps individually good trades from becoming collectively bad exposure. It uses expected economic quality, but it must remain explicit and lightweight in first phase.

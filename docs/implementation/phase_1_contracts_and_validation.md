@@ -1,298 +1,211 @@
+# Phase 1 — Contracts & Hybrid Validation (Planned)
 
-# Phase 1 — Contracts & Validation (Planned)
-
-**Status:** Planned
-**Owner:** Contracts / interface track
-**Last updated:** 2026-04-24
+**Status:** Planned  
+**Owner:** Contracts / interface track  
+**Last updated:** 2026-05-23  
 **Delivery status:** Not started
 
 ---
 
 ## 1. Purpose
 
-This phase implements the four V7 lifecycle contracts as typed runtime surfaces and builds validation around them.
+Implement the four V7 lifecycle contracts as typed runtime surfaces and make the hybrid model outputs explicit and validateable.
 
-It solves the problem that V7 semantics currently exist in docs but not yet as trusted code-level boundaries.
-
----
-
-## 2. What Carried Over / What Must Stay Stable
-
-The following are already implemented / must remain stable:
-
-- [x] Contract family semantics are documented
-- [x] Atomic request/result/event/outcome boundaries are locked
-- [x] Runtime vs engine ownership boundaries are already defined
-- [x] Phase 0 chooses the typed-object strategy
-
-This phase builds on top of these. Do not regress them.
+This phase prevents later stages from passing ad hoc dicts or hiding required score surfaces.
 
 ---
 
-## 3. Background & Motivation
+## 2. Stable Contract Family
 
-Without real contract surfaces, later implementation will:
-- pass ad hoc dicts
-- hide required fields
-- drift between runtime and pipeline
-- lose version discipline
+Implement:
 
-The correct approach is to make contracts explicit before simulation/model/runtime work deepens.
+- `AnalysisRequest`
+- `AnalysisResult`
+- `DecisionEvent`
+- `TradeOutcome`
 
----
-
-## 4. Current Failure State / Known Blockers
-
-The current state has the following known issues:
-
-- `AnalysisRequest` = documented, not guaranteed as typed object
-- `AnalysisResult` = documented, not guaranteed as typed object
-- `DecisionEvent` = documented, not guaranteed as typed object
-- `TradeOutcome` = documented, not guaranteed as typed object
-- `contract validation` = may be scattered or absent
+Request/result are engine-facing. Event/outcome are system-facing.
 
 ---
 
-## 5. Workstream A — Typed Contract Objects
+## 3. Workstream A — Typed Contract Objects
 
-**Status:** New
+### `AnalysisRequest`
 
-### Problem / Goal
+Minimum fields:
 
-Implement the four core lifecycle objects as explicit typed structures.
+- `request_id`
+- `contract_version`
+- `symbol`
+- `model_scope`
+- `requested_trade_mode`
+- `primary_interval`
+- `context_intervals`
+- `refinement_intervals`
+- `state_timestamp_utc`
+- `feature_schema_version`
+- `label_horizon_family`
+- `simulation_profile_version`
+- `runtime_context`
+- degradation / missingness flags where relevant
 
-### Implementation tasks
+### `AnalysisResult`
 
-- [ ] Implement `AnalysisRequest`
-- [ ] Implement `AnalysisResult`
-- [ ] Implement `DecisionEvent`
-- [ ] Implement `TradeOutcome`
-- [ ] Add explicit contract fields for `requested_trade_mode`, `model_scope`, `primary_interval`, `context_intervals`, `refinement_intervals`, `label_horizon_family`, `artifact_id`, and `calibration_artifact_id` where documented
+Must support hybrid output surfaces:
 
-### Typed implementation rule
+- `result_id`
+- `request_id`
+- `contract_version`
+- `response_schema_version`
+- `model_scope`
+- `artifact_id`
+- `calibration_artifact_id`
+- `recommended_action`
+- `is_actionable`
+- `action_probabilities`
+  - `LONG_NOW`
+  - `SHORT_NOW`
+  - `NO_TRADE`
+- `confidence`
+- `confidence_kind`
+- `expected_r_by_action`
+  - `LONG_NOW`
+  - `SHORT_NOW`
+- `expected_drawdown_r_by_action` where available
+- `expected_cost_adjusted_r_by_action` where available
+- `policy_gate_status`
+- `policy_reason_codes`
+- `entry_readiness`
+- `entry_valid_for_bars`
+- `degradation_flags`
 
-Default first-phase choice:
-- typed dataclass-style objects
-- explicit constructor or post-init validation hooks kept minimal
-- validation logic lives in dedicated validators, not hidden side effects
+### `DecisionEvent`
 
-If the repo’s existing dominant model layer is reused, the implementation must preserve:
-- explicit required/optional fields
-- explicit version fields
-- explicit dict round-trip
+Must snapshot final decision and supporting hybrid surfaces:
+
+- request/result lineage
+- model/calibration/policy artifact lineage
+- action probabilities observed
+- expected-R surfaces observed
+- policy gates observed
+- portfolio/risk suppression state
+- runtime interpretation
+
+### `TradeOutcome`
+
+Must support later comparison between:
+
+- projected probabilities
+- projected expected R
+- realized outcome R
+- realized exit reason
+- no-trade / missed-opportunity / saved-loss evidence
 
 ### Acceptance Criteria
 
-- [ ] all four contract types exist in code
-- [ ] required vs optional fields are explicit
-- [ ] version fields are represented explicitly
+- [ ] all four typed objects exist.
+- [ ] hybrid output fields are explicit.
+- [ ] required vs optional fields are clear.
+- [ ] version fields are represented explicitly.
 
 ---
 
-## 6. Workstream B — Contract Validation
+## 4. Workstream B — Contract Validation
 
-**Status:** New
+Validators must check:
 
-### Problem / Goal
-
-Ensure invalid lifecycle objects fail early and clearly.
-
-### Implementation Tasks
-
-- [ ] Add structural validators for each contract
-- [ ] Add consistency validators for request/result/event/outcome linkage
-- [ ] Add `model_scope` / `requested_trade_mode` compatibility validation
-- [ ] Add scope-compatible artifact and calibration lineage validation
-- [ ] Add enum and numeric bound validation
-- [ ] Add timing-extension field validation for `AnalysisResult`
+- required field presence
+- enum legality
+- numeric bounds
+- probabilities sum within configured tolerance
+- no negative or impossible probability values
+- expected-R values are numeric or explicitly unavailable
+- `model_scope` compatibility
+- artifact/calibration/policy bundle compatibility
+- timing extension bounds
+- actionability vs execution eligibility separation
 
 ### Timing validation defaults
 
-First-phase timing validation should enforce:
-- `entry_valid_for_bars` is an integer
-- default allowed range is **0–5**
-- `entry_readiness` must be one of the documented legal enum values
-- `entry_expiry_utc`, if present, must parse as valid UTC timestamp
+- `entry_valid_for_bars` integer range: `0–5`
+- `entry_readiness` legal enum only
+- `entry_expiry_utc`, if present, parses as UTC
+
+### Hybrid validation defaults
+
+- `recommended_action` must be in `LONG_NOW`, `SHORT_NOW`, `NO_TRADE`.
+- `action_probabilities` must include all three actions.
+- If a directional action is actionable, its expected-R surface must be present unless result is explicitly degraded.
+- Raw confidence must never be mislabeled as calibrated confidence.
 
 ### Acceptance Criteria
 
-- [ ] invalid objects fail before downstream use
-- [ ] consistency mismatches raise clear errors
-- [ ] `scope_mismatch` fails clearly or routes to documented safe degraded behavior before inference/execution
-- [ ] timing extension fields are bounded and legal
+- [ ] invalid objects fail before downstream use.
+- [ ] scope mismatch fails or routes to documented degraded-safe behavior.
+- [ ] invalid hybrid surfaces cannot silently pass.
 
 ---
 
-## 7. Workstream C — Serialization / Round-Trip
+## 5. Workstream C — Serialization / Round-Trip
 
-**Status:** New
-
-### Problem / Goal
-
-Enable lifecycle objects to move safely across logging, persistence, and tests.
-
-#### 7.1 Serialization helpers
+Implement:
 
 ```python
 obj.to_dict()
 ContractType.from_dict(payload)
 ```
 
-**Rationale:**
-- tests need round-trip safety
-- persistence should not invent a second schema
+Version compatibility rule:
 
-#### 7.2 Version-aware validation
-
-```python
-payload = {
-  "contract_version": "v7-0.x",
-  "response_schema_version": "result-0.x",
-}
-```
-
-### Version compatibility rule
-
-First-phase default:
-- contract-family major mismatch fails
-- same-family newer minor/patch versions may load only if all required fields for the active runtime are present
-- unknown optional fields may be preserved or ignored explicitly, but never silently reinterpret meaning
+- major contract-family mismatch fails
+- same-family newer minor versions may load only if active required fields exist
+- unknown optional fields are preserved or explicitly ignored, never reinterpreted silently
 
 ### Acceptance Criteria
 
-- [ ] contracts serialize predictably
-- [ ] contracts deserialize predictably
-- [ ] version mismatches fail clearly where unsupported
+- [ ] request/result/event/outcome round-trip safely.
+- [ ] unknown or unsupported versions fail clearly.
+- [ ] hybrid fields survive round-trip.
 
 ---
 
-## 8. Workstream D — Test Coverage
+## 6. Workstream D — Test Coverage
 
-**Status:** New
-**Required before:** Phase 2 simulation implementation
+Minimum tests:
 
-### 8.1 Contract shape tests
-
-- [ ] required-field tests for all four contracts
-- [ ] optional-field omission tests
-- [ ] enum legality tests
-
-### 8.2 Consistency tests
-
-- [ ] request/result linkage validation
-- [ ] result/event linkage validation
-- [ ] event/outcome linkage validation
-- [ ] `requested_trade_mode` / `model_scope` mismatch validation
-- [ ] non-scope-compatible artifact/calibration validation
-
-### 8.3 Round-trip tests
-
-- [ ] request serialization round-trip
-- [ ] result serialization round-trip
-- [ ] event serialization round-trip
-- [ ] outcome serialization round-trip
+- required/optional field tests
+- hybrid `AnalysisResult` shape tests
+- action probability validation tests
+- expected-R availability tests
+- confidence kind tests
+- request/result/event/outcome linkage tests
+- scope-compatible artifact bundle tests
+- timing field validation tests
+- serialization round-trip tests
 
 ---
 
-## 9. Workstream E — Pre-Run Audit Checklist
+## 7. Pre-Run Audit
 
-**Status:** New
-**Must complete before:** Phase 2
+Before Phase 2:
 
-### 9.1 Contract audit
-
-- [ ] verify contract names map directly to doc names
-- [ ] verify no duplicate legacy contract variants silently remain in active path
-
-### 9.2 Validation audit
-
-- [ ] verify invalid objects cannot bypass validators
-- [ ] verify version fields are present and test-covered
-- [ ] verify `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` examples round-trip with correct scope fields
-- [ ] verify scope mismatch cannot silently fall through to another artifact
-
-### 9.3 Boundary audit
-
-- [ ] verify runtime-owned vs engine-owned contracts are separated in code organization
-- [ ] verify timing validation upper bounds are config-aligned or explicitly fixed by this phase
+- [ ] no active V7 flow depends on unvalidated dict payloads
+- [ ] all hybrid result fields have defined names and types
+- [ ] scope mismatch cannot silently fall through to another artifact
+- [ ] raw vs calibrated confidence distinction is test-covered
 
 ---
 
-## 10. Combined Implementation Order
+## 8. Definition of Done
 
-1. Complete Workstream A — Typed Contract Objects
-2. Implement Workstream B — Contract Validation
-3. Apply Workstream C — Serialization / Round-Trip
-4. Run Workstream E — Pre-Run Audit
-5. Implement Workstream D — Test Coverage
-6. Execute contract test suite
-7. Evaluate results against acceptance criteria
-
-### Acceptance Criteria for First Combined Run
-
-- [ ] four contract types instantiate successfully
-- [ ] invalid linkage fails correctly
-- [ ] round-trip tests pass
-- [ ] version fields are preserved and validated
+- [ ] typed contract objects exist.
+- [ ] validators exist for all four contracts.
+- [ ] hybrid result validation exists.
+- [ ] serialization works.
+- [ ] tests pass.
 
 ---
 
-## 11. Definition of Done
+## 9. What Phase 2 Inherits
 
-### 11.1 Contract layer
-
-- [x] contract semantics are documented
-- [x] required fields are known from docs
-- [ ] typed request/result/event/outcome objects exist
-- [ ] validators exist for all four
-
-### 11.2 Interface layer
-
-- [ ] serialization helpers exist
-- [ ] linkage consistency checks exist
-- [ ] timing extension validation exists
-- [ ] version compatibility policy is implemented
-
-### 11.3 Candidate health
-
-- [ ] no active V7 flow depends on ad hoc unvalidated dict payloads
-- [ ] versioned contract boundaries are testable
-
-### 11.4 Test layer
-
-- [ ] required/optional field tests pass
-- [ ] linkage tests pass
-- [ ] round-trip tests pass
-
----
-
-## 12. What Phase 2 Inherits
-
-### 12.1 Capability expansion themes
-
-- trusted typed lifecycle objects
-- validation before simulation use
-- stable serialization surfaces
-- explicit version compatibility behavior
-
-### 12.2 Phase Boundary
-
-- Phase 2 is simulation truth-layer work.
-- Phase 1 is the prerequisite.
-- Do not start Phase 2 work until Phase 1 definition of done is fully satisfied.
-
----
-
-## 13. Compact Mental Model
-
-### 13.1 Phase Relationships
-
-- Phase 0: repo is ready
-- Phase 1: contracts become real
-- Phase 2: truth layer becomes real
-- Phase 3: labels/outcomes become coherent
-
-### 13.2 Key Takeaway
-
-Simulation and runtime should not be built on untyped guesswork.
-Phase 1 turns the contract docs into actual enforceable program boundaries.
+Phase 2 inherits trusted typed objects that can carry simulation lineage and later hybrid model outputs without schema guessing.

@@ -8,56 +8,41 @@ Defines how V7 transforms canonical state into model-ready features.
 
 It answers:
 
-> Given one valid canonical market state, what stable, leak-free feature schema should V7 produce?
-
----
-
-## In Scope
-
-- state-to-feature transformation
-- feature grouping
-- feature versioning
-- missing/degraded feature handling
-- normalization
-- feature drift ownership
-
----
-
-## Out of Scope
-
-- simulation truth
-- label generation
-- dataset splitting
-- model training logic
-- runtime execution logic
+> Given one valid canonical market state, what stable, leak-free feature schema should V7 produce for the hybrid model?
 
 ---
 
 ## Core Decision
 
-V7 features are produced from **canonical state only**.
+V7 features are produced from canonical state only.
 
-That means:
-- no future leakage
-- no hidden runtime-only side channels
-- same feature meaning across live, replay, and training
+The same feature row feeds both:
+
+- classification heads
+- regression heads
+
+Do not create separate feature pipelines for action classification and economic regression in first phase unless a later authority doc explicitly approves it.
 
 ---
 
 ## First-Phase Scope
 
-Feature design should assume shared feature infrastructure with schema variants where needed by `model_scope`:
-- `SWING`: `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`
-- `SCALP`: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`
-- `AGGRESSIVE_SCALP`: `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, micro refinement where applicable
-- target universe up to **60 symbols**
+Feature design assumes:
+
+- primary decision interval: 4h
+- higher-timeframe context: 1d
+- refinement/timing context: 1h
+- shared centralized multi-symbol model family
+- target universe up to 60 symbols
 
 ---
 
 ## Inputs
 
-- `canonical_state`
-- `state_views`
+- canonical state
+- 4h primary state view
+- 1d higher-timeframe state view
+- 1h refinement/timing state view
 - feature config
 - feature schema version
 
@@ -65,128 +50,129 @@ Feature design should assume shared feature infrastructure with schema variants 
 
 ## Outputs
 
-A feature row should include:
+A feature row includes:
 
-- feature values
+- numeric feature values
+- categorical/identity feature values where approved
 - feature schema version
 - missing/degraded flags
-- symbol identity features where approved
-- `model_scope` / interval identity features where approved
+- symbol identity features
+- interval/view availability flags
+- normalization lineage
 
 ---
 
 ## Recommended Feature Groups
 
-First-phase grouping should be explicit:
+### 4h primary decision features
 
-- **Scope primary decision features**: price geometry, momentum, volatility, structure on the scope `primary_interval`
-- **Context interval features**: HTF alignment, regime, structure for the scope `context_intervals`
-- **Refinement interval features**: timing pressure, local momentum, and entry-readiness support for the scope `refinement_intervals`
-- **Global context**: time/session features, symbol metadata, quality/degradation flags
+- returns
+- candle geometry
+- range structure
+- volatility
+- momentum
+- trend/range state
+- local support/resistance distance where available
 
-For example, `SWING` uses 4h + 1d + 1h, `SCALP` uses 15m + 1h + 5m, and `AGGRESSIVE_SCALP` uses 1m/3m + 5m/15m context. These views are context within one selected scope, not independently averaged interval predictors.
+### 1d higher-timeframe context
 
-Do not create one giant anonymous feature blob.
+- HTF trend alignment
+- HTF volatility regime
+- HTF range compression/expansion
+- HTF structure quality
+
+### 1h refinement/timing context
+
+- local momentum pressure
+- entry-zone distance
+- short-term volatility pressure
+- entry readiness indicators
+- local invalidation pressure
+
+1h features are refinement/context features. They do not create a separate first-phase primary 1h model universe.
+
+### Global context
+
+- symbol identity
+- session/time features
+- data-quality flags
+- missingness flags
+- regime metadata
 
 ---
 
 ## Rules
 
-### 1. Canonical-state only
-If a value is not present or derivable from the approved state surface, it is not a valid feature.
-
-### 2. Leak-free only
-No future bars, future labels, outcome echoes, or hidden evaluation data.
-
-### 3. Stable naming
-Feature names should remain stable and grouped.
-
-### 4. Missingness is explicit
-Missing or degraded context should surface as flags, not as silent zeros.
-
-### 5. Keep first phase boring
-Prefer explicit, interpretable features over complex opaque constructions.
-
-### 6. Scope-compatible schemas
-Features should support shared infrastructure and multi-symbol learning within a `model_scope`, not per-symbol handcrafted pipelines. Feature schemas may vary by `model_scope` where needed, and features do not decide the scope; runtime `scope_router` and config choose the scope before inference.
+1. Canonical-state only.
+2. No future bars, future labels, or outcome echoes.
+3. Stable naming and grouping.
+4. Missingness is explicit.
+5. First phase stays boring and interpretable.
+6. Features support shared multi-symbol modeling.
+7. Feature semantics are identical for training, replay, and live inference.
 
 ---
 
 ## Normalization Family
 
-First-phase normalization family:
-- fit on the training split only
-- global across the approved training universe unless explicitly versioned otherwise
-- use robust centering/scaling for continuous features
-- do not use per-symbol normalization in first phase
+First-phase normalization:
 
-This keeps the shared multi-symbol model interpretable and prevents hidden symbol-local semantics.
+- fit on training split only
+- global across approved training universe
+- robust centering/scaling for continuous features where needed
+- no per-symbol normalization in first phase unless explicitly versioned later
+
+Tree models may not require aggressive scaling, but normalization lineage must still be explicit when applied.
 
 ---
 
-## Missing HTF Context Rule
+## Missing Context Rules
 
 If higher-timeframe context is unavailable:
-- emit the normalized fallback value `0.0` for affected HTF numeric features
-- emit explicit HTF-missing flags alongside them
 
-The flag is authoritative.
-The fallback value exists only to preserve numeric schema stability.
+- emit fallback numeric values only to preserve schema stability
+- emit explicit missing flags
+- keep degradation visible downstream
+
+If 1h refinement context is unavailable:
+
+- preserve primary 4h decision features
+- emit 1h-missing flags
+- policy/runtime may degrade timing guidance or actionability based on config
 
 ---
 
 ## Symbol Identity Encoding
 
-First-phase symbol identity encoding:
-- compact one-hot encoding over the approved symbol universe
+First phase uses compact one-hot encoding over the approved symbol universe.
 
-Do not use opaque embedding systems in first phase authority.
 If the approved universe changes materially, bump the feature schema or symbol-encoding family version.
-
----
-
-## Feature Drift Ownership
-
-Feature drift monitoring belongs to `pipeline/monitoring.md`.
-
-Minimum drift families to monitor:
-- distribution shift in continuous feature groups
-- missingness-rate shift
-- symbol-coverage shift
-- HTF-availability shift
-
-This document owns feature meaning.
-Monitoring owns feature-drift observation.
-
----
-
-## Failure / Fallback
-
-If feature generation degrades:
-- emit degradation flags
-- preserve schema compatibility where possible
-- do not silently drop critical features without visibility
 
 ---
 
 ## Config Surface
 
 Key config families:
+
 - feature schema version
 - enabled feature groups
-- normalization families
-- allowed symbol metadata
-- missingness handling rules
+- normalization family
 - symbol-encoding family
+- missingness handling rules
+- feature clipping/winsorization rules
+- approved symbol metadata
 
 ---
 
 ## Interfaces
 
 Upstream:
+
+- canonical state
 - `contracts/analysis_request.md`
 
 Downstream:
+
 - `pipeline/dataset.md`
 - `pipeline/model.md`
 - `pipeline/monitoring.md`
@@ -195,18 +181,19 @@ Downstream:
 
 ## Test Requirements
 
-Minimum feature tests:
+Minimum tests:
+
 - deterministic transform for same input
 - no future leakage
 - schema stability
 - missing-context flags work
-- HTF fallback + missing flags work
-- symbol one-hot encoding is stable
-- normalization uses training-only statistics
+- HTF fallback + flags work
+- 1h refinement absence is visible
+- symbol one-hot stability
+- training-only normalization statistics
 
 ---
 
 ## Final Position
 
-Features are the stable interface between canonical state and learned model behavior.
-If feature meaning drifts, model quality becomes hard to trust.
+Features are the stable interface between canonical state and learned behavior. In V7, the same leak-free feature row must support both action classification and economic regression.

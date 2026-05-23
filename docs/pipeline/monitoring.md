@@ -8,46 +8,24 @@ Defines how V7 monitors post-training and post-deployment quality.
 
 It answers:
 
-> After artifacts are trained and runtime is active, what signals should V7 track to detect drift, degradation, and contract-family health issues?
-
----
-
-## In Scope
-
-- result quality monitoring
-- calibration drift monitoring
-- no-trade / action mix monitoring
-- contract-family health monitoring
-- batch/session visibility
-- timing extension observability
-- feature drift
-- baseline updates
-
----
-
-## Out of Scope
-
-- alert transport implementation
-- dashboard UI design
-- broker monitoring specifics
-- scheduler internals
+> After hybrid artifacts are trained and runtime is active, what should V7 track to detect drift, degradation, and lifecycle health issues?
 
 ---
 
 ## Core Decision
 
 Monitoring must observe both:
+
 - model quality surfaces
 - system lifecycle surfaces
 
-Monitoring must track `model_scope` as a first-class dimension before scope-level promotion or live enablement.
+For V7 hybrid modeling, monitoring also tracks:
 
-That means monitoring should track not only scores, but also:
-- degradation
-- fallback
-- execution suppression
-- outcome readiness
-- contract validity
+- action probability drift
+- expected-R drift
+- regression reliability drift
+- calibration drift
+- no-trade/action mix drift
 
 ---
 
@@ -57,15 +35,15 @@ That means monitoring should track not only scores, but also:
 - `DecisionEvent`
 - `TradeOutcome`
 - calibration artifacts
+- model artifact metadata
 - runtime logs / metrics
-- runtime simulation / replay adapter metrics
 - monitoring config
 
 ---
 
 ## Outputs
 
-Monitoring should produce:
+Monitoring produces:
 
 - health signals
 - drift indicators
@@ -73,174 +51,149 @@ Monitoring should produce:
 - coverage summaries
 - symbol/regime dashboards
 - timing extension usefulness summaries
-
----
-
-## Rules
-
-### 1. Monitor the contract family, not just the model
-A healthy model with broken lifecycle plumbing is still a broken system.
-
-### 2. Calibration drift matters
-Confidence usage in runtime requires monitoring of confidence reliability.
-
-### 3. No-trade distribution matters
-A large shift in no-trade frequency may signal model or state drift.
-
-### 4. Degradation must be visible
-Fallback and degraded-result usage should be measurable.
-
-### 5. Timing extension is initially observability-first
-Track:
-- frequency of `entry_readiness` states
-- later outcome quality by timing state
-- whether timing gating is active
-
----
-
-## Baseline Update Policy
-
-Monitoring baselines should reference:
-1. the currently promoted artifact family
-2. the previous promoted artifact family for regression comparison
-3. optional longer historical aggregate baselines for trend context
-
-When promotion occurs:
-- the promoted artifact becomes the new primary monitoring baseline
-- the previous promoted artifact remains retained according to baseline-retention config
-
-This keeps drift interpretation stable.
-
----
-
-## Feature Drift Ownership
-
-Monitoring owns feature-drift observation.
-
-Minimum first-phase feature drift families:
-- feature distribution shift
-- missingness-rate shift
-- HTF-availability shift
-- symbol mix shift
-
-Recommended metrics may include PSI-like or distribution-shift families, but the exact metric family remains config-driven.
-
----
-
-## Timing Extension Decision Rule
-
-The timing extension may move from observability-only to gating-enabled only when:
-- timing states show stable predictive usefulness across multiple evaluation windows
-- `CHASING` or `MISSED` states repeatedly correspond to materially worse outcomes
-- the evidence crosses the configured promotion threshold for timing gating
-
-Until then:
-- `entry_timing_used_for_gate` should remain false in normal operation
-
----
-
-## Outcome Finality Lag Rule
-
-Monitoring should track outcome finality lag as:
-- median lag
-- tail lag
-- unresolved fraction by horizon family
-
-If lag exceeds configured thresholds:
-- raise a data-quality / pipeline-health signal
-- do not silently treat missing outcomes as stable absence
-
-Whether this blocks training is controlled by training/evaluation config, not hardcoded here.
-
----
-
-## Coverage Thresholds
-
-Monitoring should track:
-- symbol coverage
-- regime coverage
-
-Coverage thresholds must be config-driven.
-Below-threshold coverage should emit:
-- warning signals
-- slice incompleteness markers
-- optional promotion-blocking evidence if evaluation policy requires it
+- regression reliability summaries
 
 ---
 
 ## Recommended Monitoring Families
 
-Minimum first-phase families by `model_scope`:
-- decision counts by scope
-- realized outcome by scope
+Minimum first-phase families:
+
 - request/result validation failure rate
-- fallback / degraded rate by scope
-- calibration drift by scope
-- confidence distribution
+- fallback/degraded rate
+- calibrated confidence distribution
+- action probability distribution
 - expected-R distribution
+- expected adverse-pressure distribution
 - no-trade rate
+- long/short/no-trade action mix
 - actionability vs execution-eligibility gap
-- symbol-side harmful cohort by scope
 - symbol and regime coverage
-- interval-view coverage integrity by scope
-- timing-field quality by refinement presence
+- interval-view coverage integrity
+- 1h refinement availability rate
 - timing-extension distribution
-- runtime simulation unresolved/invalidated rate
-- replay/paper divergence where measurable
-- simulation profile/version coverage
-- side-effect-free adapter failure rate
-- Monte Carlo robustness drift when configured
 - outcome finality lag
 - feature drift
+- regression reliability drift
 
 ---
 
-## Alert Thresholds
+## Calibration Drift
 
-Thresholds belong in config.
-Alert transport is outside scope.
+Monitor:
 
-Bridge rule:
-- monitoring defines what threshold crossing means
-- deployment/runtime alerting systems define how that threshold is delivered
+- reliability error
+- confidence bucket realized quality
+- no-trade confidence quality
+- per-symbol and per-regime reliability breakdowns
 
-This keeps threshold semantics useful without forcing transport design into this document.
+Confidence used in runtime requires reliability evidence.
 
 ---
 
-## Failure / Fallback
+## Regression Drift
 
-If monitoring coverage is incomplete:
-- preserve that explicitly
-- do not silently report false stability
+Monitor:
+
+- predicted expected-R bucket vs realized average R
+- expected-R sign quality
+- adverse-pressure prediction quality
+- cost-adjusted expectancy bucket quality
+- error distribution by symbol/regime
+
+If regression reliability degrades, policy may need to raise economic gates, ignore affected heads, or degrade to no-trade depending on config.
+
+---
+
+## Feature Drift
+
+Monitoring owns feature-drift observation.
+
+Minimum families:
+
+- continuous feature distribution shift
+- missingness-rate shift
+- HTF availability shift
+- 1h refinement availability shift
+- symbol mix shift
+
+---
+
+## Timing Extension Decision Rule
+
+Timing extension may move from observability-only to gating-enabled only when:
+
+- timing states show stable predictive usefulness across multiple windows
+- `CHASING` or `MISSED` states repeatedly correspond to worse outcomes
+- evidence crosses configured promotion threshold
+
+Until then, `entry_timing_used_for_gate` should remain false in normal operation.
+
+---
+
+## Outcome Finality Lag
+
+Track:
+
+- median lag
+- tail lag
+- unresolved fraction by horizon family
+
+If lag exceeds thresholds:
+
+- raise data-quality/pipeline-health signal
+- do not treat missing outcomes as stable absence
+
+---
+
+## Baseline Update Policy
+
+Monitoring baselines reference:
+
+1. current promoted artifact family
+2. previous promoted artifact family
+3. optional longer historical aggregate baselines
+
+When promotion occurs, the promoted artifact becomes the new primary monitoring baseline.
+
+---
+
+## Rules
+
+1. Monitor the contract family, not just the model.
+2. Calibration drift matters.
+3. Regression drift matters.
+4. No-trade distribution matters.
+5. Degradation must be visible.
+6. Timing extension is initially observability-first.
 
 ---
 
 ## Config Surface
 
 Key config families:
+
 - monitoring windows
 - drift thresholds
 - alert thresholds
+- regression reliability thresholds
 - timing observability enablement
 - slice definitions
-- baseline retention rules
-- feature-drift thresholds
+- baseline retention
 - outcome-lag thresholds
-- simulation profile/version coverage thresholds
-- adapter failure thresholds
-- Monte Carlo robustness drift thresholds, if enabled
 
 ---
 
 ## Interfaces
 
 Upstream:
+
 - `contracts/analysis_result.md`
 - `contracts/decision_event.md`
 - `contracts/trade_outcome.md`
 
 Downstream:
+
 - alerting systems
 - evaluation baselines
 - promotion reviews
@@ -249,20 +202,19 @@ Downstream:
 
 ## Test Requirements
 
-Minimum monitoring tests:
+Minimum tests:
+
 - drift calculations stable
 - degraded/fallback counting correct
+- expected-R distribution aggregation works
+- regression reliability aggregation works
 - actionability vs execution-eligibility gap measurable
 - timing extension aggregation works
 - outcome lag metrics correct
-- simulation unresolved/invalidated and adapter failure aggregation works
-- Monte Carlo robustness drift aggregation works when configured
-- feature drift aggregation works
 - baseline replacement logic works
 
 ---
 
 ## Final Position
 
-Monitoring is how V7 stays trustworthy after deployment.
-It must track both economic quality and lifecycle integrity.
+Monitoring is how V7 stays trustworthy after deployment. A hybrid model must monitor both decision probabilities and economic estimates, not just final actions.

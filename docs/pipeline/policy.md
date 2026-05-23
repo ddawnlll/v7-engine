@@ -4,170 +4,172 @@
 
 ## Purpose
 
-Defines how V7 converts calibrated decision surfaces into a normalized engine decision.
+Defines how V7 converts calibrated classification and regression surfaces into a normalized engine decision.
 
 It answers:
 
-> Given calibrated scores and economic signals, how should V7 decide between `LONG_NOW`, `SHORT_NOW`, and `NO_TRADE`?
-
----
-
-## In Scope
-
-- decision policy logic
-- actionability policy
-- long / short / no-trade selection
-- economic gating at engine-policy level
-- timing guidance derivation
-
----
-
-## Out of Scope
-
-- portfolio exposure management
-- hard risk controls
-- broker execution logic
-- account-level operational gating
+> Given action probabilities and economic estimates, how should V7 decide between `LONG_NOW`, `SHORT_NOW`, and `NO_TRADE`?
 
 ---
 
 ## Core Decision
 
-Policy is the stage that turns calibrated surfaces into:
-- `recommended_action`
-- `is_actionable`
-- confidence-facing result fields
-- expected-R-facing result fields
-- execution guidance
-- timing guidance
+Policy is the stage where learned evidence becomes a decision.
 
-Runtime then decides whether execution is operationally allowed.
+Policy combines:
 
-Policy does not run simulation. It consumes calibrated model outputs and configured offline evidence. Runtime simulation may later test or track policy guidance, but policy must not hide live simulation loops inside decision selection.
+- calibrated action probabilities
+- calibrated confidence
+- expected R estimates
+- adverse-pressure estimates
+- cost-adjusted expectancy
+- no-trade quality
+- decision margins
+- timing/refinement signals
+
+Runtime later decides whether execution is operationally allowed.
 
 ---
 
 ## Inputs
 
-- calibrated score surfaces from one selected `model_scope` (context views may be fused inside the scope, but scope outputs are not averaged)
+- calibrated classification surfaces
+- regression economic surfaces
 - confidence
 - expected R
-- expected drawdown
+- expected adverse pressure / drawdown
+- cost-adjusted expectancy
 - decision margins
-- timing-supporting fields (e.g., 1h refinement data, which influences timing and entry readiness more than primary direction in phase one)
-- `model_scope`-specific policy config from the unified config system
+- timing-supporting fields
+- policy config
 
 ---
 
 ## Outputs
 
-Policy should produce a normalized decision surface matching `AnalysisResult`, including:
+Policy produces fields matching `AnalysisResult`, including:
 
 - `recommended_action`
 - `is_actionable`
 - `confidence`
+- `confidence_kind`
 - `expected_r`
-- `expected_drawdown`
+- `expected_drawdown` or adverse pressure
+- `action_probabilities`
+- `economic_quality_by_action`
+- `policy_reason_codes`
 - `entry_price`
 - `stop_loss`
 - `take_profit`
 - `time_sensitivity`
-- optional advisory timing:
-  - `entry_readiness`
-  - `entry_valid_for_bars`
+- optional `entry_readiness`
+- optional `entry_valid_for_bars`
 
 ---
 
-## Rules
+## Decision Gates
 
-### 1. Confidence matters, but is not enough
-Confidence remains first-class.
-It is not the only decision scalar.
+A directional action must pass:
 
-### 2. No-trade is first-class
-No-trade must be explicitly selected, not inferred from weak long/short scores.
+1. probability/confidence gate
+2. no-trade comparison gate
+3. decision margin gate
+4. expected-R gate
+5. cost-adjusted expectancy gate
+6. adverse-pressure/drawdown gate
+7. degradation/fallback gate
 
-### 3. Economic gating is policy-owned
-Expected R and related economic surfaces belong here before runtime execution gates.
-
-### 4. Timing extension is advisory-first
-`entry_readiness` and `entry_valid_for_bars` are produced at the policy stage from calibrated score surfaces, entry-zone geometry, and timing heuristics.
-They are not first-phase primary learned targets.
-
-### 5. Keep the action family compact
-First phase action family:
-- `LONG_NOW`
-- `SHORT_NOW`
-- `NO_TRADE`
-
-### 6. Scope-specific thresholds
-Policy thresholds are `model_scope`-specific. `SCALP` and `AGGRESSIVE_SCALP` may require stricter no-trade, cost, and slippage gates than `SWING`, but all such settings must live in the unified config system as first-phase defaults or configured overrides.
-
-### 7. No scope averaging
-Policy consumes one selected scope output. Runtime `scope_router` chooses the scope before policy execution; policy must not average `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` outputs.
-
-### 8. Scope mismatch
-If the result artifact or request scope is incompatible, policy/runtime handling must reject, emit `NO_TRADE`, or use the existing rejection vocabulary such as `REJECT_SCOPE_MISMATCH` where available.
+If any required gate fails, policy selects `NO_TRADE` or degraded-safe behavior.
 
 ---
 
 ## Tie-Break Rule
 
-First-phase decision rule:
-1. both actionability gates must pass:
-   - confidence gate
-   - economic gate
-2. if both directional actions fail, select `NO_TRADE`
-3. if one directional action passes and beats `NO_TRADE` by the configured margin, select it
-4. if long/short are too close or neither beats `NO_TRADE` cleanly, select `NO_TRADE`
+First-phase rule:
 
-This keeps `NO_TRADE` a positive decision rather than a weak fallback.
+1. evaluate directional actions against gates
+2. if both fail, select `NO_TRADE`
+3. if one passes and beats `NO_TRADE` by the configured margin, select it
+4. if both pass, choose the better policy score after economic quality adjustment
+5. if long/short are too close, select `NO_TRADE`
+
+No-trade is a positive decision, not a weak fallback.
 
 ---
 
-## `entry_readiness` Rule
+## Policy Score
 
-First-phase `entry_readiness` is policy-derived, not a standalone model target.
+The first-phase policy score should be explicit and config-driven.
 
-It should use:
+A reasonable shape:
+
+```text
+policy_score(action) =
+  calibrated_action_probability_component
++ expected_r_component
+- adverse_pressure_component
+- friction_component
++ path_quality_component
+- uncertainty_penalty
+```
+
+The exact weights belong in config and must be versioned.
+
+Do not create hidden selector complexity outside the policy module.
+
+---
+
+## Timing Extension Rule
+
+`entry_readiness` and `entry_valid_for_bars` are policy-derived first phase.
+
+They may use:
+
+- 1h refinement features
 - entry-zone distance
-- time sensitivity
+- local momentum pressure
+- time-sensitivity heuristics
 - margin decay signals if configured
-- simple bounded heuristics
 
-Do not turn policy into a complex timing optimizer.
-
-Policy thresholds may be informed by offline evaluation or Monte Carlo robustness evidence, but those settings must be expressed through the unified config system and not as hidden live simulation behavior.
+They are advisory-first, not primary action targets.
 
 ---
 
 ## Failure / Fallback
 
 If policy cannot safely produce a clean actionable decision:
-- emit no-trade or degraded-safe behavior
-- preserve fallback visibility
-- do not silently emit confident but structurally incomplete actions
+
+- emit `NO_TRADE` or degraded-safe behavior
+- preserve fallback/degradation visibility
+- do not emit confident but structurally incomplete actions
 
 ---
 
 ## Config Surface
 
 Key config families:
+
+- minimum action probability
 - minimum confidence
 - minimum expected R
-- drawdown limits at policy stage
-- `model_scope`-specific no-trade thresholds
+- minimum cost-adjusted expectancy
+- drawdown/adverse-pressure limits
+- no-trade thresholds
+- policy score weights
+- decision margin
 - timing extension enablement
-- timing heuristic thresholds
+- degraded-result behavior
 
 ---
 
 ## Interfaces
 
 Upstream:
+
 - `pipeline/calibration.md`
 
 Downstream:
+
 - `pipeline/portfolio.md`
 - `pipeline/risk.md`
 - `contracts/analysis_result.md`
@@ -176,16 +178,18 @@ Downstream:
 
 ## Test Requirements
 
-Minimum policy tests:
+Minimum tests:
+
 - long vs short vs no-trade selection
-- confidence-only is insufficient when economic gate fails
+- confidence-only cannot pass when economic gate fails
+- expected-R-only cannot pass when probability gate fails
 - no-trade selected explicitly
-- fallback behavior visible
-- timing extension fields bounded and legal
+- ambiguous long/short selects no-trade
+- regression-head missingness degrades visibly
+- timing fields are bounded and legal
 
 ---
 
 ## Final Position
 
-Policy is where learned scores become a normalized decision.
-It must stay explicit, compact, and auditable.
+Policy is where V7 becomes profitability-aware. It must use classification and regression evidence together, while staying explicit, compact, and auditable.

@@ -1,306 +1,189 @@
+# Phase 4 — Features & Hybrid Dataset (Planned)
 
-# Phase 4 — Features & Dataset (Planned)
-
-**Status:** Planned
-**Owner:** Data / training-input track
-**Last updated:** 2026-04-24
+**Status:** Planned  
+**Owner:** Data / training-input track  
+**Last updated:** 2026-05-23  
 **Delivery status:** Not started
 
 ---
 
 ## 1. Purpose
 
-This phase turns canonical state and label truth into leakage-safe feature rows and walk-forward dataset families.
+Turn canonical state and hybrid labels into leakage-safe feature rows and walk-forward dataset families.
 
-It solves the problem that truth and labels may exist, but training rows are not yet guaranteed to be valid, stable, or balanced.
-
----
-
-## 2. What Carried Over / What Must Stay Stable
-
-The following are already implemented / must remain stable:
-
-- [x] contracts exist
-- [x] runtime simulation adapter outputs exist
-- [x] label and outcome semantics are aligned
-- [x] feature and dataset docs already define first-phase assumptions
-
-This phase builds on top of these. Do not regress them.
+This phase earns the right to train by proving rows are temporally valid, target-valid, and lineage-valid.
 
 ---
 
-## 3. Background & Motivation
+## 2. Stable Rules
 
-Training rows can still fail even with good labels if:
-- features leak future information
-- HTF fallback is inconsistent
-- symbol identity is unstable
-- train/test splits are time-invalid
-- symbol distribution is dominated by a few instruments
-
-This phase prevents those failures.
+- Features come from canonical state only.
+- No future leakage.
+- Unresolved/invalid targets stay out of strict training by default.
+- Dataset rows preserve feature, label, simulation, and model-scope lineage.
+- Datasets do not call live exchange, broker, or mutable runtime account paths.
 
 ---
 
-## 4. Current Failure State / Known Blockers
+## 3. Workstream A — Feature Builder
 
-The current state has the following known issues:
+Feature groups:
 
-- `feature schema` = documented, not yet guaranteed in code
-- `normalization family` = documented, not yet guaranteed in code
-- `walk-forward folds` = documented, not yet guaranteed in code
-- `symbol balancing` = may not yet exist
-- `dataset_family_version` = may not yet be tied to actual row lineage
+- 4h primary decision features
+- 1d higher-timeframe context features
+- 1h refinement/timing context features
+- symbol identity and metadata features
+- regime/volatility features
+- missingness/degradation flags
 
----
-
-## 5. Workstream A — Feature Builder
-
-**Status:** New
-
-### Problem / Goal
-
-Convert canonical state into explicit grouped model features.
-
-### Implementation Tasks
-
-- [ ] Implement grouped feature families
-- [ ] Implement HTF context feature extraction
-- [ ] Implement missing/degraded flags
-- [ ] Implement symbol one-hot encoding family
-
-### Symbol-universe evolution rule
-
-Within one `dataset_family_version`, the approved symbol universe is fixed.
-If a symbol is added or removed:
-- bump the symbol-encoding family version
-- bump the dataset family version
-- retrain downstream model artifacts
-
-Do not hot-swap one-hot dimensions inside the same dataset family.
+First phase uses one fused row per evaluated market state, not separate averaged interval predictors.
 
 ### Acceptance Criteria
 
-- [ ] grouped feature surfaces exist
-- [ ] HTF missingness is explicit
-- [ ] symbol encoding is stable and versioned
+- [ ] grouped feature surfaces exist.
+- [ ] HTF/refinement missingness is explicit.
+- [ ] symbol encoding is stable and versioned.
 
 ---
 
-## 6. Workstream B — Normalization & Schema Stability
+## 4. Workstream B — Normalization & Schema Stability
 
-**Status:** New
+Normalization rule:
 
-### Problem / Goal
-
-Keep feature values numerically stable without hiding their meaning.
-
-### Normalization rule
-
-Walk-forward normalization is **per fold**:
-- fit normalization statistics on the training window of that fold only
-- apply those same statistics to that fold’s validation/calibration/holdout rows
-- do not reuse fold 1 statistics for later folds
-
-### Implementation Tasks
-
-- [ ] Implement training-only normalization fitting
-- [ ] Implement transform-time normalization reuse
-- [ ] Implement feature schema versioning
-- [ ] Implement schema compatibility validation
+- fit normalization statistics on the training window only
+- apply those statistics to that fold's validation/calibration/holdout rows
+- fit separately per walk-forward fold
+- do not reuse fold statistics across folds unless explicitly versioned
 
 ### Acceptance Criteria
 
-- [ ] normalization uses training-only statistics
-- [ ] schema version is attached to outputs
-- [ ] incompatible schemas fail clearly
+- [ ] normalization uses training-only statistics.
+- [ ] feature schema version is attached.
+- [ ] incompatible schemas fail clearly.
 
 ---
 
-## 7. Workstream C — Dataset Assembly
+## 5. Workstream C — Hybrid Dataset Assembly
 
-**Status:** New
-
-### Problem / Goal
-
-Produce walk-forward training rows with preserved lineage and symbol balancing.
-
-#### 7.1 Row assembly
+Each row should include:
 
 ```python
 row_id
 symbol
-model_scope (SWING | SCALP | AGGRESSIVE_SCALP)
-primary_interval (e.g., 4h for SWING, 15m for SCALP, 1m/3m for AGGRESSIVE_SCALP)
+model_scope
+primary_interval
 context_intervals
 refinement_intervals
-label_horizon_family
-cost_model
-slippage_model
-simulation_profile_version
-simulation_run_id / replay_run_id where used
-monte_carlo_run_id where configured
 state_timestamp_utc
+feature_schema_version
+label_interpretation_version
+simulation_profile_version
+cost_model_version
+slippage_model_version
+horizon_family
+simulation_run_id
+replay_run_id
+monte_carlo_run_id  # when configured
 dataset_family_version
 ```
 
-**Rationale:**
-- rows must be traceable
-- dataset family cannot be anonymous
-- scope-specific multi-view rows; no mixing of `model_scope`, primary clock, or label horizon across supervised datasets
-- labels come from runtime simulation adapter outputs
-- dataset assembly must not call live execution, broker, exchange, or mutable account-state paths
-
-#### 7.2 Split and weighting
+Target fields:
 
 ```python
-fold_count = 6
-min_train_window = "12m"
-validation_window = "2m"
-holdout_window = "1m"
-symbol_weighting = "inverse_frequency_capped"
-max_weight_ratio = 5.0
+classification_target = best_action_label
+classification_target_validity
+expected_r_target_long
+expected_r_target_short
+expected_r_target_long_validity
+expected_r_target_short_validity
+adverse_r_target_long       # optional if enabled
+adverse_r_target_short      # optional if enabled
+cost_adjusted_r_target_long # optional if enabled
+cost_adjusted_r_target_short# optional if enabled
+sample_weight
+symbol_weight
 ```
 
-### Balancing default
+### Target completeness rule
 
-First implementation default:
-- use inverse-frequency sample weights by symbol
-- cap max relative symbol weight ratio at `5.0`
-- only add hard row-count caps if symbol imbalance remains pathological after weighting
+A row can be valid for classification but invalid for one regression target. Training export must preserve per-target validity rather than silently dropping or filling values.
+
+### Scope rule
+
+Do not mix `model_scope`, primary clock, or label horizon inside one supervised dataset family unless a documented multi-scope training mode explicitly exists. First phase assumes scope-compatible datasets.
 
 ### Acceptance Criteria
 
-- [ ] walk-forward folds are reproducible
-- [ ] unresolved / invalid rows are excluded by default
-- [ ] symbol weighting or capping prevents silent domination
+- [ ] dataset rows carry classification and regression targets.
+- [ ] target validity is per-target and explicit.
+- [ ] lineage is preserved.
 
 ---
 
-## 8. Workstream D — Test Coverage
+## 6. Workstream D — Splits and Symbol Balancing
 
-**Status:** New
-**Required before:** Phase 5 model training
+Default walk-forward settings:
 
-### 8.1 Feature tests
+- `fold_count = 6`
+- `min_train_window = 12m`
+- `validation_window = 2m`
+- `holdout_window = 1m`
 
-- [ ] no future leakage test
-- [ ] HTF fallback + missing-flag test
-- [ ] symbol encoding stability test
+Balancing default:
 
-### 8.2 Normalization tests
+- inverse-frequency sample weights by symbol
+- cap max relative symbol weight ratio at `5.0`
+- use hard row caps only if weighting fails to prevent pathological dominance
 
-- [ ] training-only normalization-fit test
-- [ ] per-fold normalization separation test
-- [ ] schema mismatch test
+### Acceptance Criteria
 
-### 8.3 Dataset tests
-
-- [ ] walk-forward split integrity test
-- [ ] unresolved row exclusion test
-- [ ] symbol-weighting reproducibility test
+- [ ] folds are reproducible.
+- [ ] no random temporal leakage.
+- [ ] symbol weighting is reproducible.
 
 ---
 
-## 9. Workstream E — Pre-Run Audit Checklist
+## 7. Workstream E — Test Coverage
 
-**Status:** New
-**Must complete before:** first model training run
+Minimum tests:
 
-### 9.1 Feature audit
-
-- [ ] verify no feature uses future-only information
-- [ ] verify grouped feature families map to docs
-
-### 9.2 Dataset audit
-
-- [ ] verify fold windows match documented defaults or explicit config override
-- [ ] verify row lineage is preserved end to end
-- [ ] verify simulation profile/version and adapter lineage are preserved
-- [ ] verify replay/Monte Carlo run IDs are preserved when used
-- [ ] verify dataset assembly has no live execution side effects
-
-### 9.3 Balance audit
-
-- [ ] verify no single symbol silently dominates row weights or row counts
-- [ ] verify symbol-universe changes would bump dataset/version surfaces
+- no future leakage
+- HTF/refinement fallback + missing flags
+- symbol encoding stability
+- training-only normalization fit
+- per-fold normalization separation
+- schema mismatch failure
+- walk-forward split integrity
+- unresolved row exclusion
+- per-target validity handling
+- symbol-weight reproducibility
 
 ---
 
-## 10. Combined Implementation Order
+## 8. Pre-Run Audit
 
-1. Complete Workstream A — Feature Builder
-2. Implement Workstream B — Normalization & Schema Stability
-3. Apply Workstream C — Dataset Assembly
-4. Run Workstream E — Pre-Run Audit
-5. Implement Workstream D — Test Coverage
-6. Execute feature/dataset test suite
-7. Evaluate results against acceptance criteria
+Before Phase 5:
 
-### Acceptance Criteria for First Combined Run
-
-- [ ] feature rows are produced from canonical state only
-- [ ] normalization is training-only and per-fold
-- [ ] walk-forward datasets are reproducible
-- [ ] symbol weighting/capping is explicit and testable
+- [ ] features use canonical state only
+- [ ] dataset rows preserve simulation adapter lineage
+- [ ] regression targets are not fake-filled
+- [ ] target validity masks are present
+- [ ] no single symbol dominates rows or weights silently
+- [ ] dataset assembly has no live execution side effects
 
 ---
 
-## 11. Definition of Done
+## 9. Definition of Done
 
-### 11.1 Feature layer
-
-- [x] feature semantics are documented
-- [x] normalization direction is documented
-- [ ] feature builder exists
-- [ ] HTF fallback + flags exist
-
-### 11.2 Dataset layer
-
-- [ ] dataset row assembly exists
-- [ ] walk-forward folds exist
-- [ ] dataset family versioning exists
-
-### 11.3 Candidate health
-
-- [ ] no temporal leakage remains in row construction
-- [ ] symbol dominance is controlled explicitly
-- [ ] symbol-universe evolution is version-safe
-
-### 11.4 Test layer
-
-- [ ] feature tests pass
-- [ ] normalization tests pass
-- [ ] dataset tests pass
+- [ ] feature builder exists.
+- [ ] normalization is training-only and per-fold.
+- [ ] hybrid dataset rows exist.
+- [ ] target validity is explicit.
+- [ ] walk-forward folds exist.
+- [ ] tests pass.
 
 ---
 
-## 12. What Phase 5 Inherits
+## 10. What Phase 5 Inherits
 
-### 12.1 Capability expansion themes
-
-- training-ready rows
-- stable feature schema
-- reproducible walk-forward splits
-
-### 12.2 Phase Boundary
-
-- Phase 5 is baseline model training work.
-- Phase 4 is the prerequisite.
-- Do not start Phase 5 work until Phase 4 definition of done is fully satisfied.
-
----
-
-## 13. Compact Mental Model
-
-### 13.1 Phase Relationships
-
-- Phase 3: labels became coherent
-- Phase 4: rows become valid
-- Phase 5: baseline model is trained
-- Phase 6: scores become calibrated decisions
-
-### 13.2 Key Takeaway
-
-A model cannot fix bad rows.
-This phase is where V7 earns the right to start learning.
+Phase 5 inherits training-ready rows with feature matrices, class targets, expected-R regression targets, validity masks, and sample weights.
