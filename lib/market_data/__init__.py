@@ -1,4 +1,9 @@
-# Package: lib/market_data
-# P0.5 will populate this package with shared primitives.
-# See lib/docs/ for the specification.
+"""
+lib/market_data — Shared market data contracts and quality checks.
 
+Use `lib.market_data.binance.BinanceMarketDataService` for data retrieval.
+"""
+
+from lib.market_data.contracts import KlineRecord, MarketDataResult, DataQualityReport
+
+__all__ = ["KlineRecord", "MarketDataResult", "DataQualityReport"]
