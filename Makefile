@@ -1,16 +1,21 @@
-.PHONY: help install test check-boundaries clean lint typecheck
+.PHONY: help install test check-boundaries clean lint typecheck setup
 
 help:
 	@echo "V7 Engine Monorepo — Makefile"
 	@echo ""
+	@echo "  make setup            Full environment setup (venv + deps + verify)"
+	@echo "  make setup ARGS=--quick   Quick setup (use existing venv)"
 	@echo "  make install          Install dependencies (pip)"
 	@echo "  make test             Run all lib/ tests"
 	@echo "  make test file=FILE   Run a specific test file"
 	@echo "  make check-boundaries Verify lib/ imports no v7/alphaforge modules"
 	@echo "  make clean            Remove caches, artifacts, build artifacts"
-	@echo "  make lint             Run flake8 / ruff linting"
+	@echo "  make lint             Run ruff linting"
 	@echo "  make typecheck        Run mypy type checking"
 	@echo ""
+
+setup:
+	@bash scripts/setup.sh $(ARGS)
 
 install:
 	pip install -q -U pip pytest requests mypy ruff
