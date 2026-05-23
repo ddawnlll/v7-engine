@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-Integrate hybrid policy outputs into runtime lifecycle, portfolio interpretation, risk gates, `DecisionEvent`, and `TradeOutcome` flows.
+Integrate hybrid policy outputs into runtime lifecycle, portfolio interpretation, risk gates, `DecisionEvent`, and `TradeOutcome` flows — **with mode routing and correlation-aware portfolio controls**.
 
 A valid `AnalysisResult` is economically actionable, but runtime still decides whether execution is operationally eligible.
 
@@ -17,15 +17,17 @@ A valid `AnalysisResult` is economically actionable, but runtime still decides w
 
 ## 2. Stable Rules
 
-- Runtime builds requests and validates results.
-- Engine produces the hybrid decision surface.
+- Runtime builds requests (with `requested_trade_mode`) and validates results.
+- **Mode router** selects the correct artifact bundle.
+- Engine produces the hybrid decision surface (per mode).
 - Portfolio and risk are separate explicit stages.
-- Runtime persists lifecycle records.
+- **Portfolio uses correlation-aware cluster controls** (section 6.7 of mode-centric doc).
+- Runtime persists lifecycle records with mode context.
 - No hidden fallback, hidden veto, or hidden score mutation.
 
 ---
 
-## 3. Workstream A — Portfolio & Risk Controls
+## 3. Workstream A — Correlation-Aware Portfolio & Risk Controls
 
 Portfolio consumes:
 
@@ -36,6 +38,22 @@ Portfolio consumes:
 - expected drawdown/adverse estimates
 - portfolio context
 - cluster/concentration config
+- **pre-computed correlation groups**
+
+### Correlation-Aware Exposure Control
+
+Portfolio uses correlation groups to prevent effective overexposure:
+
+```python
+CORRELATION_GROUPS = {
+    "btc_cluster": {"BTCUSDT", "WBTCUSDT"},
+    "eth_cluster": {"ETHUSDT", "ETH.*"},
+    "layer1": {"SOLUSDT", "ADAUSDT", "DOTUSDT"},
+    "defi": {"UNIUSDT", "AAVEUSDT", "MKRUSDT"},
+}
+```
+
+If a correlation group's combined exposure exceeds `max_cluster_exposure` (default 15%), additional candidates from that group are suppressed.
 
 Risk consumes:
 
@@ -58,15 +76,16 @@ If both portfolio and risk block:
 - [ ] portfolio suppression is explicit.
 - [ ] risk blocks are explicit.
 - [ ] expected-R/probability context is preserved through suppression.
+- [ ] correlation-aware cluster suppression works.
 
 ---
 
-## 4. Workstream B — Runtime Request/Result Flow
+## 4. Workstream B — Mode-Routed Runtime Request/Result Flow
 
 Runtime must:
 
-- build valid `AnalysisRequest`
-- route by `requested_trade_mode` / `model_scope`
+- build valid `AnalysisRequest` with `requested_trade_mode`
+- **route by mode** — select SWING, SCALP, or AGGRESSIVE_SCALP bundle
 - load scope-compatible model/calibration/policy bundle
 - reject invalid `AnalysisResult`
 - preserve actionability vs execution eligibility
@@ -82,10 +101,12 @@ Runtime rejects or degrades when:
 - confidence kind is misrepresented
 - artifact/calibration/policy bundle is scope-incompatible
 - policy gate status is missing
+- mode mismatch between request and artifact
 
 ### Acceptance Criteria
 
-- [ ] runtime builds valid requests.
+- [ ] runtime builds valid requests with mode.
+- [ ] mode routing loads the correct artifact bundle.
 - [ ] runtime validates hybrid results.
 - [ ] actionability and execution eligibility are distinct.
 

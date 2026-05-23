@@ -1,14 +1,14 @@
-# Pipeline Simulation
+# Pipeline Simulation — Mode-Centric
 
 **Intended path:** `docs/v7/pipeline/simulation.md`
 
 ## Purpose
 
-Defines the single authoritative economic simulation truth layer for V7.
+Defines the authoritative economic simulation truth layer for V7 — **configured per trading mode**.
 
 It answers:
 
-> Given one decision-time state and a future price path, how should V7 compute long, short, and no-trade consequences under one consistent economic model?
+> Given one decision-time state and a future price path, how should V7 compute long, short, and no-trade consequences under one consistent economic model, parameterized by mode?
 
 Simulation is the base authority for labels, evaluation, replay projection, and `TradeOutcome` normalization.
 
@@ -16,7 +16,7 @@ Simulation is the base authority for labels, evaluation, replay projection, and 
 
 ## Core Decision
 
-V7 uses one simulation truth layer across:
+V7 uses **one simulation engine, configured per mode** across:
 
 - label generation
 - out-of-sample evaluation
@@ -31,9 +31,9 @@ There must not be one cost model for labels and a different cost model for evalu
 ## First-Phase Scope
 
 - target universe: up to 60 symbols
-- primary decision interval: 4h
-- higher-timeframe context: 1d
-- refinement/timing context: 1h
+- **SWING mode:** primary 4h, context 1d, refinement 1h
+- **SCALP mode:** primary 1h, context 4h, refinement 15m
+- **AGGRESSIVE_SCALP mode:** primary 15m, context 1h, refinement 5m
 - action family: `LONG_NOW`, `SHORT_NOW`, `NO_TRADE`
 
 ---
@@ -96,6 +96,69 @@ First-phase exit reasons:
 - `INVALIDATED`
 
 Do not introduce many specialized exit families in first phase.
+
+---
+
+## Mode-Specific Simulation Configuration
+
+Each mode has its own simulation config. The same simulation engine is used, parameterized by mode.
+
+### Configuration Table
+
+| Parameter | SWING | SCALP | AGGRESSIVE_SCALP |
+|-----------|-------|-------|------------------|
+| Primary interval | 4h | 30m/1h | 15m |
+| Context interval | 1d | 4h | 1h |
+| Refinement interval | 1h | 15m | 5m |
+| Max holding bars | 12-30 | 3-12 | 1-5 |
+| Stop multiplier (ATR) | 2.0-2.5 | 1.5-2.0 | 1.0-1.5 |
+| Target multiplier (ATR) | 2.0-3.0 | 1.5-2.0 | 1.0-1.5 |
+| Ambiguity margin (R) | 0.20 | 0.10 | 0.05 |
+| Min action edge (R) | 0.35 | 0.15 | 0.08 |
+| MAE penalty weight | MEDIUM | HIGH | VERY_HIGH |
+| Cost penalty weight | MEDIUM | HIGH | VERY_HIGH |
+| NO_TRADE tendency | LOW | MEDIUM | HIGH (default) |
+
+### Mode-Specific Stop/Target Behavior
+
+```yaml
+simulation_configs:
+  swing:
+    primary_interval: "4h"
+    context_intervals: ["1d", "1h"]
+    max_holding_bars: 30
+    stop_method: "atr_wide"
+    target_method: "atr_wide"
+    ambiguity_margin_r: 0.20
+    min_action_edge_r: 0.35
+
+  scalp:
+    primary_interval: "1h"
+    context_intervals: ["4h", "15m"]
+    max_holding_bars: 12
+    stop_method: "atr_medium"
+    target_method: "atr_medium"
+    ambiguity_margin_r: 0.10
+    min_action_edge_r: 0.15
+
+  aggressive_scalp:
+    primary_interval: "15m"
+    context_intervals: ["1h", "5m"]
+    max_holding_bars: 5
+    stop_method: "atr_tight"
+    target_method: "atr_tight"
+    ambiguity_margin_r: 0.05
+    min_action_edge_r: 0.08
+    no_trade_default: true
+```
+
+### Regime-Aware Stop Multipliers
+
+Stop multipliers adapt to detected market regime (see mode-centric doc section 5.4):
+
+- In `TRANSITION` regime: use 99.0 multiplier (forces no-trade instead of wide stop)
+- In trend regimes: use base multipliers (2.0)
+- In `RANGE`: use tighter multipliers (1.5)
 
 ---
 

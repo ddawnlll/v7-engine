@@ -33,13 +33,34 @@ These decisions remain stable and must not be regressed:
 
 ---
 
-## 3. Resolved Hybrid Model Strategy
+## 3. Resolved Mode-Centric Hybrid Model Strategy
 
-V7 first implementation uses an **XGBoost-first hybrid supervised decision model**.
+V7 first implementation uses an **XGBoost-first hybrid supervised decision model per mode scope**. This is the **mode-centric architecture** (see `docs/v7_mode_centric_architecture.md`).
 
 The first baseline is not pure classification and not pure regression.
 
-It consists of:
+It consists of **three independent pipelines**:
+
+```
+Mode Router
+  ├── SWING (4h primary, 1d context, 1h refinement)
+  │   ├── simulation config
+  │   ├── labels
+  │   ├── model + calibration
+  │   └── policy (regime-aware)
+  ├── SCALP (1h primary, 4h context, 15m refinement)
+  │   ├── simulation config
+  │   ├── labels
+  │   ├── model + calibration
+  │   └── policy (regime-aware)
+  └── AGGRESSIVE_SCALP (15m primary, 1h context, 5m refinement)
+      ├── simulation config
+      ├── labels
+      ├── model + calibration
+      └── policy (regime-aware)
+```
+
+Each mode produces:
 
 1. **Classification surface**
    - action probabilities for `LONG_NOW`, `SHORT_NOW`, `NO_TRADE`
@@ -56,12 +77,13 @@ It consists of:
 
 3. **Policy surface**
    - calibrated probability + expected-R + risk gates
+   - **regime-aware modifiers**
    - explicit no-trade selection
    - timing guidance remains advisory-first
 
 ### Scope rule
 
-V7 uses one shared training framework with separate `model_scope` artifacts when multiple scopes are activated:
+V7 uses one shared training framework with **separate `model_scope` artifacts** when multiple scopes are activated:
 
 - `SWING`
 - `SCALP`
@@ -69,11 +91,11 @@ V7 uses one shared training framework with separate `model_scope` artifacts when
 
 Do not train one universal artifact across incompatible scopes. Each activated scope must satisfy its own dataset, model, calibration, evaluation, and release gates.
 
-First implementation may stage `SWING` first.
+First implementation should stage `SWING` first per the recommendation in the mode-centric architecture doc (section 8).
 
 ---
 
-## 4. Revised Phase Sequence
+## 4. Revised Phase Sequence (Mode-Centric)
 
 1. **Phase 0 — Repo Alignment & Hybrid Foundations**
 2. **Phase 1 — Contracts & Hybrid Validation**

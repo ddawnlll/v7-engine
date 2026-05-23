@@ -14,7 +14,7 @@ This document is a lossless dense synthesis of every V7 markdown file in the rep
 ## 1. SYSTEM IDENTITY — VISION (docs/vision.md)
 
 ### 1.1 One-Sentence Definition
-V7 is a centralized, market-first, simulation-native learned trading engine that optimizes economic quality first, uses calibrated decision outputs, and evaluates long / short / no-trade actions through one runtime-hosted forward-simulation truth layer.
+V7 is a mode-centric, centralized, market-first, simulation-native learned trading engine that optimizes economic quality first, uses calibrated decision outputs, and evaluates long / short / no-trade actions through one runtime-hosted forward-simulation truth layer configured per trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
 
 ### 1.2 Why V7 Exists
 - V6 established: explicit runtime–engine contracts, market-first labeling, unified snapshot thinking, walk-forward evaluation discipline, decision and outcome normalization, validation/verification/rollback discipline.
@@ -91,24 +91,42 @@ About: defining right success criteria, contracts, runtime-hosted simulation out
 
 ### 2.1 Architectural Summary
 ```
-one market-state pipeline
-→ one simulation truth layer
-→ one label/evaluation language
-→ one hybrid supervised model
-→ one explicit policy layer
-→ one portfolio layer
-→ one risk gate
-→ one runtime boundary
+Market Data → Mode Router → 3 Independent Pipelines
+                  ↓
+            ┌─────┴─────┐
+            ↓           ↓
+       SWING        SCALP         AGGRESSIVE_SCALP
+       mode         mode          mode
+            ↓           ↓           ↓
+       [4h + 1d]    [1h + 4h]     [15m + 1h]
+       sim_config   sim_config    sim_config
+       labels       labels        labels
+       model        model         model
+       policy       policy        policy
+       regime       regime        regime
+```
+Each mode pipeline:
+```
+one market-state pipeline (shared features)
+→ one simulation truth layer (mode-configured)
+→ one mode-specific label/evaluation language
+→ one mode-specific hybrid supervised model
+→ one explicit policy layer (regime-aware)
+→ one portfolio layer (shared, correlation-aware)
+→ one risk gate (shared)
+→ one runtime boundary (mode-routed)
 ```
 
 ### 2.2 Core Architectural Rules
-1. One simulation truth layer: same simulation logic defines labels, replay evaluation, paper/live outcome interpretation, no-trade quality, regret, cost-aware trade resolution.
-2. One canonical market-state language: live inference, replay, dataset generation, evaluation use same state language.
-3. One explicit contract family: AnalysisRequest, AnalysisResult, DecisionEvent, TradeOutcome.
-4. One primary model family first: XGBoost-first.
-5. Hybrid model outputs first-class: model artifact exposes action probability/classification surfaces AND expected economic quality/regression surfaces.
-6. Runtime is not the model: runtime owns orchestration/persistence/safety/fallback/execution eligibility; model produces decision evidence not operational permission.
-7. One central configuration root: all behavior routes through unified config system.
+1. One simulation truth layer (mode-configured): same simulation logic defines labels, replay evaluation, paper/live outcome interpretation, but with mode-specific parameters (primary timeframe, holding horizon, stop/target multipliers).
+2. One canonical market-state language: live inference, replay, dataset generation, evaluation use same state language. Features are shared across modes.
+3. One explicit contract family: AnalysisRequest (carries requested_trade_mode/model_scope), AnalysisResult, DecisionEvent, TradeOutcome.
+4. One primary model family first (per mode): XGBoost-first. Each mode trains its own artifact bundle.
+5. Hybrid model outputs first-class (per mode): model artifact exposes action probability/classification surfaces AND expected economic quality/regression surfaces.
+6. Runtime is not the model: runtime owns orchestration/persistence/safety/fallback/execution eligibility/mode routing; model produces decision evidence not operational permission.
+7. One central configuration root: all behavior routes through unified config system. Mode-specific configs nested under simulation_configs.{swing,scalp,aggressive_scalp}.
+8. Features are shared across modes: canonical state → features. Labels are mode-specific.
+9. Regime awareness: every mode integrates a rule-based regime detector. Regime modifies policy thresholds.
 
 ### 2.3 Top-Level Layers (11 layers)
 1. Raw market data
@@ -225,8 +243,8 @@ Rules: one request targets one model scope (not all scopes competing). primary_i
 
 ### 4.7 Scope Defaults
 SWING: primary_interval 4h, context_intervals [1d], refinement_intervals [1h], label_horizon_family swing_horizon.
-SCALP: primary_interval 15m, context_intervals [1h], refinement_intervals [5m], label_horizon_family scalp_horizon.
-AGGRESSIVE_SCALP: primary_interval 1m or 3m, context_intervals [5m, 15m], refinement_intervals [1m/3m micro context], label_horizon_family immediate_continuation_short_horizon.
+SCALP: primary_interval 1h (or 30m), context_intervals [4h], refinement_intervals [15m], label_horizon_family scalp_horizon.
+AGGRESSIVE_SCALP: primary_interval 15m, context_intervals [1h], refinement_intervals [5m], label_horizon_family aggressive_scalp_horizon.
 
 ### 4.8 Canonical State Section
 Most important part. One stable internal structure containing: recent raw market window, derived local state, higher-timeframe context, volatility/regime context, symbol/interval identity, data-quality/freshness metadata, optional runtime-safe context.
@@ -725,7 +743,25 @@ entry_readiness and entry_valid_for_bars remain observability-first by default. 
 ## 12. PIPELINE SIMULATION (docs/pipeline/simulation.md)
 
 ### 12.1 Core Decision
-One simulation truth layer across: label generation, OOS evaluation, runtime paper trading, historical replay, production-side outcome normalization. No separate cost model for labels vs evaluation.
+One simulation engine, configured per mode across: label generation, OOS evaluation, runtime paper trading, historical replay, production-side outcome normalization. No separate cost model for labels vs evaluation.
+
+### 12.1a Mode-Specific Simulation Configuration
+Each mode has its own simulation config:
+
+| Parameter | SWING | SCALP | AGGRESSIVE_SCALP |
+|-----------|-------|-------|------------------|
+| Primary interval | 4h | 1h | 15m |
+| Context interval | 1d | 4h | 1h |
+| Refinement interval | 1h | 15m | 5m |
+| Max holding bars | 12-30 | 3-12 | 1-5 |
+| Stop multiplier (ATR) | 2.0-2.5 | 1.5-2.0 | 1.0-1.5 |
+| Target multiplier (ATR) | 2.0-3.0 | 1.5-2.0 | 1.0-1.5 |
+| Ambiguity margin (R) | 0.20 | 0.10 | 0.05 |
+| Min action edge (R) | 0.35 | 0.15 | 0.08 |
+| NO_TRADE tendency | LOW | MEDIUM | HIGH (default) |
+
+### 12.1b Regime-Aware Stop Multipliers
+Stop multipliers adapt to detected market regime: TRANSITION → 99.0 (forces no-trade), trends → 2.0, RANGE → 1.5.
 
 ### 12.2 Inputs
 decision timestamp, symbol, primary interval, canonical market state lineage, future candle path, horizon family, stop family, target family, time-exit family, fee model, slippage model, simulation-family version. Optional: execution assumption family, entry timing annotation, replay/paper/live mode metadata.
@@ -761,7 +797,7 @@ Must include: fee assumption, slippage assumption, net realized R after costs. R
 ## 13. PIPELINE LABELS (docs/pipeline/labels.md)
 
 ### 13.1 Core Decision
-Labels derived from single simulation truth layer. First-phase design explicitly hybrid: classification labels define action preference, regression labels define economic quality and risk. Market-first, cost-aware, comparative, no-trade aware.
+Labels derived from simulation truth layer configured per mode. First-phase design explicitly hybrid and mode-aware: classification labels define action preference (mode-specific thresholds), regression labels define economic quality and risk (mode-specific). The same timestamp produces different label truths for SWING, SCALP, and AGGRESSIVE_SCALP.
 
 ### 13.2 Classification Label Fields
 best_action_label (LONG_NOW/SHORT_NOW/NO_TRADE/AMBIGUOUS_STATE), second_best_action_label, long_success_label, short_success_label, no_trade_quality_label, skip_was_correct, label_validity, ambiguity_reason.
@@ -769,11 +805,14 @@ best_action_label (LONG_NOW/SHORT_NOW/NO_TRADE/AMBIGUOUS_STATE), second_best_act
 ### 13.3 Regression Label Fields
 long_realized_r_net, short_realized_r_net, long_realized_r_gross, short_realized_r_gross, long_cost_r, short_cost_r, long_mae_r, short_mae_r, long_mfe_r, short_mfe_r, regret_r, saved_loss_score, missed_opportunity_score, path_quality_score.
 
+### 13.3a Mode-Specific Fields
+mode (SWING/SCALP/AGGRESSIVE_SCALP), primary_interval. For SCALP and AGGRESSIVE_SCALP: long_time_to_mfe_bars, short_time_to_mfe_bars, long_exit_efficiency, short_exit_efficiency. For AGGRESSIVE_SCALP only: instant_adverse_label. Regime context: regime, regime_confidence, regime_transition_risk.
+
 ### 13.4 Lineage Fields
 label_interpretation_version, simulation_family_version, cost_model_version, horizon_family_version.
 
-### 13.5 Ambiguity Rule
-If gap between best and second-best action below configured ambiguity threshold: set label_validity=AMBIGUOUS, best_action_label=AMBIGUOUS_STATE, preserve regression targets if valid, exclude from strict action-classification training by default unless config explicitly allows soft-label use. Do not force artificial action winners.
+### 13.5 Ambiguity Rule (Mode-Specific Thresholds)
+Each mode uses its own ambiguity_gap_r threshold: SWING=0.20, SCALP=0.10, AGGRESSIVE_SCALP=0.05. If gap below threshold: set label_validity=AMBIGUOUS, best_action_label=AMBIGUOUS_STATE, preserve regression targets if valid, exclude from strict action-classification training by default unless config explicitly allows soft-label use. Do not force artificial action winners.
 
 ### 13.6 Unresolved/Invalid Rule
 Unresolved simulation → label remains unresolved, strict supervised training excludes the row. Invalidated simulation → label invalid, invalidity reason preserved, strict supervised training excludes the row. No silent coercion.
@@ -781,23 +820,23 @@ Unresolved simulation → label remains unresolved, strict supervised training e
 ### 13.7 Path Quality Buckets
 HIGH (path_quality_score >= 0.70), MEDIUM (0.40 <= score < 0.70), LOW (score < 0.40). Thresholds config-driven and versioned.
 
-### 13.8 skip_was_correct Rule
-true when best action is NO_TRADE, or both directional actions fail minimum acceptable realized-R threshold, or saved-loss score exceeds configured threshold and no-trade preferred.
+### 13.8 skip_was_correct Rule (Mode-Aware)
+true when best action is NO_TRADE, or both directional actions fail mode-specific minimum acceptable realized-R threshold (SWING=0.35, SCALP=0.15, AGGRESSIVE_SCALP=0.08), or saved-loss score exceeds configured threshold and no-trade preferred.
 
 ### 13.9 Config Surface Families
-label interpretation version, minimum acceptable R, ambiguity threshold, no-trade correctness thresholds, saved-loss threshold, missed-opportunity threshold, path-quality thresholds, invalid/ambiguous filtering policy, regression target clipping policy.
+label interpretation version, mode-specific minimum acceptable R, mode-specific ambiguity threshold, no-trade correctness thresholds, saved-loss threshold, missed-opportunity threshold, path-quality thresholds, invalid/ambiguous filtering policy, regression target clipping policy.
 
 ---
 
 ## 14. PIPELINE FEATURES (docs/pipeline/features.md)
 
 ### 14.1 Core Decision
-Features produced from canonical state only. Same feature row feeds both classification and regression heads. No separate feature pipelines for action classification vs economic regression in first phase.
+Features produced from canonical state only. Same feature row feeds both classification and regression heads across all modes. Features are shared across modes; labels are mode-specific. No separate feature pipelines per mode or for action classification vs economic regression in first phase.
 
-### 14.2 Recommended Feature Groups
-**4h primary decision features:** returns, candle geometry, range structure, volatility, momentum, trend/range state, local support/resistance distance where available.
-**1d higher-timeframe context:** HTF trend alignment, HTF volatility regime, HTF range compression/expansion, HTF structure quality.
-**1h refinement/timing context:** local momentum pressure, entry-zone distance, short-term volatility pressure, entry readiness indicators, local invalidation pressure. (Refinement/context features, not separate first-phase primary 1h model universe.)
+### 14.2 Recommended Feature Groups (Shared Across Modes)
+**Primary decision features (per mode interval - 4h/1h/15m):** returns, candle geometry, range structure, volatility, momentum, trend/range state, local support/resistance distance where available.
+**Higher-timeframe context (per mode):** HTF trend alignment, HTF volatility regime, HTF range compression/expansion, HTF structure quality.
+**Refinement/timing context (per mode):** local momentum pressure, entry-zone distance, short-term volatility pressure, entry readiness indicators, local invalidation pressure.
 **Global context:** symbol identity, session/time features, data-quality flags, missingness flags, regime metadata.
 
 ### 14.3 Rules
@@ -806,8 +845,9 @@ Features produced from canonical state only. Same feature row feeds both classif
 3. Stable naming and grouping.
 4. Missingness is explicit.
 5. First phase stays boring and interpretable.
-6. Features support shared multi-symbol modeling.
+6. Features support shared multi-symbol modeling per mode.
 7. Feature semantics identical for training, replay, live inference.
+8. **Features are shared across modes** — labels are mode-specific.
 
 ### 14.4 Normalization Family
 First-phase: fit on training split only, global across approved training universe, robust centering/scaling for continuous features where needed, no per-symbol normalization in first phase unless explicitly versioned later. Normalization lineage explicit when applied.
@@ -826,24 +866,25 @@ feature schema version, enabled feature groups, normalization family, symbol-enc
 ## 15. PIPELINE DATASET (docs/pipeline/dataset.md)
 
 ### 15.1 Core Decision
-Valid V7 dataset row contains: canonical state lineage, feature row, classification labels, regression labels, simulation lineage, version lineage. No row valid without traceable upstream lineage.
+Valid V7 dataset row contains: canonical state lineage, feature row (shared), mode identifier (SWING/SCALP/AGGRESSIVE_SCALP), mode-specific classification labels, mode-specific regression labels, simulation lineage (mode-configured), version lineage. No row valid without traceable upstream lineage. Datasets are mode-specific — do not mix modes in one dataset.
 
 ### 15.2 Dataset Row Fields
-feature vector, classification target fields, regression target fields, sample weights, symbol, primary interval, timestamp, feature schema version, label interpretation version, simulation family version, dataset family version, row validity status, exclusion reason where applicable.
+mode (SWING/SCALP/AGGRESSIVE_SCALP), feature vector (shared), classification target fields (mode-specific), regression target fields (mode-specific), sample weights, symbol, primary interval (per mode), timestamp, feature schema version, label interpretation version (mode-specific), simulation family version, dataset family version, row validity status, exclusion reason where applicable.
 
-### 15.3 Target Families
+### 15.3 Target Families (Per Mode)
 **Classification:** best_action_label, long_success_label, short_success_label, no_trade_quality_label.
-**Regression:** long_realized_r_net, short_realized_r_net, long_mae_r, short_mae_r, long_mfe_r, short_mfe_r, regret_r, saved_loss_score, missed_opportunity_score, optional clipped/normalized target variants.
+**Regression:** long_realized_r_net, short_realized_r_net, long_mae_r, short_mae_r, long_mfe_r, short_mfe_r, regret_r, saved_loss_score, missed_opportunity_score, optional mode-specific fields (e.g., long_time_to_mfe_bars for SCALP), optional clipped/normalized target variants.
 
 ### 15.4 Rules
-1. Temporal correctness: no future leakage across train/validation/test.
-2. Shared-family rows: support one shared model family across symbols.
-3. Symbol balance matters: no silent dominance by high-row-count symbols.
-4. Unresolved rows stay out of strict supervised training by default.
-5. Ambiguous rows explicit and excluded from hard action-classification training by default.
-6. Split by time first, not IID random shuffle.
-7. Preserve lineage for every row.
-8. Classification and regression target availability tracked separately.
+1. **Mode-specific datasets:** do not mix modes in one dataset. Each mode has its own dataset with mode-specific labels and simulation configs.
+2. Temporal correctness: no future leakage across train/validation/test.
+3. Shared-family rows within mode: support one shared model family across symbols per mode.
+4. Symbol balance matters: no silent dominance by high-row-count symbols.
+5. Unresolved rows stay out of strict supervised training by default.
+6. Ambiguous rows explicit and excluded from hard action-classification training by default.
+7. Split by time first, not IID random shuffle.
+8. Preserve lineage for every row, including mode field.
+9. Classification and regression target availability tracked separately.
 
 ### 15.5 Symbol Balancing
 First-phase: inverse-frequency sample weights by symbol, capped per-symbol row contribution before export. Default: preserve full row set, attach inverse-frequency symbol weights, cap only when symbol massively dominates corpus.
@@ -855,22 +896,22 @@ First-phase: inverse-frequency sample weights by symbol, capped per-symbol row c
 Rows may have valid classification targets but invalid regression targets, or opposite. Default: strict model training uses only rows valid for target head being trained. Row validity head-specific. Excluded rows preserve exclusion reason. No silent target imputation for labels.
 
 ### 15.8 Dataset Versioning Rule
-Bump dataset_family_version when materially: feature schema meaning changes, label interpretation meaning changes, simulation family meaning changes, target transformation policy changes, symbol-universe policy changes, split family meaning changes, row validity policy changes.
+Bump dataset_family_version when materially: feature schema meaning changes, label interpretation meaning changes (per mode), simulation family meaning changes (per mode), target transformation policy changes, symbol-universe policy changes, split family meaning changes, row validity policy changes.
 
 ---
 
 ## 16. PIPELINE MODEL (docs/pipeline/model.md)
 
 ### 16.1 Core Decision
-XGBoost-first hybrid supervised decision model. Action selection is classification-first. Economic quality is regression-first. Both outputs exposed as first-class decision surfaces.
+XGBoost-first hybrid supervised decision model per mode scope. Action selection is classification-first. Economic quality is regression-first. Both outputs exposed as first-class decision surfaces. Do not train one artifact across incompatible modes.
 
 ### 16.2 First-Phase Scope
-One shared multi-symbol model family. No per-symbol model families. Primary decision interval 4h, HTF 1d, refinement 1h. Target universe up to 60 symbols. One fused decision surface per atomic request.
+One artifact bundle per mode scope (SWING/SCALP/AGGRESSIVE_SCALP). Shared multi-symbol model family within each mode. No per-symbol model families. SWING: primary 4h, context 1d, refinement 1h. SCALP: primary 1h, context 4h, refinement 15m. AGGRESSIVE_SCALP: primary 15m, context 1h, refinement 5m. Target universe up to 60 symbols. One fused decision surface per atomic request per mode.
 
-### 16.3 Output Surface
+### 16.3 Output Surface (Per Mode Artifact)
 **Classification:** p_long_now, p_short_now, p_no_trade, classification_margin, optional per-action raw scores.
 **Regression:** expected_r_long, expected_r_short, expected_drawdown_long/expected_mae_long, expected_drawdown_short/expected_mae_short, expected_cost_adjusted_r_long, expected_cost_adjusted_r_short, optional path-quality estimates.
-**Metadata:** feature schema version, label version, model family version, target family version, training dataset version, calibration requirement flag.
+**Metadata:** model_scope (SWING/SCALP/AGGRESSIVE_SCALP), feature schema version, label version (mode-specific), model family version, target family version, training dataset version, calibration requirement flag.
 
 ### 16.4 Recommended Implementation Shape
 First phase may use separate XGBoost models per target head:
@@ -886,13 +927,14 @@ regression:
 ```
 
 ### 16.5 Rules
-1. Shared model first: no per-symbol families in first phase.
-2. Hybrid output first: classification and regression surfaces both first-class.
-3. Compact artifact surface: outputs must stay calibratable and policy-wrappable.
-4. Stable lineage: every artifact versioned and traceable.
-5. No hidden runtime semantics: model recommends; runtime decides execution eligibility.
-6. No regression-only decisioning: regression supports economic gates; policy still compares calibrated action evidence.
-7. No raw-score trust: calibration must distinguish raw and calibrated surfaces.
+1. **Mode-specific models:** each mode trains its own artifact bundle. Do not train across incompatible scopes.
+2. Shared features within mode: no per-symbol families in first phase.
+3. Hybrid output first: classification and regression surfaces both first-class.
+4. Compact artifact surface: outputs must stay calibratable and policy-wrappable.
+5. Stable lineage: every artifact versioned and traceable, including model_scope.
+6. No hidden runtime semantics: model recommends; runtime decides execution eligibility.
+7. No regression-only decisioning: regression supports economic gates; policy still compares calibrated action evidence.
+8. No raw-score trust: calibration must distinguish raw and calibrated surfaces.
 
 ### 16.6 Early Stopping Policy
 Explicit validation folds from dataset split family. Early stopping enabled by default. Monitored validation objective per target head. Separate monitored metrics for classification and regression. Do not train to exhaustion by default.
@@ -900,8 +942,8 @@ Explicit validation folds from dataset split family. Early stopping enabled by d
 ### 16.7 Hyperparameter Surface
 max_depth, n_estimators, learning_rate, min_child_weight, subsample, colsample_bytree, reg_alpha, reg_lambda, early_stopping_rounds, target-specific objectives, target-specific sample weighting.
 
-### 16.8 Artifact Publishing Flow
-Training may produce: candidate artifacts, rejected artifacts, promotable artifacts. Successful training may publish candidate artifact. Promotion controlled by evaluation and release policy. Failed/invalid runs must not publish promotable artifacts.
+### 16.8 Artifact Publishing Flow (Per Mode)
+Training may produce (per mode scope): candidate artifacts, rejected artifacts, promotable artifacts. Successful training may publish candidate artifact per mode. Promotion controlled by evaluation and release policy per mode. Failed/invalid runs must not publish promotable artifacts.
 
 ---
 
@@ -910,8 +952,33 @@ Training may produce: candidate artifacts, rejected artifacts, promotable artifa
 ### 17.1 Core Decision
 Hybrid supervised training: classification heads for action selection, regression heads for economic quality, calibration artifacts for runtime-facing confidence. Training does NOT decide live execution eligibility. It produces candidate artifacts for evaluation.
 
-### 17.2 Training Flow
-Canonical Market State → Feature Engineering → Simulation Truth → Hybrid Labels (classification + regression) → Temporal Dataset/Walk-Forward Folds → XGBoost Hybrid Training (classifier heads: P(LONG_NOW), P(SHORT_NOW), P(NO_TRADE) + regressor heads: E[R|LONG_NOW], E[R|SHORT_NOW], expected adverse pressure, cost-adjusted expectancy) → Calibration Fit → Policy Evaluation → Candidate Artifact → Walk-Forward/Economic Evaluation → Promotion Review.
+### 17.2 Training Flow (Per Mode)
+```
+Canonical Market State (shared)
+  ↓
+Feature Engineering (shared)
+  ↓
+Simulation Truth (mode-configured)
+  ↓
+Mode-Specific Hybrid Labels (classification + regression, mode thresholds)
+  ↓
+Temporal Dataset/Walk-Forward Folds (per mode)
+  ↓
+XGBoost Hybrid Training (per mode)
+  ├── classifier heads: P(LONG_NOW), P(SHORT_NOW), P(NO_TRADE)
+  └── regressor heads: E[R|LONG_NOW], E[R|SHORT_NOW], expected adverse pressure, cost-adjusted expectancy
+  ↓
+Calibration Fit (per mode)
+  ↓
+Policy Evaluation (regime-aware)
+  ↓
+Candidate Artifact (per mode)
+  ↓
+Walk-Forward/Economic Evaluation (per mode)
+  ↓
+Promotion Review (per mode)
+```
+Each mode (SWING, SCALP, AGGRESSIVE_SCALP) has its own training pipeline sharing only canonical state and feature engineering.
 
 ### 17.3 Rules
 1. Training rows must be temporally valid.
@@ -935,10 +1002,10 @@ Track: classification log loss/AUC/precision by action, no-trade classification 
 ## 18. PIPELINE CALIBRATION (docs/pipeline/calibration.md)
 
 ### 18.1 Core Decision
-Calibration is first-class stage. Raw model scores not enough because runtime and policy may gate on confidence and actionability.
+Calibration is a first-class stage per mode. Raw model scores not enough because runtime and policy may gate on confidence and actionability.
 
 ### 18.2 First-Phase Scope
-Global calibration first. No per-symbol calibration family in first phase. No per-regime calibration family. Symbol/regime breakdowns evaluated, not automatically split into calibration families.
+Per-mode calibration (SWING, SCALP, AGGRESSIVE_SCALP each have own calibration artifact). No per-symbol calibration family in first phase. No per-regime calibration family (regime affects policy, not calibration). Symbol/regime breakdowns evaluated, not automatically split into calibration families.
 
 ### 18.3 Inputs
 Raw classification outputs, raw regression outputs where relevant, validation/calibration-eligible data, calibration config, calibration family version.
@@ -971,7 +1038,7 @@ Produce new calibration artifact when: new candidate model family intended for e
 ## 19. PIPELINE POLICY (docs/pipeline/policy.md)
 
 ### 19.1 Core Decision
-Policy is where learned evidence becomes a decision. Combines: calibrated action probabilities, calibrated confidence, expected R estimates, adverse-pressure estimates, cost-adjusted expectancy, no-trade quality, decision margins, timing/refinement signals.
+Policy is where learned evidence becomes a decision — with regime-aware modifications and mode-specific thresholding. Combines: calibrated action probabilities, calibrated confidence, expected R estimates, adverse-pressure estimates, cost-adjusted expectancy, no-trade quality, decision margins, timing/refinement signals, regime context, mode identifier.
 
 ### 19.2 Decision Gates (directional action must pass all)
 1. Probability/confidence gate
@@ -980,9 +1047,17 @@ Policy is where learned evidence becomes a decision. Combines: calibrated action
 4. Expected-R gate
 5. Cost-adjusted expectancy gate
 6. Adverse-pressure/drawdown gate
-7. Degradation/fallback gate
+7. **Regime consistency gate**
+8. Degradation/fallback gate
 
 If any required gate fails → policy selects NO_TRADE or degraded-safe behavior.
+
+### 19.2a Regime-Aware Policy Modifiers
+Detected market regime modifies policy thresholds:
+- **TREND_UP:** favor LONG, block SHORT; confidence_mult=0.9, expected_r_mult=0.9
+- **TREND_DOWN:** favor SHORT, block LONG; confidence_mult=0.9, expected_r_mult=0.9
+- **RANGE:** allow both; confidence_mult=1.1, expected_r_mult=1.2
+- **TRANSITION:** strongly prefer NO_TRADE; confidence_mult=1.3, expected_r_mult=1.5, require_no_trade=True
 
 ### 19.3 Tie-Break Rule
 1. Evaluate directional actions against gates.
@@ -1008,7 +1083,7 @@ minimum action probability, minimum confidence, minimum expected R, minimum cost
 ## 20. PIPELINE PORTFOLIO (docs/pipeline/portfolio.md)
 
 ### 20.1 Core Decision
-Designed for centralized multi-symbol world. Portfolio logic first-class but lightweight in first phase. Not the model and not a full optimizer.
+Designed for centralized multi-symbol world. Portfolio logic first-class but lightweight in first phase. Not the model and not a full optimizer. **Correlation-aware controls prevent cluster overexposure** (pre-computed correlation groups: btc_cluster, eth_cluster, layer1, defi).
 
 ### 20.2 Inputs
 Policy-approved candidate results, action probabilities, expected R by action, confidence, current portfolio context, exposure state, symbol cluster/correlation metadata, portfolio config.
@@ -1032,9 +1107,10 @@ Use suppression instead of down-ranking when: hard portfolio cap exceeded, clust
 3. Portfolio should not hide risk vetoes.
 4. Lightweight first phase.
 5. Regression expected-R can inform ranking but cannot override hard caps.
+6. **Effective exposure accounts for correlation, not just position count.**
 
-### 20.6 Cluster Definition (first-phase)
-Approved manual groupings, stable correlation-based groups computed offline and versioned. Do not compute ad hoc runtime clusters without versioned grouping family.
+### 20.6 Cluster Definition (first-phase, correlation-aware)
+Pre-computed correlation groups: btc_cluster (BTCUSDT, WBTCUSDT), eth_cluster (ETHUSDT), layer1 (SOL, ADA, DOT, AVAX), defi (UNI, AAVE, MKR). Max cluster exposure default: 15%. Directional exposure limits also apply per group. Do not compute ad hoc runtime clusters without versioned grouping family.
 
 ### 20.7 Portfolio Context Unavailable Rule
 Degrade explicitly. Default first-phase behavior: safe non-execution unless config explicitly allows lighter fallback. Do not silently assume zero portfolio pressure.
@@ -1084,22 +1160,23 @@ kill-switch settings, cooldown rules, exposure hard limits, stale-result limits,
 ## 22. PIPELINE EVALUATION (docs/pipeline/evaluation.md)
 
 ### 22.1 Core Decision
-Economic-quality-first evaluation. Not judged by accuracy/confidence/hit rate alone. Judged by: realized R, expectancy, regret, no-trade quality, calibration quality, regression reliability, path quality, symbol/regime stability, safety behavior.
+Economic-quality-first evaluation per mode with regime breakdowns. Not judged by accuracy/confidence/hit rate alone. Judged by: realized R (per mode), expectancy, regret, no-trade quality, calibration quality, regression reliability, path quality, symbol/regime stability, safety behavior, mode comparison quality.
 
 ### 22.2 Walk-Forward Family (first-phase)
 6 folds, minimum train window 12 months, validation window 2 months, optional holdout tail 1 month. Dataset owns fold construction. Evaluation owns fold consumption and interpretation.
 
-### 22.3 Metric Families
+### 22.3 Metric Families (Per Mode)
 **Economic:** realized R, net expectancy, profit factor, max drawdown, average trade R, cost-adjusted R, regret distribution, saved-loss/missed-opportunity quality.
 **Classification:** action accuracy where meaningful, precision/recall by action, no-trade classification quality, confusion matrix for LONG/SHORT/NO_TRADE, action probability bucket quality.
 **Regression:** MAE/RMSE for expected R heads, sign correctness for expected R, predicted-R bucket vs realized-R average, adverse-pressure error, cost-adjusted expectancy error, symbol/regime regression breakdowns.
 **Calibration:** reliability error, confidence bucket behavior, no-trade calibration quality, forward-period stability.
+**Regime-aware:** realized-R by regime bucket, no-trade quality by regime, action distribution by regime, decision margin by regime, regime stability across consecutive same-regime windows.
 
 ### 22.4 No-Trade Quality
 Must measure: correct skip, saved loss, missed opportunity, over-suppression, under-suppression. Model that avoids all trades may look safe but is not automatically good.
 
 ### 22.5 Ablation Requirement
-First-phase interval-view ablation: 4h only, 4h + 1d, 4h + 1d + 1h. 1h refinement must prove value through evidence.
+First-phase: per-mode ablation (SWING only, SCALP only, AGGRESSIVE_SCALP only), interval-view ablation per mode (primary only, primary+context, primary+context+refinement), classifier-only vs hybrid policy, probability gate only vs probability+expected-R gate, regime awareness vs no regime awareness. Refinement intervals must prove value through evidence.
 
 ### 22.6 Promotion Gate (never single scalar)
 Minimum gate families: realized-R quality threshold, no-trade quality threshold, calibration quality threshold, regression reliability threshold, symbol/regime stability threshold, no critical safety regression, no unacceptable portfolio/risk suppression regression. Threshold values in config.
@@ -1115,9 +1192,9 @@ Compare candidates against: 1. current promoted baseline model family, 2. last a
 ## 23. PIPELINE MONITORING (docs/pipeline/monitoring.md)
 
 ### 23.1 Core Decision
-Must observe both model quality surfaces and system lifecycle surfaces. For hybrid modeling: action probability drift, expected-R drift, regression reliability drift, calibration drift, no-trade/action mix drift.
+Must observe both model quality surfaces and system lifecycle surfaces — per mode scope. For hybrid modeling: action probability drift (per mode), expected-R drift (per mode), regression reliability drift (per mode), calibration drift (per mode), no-trade/action mix drift (per mode), mode distribution/coverage balance.
 
-### 23.2 Recommended Monitoring Families (minimum first-phase)
+### 23.2 Recommended Monitoring Families (minimum first-phase, per mode)
 - request/result validation failure rate
 - fallback/degraded rate
 - calibrated confidence distribution
@@ -1129,11 +1206,12 @@ Must observe both model quality surfaces and system lifecycle surfaces. For hybr
 - actionability vs execution-eligibility gap
 - symbol and regime coverage
 - interval-view coverage integrity
-- 1h refinement availability rate
+- refinement availability rate (per mode)
 - timing-extension distribution
 - outcome finality lag
 - feature drift
 - regression reliability drift
+- **mode activity balance**
 
 ### 23.3 Calibration Drift
 Monitor: reliability error, confidence bucket realized quality, no-trade confidence quality, per-symbol/per-regime reliability breakdowns. Confidence used in runtime requires reliability evidence.
@@ -1591,23 +1669,24 @@ min_confidence, min_expected_r, max_expected_drawdown, enable_entry_timing_obser
 
 ## 31. COMPLETE PIPELINE DATA FLOW (for AI reference)
 
-### 31.1 Data Flow End to End
+### 31.1 Data Flow End to End (Mode-Centric)
 1. Raw market data (Binance candles) → validated raw history
-2. Canonical state construction (one per symbol per decision timestamp, 4h primary + 1d HTF + 1h refinement)
-3. Runtime simulation engine (compares LONG/SHORT/NO_TRADE under same stop/target/horizon/fee/slippage, produces comparative outputs with realized R, MFE/MAE, path quality, regret, saved-loss, missed-opportunity)
-4. Label builder (classification: best_action_label, long/short/no-trade quality; regression: long/short realized R net/gross, MFE/MAE, regret, saved-loss, path quality)
-5. Feature builder (canonical state only: 4h features + 1d HTF features + 1h refinement features + symbol identity + regime/volatility + missingness flags)
-6. Dataset assembly (temporal walk-forward rows with lineage, per-target validity masks, symbol weights)
-7. Hybrid model training (XGBoost multiclass classifier + XGBoost long/short expected-R regressors + optional risk regressors)
-8. Calibration (global per scope: calibrated action probabilities, calibrated confidence, reliability metrics)
-9. Expected-R reliability review (MAE/RMSE, signed bias, rank correlation, bucket quality)
-10. Policy gates (confidence + probability + expected-R + drawdown + no-trade margin + timing advisory)
-11. Portfolio interpretation (cross-symbol competition: pass/suppress/down-rank by expected-R, confidence, concentration caps)
-12. Risk gating (kill switch, cooldowns, exposure limits, duplicate protection, stale/degraded handling)
-13. Runtime integration (request builder → scope router → artifact selection → engine → result validator → runtime interpretation → DecisionEvent → execution eligibility → TradeOutcome)
-14. Evaluation (walk-forward economic metrics + classification metrics + regression metrics + calibration metrics + ablation)
-15. Monitoring (drift: feature/calibration/regression/action-mix/outcome-lag/fallback-rate)
-16. Deployment safety (replay → paper → shadow → live-eligible; rollback bundles; kill switch)
+2. Canonical state construction (one per symbol per decision timestamp, shared across modes)
+3. **Mode Router** → routes to SWING/SCALP/AGGRESSIVE_SCALP pipeline
+4. Runtime simulation engine (mode-configured: each mode uses its own interval/stop/target config, compares LONG/SHORT/NO_TRADE, produces comparative outputs with realized R, MFE/MAE, path quality, regret, saved-loss, missed-opportunity)
+5. Label builder (mode-specific classification: best_action_label with mode thresholds; mode-specific regression: long/short realized R with mode thresholds)
+6. Feature builder (shared across modes: canonical state only; primary features + HTF context + refinement context + symbol identity + regime/volatility + missingness flags)
+7. Dataset assembly (per mode: temporal walk-forward rows with mode field, per-target validity masks, symbol weights)
+8. Hybrid model training (per mode: XGBoost multiclass classifier + XGBoost long/short expected-R regressors + optional risk regressors)
+9. Calibration (per mode: calibrated action probabilities, calibrated confidence, reliability metrics)
+10. Expected-R reliability review (per mode: MAE/RMSE, signed bias, rank correlation, bucket quality)
+11. **Regime-aware** Policy gates (confidence + probability + expected-R + drawdown + no-trade margin + **regime consistency** + timing advisory)
+12. Portfolio interpretation (correlation-aware cluster controls: cross-symbol competition with cluster exposure caps)
+13. Risk gating (kill switch, cooldowns, exposure limits, duplicate protection, stale/degraded handling)
+14. Runtime integration (request builder → mode router → artifact selection → engine → result validator → runtime interpretation → DecisionEvent → execution eligibility → TradeOutcome)
+15. Evaluation (per mode: walk-forward economic metrics + classification metrics + regression metrics + calibration metrics + regime-aware metrics + ablation)
+16. Monitoring (per mode: drift: feature/calibration/regression/action-mix/outcome-lag/fallback-rate; mode activity balance)
+17. Deployment safety (per mode: replay → paper → shadow → live-eligible; rollback bundles; kill switch)
 
 ### 31.2 Key Ownership Map
 | Component | Owns | Does Not Own |

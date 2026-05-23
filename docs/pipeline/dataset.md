@@ -1,14 +1,14 @@
-# Pipeline Dataset
+# Pipeline Dataset — Mode-Centric
 
 **Intended path:** `docs/v7/pipeline/dataset.md`
 
 ## Purpose
 
-Defines how V7 assembles training and evaluation datasets from canonical state, features, simulation outputs, and labels.
+Defines how V7 assembles training and evaluation datasets from canonical state, features, simulation outputs, and labels — **per mode scope**.
 
 It answers:
 
-> How should V7 build temporally correct datasets for hybrid supervised training and economic evaluation?
+> How should V7 build temporally correct datasets for mode-specific hybrid supervised training and economic evaluation?
 
 ---
 
@@ -17,10 +17,11 @@ It answers:
 A valid V7 dataset row contains:
 
 - canonical state lineage
-- feature row
-- classification labels
-- regression labels
-- simulation lineage
+- feature row (shared across modes)
+- **mode identifier**
+- mode-specific classification labels
+- mode-specific regression labels
+- simulation lineage (mode-configured)
 - version lineage
 
 No row is valid without traceable upstream lineage.
@@ -29,9 +30,11 @@ No row is valid without traceable upstream lineage.
 
 ## First-Phase Scope
 
-- shared multi-symbol dataset
-- primary decision interval: 4h
-- 1d and 1h views embedded in the same row
+- **datasets are mode-specific** (one dataset per mode scope)
+- shared multi-symbol dataset within each mode
+- **SWING:** primary 4h, context 1d, refinement 1h
+- **SCALP:** primary 1h, context 4h, refinement 15m
+- **AGGRESSIVE_SCALP:** primary 15m, context 1h, refinement 5m
 - target universe up to 60 symbols
 - initial rollout may subset symbols, but dataset design must not assume six-symbol permanence
 
@@ -39,9 +42,10 @@ No row is valid without traceable upstream lineage.
 
 ## Inputs
 
-- feature rows
-- normalized label records
-- simulation outputs
+- feature rows (shared)
+- mode-specific normalized label records
+- mode-specific simulation outputs
+- mode identifier
 - request/result/event/outcome lineage where relevant
 - dataset config
 - split config
@@ -52,15 +56,16 @@ No row is valid without traceable upstream lineage.
 
 A dataset row should minimally carry:
 
-- feature vector
-- classification target fields
-- regression target fields
+- **mode** (SWING | SCALP | AGGRESSIVE_SCALP)
+- feature vector (shared)
+- classification target fields (mode-specific)
+- regression target fields (mode-specific)
 - sample weights
 - symbol
-- primary interval
+- primary interval (per mode)
 - timestamp
 - feature schema version
-- label interpretation version
+- label interpretation version (mode-specific)
 - simulation family version
 - dataset family version
 - row validity status
@@ -68,7 +73,7 @@ A dataset row should minimally carry:
 
 ---
 
-## Target Families
+## Target Families (Per Mode)
 
 ### Classification targets
 
@@ -88,6 +93,7 @@ A dataset row should minimally carry:
 - `regret_r`
 - `saved_loss_score`
 - `missed_opportunity_score`
+- optional mode-specific fields (e.g., `long_time_to_mfe_bars` for SCALP)
 - optional clipped/normalized target variants
 
 Regression targets may use clipping/winsorization, but target transformation must be versioned and reversible enough for evaluation interpretation.
@@ -96,14 +102,15 @@ Regression targets may use clipping/winsorization, but target transformation mus
 
 ## Rules
 
-1. Temporal correctness: no future leakage across train/validation/test.
-2. Shared-family rows: support one shared model family across symbols.
-3. Symbol balance matters: no silent dominance by high-row-count symbols.
-4. Unresolved rows stay out of strict supervised training by default.
-5. Ambiguous rows are explicit and excluded from hard action-classification training by default.
-6. Split by time first, not IID random shuffle.
-7. Preserve lineage for every row.
-8. Classification and regression target availability are tracked separately.
+1. **Mode-specific datasets:** do not mix modes in one dataset. Each mode has its own dataset with mode-specific labels and simulation configs.
+2. Temporal correctness: no future leakage across train/validation/test.
+3. Shared-family rows: support one shared model family across symbols **per mode**.
+4. Symbol balance matters: no silent dominance by high-row-count symbols.
+5. Unresolved rows stay out of strict supervised training by default.
+6. Ambiguous rows are explicit and excluded from hard action-classification training by default.
+7. Split by time first, not IID random shuffle.
+8. Preserve lineage for every row.
+9. Classification and regression target availability are tracked separately.
 
 ---
 
@@ -124,7 +131,7 @@ Default preference:
 
 ## Recommended Split Strategy
 
-First-phase walk-forward convention:
+First-phase walk-forward convention (per mode):
 
 - 6 folds
 - minimum train window: 12 months
@@ -154,8 +161,8 @@ Default behavior:
 Bump `dataset_family_version` when any of the following changes materially:
 
 - feature schema meaning
-- label interpretation meaning
-- simulation family meaning
+- label interpretation meaning (per mode)
+- simulation family meaning (per mode)
 - target transformation policy
 - symbol-universe policy
 - split family meaning
@@ -205,6 +212,7 @@ Minimum tests:
 - ambiguous rows handled correctly
 - classification/regression validity tracked separately
 - row lineage preserved
+- mode field populated correctly
 - symbol weighting reproducible
 - walk-forward folds reproducible
 - dataset-family version bump triggers work
@@ -213,4 +221,4 @@ Minimum tests:
 
 ## Final Position
 
-Dataset quality is not just row count. V7 requires temporally valid, lineage-valid, target-valid row construction for both classification and regression heads.
+Dataset quality is not just row count. V7 requires temporally valid, lineage-valid, target-valid row construction for both classification and regression heads — independently per mode scope.

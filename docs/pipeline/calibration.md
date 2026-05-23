@@ -1,20 +1,20 @@
-# Pipeline Calibration
+# Pipeline Calibration — Mode-Centric
 
 **Intended path:** `docs/v7/pipeline/calibration.md`
 
 ## Purpose
 
-Defines how V7 turns raw model outputs into calibrated runtime-facing decision surfaces.
+Defines how V7 turns raw model outputs into calibrated runtime-facing decision surfaces — **per mode scope**.
 
 It answers:
 
-> Given raw classification and economic model outputs, how should V7 produce confidence and score surfaces that policy can use safely?
+> Given raw classification and economic model outputs for a specific mode, how should V7 produce confidence and score surfaces that policy can use safely?
 
 ---
 
 ## Core Decision
 
-Calibration is a first-class stage.
+Calibration is a first-class stage, **per mode**.
 
 Raw model scores are not enough because runtime and policy may gate on confidence and actionability.
 
@@ -22,9 +22,9 @@ Raw model scores are not enough because runtime and policy may gate on confidenc
 
 ## First-Phase Scope
 
-- global calibration first
+- **per-mode calibration** (SWING, SCALP, AGGRESSIVE_SCALP each have their own calibration artifact)
 - no per-symbol calibration family in first phase
-- no per-regime calibration family in first phase
+- no per-regime calibration family in first phase (regime affects policy, not calibration)
 - symbol/regime breakdowns are evaluated, not automatically split into calibration families
 
 ---

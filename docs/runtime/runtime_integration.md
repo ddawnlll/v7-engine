@@ -37,8 +37,9 @@ Instead, runtime should be treated as:
 - the persistence shell
 - the safety shell
 - the lifecycle materialization shell
+- the **mode routing shell**
 
-The engine stack owns:
+The engine stack owns (per mode):
 - market-state interpretation
 - score generation
 - confidence
@@ -61,26 +62,29 @@ Runtime owns:
 - event creation
 - outcome attachment
 - operational safeguards
-- `scope_router` selection from `requested_trade_mode` / `model_scope`
-- model artifact selection and scope compatibility validation
+- **mode router** — selection from `requested_trade_mode` / `model_scope`
+- model artifact selection and scope compatibility validation (per mode)
 - blocking or downgrading `scope_mismatch` to visible safe behavior
 
 This preserves the V7 boundary discipline already established by the request/result/event/outcome family. fileciteturn20file1 fileciteturn33file0 fileciteturn21file0 fileciteturn27file0
 
 ---
 
-## Integration Flow
+## Integration Flow (Mode-Routed)
 
 The normalized V7 runtime flow should be:
 
 ```text
 Market/Data State
 → Request Builder
-→ AnalysisRequest
-→ Scope Router (`requested_trade_mode` / `model_scope`)
+→ AnalysisRequest (carries requested_trade_mode)
+→ Mode Router (`requested_trade_mode` / `model_scope`)
+  ├── SWING             → load SWING artifact bundle
+  ├── SCALP             → load SCALP artifact bundle
+  └── AGGRESSIVE_SCALP  → load AGGRESSIVE_SCALP artifact bundle
 → Scope-Compatible Artifact Selection
-→ Engine
-→ AnalysisResult
+→ Engine (per mode)
+→ AnalysisResult (per mode)
 → Result Validator
 → Runtime Interpretation
 → DecisionEvent
@@ -92,12 +96,14 @@ Market/Data State
 This ordering matters.
 
 ### Why this order matters
-- request is the engine input
-- result is the engine output
+- request is the engine input (explicitly scoped)
+- result is the engine output (mode-specific)
 - event is the runtime-owned normalized lifecycle record
 - outcome is the later consequence record
 
 Runtime must not skip the event layer.
+
+**Mode routing is explicit:** a single request targets exactly one mode scope. Runtime never asks all scopes to compete or averages outputs across modes.
 
 Simulation execution is runtime-owned. Model inference returns scoring and guidance; it does not run simulation. Runtime simulation may later test or track result guidance such as entry, stop, take-profit, and timing assumptions.
 

@@ -9,17 +9,17 @@
 
 ## 1. Purpose
 
-Convert runtime simulation outputs into the hybrid supervised target family used by V7.
+Convert runtime simulation outputs into the hybrid supervised target family used by V7 — **with mode-specific thresholds**.
 
 This phase answers:
 
-> What should the classifier learn, what should the regressors learn, and how do those targets align with later `TradeOutcome` records?
+> What should the classifier learn, what should the regressors learn (per mode), and how do those targets align with later `TradeOutcome` records?
 
 ---
 
 ## 2. Stable Rules
 
-- Labels are derived from simulation truth, not runtime action history.
+- Labels are derived from simulation truth (mode-configured), not runtime action history.
 - No-trade remains first-class.
 - Unresolved and invalid simulation outputs do not enter strict supervised training.
 - Ambiguous states remain explicit.
@@ -27,13 +27,22 @@ This phase answers:
 
 ---
 
-## 3. Workstream A — Classification Label Builder
+## 3. Workstream A — Mode-Specific Classification Label Builder
 
 The primary classification target is:
 
 ```python
 best_action_label in {LONG_NOW, SHORT_NOW, NO_TRADE, AMBIGUOUS_STATE}
 ```
+
+But thresholds are **mode-specific** (see mode-centric architecture section 4.2):
+
+| Threshold | SWING | SCALP | AGGRESSIVE_SCALP |
+|-----------|-------|-------|------------------|
+| min_net_r_for_success | 0.75 | 0.20 | 0.10 |
+| max_mae_r_for_success | -0.60 | -0.25 | -0.10 |
+| ambiguity_gap_r | 0.20 | 0.10 | 0.05 |
+| no_trade_default | False | False | True |
 
 Derived fields:
 
@@ -45,25 +54,27 @@ Derived fields:
 - `missed_opportunity_score`
 - `path_quality_bucket`
 - `label_validity`
+- **`mode`** (SWING | SCALP | AGGRESSIVE_SCALP)
 
 ### Acceptance Criteria
 
-- [ ] best-action label exists.
+- [ ] best-action label exists (per mode).
 - [ ] no-trade correctness is explicit.
 - [ ] regret outputs exist.
 - [ ] ambiguous states are not forced into fake winners.
+- [ ] mode-specific thresholds are applied correctly.
 
 ---
 
-## 4. Workstream B — Regression Target Builder
+## 4. Workstream B — Mode-Specific Regression Target Builder
 
-The regression target family supports economic-quality learning.
+The regression target family supports economic-quality learning, **per mode**. Targets differ because success thresholds and holding horizons differ.
 
 First-phase required targets:
 
 ```python
-expected_r_target_long = realized_r_long
-expected_r_target_short = realized_r_short
+expected_r_target_long = realized_r_long  # mode-specific horizon
+expected_r_target_short = realized_r_short  # mode-specific horizon
 ```
 
 Recommended first-phase optional targets, if simulation outputs are stable enough:
@@ -73,6 +84,11 @@ adverse_r_target_long = mae_r_long
 adverse_r_target_short = mae_r_short
 cost_adjusted_r_target_long = net_realized_r_long
 cost_adjusted_r_target_short = net_realized_r_short
+# SCALP and AGGRESSIVE_SCALP:
+time_to_mfe_target_long
+ime_to_mfe_target_short
+# AGGRESSIVE_SCALP only:
+instant_adverse_label
 ```
 
 No-trade may expose review targets, but first phase should not force a no-trade regressor unless evaluation shows a need:
@@ -90,26 +106,29 @@ saved_loss_target
 
 ### Acceptance Criteria
 
-- [ ] long and short expected-R regression targets exist.
+- [ ] long and short expected-R regression targets exist (per mode).
 - [ ] invalid/unresolved target rows are excluded or flagged by dataset rules.
 - [ ] target lineage is preserved.
+- [ ] mode-specific regression fields are present.
 
 ---
 
-## 5. Workstream C — Ambiguity & Path Quality
+## 5. Workstream C — Mode-Specific Ambiguity & Path Quality
 
-Default config values:
+Default config values (per mode):
 
-- `ambiguity_gap_r_threshold = 0.15`
-- `path_quality_high_threshold = 0.70`
-- `path_quality_medium_threshold = 0.40`
-- `min_acceptable_directional_realized_r = 0.25`
+| Parameter | SWING | SCALP | AGGRESSIVE_SCALP |
+|-----------|-------|-------|------------------|
+| ambiguity_gap_r_threshold | 0.20 | 0.10 | 0.05 |
+| path_quality_high_threshold | 0.70 | 0.70 | 0.70 |
+| path_quality_medium_threshold | 0.40 | 0.40 | 0.40 |
+| min_acceptable_directional_realized_r | 0.35 | 0.15 | 0.08 |
 
 These are defaults, not permanent constants.
 
 ### Acceptance Criteria
 
-- [ ] ambiguity threshold emits `AMBIGUOUS_STATE`.
+- [ ] ambiguity threshold emits `AMBIGUOUS_STATE` (per mode).
 - [ ] path-quality buckets are deterministic.
 - [ ] `skip_was_correct` follows configured semantics.
 

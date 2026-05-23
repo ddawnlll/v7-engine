@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-Turn raw hybrid model outputs into calibrated, policy-shaped decision surfaces that match `AnalysisResult`.
+Turn raw hybrid model outputs into calibrated, policy-shaped decision surfaces that match `AnalysisResult` — **per mode scope with regime awareness**.
 
 Runtime must not consume raw classifier probabilities or raw expected-R values as final decisions.
 
@@ -17,15 +17,16 @@ Runtime must not consume raw classifier probabilities or raw expected-R values a
 
 ## 2. Stable Rules
 
-- Confidence must be calibrated or explicitly downgraded.
+- Confidence must be calibrated or explicitly downgraded (per mode).
 - Expected-R estimates must be reliability-reviewed before policy uses them aggressively.
 - No-trade remains explicit.
 - A directional trade needs both probability support and economic support.
 - Timing extension remains advisory-first.
+- **Regime context modifies policy thresholds.**
 
 ---
 
-## 3. Workstream A — Classification Calibration Artifact
+## 3. Workstream A — Classification Calibration Artifact (Per Mode)
 
 Produce calibration artifacts per `model_scope` for the action classifier.
 
@@ -46,7 +47,7 @@ Calibration outputs:
 
 ### Acceptance Criteria
 
-- [ ] calibration artifact exists.
+- [ ] calibration artifact exists (per mode).
 - [ ] raw vs calibrated confidence is explicit.
 - [ ] stale/missing calibration is detectable.
 - [ ] calibration artifact is scope-compatible.
@@ -115,6 +116,57 @@ If long/short are too close: select `NO_TRADE`.
 - [ ] confidence-only cannot override failed economic gate.
 - [ ] expected-R-only cannot override failed confidence gate.
 - [ ] `NO_TRADE` is selected positively.
+- [ ] regime modifiers are applied correctly.
+- [ ] `TRANSITION` regime forces `NO_TRADE`.
+- [ ] counter-trend directions blocked in trend regimes.
+
+---
+
+## 5.5 Regime-Aware Policy Modifiers
+
+Detected market regime modifies policy thresholds (from mode-centric architecture section 5.4):
+
+```python
+REGIME_POLICY_MODIFIERS = {
+    "TREND_UP": {
+        "confidence_mult": 0.9,
+        "expected_r_mult": 0.9,
+        "allow_long": True,
+        "allow_short": False,
+    },
+    "TREND_DOWN": {
+        "confidence_mult": 0.9,
+        "expected_r_mult": 0.9,
+        "allow_long": False,
+        "allow_short": True,
+    },
+    "RANGE": {
+        "confidence_mult": 1.1,
+        "expected_r_mult": 1.2,
+        "allow_long": True,
+        "allow_short": True,
+    },
+    "TRANSITION": {
+        "confidence_mult": 1.3,
+        "expected_r_mult": 1.5,
+        "allow_long": True,
+        "allow_short": True,
+        "require_no_trade": True,
+    },
+}
+```
+
+Policy applies these modifiers to base thresholds before evaluating gates.
+
+### Regime Detection Integration
+
+Each mode has its own regime detection config:
+
+| Mode | Primary Bars | Context Bars | Indicators |
+|------|-------------|--------------|------------|
+| SWING | 4h | 1d | adx, atr_percentile, ema_slope, structure_count |
+| SCALP | 1h | 4h | atr_expansion, ema_separation, buying_pressure |
+| AGGRESSIVE_SCALP | 15m | 1h | body_ratio, micro_momentum, spread_proxy, atr_percentile |
 
 ---
 

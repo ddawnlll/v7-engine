@@ -37,15 +37,15 @@ Minimum fields:
 - `request_id`
 - `contract_version`
 - `symbol`
-- `model_scope`
-- `requested_trade_mode`
-- `primary_interval`
-- `context_intervals`
-- `refinement_intervals`
+- `model_scope` (SWING | SCALP | AGGRESSIVE_SCALP)
+- `requested_trade_mode` (maps to model_scope)
+- `primary_interval` (per mode: 4h/1h/15m)
+- `context_intervals` (per mode: 1d/4h/1h)
+- `refinement_intervals` (per mode: 1h/15m/5m)
 - `state_timestamp_utc`
 - `feature_schema_version`
 - `label_horizon_family`
-- `simulation_profile_version`
+- `simulation_profile_version` (mode-specific)
 - `runtime_context`
 - degradation / missingness flags where relevant
 

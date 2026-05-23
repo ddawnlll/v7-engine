@@ -9,51 +9,71 @@
 
 ## 1. Purpose
 
-Train the first V7 hybrid model baseline and publish candidate artifacts.
+Train the first V7 hybrid model baseline **per mode scope** and publish candidate artifacts.
 
-This phase proves that V7 can train a compact, shared, scope-compatible, multi-symbol model family that produces both action probabilities and economic-quality estimates.
+This phase proves that V7 can train compact, shared (within mode), scope-compatible, multi-symbol model families that produce both action probabilities and economic-quality estimates — independently for SWING, SCALP, and AGGRESSIVE_SCALP.
 
 ---
 
 ## 2. Stable Rules
 
-- First-phase model family is XGBoost-first.
+- First-phase model family is XGBoost-first per mode.
 - Do not begin with large deep architectures.
 - Do not create one model per symbol in first phase.
 - Do not train one universal artifact across incompatible `model_scope` values.
 - Phase 5 produces candidate artifacts only, not live authority.
-- Model training consumes datasets. It does not run simulation.
+- Model training consumes datasets (mode-specific). It does not run simulation.
 
 ---
 
-## 3. Workstream A — Hybrid Baseline Trainer
+## 3. Workstream A — Mode-Specific Hybrid Baseline Trainer
 
 ### First implementation model suite
 
-Use one artifact bundle per activated `model_scope`.
+Use **one artifact bundle per activated `model_scope`**.
+
+```
+model_artifact_bundles/
+  swing/
+    action_classifier.pkl
+    expected_r_long_regressor.pkl
+    expected_r_short_regressor.pkl
+    metadata.json
+  scalp/
+    action_classifier.pkl
+    expected_r_long_regressor.pkl
+    expected_r_short_regressor.pkl
+    metadata.json
+  aggressive_scalp/
+    action_classifier.pkl
+    expected_r_long_regressor.pkl
+    expected_r_short_regressor.pkl
+    metadata.json
+```
 
 Default first baseline inside each scope:
 
 1. **Action classifier**
    - XGBoost multiclass classifier
-   - target: `best_action_label`
+   - target: `best_action_label` (mode-specific labels)
    - classes: `LONG_NOW`, `SHORT_NOW`, `NO_TRADE`
    - output: `action_probabilities`
 
 2. **Long expected-R regressor**
    - XGBoost regressor
-   - target: `expected_r_target_long`
+   - target: `expected_r_target_long` (mode-specific horizon)
    - output: `expected_r_long`
 
 3. **Short expected-R regressor**
    - XGBoost regressor
-   - target: `expected_r_target_short`
+   - target: `expected_r_target_short` (mode-specific horizon)
    - output: `expected_r_short`
 
 Optional first-phase regressors only if target quality is adequate:
 
 - long/short adverse-R regressors
 - long/short cost-adjusted-R regressors
+- time-to-MFE regressors (SCALP, AGGRESSIVE_SCALP)
 
 ### Explicit non-goals
 
@@ -61,23 +81,24 @@ Optional first-phase regressors only if target quality is adequate:
 - Do not make regression the only decision source.
 - Do not let expected-R regressors directly bypass policy.
 - Do not bundle incompatible scopes in one model.
+- Do not train SWING/SCALP/AGGRESSIVE_SCALP together.
 
 ### Implementation Tasks
 
-- [ ] Implement hybrid trainer entrypoint.
-- [ ] Train multiclass action classifier.
-- [ ] Train long expected-R regressor.
-- [ ] Train short expected-R regressor.
+- [ ] Implement hybrid trainer entrypoint (per mode).
+- [ ] Train multiclass action classifier (per mode).
+- [ ] Train long expected-R regressor (per mode).
+- [ ] Train short expected-R regressor (per mode).
 - [ ] Support target validity masks.
 - [ ] Support sample weights.
-- [ ] Emit model-suite metadata and lineage.
+- [ ] Emit model-suite metadata and lineage, including `model_scope`.
 
 ### Acceptance Criteria
 
-- [ ] action classifier trains successfully.
-- [ ] long/short expected-R regressors train successfully.
+- [ ] action classifier trains successfully (per mode).
+- [ ] long/short expected-R regressors train successfully (per mode).
 - [ ] artifact bundle loads for inference.
-- [ ] metadata preserves dataset, feature, label, and simulation lineage.
+- [ ] metadata preserves dataset, feature, label, simulation lineage, and mode scope.
 
 ---
 

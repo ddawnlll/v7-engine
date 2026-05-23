@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-Prove whether V7's hybrid model, calibration, policy, runtime flow, and monitoring surfaces are economically useful and operationally trustworthy.
+Prove whether V7's hybrid model, calibration, policy, runtime flow, and monitoring surfaces are economically useful and operationally trustworthy — **per mode scope with regime breakdowns**.
 
 A working system is not automatically a good system. This phase supplies evidence.
 
@@ -17,21 +17,22 @@ A working system is not automatically a good system. This phase supplies evidenc
 
 ## 2. Stable Rules
 
-- Evaluation is economic-quality-first.
+- Evaluation is economic-quality-first (per mode).
 - No-trade quality matters.
 - Calibration quality matters.
 - Expected-R reliability matters.
+- **Regime-aware metrics** are mandatory.
 - Symbol/regime breakdowns are mandatory.
 - Promotion is per `model_scope`.
 - Replay/paper/live evidence must stay comparable.
 
 ---
 
-## 3. Workstream A — Hybrid Evaluation Core
+## 3. Workstream A — Mode-Specific Hybrid Evaluation Core
 
-Evaluate candidates against baseline using:
+Evaluate candidates against baseline **per mode** using:
 
-### Economic metrics
+### Economic metrics (per mode)
 
 - realized R
 - average R
@@ -44,7 +45,7 @@ Evaluate candidates against baseline using:
 - saved loss
 - path quality
 
-### Classification metrics
+### Classification metrics (per mode)
 
 - action confusion matrix
 - directional precision/recall where meaningful
@@ -52,7 +53,7 @@ Evaluate candidates against baseline using:
 - calibrated confidence buckets
 - class distribution stability
 
-### Regression metrics
+### Regression metrics (per mode)
 
 - expected-R MAE / RMSE
 - signed expected-R bias
@@ -61,20 +62,30 @@ Evaluate candidates against baseline using:
 - rank correlation between predicted expected-R and realized R
 - expected-R gate quality
 
-### Ablation metrics
+### Regime-aware metrics
 
-- 4h-only
-- 4h + 1d
-- 4h + 1d + 1h
+- realized-R by regime bucket (TREND_UP, TREND_DOWN, RANGE, TRANSITION)
+- no-trade quality by regime
+- action distribution by regime
+- decision margin by regime
+- regime stability: consistency of metrics across consecutive same-regime windows
+
+### Ablation metrics (per mode)
+
+- primary-only
+- primary + context
+- primary + context + refinement
 - classifier-only policy vs hybrid policy
 - probability gate only vs probability + expected-R gate
+- **regime awareness vs no regime awareness**
 
 ### Acceptance Criteria
 
-- [ ] candidate vs baseline comparison exists.
+- [ ] candidate vs baseline comparison exists (per mode).
 - [ ] hybrid surface quality is measurable.
 - [ ] no-trade quality is measurable.
 - [ ] interval-view and hybrid-policy ablations exist.
+- [ ] regime-aware metrics are computed.
 
 ---
 

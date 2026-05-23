@@ -13,7 +13,7 @@ It defines what V7 is, why it exists, what success means, what design principles
 
 ## One-Sentence Definition
 
-**V7 is a centralized, market-first, simulation-native learned trading engine that optimizes economic quality first, uses calibrated decision outputs, and evaluates long / short / no-trade actions through one runtime-hosted forward-simulation truth layer.**
+**V7 is a mode-centric, centralized, market-first, simulation-native learned trading engine that optimizes economic quality first, uses calibrated decision outputs, and evaluates long / short / no-trade actions through one runtime-hosted forward-simulation truth layer configured per trading mode (SWING, SCALP, AGGRESSIVE_SCALP).**
 
 ---
 

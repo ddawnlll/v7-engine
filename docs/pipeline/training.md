@@ -1,47 +1,47 @@
-# Pipeline Training
+# Pipeline Training — Mode-Centric
 
 **Intended path:** `docs/v7/pipeline/training.md`
 
 ## Purpose
 
-Defines the first-phase training flow for the V7 hybrid supervised model.
+Defines the first-phase training flow for the V7 hybrid supervised model — **per mode scope**.
 
 It answers:
 
-> Given valid temporal datasets, how should V7 train classification and regression heads without leakage or promotion shortcuts?
+> Given valid temporal datasets for a specific mode, how should V7 train classification and regression heads without leakage or promotion shortcuts?
 
 ---
 
 ## Core Decision
 
-V7 training is **hybrid supervised training**.
+V7 training is **hybrid supervised training per mode**.
 
-It trains:
+It trains (per mode):
 
 - classification heads for action selection
 - regression heads for economic quality
 - calibration artifacts for runtime-facing confidence
 
-Training does not decide live execution eligibility. It produces candidate artifacts for evaluation.
+Training does not decide live execution eligibility. It produces candidate artifacts for evaluation. **Do not train across incompatible modes.**
 
 ---
 
-## Training Diagram
+## Training Diagram (Per Mode)
 
 ```text
-Canonical Market State
+Canonical Market State (shared)
       ↓
-Feature Engineering
+Feature Engineering (shared)
       ↓
-Simulation Truth
+Simulation Truth (mode-configured)
       ↓
-Hybrid Labels
-      ├── Classification labels
-      └── Regression labels
+Mode-Specific Hybrid Labels
+      ├── Classification labels (mode thresholds)
+      └── Regression labels (mode thresholds)
       ↓
-Temporal Dataset / Walk-Forward Folds
+Temporal Dataset / Walk-Forward Folds (per mode)
       ↓
-XGBoost Hybrid Training
+XGBoost Hybrid Training (per mode)
       ├── Classifier heads
       │   ├── P(LONG_NOW)
       │   ├── P(SHORT_NOW)
@@ -52,15 +52,18 @@ XGBoost Hybrid Training
           ├── expected adverse pressure
           └── cost-adjusted expectancy
       ↓
-Calibration Fit
+Calibration Fit (per mode)
       ↓
-Policy Evaluation
+Policy Evaluation (regime-aware)
       ↓
-Candidate Artifact
+Candidate Artifact (per mode)
       ↓
-Walk-Forward / Economic Evaluation
+Walk-Forward / Economic Evaluation (per mode)
       ↓
-Promotion Review
+Promotion Review (per mode)
+
+Each mode (SWING, SCALP, AGGRESSIVE_SCALP) has its own training pipeline
+sharing only the canonical state and feature engineering layers.
 ```
 
 ---

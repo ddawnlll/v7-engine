@@ -17,11 +17,12 @@ Good evaluation is not the same as safe operational authority.
 
 ## 2. Stable Rules
 
-- Release eligibility is per `model_scope`.
-- Candidate artifact, evaluation-promotable artifact, and live-eligible authority are distinct.
+- Release eligibility is per `model_scope` (SWING, SCALP, AGGRESSIVE_SCALP).
+- Candidate artifact, evaluation-promotable artifact, and live-eligible authority are distinct **per mode**.
 - Shadow is required for first live-eligible release unless explicitly waived.
-- Hybrid artifact bundles must rollback as compatible bundles.
+- Hybrid artifact bundles (classifier + regressors + calibration + policy) must rollback as compatible bundles **per mode**.
 - Timing remains advisory-first unless Phase 8 evidence and config approve gating.
+- **Mode-specific release gates** — each mode has its own promotion path.
 
 ---
 

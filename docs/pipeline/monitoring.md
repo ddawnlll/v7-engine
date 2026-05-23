@@ -1,14 +1,14 @@
-# Pipeline Monitoring
+# Pipeline Monitoring — Mode-Aware
 
 **Intended path:** `docs/v7/pipeline/monitoring.md`
 
 ## Purpose
 
-Defines how V7 monitors post-training and post-deployment quality.
+Defines how V7 monitors post-training and post-deployment quality — **per mode scope**.
 
 It answers:
 
-> After hybrid artifacts are trained and runtime is active, what should V7 track to detect drift, degradation, and lifecycle health issues?
+> After hybrid artifacts are trained and runtime is active, what should V7 track to detect drift, degradation, and lifecycle health issues per mode?
 
 ---
 
@@ -16,26 +16,27 @@ It answers:
 
 Monitoring must observe both:
 
-- model quality surfaces
+- model quality surfaces (per mode)
 - system lifecycle surfaces
 
 For V7 hybrid modeling, monitoring also tracks:
 
-- action probability drift
-- expected-R drift
-- regression reliability drift
-- calibration drift
-- no-trade/action mix drift
+- action probability drift (per mode)
+- expected-R drift (per mode)
+- regression reliability drift (per mode)
+- calibration drift (per mode)
+- no-trade/action mix drift (per mode)
+- **mode distribution** (which modes are active, coverage balance)
 
 ---
 
 ## Inputs
 
-- `AnalysisResult`
-- `DecisionEvent`
+- `AnalysisResult` (mode-scoped)
+- `DecisionEvent` (mode-scoped)
 - `TradeOutcome`
-- calibration artifacts
-- model artifact metadata
+- calibration artifacts (per mode)
+- model artifact metadata (per mode)
 - runtime logs / metrics
 - monitoring config
 
@@ -43,7 +44,7 @@ For V7 hybrid modeling, monitoring also tracks:
 
 ## Outputs
 
-Monitoring produces:
+Monitoring produces (**per mode**):
 
 - health signals
 - drift indicators
@@ -52,12 +53,13 @@ Monitoring produces:
 - symbol/regime dashboards
 - timing extension usefulness summaries
 - regression reliability summaries
+- **mode distribution and cross-mode comparisons**
 
 ---
 
 ## Recommended Monitoring Families
 
-Minimum first-phase families:
+Minimum first-phase families (tracked **per mode**):
 
 - request/result validation failure rate
 - fallback/degraded rate
@@ -70,11 +72,12 @@ Minimum first-phase families:
 - actionability vs execution-eligibility gap
 - symbol and regime coverage
 - interval-view coverage integrity
-- 1h refinement availability rate
+- refinement availability rate (per mode)
 - timing-extension distribution
 - outcome finality lag
 - feature drift
 - regression reliability drift
+- **mode activity balance**
 
 ---
 

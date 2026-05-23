@@ -90,11 +90,13 @@ Minimum config groups:
 - `evaluation`
 - `deployment`
 
-### Hybrid config requirements
+### Hybrid config requirements (mode-centric)
 
 The config must be able to express:
 
-- enabled `model_scope` values
+- enabled `model_scope` values (SWING, SCALP, AGGRESSIVE_SCALP)
+- **mode-specific simulation configurations** (primary interval, stop/target multipliers, holding horizon)
+- **mode-specific label thresholds**
 - action-classification target family
 - regression target family
 - XGBoost classifier hyperparameters
@@ -103,6 +105,9 @@ The config must be able to express:
 - calibration method for classifier confidence
 - expected-R reliability review settings
 - policy gates for confidence, expected-R, drawdown, and no-trade margin
+- **regime detection config per mode**
+- **regime policy modifiers**
+- **correlation group definitions** for portfolio
 
 ### Merge order
 

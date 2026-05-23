@@ -1,10 +1,10 @@
-# V7 Architecture
+# V7 Architecture — Mode-Centric System
 
 ## Purpose
 
 This document defines the revised V7 system architecture.
 
-V7 is a centralized, simulation-native, contract-first trading system built around one economic truth layer and one hybrid supervised decision engine.
+V7 is a **mode-centric**, centralized, simulation-native, contract-first trading system built around one economic truth layer and **three independent mode-specific hybrid supervised decision pipelines** (SWING, SCALP, AGGRESSIVE_SCALP).
 
 The architecture is optimized for:
 
@@ -14,20 +14,39 @@ The architecture is optimized for:
 4. multi-symbol clarity
 5. editability
 6. centralized configuration
+7. **mode-aware regime adaptability**
 
 ---
 
 ## Architectural Summary
 
 ```text
-one market-state pipeline
-→ one simulation truth layer
-→ one label/evaluation language
-→ one hybrid supervised model
-→ one explicit policy layer
-→ one portfolio layer
-→ one risk gate
-→ one runtime boundary
+Market Data → Mode Router → 3 Independent Pipelines
+                  ↓
+            ┌─────┴─────┐
+            ↓           ↓
+       SWING        SCALP         AGGRESSIVE_SCALP
+       mode         mode          mode
+            ↓           ↓           ↓
+       [4h + 1d]    [1h + 4h]     [15m + 1h]
+       sim_config   sim_config    sim_config
+       labels       labels        labels
+       model        model         model
+       policy       policy        policy
+       regime       regime        regime
+```
+
+Each mode pipeline is an independent instance of the same architecture:
+
+```text
+one market-state pipeline (shared)
+→ one simulation truth layer (mode-configured)
+→ one mode-specific label/evaluation language
+→ one mode-specific hybrid supervised model
+→ one explicit policy layer (regime-aware)
+→ one portfolio layer (shared)
+→ one risk gate (shared)
+→ one runtime boundary (mode-routed)
 ```
 
 The first learned model is not pure classification and not pure regression.
@@ -43,30 +62,30 @@ It is a **classification-first hybrid profitability model**:
 
 ## Core Architectural Rules
 
-### 1. One simulation truth layer
+### 1. One simulation truth layer (mode-configured)
 
-The same simulation logic defines labels, replay evaluation, paper/live outcome interpretation, no-trade quality, regret, and cost-aware trade resolution.
+The same simulation logic defines labels, replay evaluation, paper/live outcome interpretation, no-trade quality, regret, and cost-aware trade resolution — but with **mode-specific parameters** (primary timeframe, holding horizon, stop/target multipliers).
 
 ### 2. One canonical market-state language
 
-Live inference, replay, dataset generation, and evaluation use the same state language.
+Live inference, replay, dataset generation, and evaluation use the same state language. Features are **shared across modes**, built from canonical state.
 
 ### 3. One explicit contract family
 
 Runtime and engine communicate through:
 
-- `AnalysisRequest`
+- `AnalysisRequest` (carries `requested_trade_mode` / `model_scope`)
 - `AnalysisResult`
 - `DecisionEvent`
 - `TradeOutcome`
 
-### 4. One primary model family first
+### 4. One primary model family first (per mode)
 
-First phase is **XGBoost-first** for speed, portability, tabular strength, and transparent iteration.
+First phase is **XGBoost-first** for speed, portability, tabular strength, and transparent iteration. Each mode trains its own artifact bundle.
 
 ### 5. Hybrid model outputs are first-class
 
-The model artifact must expose both:
+Each mode artifact must expose both:
 
 - action probability / classification surfaces
 - expected economic quality / regression surfaces
@@ -77,7 +96,15 @@ Runtime owns orchestration, persistence, safety, fallback, and execution eligibi
 
 ### 7. One central configuration root
 
-All behavior must route through the unified config system. No hidden shell-script semantics or local config mutation should become the real authority.
+All behavior must route through the unified config system. Mode-specific configs are nested under `simulation_configs.{swing,scalp,aggressive_scalp}`.
+
+### 8. Features are shared across modes
+
+Canonical state → features. Features are identical for all modes. Labels are **mode-specific**.
+
+### 9. Regime awareness
+
+Every mode integrates a rule-based regime detector. Regime modifies policy thresholds and stop/target behavior.
 
 ---
 
@@ -85,15 +112,15 @@ All behavior must route through the unified config system. No hidden shell-scrip
 
 1. raw market data
 2. canonical state construction
-3. simulation and outcome truth
-4. labels and features
-5. dataset and split
-6. hybrid model and calibration
-7. decision policy
-8. portfolio interpretation
+3. **mode router** → simulation and outcome truth (per mode)
+4. **mode-specific** labels and shared features
+5. **mode-specific** dataset and split
+6. **mode-specific** hybrid model and calibration
+7. **regime-aware** decision policy
+8. portfolio interpretation (shared, correlation-aware)
 9. risk gating
 10. runtime lifecycle
-11. evaluation and monitoring
+11. evaluation and monitoring (mode-aware)
 
 ---
 
@@ -109,9 +136,9 @@ Responsibilities:
 First-phase assumptions:
 
 - Binance candles
-- primary decision interval: 4h
-- higher-timeframe context: 1d
-- refinement/timing context: 1h
+- **SWING mode:** primary 4h, context 1d, refinement 1h
+- **SCALP mode:** primary 1h, context 4h, refinement 15m
+- **AGGRESSIVE_SCALP mode:** primary 15m, context 1h, refinement 5m
 - target universe: up to 60 symbols
 
 Rules:
@@ -127,7 +154,7 @@ Rules:
 Responsibilities:
 
 - build one canonical state for one symbol and decision timestamp
-- attach 4h primary, 1d context, and 1h refinement views
+- attach multiple interval views (4h, 1h, 15m primary + context + refinement per mode)
 - attach volatility, regime, symbol metadata, quality, and freshness metadata
 - provide identical semantics to live, replay, dataset, and evaluation
 
@@ -140,9 +167,9 @@ Rules:
 
 ---
 
-## 3. Simulation and Outcome Truth
+## 3. Simulation and Outcome Truth (Mode-Specific)
 
-Simulation is the economic truth core.
+Simulation is the economic truth core — **per mode**.
 
 It compares:
 
@@ -150,7 +177,7 @@ It compares:
 - `SHORT_NOW`
 - `NO_TRADE`
 
-for the same state and future path under the same stop, target, horizon, fee, and slippage semantics.
+for the same state and future path under **mode-specific** stop, target, horizon, fee, and slippage semantics.
 
 It computes:
 
@@ -164,7 +191,7 @@ It computes:
 
 Rules:
 
-- one simulation engine
+- one simulation engine (mode-configured)
 - labels and evaluation share semantics
 - no unresolved simulation becomes a final training label
 - simulation-family version changes when meaning changes
@@ -173,17 +200,17 @@ Rules:
 
 ## 4. Labels and Features
 
-Labels are derived from simulation truth.
+**Labels are mode-specific.** The same timestamp produces different label truths for SWING, SCALP, and AGGRESSIVE_SCALP.
 
 Classification labels answer:
 
-> Which action is preferable?
+> Which action is preferable for this mode?
 
 Regression labels answer:
 
-> How profitable, risky, or costly is the action?
+> How profitable, risky, or costly is the action for this mode?
 
-Features are derived from canonical state only.
+**Features are shared across modes** — derived from canonical state only.
 
 Rules:
 
@@ -191,22 +218,23 @@ Rules:
 - explicit feature schema versioning
 - explicit label interpretation versioning
 - compact, interpretable first-phase features
-- shared multi-symbol model bias
+- shared multi-symbol model bias per mode
 
 ---
 
 ## 5. Dataset and Split
 
-Datasets are temporal and lineage-preserving.
+Datasets are temporal, lineage-preserving, and **mode-specific**.
 
 Rows contain:
 
 - symbol
+- **mode** (SWING | SCALP | AGGRESSIVE_SCALP)
 - primary interval
 - timestamp
-- feature vector
-- classification targets
-- regression targets
+- feature vector (shared)
+- classification targets (mode-specific)
+- regression targets (mode-specific)
 - simulation lineage
 - label lineage
 - feature schema lineage
@@ -221,13 +249,13 @@ Rules:
 
 ---
 
-## 6. Hybrid Model and Calibration
+## 6. Hybrid Model and Calibration (Per Mode)
 
-The first-phase learned system is:
+The first-phase learned system is **per mode**:
 
-> **XGBoost-first hybrid supervised model**
+> **XGBoost-first hybrid supervised model per mode scope**
 
-Recommended artifact shape:
+Recommended artifact shape (per mode):
 
 ```text
 shared feature matrix
@@ -242,7 +270,7 @@ shared feature matrix
         └── cost-adjusted expectancy
 ```
 
-Calibration then maps raw classification scores into reliable probability/confidence surfaces.
+Calibration then maps raw classification scores into reliable probability/confidence surfaces (per mode).
 
 Rules:
 
@@ -250,10 +278,11 @@ Rules:
 - raw scores are not runtime confidence
 - regression heads are economic evidence, not direct execution permission
 - model family can change without rewriting runtime contracts
+- **do not train one artifact across incompatible modes**
 
 ---
 
-## 7. Decision Policy
+## 7. Decision Policy (Regime-Aware)
 
 Policy turns calibrated and economic surfaces into a normalized decision.
 
@@ -265,12 +294,15 @@ A directional action must pass:
 - cost-adjusted expectancy gate
 - adverse-pressure/drawdown gate
 - decision-margin gate
+- **regime consistency gate**
 
 If the evidence is weak, contradictory, degraded, or ambiguous, policy selects `NO_TRADE` explicitly.
 
+**Regime modifiers** (section 5.4 of mode-centric doc) adjust confidence thresholds and directional bias based on detected market regime.
+
 ---
 
-## 8. Portfolio Interpretation
+## 8. Portfolio Interpretation (Correlation-Aware)
 
 Portfolio handles cross-symbol competition after single-candidate policy outputs exist.
 
@@ -282,6 +314,8 @@ It may:
 - annotate
 
 First phase stays lightweight. It is not a full optimizer.
+
+**Correlation-aware controls** (section 6.7 of mode-centric doc) prevent cluster overexposure.
 
 Rules:
 
@@ -311,11 +345,12 @@ Rules:
 
 ---
 
-## 10. Runtime Lifecycle
+## 10. Runtime Lifecycle (Mode-Routed)
 
 Runtime owns:
 
-- request assembly
+- request assembly (with `requested_trade_mode` / `model_scope`)
+- **mode routing** → load scope-compatible artifact bundle
 - result validation
 - event creation
 - execution eligibility
@@ -324,7 +359,7 @@ Runtime owns:
 - fallback visibility
 - rollback and operational safety
 
-Engine owns:
+Engine owns (per mode):
 
 - hybrid model scoring
 - calibrated decision evidence
@@ -351,20 +386,15 @@ The model does not define truth by itself.
 
 ## Bottom Line
 
-V7 is intentionally simple at the system level:
+V7 is mode-centric but intentionally simple at the system level:
 
 ```text
 raw data
 → canonical state
-→ simulation truth
-→ labels/features
-→ temporal dataset
-→ XGBoost-first hybrid model
-→ calibration
-→ policy
-→ portfolio
-→ risk
-→ runtime contracts
+→ mode router
+  → SWING:     sim truth → labels → dataset → model → calibration → policy → portfolio → risk → runtime
+  → SCALP:     sim truth → labels → dataset → model → calibration → policy → portfolio → risk → runtime
+  → AGGRESSIVE_SCALP: sim truth → labels → dataset → model → calibration → policy → portfolio → risk → runtime
 ```
 
-The purpose is to make economic truth central, behavior explicit, and iteration fast without repeating V6's structural drag.
+The purpose is to make economic truth central, behavior explicit, mode-aware, and iteration fast without repeating V6's structural drag.

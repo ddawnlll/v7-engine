@@ -1,14 +1,14 @@
-# Pipeline Policy
+# Pipeline Policy — Regime-Aware, Mode-Centric
 
 **Intended path:** `docs/v7/pipeline/policy.md`
 
 ## Purpose
 
-Defines how V7 converts calibrated classification and regression surfaces into a normalized engine decision.
+Defines how V7 converts calibrated classification and regression surfaces into a normalized engine decision — **with regime-aware modifications and mode-specific thresholding**.
 
 It answers:
 
-> Given action probabilities and economic estimates, how should V7 decide between `LONG_NOW`, `SHORT_NOW`, and `NO_TRADE`?
+> Given action probabilities and economic estimates for a specific mode, and the detected market regime, how should V7 decide between `LONG_NOW`, `SHORT_NOW`, and `NO_TRADE`?
 
 ---
 
@@ -26,6 +26,7 @@ Policy combines:
 - no-trade quality
 - decision margins
 - timing/refinement signals
+- **regime context**
 
 Runtime later decides whether execution is operationally allowed.
 
@@ -41,6 +42,8 @@ Runtime later decides whether execution is operationally allowed.
 - cost-adjusted expectancy
 - decision margins
 - timing-supporting fields
+- **regime signal** (from rule-based regime detector)
+- **mode identifier** (SWING | SCALP | AGGRESSIVE_SCALP)
 - policy config
 
 ---
@@ -57,7 +60,7 @@ Policy produces fields matching `AnalysisResult`, including:
 - `expected_drawdown` or adverse pressure
 - `action_probabilities`
 - `economic_quality_by_action`
-- `policy_reason_codes`
+- `policy_reason_codes` (includes regime reason)
 - `entry_price`
 - `stop_loss`
 - `take_profit`
@@ -77,9 +80,49 @@ A directional action must pass:
 4. expected-R gate
 5. cost-adjusted expectancy gate
 6. adverse-pressure/drawdown gate
-7. degradation/fallback gate
+7. **regime consistency gate**
+8. degradation/fallback gate
 
 If any required gate fails, policy selects `NO_TRADE` or degraded-safe behavior.
+
+---
+
+## Regime-Aware Policy Modifiers
+
+Detected market regime modifies policy thresholds:
+
+```python
+REGIME_POLICY_MODIFIERS = {
+    "TREND_UP": {
+        "confidence_mult": 0.9,
+        "expected_r_mult": 0.9,
+        "allow_long": True,
+        "allow_short": False,  # Don't fight the trend
+    },
+    "TREND_DOWN": {
+        "confidence_mult": 0.9,
+        "expected_r_mult": 0.9,
+        "allow_long": False,
+        "allow_short": True,
+    },
+    "RANGE": {
+        "confidence_mult": 1.1,
+        "expected_r_mult": 1.2,
+        "allow_long": True,
+        "allow_short": True,
+    },
+    "TRANSITION": {
+        "confidence_mult": 1.3,
+        "expected_r_mult": 1.5,
+        "allow_long": True,
+        "allow_short": True,
+        "require_no_trade": True,  # Very high barrier
+    },
+}
+```
+
+When regime is `TRANSITION`, policy strongly prefers `NO_TRADE`.
+When regime is `TREND_UP` or `TREND_DOWN`, policy blocks counter-trend directions.
 
 ---
 
@@ -87,7 +130,7 @@ If any required gate fails, policy selects `NO_TRADE` or degraded-safe behavior.
 
 First-phase rule:
 
-1. evaluate directional actions against gates
+1. evaluate directional actions against gates (including regime)
 2. if both fail, select `NO_TRADE`
 3. if one passes and beats `NO_TRADE` by the configured margin, select it
 4. if both pass, choose the better policy score after economic quality adjustment
@@ -97,20 +140,19 @@ No-trade is a positive decision, not a weak fallback.
 
 ---
 
-## Policy Score
+## Policy Score (Regime-Adjusted)
 
 The first-phase policy score should be explicit and config-driven.
 
-A reasonable shape:
-
 ```text
-policy_score(action) =
+policy_score(action, regime) =
   calibrated_action_probability_component
-+ expected_r_component
++ expected_r_component * regime.expected_r_mult
 - adverse_pressure_component
 - friction_component
 + path_quality_component
 - uncertainty_penalty
+- regime_penalty
 ```
 
 The exact weights belong in config and must be versioned.
@@ -125,7 +167,7 @@ Do not create hidden selector complexity outside the policy module.
 
 They may use:
 
-- 1h refinement features
+- refinement features (per mode)
 - entry-zone distance
 - local momentum pressure
 - time-sensitivity heuristics
@@ -159,6 +201,7 @@ Key config families:
 - decision margin
 - timing extension enablement
 - degraded-result behavior
+- **regime policy modifiers**
 
 ---
 
@@ -187,9 +230,12 @@ Minimum tests:
 - ambiguous long/short selects no-trade
 - regression-head missingness degrades visibly
 - timing fields are bounded and legal
+- **regime modifiers applied correctly**
+- **TRANSITION regime blocks directional trades**
+- **counter-trend directions blocked in trend regimes**
 
 ---
 
 ## Final Position
 
-Policy is where V7 becomes profitability-aware. It must use classification and regression evidence together, while staying explicit, compact, and auditable.
+Policy is where V7 becomes profitability-aware and regime-aware. It must use classification, regression, regime, and mode context together, while staying explicit, compact, and auditable.

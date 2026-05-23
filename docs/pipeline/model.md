@@ -1,28 +1,29 @@
-# Pipeline Model
+# Pipeline Model — Mode-Centric
 
 **Intended path:** `docs/v7/pipeline/model.md`
 
 ## Purpose
 
-Defines the first-phase V7 model family and output surface.
+Defines the first-phase V7 model family and output surface — **per mode scope**.
 
 It answers:
 
-> Given a valid V7 dataset, what learned model family should V7 train first, and what outputs should it produce?
+> Given a valid V7 dataset for a specific mode, what learned model family should V7 train first, and what outputs should it produce?
 
 ---
 
 ## Core Decision
 
-First-phase V7 is an **XGBoost-first hybrid supervised decision model**.
+First-phase V7 is an **XGBoost-first hybrid supervised decision model per mode scope**.
 
 This means:
 
-- XGBoost remains the default first model family
+- XGBoost remains the default first model family (trained independently per mode)
 - action selection is classification-first
 - economic quality is regression-first
 - both outputs are exposed as first-class decision surfaces
 - runtime ownership stays outside the model
+- **do not train one artifact across incompatible modes**
 
 ---
 
@@ -42,11 +43,12 @@ V7 therefore does not use pure classification or pure regression as the full dec
 
 ## First-Phase Scope
 
-- one shared multi-symbol model family
+- **one artifact bundle per mode scope** (SWING, SCALP, AGGRESSIVE_SCALP)
+- shared multi-symbol model family within each mode
 - no per-symbol model families in first phase
-- primary decision interval: 4h
-- higher-timeframe context: 1d
-- refinement/timing context: 1h
+- **SWING mode:** primary 4h, context 1d, refinement 1h
+- **SCALP mode:** primary 1h, context 4h, refinement 15m
+- **AGGRESSIVE_SCALP mode:** primary 15m, context 1h, refinement 5m
 - target universe up to 60 symbols
 - one fused decision surface per atomic request
 
@@ -54,19 +56,19 @@ V7 therefore does not use pure classification or pure regression as the full dec
 
 ## Inputs
 
-- dataset rows from `pipeline/dataset.md`
+- dataset rows from `pipeline/dataset.md` (mode-scoped)
 - shared feature matrix
-- classification targets
-- regression targets
+- mode-specific classification targets
+- mode-specific regression targets
 - feature schema version
-- label interpretation version
+- mode-specific label interpretation version
 - training config
 
 ---
 
-## Output Surface
+## Output Surface (Per Mode)
 
-The model artifact should expose:
+Each mode's model artifact should expose:
 
 ### Classification outputs
 
@@ -88,8 +90,9 @@ The model artifact should expose:
 
 ### Metadata outputs
 
+- `model_scope` (SWING | SCALP | AGGRESSIVE_SCALP)
 - feature schema version
-- label version
+- label version (mode-specific)
 - model family version
 - target family version
 - training dataset version
@@ -99,7 +102,7 @@ The model artifact should expose:
 
 ## Recommended Implementation Shape
 
-First phase may use separate XGBoost models per target head:
+First phase may use separate XGBoost models per target head, **per mode**:
 
 ```text
 classification:
@@ -122,13 +125,14 @@ Do not require a complex deep multi-task architecture in first phase.
 
 ## Rules
 
-1. Shared model first: no per-symbol families in first phase.
-2. Hybrid output first: classification and regression surfaces are both first-class.
-3. Compact artifact surface: outputs must stay calibratable and policy-wrappable.
-4. Stable lineage: every artifact is versioned and traceable.
-5. No hidden runtime semantics: the model recommends; runtime decides execution eligibility.
-6. No regression-only decisioning: regression supports economic gates; policy still compares calibrated action evidence.
-7. No raw-score trust: calibration must distinguish raw and calibrated surfaces.
+1. **Mode-specific models:** each mode trains its own artifact bundle. Do not train one artifact across incompatible scopes.
+2. Shared features within mode: no per-symbol families in first phase.
+3. Hybrid output first: classification and regression surfaces are both first-class.
+4. Compact artifact surface: outputs must stay calibratable and policy-wrappable.
+5. Stable lineage: every artifact is versioned and traceable.
+6. No hidden runtime semantics: the model recommends; runtime decides execution eligibility.
+7. No regression-only decisioning: regression supports economic gates; policy still compares calibrated action evidence.
+8. No raw-score trust: calibration must distinguish raw and calibrated surfaces.
 
 ---
 
@@ -147,7 +151,7 @@ The term **XGBoost-first** means model-family preference, not target-type restri
 
 ## Early Stopping Policy
 
-First-phase training should use:
+First-phase training should use (per mode):
 
 - explicit validation folds from dataset split family
 - early stopping enabled by default
@@ -176,16 +180,16 @@ Config should include at minimum:
 
 ---
 
-## Artifact Publishing Flow
+## Artifact Publishing Flow (Per Mode)
 
-Training may produce:
+Training may produce (per mode scope):
 
 - candidate artifacts
 - rejected artifacts
 - promotable artifacts
 
 Successful training may publish a candidate artifact.
-Promotion is controlled by evaluation and release policy.
+Promotion is controlled by evaluation and release policy per mode.
 
 Failed or invalid runs must not publish promotable artifacts.
 
@@ -211,7 +215,7 @@ Downstream:
 
 Minimum tests:
 
-- training smoke test
+- training smoke test (per mode)
 - inference schema parity
 - artifact load test
 - classification output exists and is stable
@@ -220,9 +224,10 @@ Minimum tests:
 - early stopping path works
 - candidate vs promotable states stay distinct
 - missing regression head degrades explicitly
+- scope mismatch cannot load incompatible artifact
 
 ---
 
 ## Final Position
 
-The first V7 model should be boring, shared, measurable, and hybrid. Its job is not architecture novelty. Its job is to produce reliable action probabilities and economic-quality estimates for policy to evaluate.
+The first V7 model should be boring, shared (within mode), measurable, and hybrid. Its job is not architecture novelty. Its job is to produce reliable action probabilities and economic-quality estimates for policy to evaluate — independently for each mode scope.

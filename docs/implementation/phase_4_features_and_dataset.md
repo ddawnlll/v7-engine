@@ -9,40 +9,44 @@
 
 ## 1. Purpose
 
-Turn canonical state and hybrid labels into leakage-safe feature rows and walk-forward dataset families.
+Turn canonical state and hybrid labels into leakage-safe feature rows and walk-forward dataset families — **with mode awareness**.
 
-This phase earns the right to train by proving rows are temporally valid, target-valid, and lineage-valid.
+This phase earns the right to train by proving rows are temporally valid, target-valid, scope-valid, and lineage-valid.
 
 ---
 
 ## 2. Stable Rules
 
-- Features come from canonical state only.
+- Features come from canonical state only (shared across modes).
 - No future leakage.
 - Unresolved/invalid targets stay out of strict training by default.
-- Dataset rows preserve feature, label, simulation, and model-scope lineage.
+- Dataset rows preserve feature, label, simulation, model-scope, and **mode** lineage.
+- **Datasets are mode-specific** — do not mix modes in one dataset family.
 - Datasets do not call live exchange, broker, or mutable runtime account paths.
 
 ---
 
-## 3. Workstream A — Feature Builder
+## 3. Workstream A — Feature Builder (Shared Across Modes)
 
-Feature groups:
+Feature groups (computed from canonical state, consumed by all modes):
 
-- 4h primary decision features
-- 1d higher-timeframe context features
-- 1h refinement/timing context features
+- Primary decision features (per mode interval: 4h/1h/15m)
+- Higher-timeframe context features (per mode)
+- Refinement/timing context features (per mode)
 - symbol identity and metadata features
 - regime/volatility features
 - missingness/degradation flags
 
 First phase uses one fused row per evaluated market state, not separate averaged interval predictors.
 
+Features are built once and shared. Labels are mode-specific.
+
 ### Acceptance Criteria
 
 - [ ] grouped feature surfaces exist.
 - [ ] HTF/refinement missingness is explicit.
 - [ ] symbol encoding is stable and versioned.
+- [ ] same feature row can feed all three mode pipelines.
 
 ---
 
@@ -110,11 +114,16 @@ A row can be valid for classification but invalid for one regression target. Tra
 
 ### Scope rule
 
-Do not mix `model_scope`, primary clock, or label horizon inside one supervised dataset family unless a documented multi-scope training mode explicitly exists. First phase assumes scope-compatible datasets.
+Do not mix `model_scope`, primary clock, or label horizon inside one supervised dataset family unless a documented multi-scope training mode explicitly exists. First phase assumes scope-compatible datasets (one dataset per mode).
+
+### Mode field
+
+Each dataset row includes `mode` (SWING | SCALP | AGGRESSIVE_SCALP) as a first-class field. This ensures traceability even when datasets are stored independently.
 
 ### Acceptance Criteria
 
-- [ ] dataset rows carry classification and regression targets.
+- [ ] dataset rows carry classification and regression targets (mode-specific).
+- [ ] mode field is populated correctly.
 - [ ] target validity is per-target and explicit.
 - [ ] lineage is preserved.
 
