@@ -1,0 +1,55 @@
+{
+  "schema_name": "v7_alpha_prediction_row",
+  "schema_version": "alpha_prediction_schema_v1",
+  "model_name": "V7 AlphaForge XGB",
+  "required_keys": [
+    "symbol",
+    "timestamp",
+    "mode",
+    "model_scope",
+    "p_long",
+    "p_short",
+    "p_no_trade",
+    "expected_R_long",
+    "expected_R_short",
+    "confidence",
+    "confidence_kind",
+    "long_alpha_R",
+    "short_alpha_R",
+    "model_artifact_version"
+  ],
+  "probability_sum_tolerance": 0.02,
+  "confidence_kinds": [
+    "calibrated",
+    "raw",
+    "degraded",
+    "unavailable"
+  ],
+  "deterministic_interaction": {
+    "required_when_regime_policy_applied": true,
+    "fields": [
+      "regime_state",
+      "constraint_level",
+      "regime_policy_action",
+      "regime_gate_reason_codes"
+    ],
+    "constraint_levels": [
+      "ADVISORY",
+      "SOFT_BLOCK",
+      "HARD_BLOCK"
+    ],
+    "reason_codes": [
+      "regime_gate_forced_no_trade",
+      "regime_blocked_direction",
+      "regime_threshold_multiplier_applied",
+      "regime_advisory_only",
+      "regime_policy_not_applied"
+    ]
+  },
+  "monitoring_required_slices": [
+    "model_preferred_no_trade",
+    "regime_forced_no_trade",
+    "risk_forced_no_trade",
+    "fallback_safe_no_trade"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema_name": "v7_alpha_label_row",
+  "schema_version": "alpha_label_schema_v1",
+  "required_keys": [
+    "symbol",
+    "timestamp",
+    "mode",
+    "simulation_family_version",
+    "label_interpretation_version",
+    "long_R_net",
+    "short_R_net",
+    "best_action_label",
+    "label_validity"
+  ],
+  "classification_labels": [
+    "LONG_NOW",
+    "SHORT_NOW",
+    "NO_TRADE",
+    "AMBIGUOUS_STATE"
+  ],
+  "regression_targets": [
+    "long_R_net",
+    "short_R_net",
+    "long_mae_R",
+    "short_mae_R",
+    "long_mfe_R",
+    "short_mfe_R",
+    "regret_R",
+    "saved_loss_score",
+    "missed_opportunity_score",
+    "path_quality_score"
+  ],
+  "invalid_training_statuses": [
+    "UNRESOLVED",
+    "INVALIDATED"
+  ],
+  "default_exclusion_policy": {
+    "AMBIGUOUS_STATE": "exclude_from_hard_classification",
+    "UNRESOLVED": "exclude",
+    "INVALIDATED": "exclude"
+  }
+}

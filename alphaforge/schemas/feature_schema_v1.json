@@ -1,0 +1,74 @@
+{
+  "schema_name": "v7_alpha_feature_row",
+  "schema_version": "alpha_feature_schema_v1",
+  "required_keys": [
+    "symbol",
+    "timestamp",
+    "mode",
+    "primary_interval",
+    "context_interval",
+    "refinement_interval",
+    "feature_schema_version"
+  ],
+  "feature_groups": {
+    "primary": [
+      "returns",
+      "candle_geometry",
+      "volatility",
+      "volume_liquidity",
+      "technical"
+    ],
+    "context": [
+      "trend_strength",
+      "volatility_regime",
+      "range_compression",
+      "market_regime"
+    ],
+    "refinement": [
+      "entry_pressure",
+      "micro_momentum",
+      "micro_reversal",
+      "entry_readiness_proxy"
+    ],
+    "unsupervised": [
+      "anomaly_score",
+      "volume_anomaly_score",
+      "regime_id",
+      "liquidity_shock_score"
+    ],
+    "quality": [
+      "missing_context_flags",
+      "stale_flag",
+      "data_quality_flags"
+    ]
+  },
+  "forbidden_fields": [
+    "future_return",
+    "future_R",
+    "label",
+    "realized_outcome",
+    "target_hit",
+    "stop_hit"
+  ],
+  "lineage_fields": [
+    "fold_id",
+    "anomaly_artifact_id",
+    "anomaly_family_version",
+    "anomaly_fit_window_start_utc",
+    "anomaly_fit_window_end_utc",
+    "anomaly_transform_timestamp_utc",
+    "symbol_encoding_family",
+    "symbol_universe_version"
+  ],
+  "anomaly_leakage_guard": {
+    "fit_scope": "fold_train_only",
+    "validation_rule": "anomaly_fit_window_end_utc <= fold_train_end_utc",
+    "global_fit_forbidden": true
+  },
+  "symbol_encoding": {
+    "mvp_family": "symbol_one_hot_v1",
+    "version_field": "symbol_encoding_family",
+    "universe_version_field": "symbol_universe_version",
+    "future_swap_boundary": "feature_layer_only"
+  }
+}

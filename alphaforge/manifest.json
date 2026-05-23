@@ -1,0 +1,153 @@
+{
+  "model_name": "V7 AlphaForge XGB",
+  "model_slug": "v7_alphaforge_xgb",
+  "generated": "2026-05-23",
+  "phase_count": 10,
+  "phases": [
+    {
+      "id": "P0",
+      "title": "Repo Alignment & Alpha Foundations",
+      "depends_on": [],
+      "next": "P1",
+      "contract": "execution_contracts/P0__contract.json",
+      "plan": "phase_plans/P0__repo_alignment_and_alpha_foundations.md"
+    },
+    {
+      "id": "P1",
+      "title": "Contracts & Alpha Data Contract",
+      "depends_on": [
+        "P0"
+      ],
+      "next": "P2",
+      "contract": "execution_contracts/P1__contract.json",
+      "plan": "phase_plans/P1__contracts_and_alpha_data_contract.md"
+    },
+    {
+      "id": "P2",
+      "title": "Runtime Simulation Adapter & R-Label Engine",
+      "depends_on": [
+        "P1"
+      ],
+      "next": "P3",
+      "contract": "execution_contracts/P2__contract.json",
+      "plan": "phase_plans/P2__runtime_simulation_adapter_and_r-label_engine.md"
+    },
+    {
+      "id": "P3",
+      "title": "Multi-Timeframe Feature Engine & Unsupervised Context",
+      "depends_on": [
+        "P1"
+      ],
+      "next": "P4",
+      "contract": "execution_contracts/P3__contract.json",
+      "plan": "phase_plans/P3__multi-timeframe_feature_engine_and_unsupervised_context.md"
+    },
+    {
+      "id": "P4",
+      "title": "Dataset Assembly, Walk-Forward Splits & Label QA",
+      "depends_on": [
+        "P2",
+        "P3"
+      ],
+      "next": "P5",
+      "contract": "execution_contracts/P4__contract.json",
+      "plan": "phase_plans/P4__dataset_assembly,_walk-forward_splits_and_label_qa.md"
+    },
+    {
+      "id": "P5",
+      "title": "XGBoost Hybrid Model Training",
+      "depends_on": [
+        "P4"
+      ],
+      "next": "P6",
+      "contract": "execution_contracts/P5__contract.json",
+      "plan": "phase_plans/P5__xgboost_hybrid_model_training.md"
+    },
+    {
+      "id": "P6",
+      "title": "Calibration, Reliability & Alpha Score Builder",
+      "depends_on": [
+        "P5"
+      ],
+      "next": "P7",
+      "contract": "execution_contracts/P6__contract.json",
+      "plan": "phase_plans/P6__calibration,_reliability_and_alpha_score_builder.md"
+    },
+    {
+      "id": "P7",
+      "title": "V7 Policy, Portfolio & Risk Integration",
+      "depends_on": [
+        "P6"
+      ],
+      "next": "P8",
+      "contract": "execution_contracts/P7__contract.json",
+      "plan": "phase_plans/P7__v7_policy,_portfolio_and_risk_integration.md"
+    },
+    {
+      "id": "P8",
+      "title": "Evaluation, Backtest, Paper & Shadow Validation",
+      "depends_on": [
+        "P5",
+        "P6",
+        "P7"
+      ],
+      "next": "P9",
+      "contract": "execution_contracts/P8__contract.json",
+      "plan": "phase_plans/P8__evaluation,_backtest,_paper_and_shadow_validation.md"
+    },
+    {
+      "id": "P9",
+      "title": "Deployment, Monitoring, Drift, Promotion & Rollback",
+      "depends_on": [
+        "P8"
+      ],
+      "next": "NONE",
+      "contract": "execution_contracts/P9__contract.json",
+      "plan": "phase_plans/P9__deployment,_monitoring,_drift,_promotion_and_rollback.md"
+    }
+  ],
+  "package_version": "v1.1_review_hardened",
+  "review_hardening": {
+    "fold_scoped_anomaly_fitting": true,
+    "regime_override_visibility": true,
+    "symbol_encoding_future_proofing": true,
+    "scalp_interval_authority": "SCALP primary=1h/context=4h/refinement=15m"
+  },
+  "files": [
+    "AI_SUMMARY__V7_ALPHAFORGE_XGB.md",
+    "HARDENING_REVIEW_FIXES.md",
+    "MODEL_NAME_RECOMMENDATION.md",
+    "PHASE_INDEX.md",
+    "PHASE_PLANS_COMBINED.md",
+    "README.md",
+    "SOURCE_ALIGNMENT.md",
+    "checklists/execution_checklist.md",
+    "configs/v7_alpha_defaults.json",
+    "diagrams/architecture_mermaid.md",
+    "diagrams/label_generation_mermaid.md",
+    "execution_contracts/P0__contract.json",
+    "execution_contracts/P1__contract.json",
+    "execution_contracts/P2__contract.json",
+    "execution_contracts/P3__contract.json",
+    "execution_contracts/P4__contract.json",
+    "execution_contracts/P5__contract.json",
+    "execution_contracts/P6__contract.json",
+    "execution_contracts/P7__contract.json",
+    "execution_contracts/P8__contract.json",
+    "execution_contracts/P9__contract.json",
+    "manifest.json",
+    "phase_plans/P0__repo_alignment_and_alpha_foundations.md",
+    "phase_plans/P1__contracts_and_alpha_data_contract.md",
+    "phase_plans/P2__runtime_simulation_adapter_and_r-label_engine.md",
+    "phase_plans/P3__multi-timeframe_feature_engine_and_unsupervised_context.md",
+    "phase_plans/P4__dataset_assembly,_walk-forward_splits_and_label_qa.md",
+    "phase_plans/P5__xgboost_hybrid_model_training.md",
+    "phase_plans/P6__calibration,_reliability_and_alpha_score_builder.md",
+    "phase_plans/P7__v7_policy,_portfolio_and_risk_integration.md",
+    "phase_plans/P8__evaluation,_backtest,_paper_and_shadow_validation.md",
+    "phase_plans/P9__deployment,_monitoring,_drift,_promotion_and_rollback.md",
+    "schemas/feature_schema_v1.json",
+    "schemas/label_schema_v1.json",
+    "schemas/prediction_schema_v1.json"
+  ]
+}

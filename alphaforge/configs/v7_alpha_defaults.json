@@ -1,0 +1,158 @@
+{
+  "model_name": "V7 AlphaForge XGB",
+  "model_slug": "v7_alphaforge_xgb",
+  "universe_size_mvp": 20,
+  "modes": {
+    "SWING": {
+      "primary_interval": "4h",
+      "context_interval": "1d",
+      "refinement_interval": "1h",
+      "max_holding_bars": [
+        12,
+        30
+      ],
+      "stop_atr": [
+        2.0,
+        2.5
+      ],
+      "target_atr": [
+        2.0,
+        3.0
+      ],
+      "ambiguity_gap_R": 0.2,
+      "min_action_edge_R": 0.35,
+      "no_trade_tendency": "LOW"
+    },
+    "SCALP": {
+      "primary_interval": "1h",
+      "context_interval": "4h",
+      "refinement_interval": "15m",
+      "max_holding_bars": [
+        3,
+        12
+      ],
+      "stop_atr": [
+        1.5,
+        2.0
+      ],
+      "target_atr": [
+        1.5,
+        2.0
+      ],
+      "ambiguity_gap_R": 0.1,
+      "min_action_edge_R": 0.15,
+      "no_trade_tendency": "MEDIUM"
+    },
+    "AGGRESSIVE_SCALP": {
+      "primary_interval": "15m",
+      "context_interval": "1h",
+      "refinement_interval": "5m",
+      "max_holding_bars": [
+        1,
+        5
+      ],
+      "stop_atr": [
+        1.0,
+        1.5
+      ],
+      "target_atr": [
+        1.0,
+        1.5
+      ],
+      "ambiguity_gap_R": 0.05,
+      "min_action_edge_R": 0.08,
+      "no_trade_tendency": "HIGH"
+    }
+  },
+  "training": {
+    "split_family": "walk_forward_6fold",
+    "min_train_window_months": 12,
+    "validation_window_months": 2,
+    "holdout_tail_months": 1,
+    "primary_model_family": "xgboost"
+  },
+  "calibration": {
+    "per_mode": true,
+    "per_symbol_first_phase": false,
+    "confidence_kind_required": true
+  },
+  "deployment": {
+    "first_live_eligible_requires_shadow": true,
+    "kill_switch_required": true,
+    "rollback_bundle_scope": "per_mode"
+  },
+  "review_hardening_version": "v1.1_review_hardened",
+  "interval_authority": {
+    "resolve_from_config_only": true,
+    "hardcoded_intervals_forbidden_outside_tests": true,
+    "authoritative_modes": {
+      "SWING": {
+        "primary_interval": "4h",
+        "context_interval": "1d",
+        "refinement_interval": "1h"
+      },
+      "SCALP": {
+        "primary_interval": "1h",
+        "context_interval": "4h",
+        "refinement_interval": "15m"
+      },
+      "AGGRESSIVE_SCALP": {
+        "primary_interval": "15m",
+        "context_interval": "1h",
+        "refinement_interval": "5m"
+      }
+    },
+    "scalp_primary_interval": "1h",
+    "scalp_15m_meaning": "SCALP refinement interval and AGGRESSIVE_SCALP primary interval only"
+  },
+  "anomaly_context": {
+    "enabled": true,
+    "role": "auxiliary_feature_only",
+    "fit_scope": "walk_forward_fold_train_only",
+    "global_full_history_fit_forbidden": true,
+    "persist_artifact_per_fold": true,
+    "required_lineage_fields": [
+      "fold_id",
+      "anomaly_artifact_id",
+      "anomaly_family_version",
+      "anomaly_fit_window_start_utc",
+      "anomaly_fit_window_end_utc",
+      "anomaly_transform_timestamp_utc"
+    ],
+    "dataset_boundary_check": "reject_if_anomaly_fit_window_crosses_fold_boundary"
+  },
+  "regime_policy_visibility": {
+    "regime_modifiers_allowed": true,
+    "silent_regime_veto_forbidden": true,
+    "required_constraint_levels": [
+      "ADVISORY",
+      "SOFT_BLOCK",
+      "HARD_BLOCK"
+    ],
+    "required_reason_codes": [
+      "regime_gate_forced_no_trade",
+      "regime_blocked_direction",
+      "regime_threshold_multiplier_applied",
+      "regime_advisory_only",
+      "regime_policy_not_applied"
+    ],
+    "monitoring_slices_required": [
+      "model_preferred_no_trade",
+      "regime_forced_no_trade",
+      "risk_forced_no_trade",
+      "fallback_safe_no_trade"
+    ]
+  },
+  "symbol_encoding": {
+    "first_phase_family": "symbol_one_hot_v1",
+    "symbol_universe_version_required": true,
+    "encoding_family_version_required": true,
+    "universe_change_requires_schema_or_encoding_bump": true,
+    "future_families": [
+      "symbol_target_encoding_v1",
+      "symbol_cluster_encoding_v1",
+      "symbol_embedding_features_v1"
+    ],
+    "simulation_label_contract_independent_of_encoding": true
+  }
+}

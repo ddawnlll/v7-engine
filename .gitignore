@@ -1,0 +1,71 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+*.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Environments ---
+.venv/
+venv/
+env/
+.conda/
+*.env
+.envrc
+
+# --- IDE / Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.orig
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- Data (large, generated, or sensitive) ---
+data/
+
+# --- Results / Outputs (generated at runtime) ---
+results/
+!results/.gitkeep
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Notebooks (checkpoints are noise) ---
+.ipynb_checkpoints/
+
+# --- Pi coding agent (local config, not project) ---
+.pi/
+
+# --- Config overrides (local, not committed) ---
+config.local.yaml
+config.local.yml
+config.local.json
+*.local.yaml
+*.local.yml
+*.local.json
+
+# --- Model artifacts (large, regenerated) ---
+models/
+!models/.gitkeep
+artifacts/
+
+# --- Monitoring / dashboard local state ---
+.grafana/
