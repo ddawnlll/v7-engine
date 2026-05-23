@@ -59,18 +59,17 @@ def generate_folds(
             train_start_ms = dataset_start
 
         train_duration = current_train_end - train_start_ms
-        if train_duration < min_train_ms:
-            break
+        if train_duration >= min_train_ms:
+            fold = Fold(
+                fold_id=fold_id,
+                train_start=train_start_ms,
+                train_end=current_train_end,
+                val_start=current_train_end,
+                val_end=current_train_end + val_ms,
+            )
+            folds.append(fold)
+            fold_id += 1
 
-        fold = Fold(
-            fold_id=fold_id,
-            train_start=train_start_ms,
-            train_end=current_train_end,
-            val_start=current_train_end,
-            val_end=current_train_end + val_ms,
-        )
-        folds.append(fold)
-        fold_id += 1
         current_train_end += step_ms
 
     if not folds:

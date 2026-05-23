@@ -37,7 +37,7 @@ class DataQualityReport:
     """Quality assessment for a market data fetch operation."""
     total_expected: int
     total_received: int
-    gap_count: int
+    gap_count: int = 0
     duplicate_count: int = 0
     is_complete: bool = True
     warnings: list[str] = field(default_factory=list)
