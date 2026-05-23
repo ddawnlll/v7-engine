@@ -23,7 +23,7 @@ warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV_DIR="$PROJECT_DIR/.venv"
-PYTHON_REQUIRED="3.11"
+PYTHON_REQUIRED="3.12"
 
 echo ""
 echo -e "${CYAN}══════════════════════════════════════════════════${NC}"
@@ -45,7 +45,7 @@ PY_VER=$($PYTHON --version 2>&1 | grep -oP '\d+\.\d+')
 MAJOR=$(echo "$PY_VER" | cut -d. -f1)
 MINOR=$(echo "$PY_VER" | cut -d. -f2)
 if [ "$MAJOR" -lt 3 ] || { [ "$MAJOR" -eq 3 ] && [ "$MINOR" -lt 11 ]; }; then
-    fail "Python >= 3.11 required (found $PY_VER)"
+    fail "Python >= 3.12 required (found $PY_VER)"
 fi
 pass "Python $PY_VER found at $PYTHON"
 
