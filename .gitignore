@@ -38,7 +38,12 @@ ehthumbs.db
 Thumbs.db
 
 # --- Data (large, generated, or sensitive) ---
-data/
+data/raw/*
+data/processed/*
+data/cache/*
+data/results/*
+data/models/*
+!data/**/.gitkeep
 
 # --- Results / Outputs (generated at runtime) ---
 results/
