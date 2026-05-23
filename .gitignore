@@ -46,11 +46,11 @@ data/models/*
 !data/**/.gitkeep
 
 # --- Results / Outputs (generated at runtime) ---
-results/
+/results/
 !results/.gitkeep
 
 # --- Logs ---
-logs/
+/logs/
 *.log
 
 # --- Notebooks (checkpoints are noise) ---
@@ -68,9 +68,9 @@ config.local.json
 *.local.json
 
 # --- Model artifacts (large, regenerated) ---
-models/
-!models/.gitkeep
-artifacts/
+/models/
+!/models/.gitkeep
+/artifacts/
 
 # --- Monitoring / dashboard local state ---
 .grafana/
