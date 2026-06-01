@@ -1,0 +1,62 @@
+{
+  "$schema": "https://raw.githubusercontent.com/v7-engine/contracts/main/compatibility.schema.json",
+  "schema_version": "1.0.0",
+  "description": "Version compatibility matrix for cross-domain contract pairs.",
+  "compatibility_rules": [
+    {
+      "source_contract": "SimulationOutput",
+      "target_contract": "AlphaForgeLabel",
+      "compatible_versions": [
+        { "simulation_output": "1.0.0", "alphaforge_label": "1.0.0" }
+      ],
+      "breaking_change_rules": {
+        "field_removal": "MAJOR bump on source; target must update or compatibility entry removed",
+        "field_rename": "MAJOR bump on source; target mapping must be updated",
+        "field_semantic_change": "MAJOR bump on source; target consumers must be revalidated",
+        "new_optional_field": "MINOR bump on source; target may ignore",
+        "new_required_field": "MAJOR bump on source; target must provide the field"
+      },
+      "required_validation": [
+        "schema_parity_test",
+        "fixture_roundtrip",
+        "mapping_field_existence"
+      ]
+    },
+    {
+      "source_contract": "SimulationOutput",
+      "target_contract": "TradeOutcome",
+      "compatible_versions": [
+        { "simulation_output": "1.0.0", "trade_outcome": "1.0.0" }
+      ],
+      "breaking_change_rules": {
+        "field_removal": "MAJOR bump on source; target must update or compatibility entry removed",
+        "field_rename": "MAJOR bump on source; target mapping must be updated",
+        "field_semantic_change": "MAJOR bump on source; target consumers must be revalidated",
+        "new_optional_field": "MINOR bump on source; target may ignore",
+        "new_required_field": "MAJOR bump on source; target must provide the field"
+      },
+      "required_validation": [
+        "schema_parity_test",
+        "fixture_roundtrip",
+        "mapping_field_existence"
+      ]
+    },
+    {
+      "source_contract": "SimulationProfile",
+      "target_contract": "SimulationOutput",
+      "compatible_versions": [
+        { "simulation_profile": "1.0.0", "simulation_output": "1.0.0" }
+      ],
+      "breaking_change_rules": {
+        "field_removal": "MAJOR bump on source; output lineage must be updated",
+        "field_rename": "MAJOR bump on source; output lineage must be updated",
+        "field_semantic_change": "MAJOR bump on source; output lineage must be updated",
+        "new_optional_field": "MINOR bump on source; output may ignore",
+        "new_required_field": "MAJOR bump on source; output must include in lineage"
+      },
+      "required_validation": [
+        "schema_parity_test"
+      ]
+    }
+  ]
+}

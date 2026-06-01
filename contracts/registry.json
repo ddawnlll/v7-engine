@@ -1,0 +1,77 @@
+{
+  "$schema": "https://raw.githubusercontent.com/v7-engine/contracts/main/registry.schema.json",
+  "schema_version": "1.0.0",
+  "description": "Root-level contract registry for V7 Engine monorepo. Every cross-domain contract object is listed here.",
+  "contracts": [
+    {
+      "object_name": "SimulationProfile",
+      "owner_domain": "simulation",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/simulation_profile.schema.json",
+      "fixture_file": null,
+      "description": "Mode-specific simulation configuration (SWING, SCALP, AGGRESSIVE_SCALP)",
+      "source_authority": [
+        "simulation/docs/contracts.md",
+        "simulation/docs/profiles.md"
+      ],
+      "producers": [
+        "simulation"
+      ],
+      "consumers": [
+        "simulation"
+      ]
+    },
+    {
+      "object_name": "SimulationOutput",
+      "owner_domain": "simulation",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/simulation_output.schema.json",
+      "fixture_file": "contracts/fixtures/simulation_output_minimal.json",
+      "description": "Comparative economic outcome produced by simulation engine",
+      "source_authority": [
+        "simulation/docs/contracts.md"
+      ],
+      "producers": [
+        "simulation"
+      ],
+      "consumers": [
+        "alphaforge",
+        "v7"
+      ]
+    },
+    {
+      "object_name": "AlphaForgeLabel",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge_label.schema.json",
+      "fixture_file": "contracts/fixtures/alphaforge_label_minimal.json",
+      "description": "Training label row produced by AlphaForge label engine from simulation outputs",
+      "source_authority": [
+        "alphaforge/docs/schemas/label_schema_v1.json"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "alphaforge"
+      ]
+    },
+    {
+      "object_name": "TradeOutcome",
+      "owner_domain": "v7",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/trade_outcome.schema.json",
+      "fixture_file": "contracts/fixtures/trade_outcome_minimal.json",
+      "description": "Normalized lifecycle consequence record for one DecisionEvent",
+      "source_authority": [
+        "v7/docs/contracts/trade_outcome.md"
+      ],
+      "producers": [
+        "v7"
+      ],
+      "consumers": [
+        "v7"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://v7-engine/contracts/mappings/mapping.schema.json",
+  "schema_version": "1.0.0",
+  "description": "Field-level mapping from SimulationOutput to AlphaForgeLabel. Derived from simulation/docs/contracts.md 'Relationship to AlphaForge Label Schemas' table.",
+  "source_contract": "SimulationOutput",
+  "target_contract": "AlphaForgeLabel",
+  "source_authority": "simulation/docs/contracts.md",
+  "mappings": [
+    {
+      "source": "long_outcome.realized_r_net",
+      "target": "long_R_net",
+      "meaning": "Net R for LONG_NOW action",
+      "required": true
+    },
+    {
+      "source": "short_outcome.realized_r_net",
+      "target": "short_R_net",
+      "meaning": "Net R for SHORT_NOW action",
+      "required": true
+    },
+    {
+      "source": "best_action",
+      "target": "best_action_label",
+      "meaning": "Best comparative action classification label",
+      "required": true
+    },
+    {
+      "source": "no_trade_outcome.saved_loss_score",
+      "target": "saved_loss_score",
+      "meaning": "Normalized saved loss score from NO_TRADE outcome",
+      "required": true
+    },
+    {
+      "source": "no_trade_outcome.missed_opportunity_score",
+      "target": "missed_opportunity_score",
+      "meaning": "Normalized missed opportunity score from NO_TRADE outcome",
+      "required": true
+    },
+    {
+      "source": "action_gap_r",
+      "target": "action_gap_R",
+      "meaning": "Utility gap between best and second-best action",
+      "required": true
+    },
+    {
+      "source": "long_outcome.path_metrics.path_quality_score",
+      "target": "path_quality_score",
+      "meaning": "Path quality score for best action (uses long_outcome if LONG_NOW is best; otherwise short_outcome)",
+      "required": true
+    },
+    {
+      "source": "long_outcome.path_metrics.mfe_r",
+      "target": "long_mfe_R",
+      "meaning": "Maximum favourable excursion in R terms for LONG_NOW",
+      "required": false
+    },
+    {
+      "source": "short_outcome.path_metrics.mfe_r",
+      "target": "short_mfe_R",
+      "meaning": "Maximum favourable excursion in R terms for SHORT_NOW",
+      "required": false
+    },
+    {
+      "source": "long_outcome.path_metrics.mae_r",
+      "target": "long_mae_R",
+      "meaning": "Maximum adverse excursion in R terms for LONG_NOW",
+      "required": false
+    },
+    {
+      "source": "short_outcome.path_metrics.mae_r",
+      "target": "short_mae_R",
+      "meaning": "Maximum adverse excursion in R terms for SHORT_NOW",
+      "required": false
+    },
+    {
+      "source": "regret_r",
+      "target": "regret_R",
+      "meaning": "Regret relative to best action",
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "simulation_run_id": "sim_2026_06_01_001",
+  "symbol": "BTCUSDT",
+  "decision_timestamp": "2026-06-01T12:00:00Z",
+  "mode": "SWING",
+  "primary_interval": "4h",
+  "resolution_status": "COMPLETE",
+  "long_outcome": {
+    "action": "LONG_NOW",
+    "realized_r_gross": 2.1,
+    "realized_r_net": 1.82,
+    "fee_cost_r": 0.12,
+    "slippage_cost_r": 0.16,
+    "total_cost_r": 0.28,
+    "exit_reason": "TARGET_HIT",
+    "exit_price": 67890.50,
+    "exit_bar_index": 7,
+    "hold_duration_bars": 7,
+    "action_utility": 1.82,
+    "path_metrics": {
+      "mfe": 3120.25,
+      "mae": 450.80,
+      "mfe_r": 2.5,
+      "mae_r": -0.35,
+      "time_to_mfe": 5,
+      "time_to_mae": 2,
+      "path_quality_score": 0.82,
+      "path_quality_bucket": "HIGH"
+    }
+  },
+  "short_outcome": {
+    "action": "SHORT_NOW",
+    "realized_r_gross": -0.95,
+    "realized_r_net": -1.23,
+    "fee_cost_r": 0.12,
+    "slippage_cost_r": 0.16,
+    "total_cost_r": 0.28,
+    "exit_reason": "STOP_HIT",
+    "exit_price": 65300.00,
+    "exit_bar_index": 3,
+    "hold_duration_bars": 3,
+    "action_utility": -1.23,
+    "path_metrics": {
+      "mfe": 100.50,
+      "mae": 1200.00,
+      "mfe_r": 0.08,
+      "mae_r": -0.95,
+      "time_to_mfe": 1,
+      "time_to_mae": 3,
+      "path_quality_score": 0.15,
+      "path_quality_bucket": "LOW"
+    }
+  },
+  "no_trade_outcome": {
+    "saved_loss_r": 1.23,
+    "saved_loss_score": 0.62,
+    "missed_opportunity_r": 1.82,
+    "missed_opportunity_score": 0.73,
+    "no_trade_quality": "MISSED_OPPORTUNITY",
+    "was_correct_skip": false
+  },
+  "best_action": "LONG_NOW",
+  "second_best_action": "NO_TRADE",
+  "action_gap_r": 1.82,
+  "regret_r": 0,
+  "is_ambiguous": false,
+  "lineage": {
+    "simulation_family_version": "simfam-1.0.0",
+    "simulation_profile_version": "swing_profile-1.0.0",
+    "cost_model_version": "cost-1.0.0",
+    "fee_model_version": "fee-1.0.0",
+    "slippage_model_version": "slippage-1.0.0",
+    "horizon_family": "swing_horizon",
+    "stop_family": "atr_wide",
+    "target_family": "atr_wide",
+    "time_exit_family": "hold_then_exit",
+    "adapter_kind": "TRAINING"
+  }
+}

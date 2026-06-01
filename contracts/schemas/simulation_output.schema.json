@@ -1,0 +1,297 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/simulation_output.schema.json",
+  "title": "SimulationOutput",
+  "description": "Comparative economic outcome produced by the simulation engine. Contains LONG_NOW, SHORT_NOW, and NO_TRADE outcomes with path metrics, cost breakdown, and action selection.",
+  "type": "object",
+  "required": [
+    "simulation_run_id",
+    "symbol",
+    "decision_timestamp",
+    "mode",
+    "primary_interval",
+    "resolution_status",
+    "long_outcome",
+    "short_outcome",
+    "no_trade_outcome",
+    "best_action",
+    "action_gap_r",
+    "regret_r",
+    "is_ambiguous",
+    "lineage"
+  ],
+  "properties": {
+    "simulation_run_id": {
+      "type": "string",
+      "description": "Unique identifier for this simulation run."
+    },
+    "symbol": {
+      "type": "string",
+      "description": "Trading symbol, e.g. 'BTCUSDT'."
+    },
+    "decision_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp of the decision point."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SWING", "SCALP", "AGGRESSIVE_SCALP"]
+    },
+    "primary_interval": {
+      "type": "string",
+      "description": "Primary candle interval."
+    },
+    "resolution_status": {
+      "type": "string",
+      "enum": ["COMPLETE", "UNRESOLVED", "INVALIDATED"],
+      "description": "Whether the simulation path resolved completely."
+    },
+    "invalidity_reason": {
+      "type": "string",
+      "description": "Reason for invalidation, present only if INVALIDATED."
+    },
+    "long_outcome": {
+      "$ref": "#/definitions/ActionOutcome",
+      "description": "Economic outcome of LONG_NOW action."
+    },
+    "short_outcome": {
+      "$ref": "#/definitions/ActionOutcome",
+      "description": "Economic outcome of SHORT_NOW action."
+    },
+    "no_trade_outcome": {
+      "$ref": "#/definitions/NoTradeOutcome",
+      "description": "Quality assessment of NO_TRADE action."
+    },
+    "best_action": {
+      "type": "string",
+      "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE", "AMBIGUOUS_STATE"],
+      "description": "The action with the highest comparative utility."
+    },
+    "second_best_action": {
+      "type": "string",
+      "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE", null]
+    },
+    "action_gap_r": {
+      "type": "number",
+      "description": "Utility gap between best and second-best action in R terms."
+    },
+    "regret_r": {
+      "type": "number",
+      "description": "Regret relative to best action in R terms."
+    },
+    "is_ambiguous": {
+      "type": "boolean",
+      "description": "True if action_gap_r is below ambiguity_margin."
+    },
+    "lineage": {
+      "$ref": "#/definitions/SimulationLineage",
+      "description": "Version and provenance metadata."
+    },
+    "monte_carlo_run_id": {
+      "type": "string",
+      "description": "Present only for Monte Carlo diagnostic runs."
+    }
+  },
+  "definitions": {
+    "ActionOutcome": {
+      "type": "object",
+      "required": [
+        "action",
+        "realized_r_gross",
+        "realized_r_net",
+        "fee_cost_r",
+        "slippage_cost_r",
+        "total_cost_r",
+        "exit_reason",
+        "path_metrics"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["LONG_NOW", "SHORT_NOW"]
+        },
+        "realized_r_gross": {
+          "type": "number",
+          "description": "Gross R before fees/slippage."
+        },
+        "realized_r_net": {
+          "type": "number",
+          "description": "Net R after fees/slippage."
+        },
+        "fee_cost_r": {
+          "type": "number",
+          "description": "Fee cost in R terms."
+        },
+        "slippage_cost_r": {
+          "type": "number",
+          "description": "Slippage cost in R terms."
+        },
+        "total_cost_r": {
+          "type": "number",
+          "description": "Total cost in R terms (fee + slippage)."
+        },
+        "exit_reason": {
+          "type": "string",
+          "enum": ["STOP_HIT", "TARGET_HIT", "TIME_EXIT", "HORIZON_END", "UNRESOLVED", "INVALIDATED"],
+          "description": "How this action's path exited."
+        },
+        "exit_price": {
+          "type": "number"
+        },
+        "exit_bar_index": {
+          "type": "integer"
+        },
+        "hold_duration_bars": {
+          "type": "integer"
+        },
+        "action_utility": {
+          "type": "number"
+        },
+        "path_metrics": {
+          "$ref": "#/definitions/PathMetrics"
+        }
+      }
+    },
+    "NoTradeOutcome": {
+      "type": "object",
+      "required": [
+        "saved_loss_r",
+        "saved_loss_score",
+        "missed_opportunity_r",
+        "missed_opportunity_score",
+        "no_trade_quality",
+        "was_correct_skip"
+      ],
+      "properties": {
+        "saved_loss_r": {
+          "type": "number",
+          "description": "Loss avoided by not taking the worst directional action."
+        },
+        "saved_loss_score": {
+          "type": "number",
+          "description": "0-1 normalized saved loss score."
+        },
+        "missed_opportunity_r": {
+          "type": "number",
+          "description": "Gain missed by not taking the best directional action."
+        },
+        "missed_opportunity_score": {
+          "type": "number",
+          "description": "0-1 normalized missed opportunity score."
+        },
+        "no_trade_quality": {
+          "type": "string",
+          "enum": ["CORRECT_NO_TRADE", "SAVED_LOSS", "MISSED_OPPORTUNITY", "AMBIGUOUS_NO_TRADE"],
+          "description": "Quality classification of this NO_TRADE outcome."
+        },
+        "was_correct_skip": {
+          "type": "boolean",
+          "description": "True if NO_TRADE was the correct decision."
+        }
+      }
+    },
+    "PathMetrics": {
+      "type": "object",
+      "required": [
+        "mfe_r",
+        "mae_r",
+        "path_quality_score",
+        "path_quality_bucket"
+      ],
+      "properties": {
+        "mfe": {
+          "type": "number",
+          "description": "Maximum favourable excursion in price terms."
+        },
+        "mae": {
+          "type": "number",
+          "description": "Maximum adverse excursion in price terms."
+        },
+        "mfe_r": {
+          "type": "number",
+          "description": "MFE in R terms."
+        },
+        "mae_r": {
+          "type": "number",
+          "description": "MAE in R terms."
+        },
+        "time_to_mfe": {
+          "type": "integer",
+          "description": "Bars from entry to MFE."
+        },
+        "time_to_mae": {
+          "type": "integer",
+          "description": "Bars from entry to MAE."
+        },
+        "path_quality_score": {
+          "type": "number",
+          "description": "0-1 composite path quality score."
+        },
+        "path_quality_bucket": {
+          "type": "string",
+          "enum": ["HIGH", "MEDIUM", "LOW"],
+          "description": "Bucket classification of path quality."
+        }
+      }
+    },
+    "SimulationLineage": {
+      "type": "object",
+      "required": [
+        "simulation_family_version",
+        "simulation_profile_version",
+        "cost_model_version",
+        "fee_model_version",
+        "slippage_model_version",
+        "horizon_family",
+        "stop_family",
+        "target_family",
+        "time_exit_family",
+        "adapter_kind"
+      ],
+      "properties": {
+        "simulation_family_version": {
+          "type": "string",
+          "description": "Version of the simulation engine semantics."
+        },
+        "simulation_profile_version": {
+          "type": "string",
+          "description": "Version of the mode-specific profile used."
+        },
+        "cost_model_version": {
+          "type": "string",
+          "description": "Version of the cost model."
+        },
+        "fee_model_version": {
+          "type": "string",
+          "description": "Version of the fee computation model."
+        },
+        "slippage_model_version": {
+          "type": "string",
+          "description": "Version of the slippage computation model."
+        },
+        "horizon_family": {
+          "type": "string",
+          "description": "Horizon family identifier."
+        },
+        "stop_family": {
+          "type": "string",
+          "description": "Stop family identifier."
+        },
+        "target_family": {
+          "type": "string",
+          "description": "Target family identifier."
+        },
+        "time_exit_family": {
+          "type": "string",
+          "description": "Time exit family identifier."
+        },
+        "adapter_kind": {
+          "type": "string",
+          "enum": ["TRAINING", "EVALUATION", "REPLAY", "PAPER", "LIVE_OUTCOME"],
+          "description": "Which adapter produced this simulation output."
+        }
+      }
+    }
+  }
+}

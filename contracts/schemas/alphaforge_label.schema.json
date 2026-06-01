@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/alphaforge_label.schema.json",
+  "title": "AlphaForgeLabel",
+  "description": "Training label row produced by AlphaForge from simulation outputs. Contains classification label, regression targets for R returns, and path quality metrics.",
+  "type": "object",
+  "required": [
+    "symbol",
+    "timestamp",
+    "mode",
+    "simulation_family_version",
+    "label_interpretation_version",
+    "long_R_net",
+    "short_R_net",
+    "best_action_label",
+    "label_validity"
+  ],
+  "properties": {
+    "symbol": {
+      "type": "string",
+      "description": "Trading symbol, e.g. 'BTCUSDT'."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC decision timestamp."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SWING", "SCALP", "AGGRESSIVE_SCALP"]
+    },
+    "simulation_family_version": {
+      "type": "string",
+      "description": "Version of simulation engine that produced these labels."
+    },
+    "label_interpretation_version": {
+      "type": "string",
+      "description": "Version of the label interpretation family."
+    },
+    "long_R_net": {
+      "type": "number",
+      "description": "Net R for LONG_NOW action (from simulation ActionOutcome.realized_r_net)."
+    },
+    "short_R_net": {
+      "type": "number",
+      "description": "Net R for SHORT_NOW action (from simulation ActionOutcome.realized_r_net)."
+    },
+    "best_action_label": {
+      "type": "string",
+      "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE", "AMBIGUOUS_STATE"],
+      "description": "Classification label: the best comparative action."
+    },
+    "label_validity": {
+      "type": "string",
+      "description": "Derived from resolution_status and is_ambiguous. Controls whether this row is used for training."
+    },
+    "long_mae_R": {
+      "type": "number",
+      "description": "MAE in R terms for LONG_NOW."
+    },
+    "short_mae_R": {
+      "type": "number",
+      "description": "MAE in R terms for SHORT_NOW."
+    },
+    "long_mfe_R": {
+      "type": "number",
+      "description": "MFE in R terms for LONG_NOW."
+    },
+    "short_mfe_R": {
+      "type": "number",
+      "description": "MFE in R terms for SHORT_NOW."
+    },
+    "regret_R": {
+      "type": "number",
+      "description": "Regret relative to best action in R terms."
+    },
+    "saved_loss_score": {
+      "type": "number",
+      "description": "Saved loss score from NoTradeOutcome."
+    },
+    "missed_opportunity_score": {
+      "type": "number",
+      "description": "Missed opportunity score from NoTradeOutcome."
+    },
+    "path_quality_score": {
+      "type": "number",
+      "description": "Path quality score for the best action."
+    },
+    "action_gap_R": {
+      "type": "number",
+      "description": "Gap between best and second-best action in R terms."
+    }
+  }
+}

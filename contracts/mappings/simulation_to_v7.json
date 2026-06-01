@@ -1,0 +1,76 @@
+{
+  "$schema": "https://v7-engine/contracts/mappings/mapping.schema.json",
+  "schema_version": "1.0.0",
+  "description": "Field-level mapping from SimulationOutput to TradeOutcome. Derived from simulation/docs/contracts.md 'Relationship to V7 TradeOutcome' table.",
+  "source_contract": "SimulationOutput",
+  "target_contract": "TradeOutcome",
+  "source_authority": "simulation/docs/contracts.md",
+  "mappings": [
+    {
+      "source": "long_outcome.realized_r_net",
+      "target": "realized_r",
+      "meaning": "Realized net R from best action outcome (best_action determines long vs short)",
+      "required": true
+    },
+    {
+      "source": "long_outcome.fee_cost_r",
+      "target": "realized_r",
+      "meaning": "Fee cost in R terms from best action (combined with slippage for fees_paid)",
+      "required": true
+    },
+    {
+      "source": "long_outcome.exit_reason",
+      "target": "exit_reason",
+      "meaning": "Exit reason from best action's outcome",
+      "required": true
+    },
+    {
+      "source": "long_outcome.path_metrics.mfe_r",
+      "target": "mfe_r",
+      "meaning": "MFE in R terms for best action",
+      "required": true
+    },
+    {
+      "source": "long_outcome.path_metrics.mae_r",
+      "target": "mae_r",
+      "meaning": "MAE in R terms for best action",
+      "required": true
+    },
+    {
+      "source": "best_action",
+      "target": "counterfactual_best_action",
+      "meaning": "Best comparative action",
+      "required": true
+    },
+    {
+      "source": "regret_r",
+      "target": "regret_r",
+      "meaning": "Regret relative to best action",
+      "required": true
+    },
+    {
+      "source": "no_trade_outcome.saved_loss_score",
+      "target": "saved_loss_score",
+      "meaning": "Normalized saved loss score from NoTradeOutcome",
+      "required": false
+    },
+    {
+      "source": "no_trade_outcome.missed_opportunity_score",
+      "target": "missed_opportunity_score",
+      "meaning": "Normalized missed opportunity score from NoTradeOutcome",
+      "required": false
+    },
+    {
+      "source": "long_outcome.path_metrics.path_quality_score",
+      "target": "path_quality_score",
+      "meaning": "Path quality score for best action",
+      "required": false
+    },
+    {
+      "source": "lineage.horizon_family",
+      "target": "horizon_family",
+      "meaning": "Horizon family from simulation lineage",
+      "required": true
+    }
+  ]
+}

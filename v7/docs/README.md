@@ -80,6 +80,29 @@ Answers:
 
 ---
 
+## Cross-Domain Contract Governance
+
+V7's cross-domain contract surface is now centralized in the **root contract authority**.
+
+| What | Where |
+|---|---|
+| **Canonical cross-domain contract list** | `contracts/registry.json` |
+| **TradeOutcome JSON Schema** | `contracts/schemas/trade_outcome.schema.json` |
+| **SimulationOutput schema (input to V7 adapters)** | `contracts/schemas/simulation_output.schema.json` |
+| **SimulationOutput → TradeOutcome field mapping** | `contracts/mappings/simulation_to_v7.json` |
+| **Version compatibility rules** | `contracts/compatibility.json` |
+| **Root cross-domain governance** | `docs/architecture/governance.md` |
+| **V7 adapter stub (future adapter boundary)** | `integration/adapters/v7_adapter.py` |
+| **System-level tests** | `integration/tests/` (registry, schema parity, boundary, smoke) |
+
+### Key Governance Rules for V7
+
+1. **V7 owns runtime/policy semantics** — runtime orchestration, persistence, lifecycle, DecisionEvent, TradeOutcome normalization.
+2. **V7 must NOT duplicate simulation economic truth.** The `contracts/schemas/simulation_output.schema.json` is the canonical SimulationOutput; V7 consumes it via adapters.
+3. **V7 must NOT import simulation or alphaforge internals.** Cross-domain communication happens through `integration/adapters/` only.
+4. **TradeOutcome schema in `contracts/schemas/trade_outcome.schema.json`** is the canonical cross-domain definition. V7-local contract docs (`v7/docs/contracts/trade_outcome.md`) remain authoritative for V7-internal semantics.
+5. **V7 may host simulation execution via adapters** but must not duplicate simulation's cost/horizon/exit logic.
+
 ## Core Position
 
 V7 is not a greenfield reset.

@@ -9,6 +9,24 @@ This document is a lossless dense synthesis of every V7 markdown file in the rep
 **File count synthesized:** ~45 markdown files
 **Source tree:** /home/erfolg/src/v7-engine/docs/
 
+### Cross-Domain Authority Notice
+
+The root cross-domain contract authority now lives in **`contracts/`** at the repo root.
+The root cross-domain governance lives in **`docs/architecture/governance.md`**.
+
+This document is a **V7-local** authority summary. For cross-domain contract definitions
+(TradeOutcome schema, SimulationOutput schema, field mappings, version compatibility), consult:
+
+- `contracts/registry.json` — master contract list
+- `contracts/schemas/trade_outcome.schema.json` — canonical TradeOutcome schema
+- `contracts/schemas/simulation_output.schema.json` — canonical SimulationOutput schema
+- `contracts/mappings/simulation_to_v7.json` — field-level mapping to TradeOutcome
+- `contracts/compatibility.json` — version compatibility rules
+- `integration/adapters/v7_adapter.py` — V7 adapter stub (future boundary)
+
+V7-local docs remain authoritative for V7-internal semantics.
+For cross-domain conflicts, `docs/architecture/governance.md` wins.
+
 ---
 
 ## 1. SYSTEM IDENTITY — VISION (docs/vision.md)
@@ -566,10 +584,12 @@ Required sections/fields exist, decision_event_id resolves to valid decision eve
 
 ---
 
-## 8. RUNTIME SIMULATION ENGINE (docs/runtime/simulation_engine.md)
+## 8. RUNTIME SIMULATION ENGINE — ⚠️ Migrated to /simulation (docs/runtime/simulation_engine.md → /simulation/)
+
+**Note:** Simulation truth semantics now live in the top-level **`/simulation`** authority. See `/simulation/docs/ai_summary.md` for the authoritative machine-readable synthesis. This section preserved for legacy reference.
 
 ### 8.1 Core Decision
-Simulation runs in runtime. Runtime hosts the runtime simulation engine and owns simulation execution. V7 model does NOT own simulation. Pipeline must NOT reimplement a separate simulation engine. Training/labels/evaluation/paper trading/replay/outcomes/Monte Carlo consume runtime-hosted simulation engine through deterministic, side-effect-free adapters or drivers.
+`/simulation` owns economic truth semantics and contracts. V7 runtime hosts/executes simulation operationally through stable contracts. V7 model does NOT own simulation. Pipeline must NOT reimplement a separate simulation engine. Training/labels/evaluation/paper trading/replay/outcomes/Monte Carlo consume runtime-hosted simulation engine through deterministic, side-effect-free adapters or drivers.
 
 ### 8.2 Ownership Rules
 **Runtime owns:** simulation engine hosting, simulation execution orchestration, paper forward simulation, historical replay driver orchestration, simulation profile selection, simulation run lineage, separation between simulated truth and live execution truth.

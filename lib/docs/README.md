@@ -26,6 +26,25 @@ A minimal shared library for primitives that are **nearly identical usage** betw
 
 ## Import Rules
 
-- `lib/` must NOT import `v7.*` or `alphaforge.*`
+- `lib/` must NOT import `v7.*`, `alphaforge.*`, or `simulation.*`
 - `v7/` and `alphaforge/` may import `lib/` directly for these primitives (no adapter needed for math/utils)
+- `simulation/` may import `lib/` primitives if needed (indicators, time, basic cost formulas)
 - For market data, use the service layer — don't call Binance HTTP directly from v7 or alphaforge
+- Simulation is NOT in `lib/`. The `/simulation` authority is a top-level package. `lib/` provides primitive helpers only.
+
+## Cross-Domain Context
+
+The root **contracts/** directory (`contracts/registry.json`, `contracts/schemas/`, `contracts/mappings/`)
+defines cross-domain contract objects and field mappings. This does NOT change lib's ownership —
+lib remains the shared primitive layer only.
+
+The root **integration/tests/test_cross_domain_boundaries.py** now enforces import boundaries
+for all domains, including lib. Run:
+
+```bash
+make check-lib-boundaries    # lib-only boundary check (original)
+make check-boundaries        # all-domain boundary check (lib + cross-domain)
+```
+
+If lib evolves new public APIs, update `contracts/` schemas and mappings as needed,
+and run `make test-all` to verify no boundary or parity violations.

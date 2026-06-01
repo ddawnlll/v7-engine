@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/simulation_profile.schema.json",
+  "title": "SimulationProfile",
+  "description": "Mode-specific simulation configuration. Defines stop/target/horizon/cost parameters per trading mode.",
+  "type": "object",
+  "required": [
+    "profile_version",
+    "mode",
+    "primary_interval",
+    "max_holding_bars",
+    "stop_multiplier",
+    "target_multiplier",
+    "ambiguity_margin_r",
+    "min_action_edge_r",
+    "no_trade_default"
+  ],
+  "properties": {
+    "profile_version": {
+      "type": "string",
+      "description": "Version of this profile configuration. Bumped on parameter changes."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SWING", "SCALP", "AGGRESSIVE_SCALP"],
+      "description": "Trading mode this profile applies to."
+    },
+    "primary_interval": {
+      "type": "string",
+      "description": "Primary candle interval, e.g. '4h', '1h', '15m'."
+    },
+    "context_intervals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Higher-timeframe context intervals."
+    },
+    "refinement_intervals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Lower-timeframe refinement intervals."
+    },
+    "max_holding_bars": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum bars to hold before time-exit."
+    },
+    "stop_method": {
+      "type": "string",
+      "description": "Stop calculation method, e.g. 'atr_wide', 'atr_medium', 'atr_tight'."
+    },
+    "stop_multiplier": {
+      "type": "number",
+      "minimum": 0.1,
+      "description": "ATR multiplier for stop distance."
+    },
+    "target_method": {
+      "type": "string",
+      "description": "Target calculation method."
+    },
+    "target_multiplier": {
+      "type": "number",
+      "minimum": 0.1,
+      "description": "ATR multiplier for target distance."
+    },
+    "ambiguity_margin_r": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Minimum R gap to declare a best action (avoids ambiguous classification)."
+    },
+    "min_action_edge_r": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Minimum edge in R terms to prefer directional action over NO_TRADE."
+    },
+    "mae_penalty_weight": {
+      "type": "number",
+      "description": "Weight for MAE penalty in composite utility."
+    },
+    "cost_penalty_weight": {
+      "type": "number",
+      "description": "Weight for cost penalty in composite utility."
+    },
+    "time_penalty_weight": {
+      "type": "number",
+      "description": "Weight for time-to-MFE penalty in composite utility."
+    },
+    "no_trade_default": {
+      "type": "boolean",
+      "description": "If true, NO_TRADE is the default when outcome is ambiguous."
+    }
+  }
+}

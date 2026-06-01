@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/trade_outcome.schema.json",
+  "title": "TradeOutcome",
+  "description": "Normalized lifecycle consequence record for one DecisionEvent. Attaches realized outcome, path metrics, comparative evidence, and quality interpretation.",
+  "type": "object",
+  "required": [
+    "trade_outcome_id",
+    "decision_event_id",
+    "timestamp_utc",
+    "outcome_schema_version",
+    "contract_version",
+    "event_schema_version",
+    "request_id",
+    "engine_name",
+    "engine_version",
+    "outcome_source",
+    "execution_path",
+    "execution_decision",
+    "position_opened",
+    "outcome_status",
+    "is_final",
+    "resolution_reason"
+  ],
+  "properties": {
+    "trade_outcome_id": {
+      "type": "string",
+      "description": "Canonical outcome identity."
+    },
+    "decision_event_id": {
+      "type": "string",
+      "description": "Links outcome to its decision event."
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the outcome record was materialized."
+    },
+    "outcome_schema_version": {
+      "type": "string",
+      "description": "Version of the TradeOutcome schema."
+    },
+    "contract_version": {
+      "type": "string",
+      "description": "Contract family version."
+    },
+    "event_schema_version": {
+      "type": "string",
+      "description": "Version of the DecisionEvent schema this outcome references."
+    },
+    "simulation_family_version": {
+      "type": "string",
+      "description": "Version of simulation engine that produced referenced outcomes."
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Links back to the AnalysisRequest."
+    },
+    "engine_name": {
+      "type": "string",
+      "description": "Engine that processed the request."
+    },
+    "engine_version": {
+      "type": "string",
+      "description": "Version of the engine."
+    },
+    "outcome_source": {
+      "type": "string",
+      "enum": ["LIVE_EXECUTION", "PAPER_EXECUTION", "REPLAY_PROJECTION", "OFFLINE_LABELING", "SKIP_EVAL"],
+      "description": "Source of this outcome."
+    },
+    "execution_path": {
+      "type": "string",
+      "enum": ["NOT_EXECUTED", "PAPER_EXECUTED", "LIVE_EXECUTED", "REPLAY_ONLY", "SKIPPED_BY_RUNTIME", "BLOCKED_BY_RUNTIME"],
+      "description": "How the decision was executed."
+    },
+    "execution_decision": {
+      "type": "string",
+      "enum": ["EXECUTED", "SKIPPED", "BLOCKED", "NOT_APPLICABLE"],
+      "description": "Whether the decision was executed."
+    },
+    "position_opened": {
+      "type": "boolean",
+      "description": "Whether a position was opened."
+    },
+    "outcome_status": {
+      "type": "string",
+      "enum": ["PENDING", "RESOLVED", "PARTIALLY_RESOLVED", "INVALIDATED", "UNAVAILABLE"],
+      "description": "Finality status of this outcome."
+    },
+    "is_final": {
+      "type": "boolean",
+      "description": "True if outcome will not change further."
+    },
+    "resolution_reason": {
+      "type": "string",
+      "enum": ["HORIZON_COMPLETE", "TRADE_CLOSED", "STOP_HIT", "TARGET_HIT", "TIME_EXIT", "SKIP_EVAL_COMPLETE", "DATA_INCOMPLETE", "EXECUTION_INCOMPLETE"],
+      "description": "Why the outcome reached its current state."
+    },
+    "best_realized_action": {
+      "type": "string",
+      "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE"],
+      "description": "Best realized action (from SimulationOutput.best_action)."
+    },
+    "realized_r": {
+      "type": "number",
+      "description": "Realized net R from the best action's outcome."
+    },
+    "exit_reason": {
+      "type": "string",
+      "enum": ["STOP_HIT", "TARGET_HIT", "TIME_EXIT", "MANUAL_EXIT", "RUNTIME_EXIT", "PROJECTED_HORIZON_END", "NOT_APPLICABLE"],
+      "description": "How the best action's path exited."
+    },
+    "mfe_r": {
+      "type": "number",
+      "description": "MFE in R terms for the best action."
+    },
+    "mae_r": {
+      "type": "number",
+      "description": "MAE in R terms for the best action."
+    },
+    "counterfactual_best_action": {
+      "type": "string",
+      "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE"],
+      "description": "Best counterfactual action (from SimulationOutput.best_action)."
+    },
+    "regret_r": {
+      "type": "number",
+      "description": "Regret relative to best action (from SimulationOutput.regret_r)."
+    },
+    "saved_loss_score": {
+      "type": "number",
+      "description": "From SimulationOutput.no_trade_outcome.saved_loss_score."
+    },
+    "missed_opportunity_score": {
+      "type": "number",
+      "description": "From SimulationOutput.no_trade_outcome.missed_opportunity_score."
+    },
+    "path_quality_score": {
+      "type": "number",
+      "description": "Path quality for best action."
+    },
+    "outcome_label": {
+      "type": "string",
+      "description": "Normalized interpretation label."
+    },
+    "is_good_decision": {
+      "type": "boolean",
+      "description": "Whether the decision was good given the outcome."
+    },
+    "horizon_family": {
+      "type": "string",
+      "description": "Horizon family from simulation lineage."
+    }
+  }
+}
