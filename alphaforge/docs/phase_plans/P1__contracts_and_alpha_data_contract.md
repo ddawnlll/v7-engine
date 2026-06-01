@@ -7,11 +7,13 @@
 **Phase:** `P1`  
 **One-line goal:** Feature, label, prediction, artifact, and V7 bridge contracts.  
 **Why now:** The runtime, training, and Pi agents need a stable typed boundary before feature, label, and model code can safely integrate.  
-**Blast radius:** src/v7/alpha/contracts/**, tests/v7/alpha/unit/contracts/**, schemas/**  
+**Blast radius:** src/v7/alpha/**, tests/v7/alpha/**, configs/v7/alpha/**, docs/v7/alpha/**  
 **Rollback path:** Revert this phase's workspaces, restore previous compatible alpha config/schema/artifact bundle, and rerun targeted + final validation.  
-**Scale mode:** `experimental_6`  
-**Safe parallelism target:** `3`  
-**Done when:** All workstreams pass acceptance criteria and phase JSON validates through Pi doctor.
+**Execution class:** `implementation`  
+**Execution automation:** `enabled`  
+**Scale mode:** `stable_3`  
+**Safe parallelism target:** `2`  
+**Done when:** All workspaces pass acceptance criteria and phase JSON validates through Pi doctor.
 
 ---
 
@@ -25,14 +27,17 @@
 | Last updated | `2026-05-23` |
 | Delivery status | `Not started` |
 | Target environment | `Local / Staging` |
-| Primary focus | `Feature, label, prediction, artifact, and V7 bridge contracts` |
+| Primary focus | `Feature, label, prediction, artifact, and V7 bridge contracts.` |
 | Product-code changes | `Allowed` |
-| Selected scale mode | `experimental_6` |
-| Requested max workers | `6` |
-| Expected DAG effective parallelism | `4` |
-| Expected safe effective parallelism | `3` |
+| Execution class | `implementation` |
+| Execution automation | `enabled` |
+| Selected scale mode | `stable_3` |
+| Requested max workers | `3` |
+| Expected DAG effective parallelism | `2` |
+| Expected safe effective parallelism | `2` |
 | Worktree isolation | `Required` |
 | Integration queue | `Required` |
+| Isolation mode | `worktree` |
 
 ### 1.1 RACI
 
@@ -46,9 +51,9 @@
 
 The runtime, training, and Pi agents need a stable typed boundary before feature, label, and model code can safely integrate.
 
-This phase is part of the `V7 AlphaForge XGB` implementation. It must preserve V7's market-first, simulation-native, mode-scoped architecture. The phase must not introduce execution authority into the model layer, must not create a second hidden simulator, and must not use raw future returns as the production alpha truth when V7 simulation-derived R labels are required.
+Without typed contracts, feature schema changes silently break downstream consumers, label format drifts, and prediction surfaces become incompatible with V7 decision engine expectations.
 
-When scale mode is `experimental_6`, the executor should optimize for safe effective parallelism, not maximum concurrency. Worktree isolation, integration queue, validation locks, and completion gates remain mandatory whenever more than three workers are requested.
+This phase uses `stable_3` scale-aware execution. The executor should optimize for safe effective parallelism, not maximum concurrency. Worktree isolation, integration queue, validation locks, and completion gates remain mandatory whenever more than three workers are requested.
 
 ---
 
@@ -62,8 +67,8 @@ When scale mode is `experimental_6`, the executor should optimize for safe effec
 * [ ] Features are canonical-state only.
 * [ ] Labels are mode-specific.
 * [ ] Datasets are mode-specific and temporally split.
-* [ ] Worktree isolation remains available when requested by scale mode.
-* [ ] Integration queue remains enabled when required by scale mode.
+* [ ] Worktree isolation remains available when requested.
+* [ ] Integration queue remains enabled when required.
 * [ ] Global validation lock remains active for heavy validation.
 * [ ] Completion gate hardening remains active.
 * [ ] Merge conflicts produce handoff artifacts and do not mark the plan complete.
@@ -71,29 +76,23 @@ When scale mode is `experimental_6`, the executor should optimize for safe effec
 * [ ] `git push` remains forbidden.
 * [ ] Raw destructive cleanup remains forbidden.
 * [ ] Watch-mode validation remains forbidden.
-* [ ] The executor remains the source of truth for state transitions.
+* [ ] The ExecutionKernel remains the source of truth for state transitions; executors and actors emit events only.
 
 ---
 
 ## 4. Background / What Was Wrong
 
-The existing V7 design defines mode-specific simulation semantics, hybrid model outputs, and runtime-owned execution boundaries. The new alpha generation system must align with those constraints instead of acting as an independent trading model.
-
-The main missing capability is a V7-native alpha evidence layer that can train on 20 symbols, respect SWING / SCALP / AGGRESSIVE_SCALP semantics, emit calibrated XGBoost classification and regression surfaces, and expose R-native alpha scores to the V7 decision engine.
+Without typed contracts, feature schema changes silently break downstream consumers, label format drifts, and prediction surfaces become incompatible with V7 decision engine expectations.
 
 ---
 
 ## 5. Current Failure State / Known Blockers
 
-* `v7_alphaforge_xgb` = not implemented.
-* `mode_specific_alpha_datasets` = not implemented until P4.
-* `xgboost_alpha_artifacts` = not implemented until P5.
-* `calibrated_alpha_score_builder` = not implemented until P6.
-* `v7_policy_bridge` = not implemented until P7.
-* `worktree_isolation` = enabled when selected scale mode requires it.
-* `integration_queue` = enabled.
-* `scale_mode_readiness` = pending Pi doctor review.
-* `safe_effective_parallelism` = expected, not yet computed.
+* `alpha_feature_table` = not implemented.
+* `alpha_label_table` = not implemented.
+* `alpha_prediction_table` = not implemented.
+* `alpha_artifact_bundle_schema` = not implemented.
+* `V7AnalysisRequest / AnalysisResult bridge` = not implemented.
 
 ---
 
@@ -101,104 +100,131 @@ The main missing capability is a V7-native alpha evidence layer that can train o
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---:|---:|---|
-| Future leakage enters feature rows | med | critical | Contract forbidden fields, leakage tests, timestamp checks |
-| Alpha labels diverge from V7 simulation truth | med | critical | Use runtime simulation adapter only; golden tests |
-| Raw XGBoost scores used as calibrated confidence | med | high | confidence_kind required; calibration tests |
-| Mode datasets accidentally mixed | med | high | mode field and dataset-family validation |
-| Safe parallelism lower than requested | med | med | Doctor warning; use safe batch preview |
-| Merge conflict blocks plan | med | med | Handoff artifact and stop queue safely |
-| Worktree path escapes `.pi/worktrees` | low | critical | Path scope checks; stop execution on escape |
-| Cleanup deletes wrong files | low | critical | Raw destructive cleanup forbidden |
+| Worktree isolation violation | low | critical | Path scope checks; stop execution on escape |
+| Integration queue merges unvalidated diff | medium | high | Require workspace validation and integration validation |
+| Merge conflict blocks plan | medium | medium | Generate conflict handoff artifact and stop queue safely |
+| Safe parallelism is lower than requested | medium | medium | Doctor warning; show bottleneck; use safe batch preview |
+| Validation lock limits throughput | medium | medium | Scheduler reduces concurrency while heavy validation runs |
 
 ---
 
 ## 7. Workstreams
 
-### 7.A — Feature Row Contract
+### P1.A — Feature Row Contract
 
-**Goal:** Define alpha feature row schema and forbidden leakage fields.
+**Goal:** alpha_feature_table contract with all required fields is typed.
 
-**Requirements:**
-* Must preserve V7 contract boundaries.
-* Must avoid hidden fallbacks and future leakage.
-* Must keep all thresholds and behavior config-driven.
+**Dependencies:** None (foundation)
+**Parallel Group:** batch_1
+**Risk Level:** low
+**Queue Priority:** critical
+**Can run with:** None
 
-**Acceptance Criteria:**
-* Define alpha feature row schema and forbidden leakage fields.
-* Tests are added or updated.
-* The phase contract remains valid JSON.
+**Requirements:
+* alpha_feature_table contract with all required fields is typed.
+* feature_schema_version, symbol_encoding_family, symbol_universe_version are required fields.
 
-**Isolation & Parallelism Notes:**
-* Workstream A may run in an isolated worktree.
-* Same-file edits must not run concurrently unless Pi optimizer approves a split.
-* Workspace validation is required before integration queue entry.
-### 7.B — Label Row Contract
-
-**Goal:** Define long_R/short_R and classification label schema.
-
-**Requirements:**
-* Must preserve V7 contract boundaries.
-* Must avoid hidden fallbacks and future leakage.
-* Must keep all thresholds and behavior config-driven.
-
-**Acceptance Criteria:**
-* Define long_R/short_R and classification label schema.
-* Tests are added or updated.
-* The phase contract remains valid JSON.
+**File Scope:**
+```text
+src/v7/alpha/contracts/**
+tests/v7/alpha/unit/contracts/**
+```
 
 **Isolation & Parallelism Notes:**
-* Workstream B may run in an isolated worktree.
-* Same-file edits must not run concurrently unless Pi optimizer approves a split.
-* Workspace validation is required before integration queue entry.
-### 7.C — Prediction Contract
+* Foundation workspace for this phase.
+* Expected batch: batch_1
+* Worktree isolation required.
+* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
 
-**Goal:** Define calibrated probability, expected-R, and alpha score output.
+### P1.B — Label Row Contract
 
-**Requirements:**
-* Must preserve V7 contract boundaries.
-* Must avoid hidden fallbacks and future leakage.
-* Must keep all thresholds and behavior config-driven.
+**Goal:** alpha_label_table contract with long_R_net, short_R_net, best_action_label, gap_R is typed.
 
-**Acceptance Criteria:**
-* Define calibrated probability, expected-R, and alpha score output.
-* Tests are added or updated.
-* The phase contract remains valid JSON.
+**Dependencies:** None (foundation)
+**Parallel Group:** batch_1
+**Risk Level:** low
+**Queue Priority:** critical
+**Can run with:** None
 
-**Isolation & Parallelism Notes:**
-* Workstream C may run in an isolated worktree.
-* Same-file edits must not run concurrently unless Pi optimizer approves a split.
-* Workspace validation is required before integration queue entry.
-### 7.D — Contract Tests
+**Requirements:
+* alpha_label_table contract with long_R_net, short_R_net, best_action_label, gap_R is typed.
 
-**Goal:** Round-trip, enum, numeric-bound, and scope compatibility tests.
-
-**Requirements:**
-* Must preserve V7 contract boundaries.
-* Must avoid hidden fallbacks and future leakage.
-* Must keep all thresholds and behavior config-driven.
-
-**Acceptance Criteria:**
-* Round-trip, enum, numeric-bound, and scope compatibility tests.
-* Tests are added or updated.
-* The phase contract remains valid JSON.
+**File Scope:**
+```text
+src/v7/alpha/contracts/**
+tests/v7/alpha/unit/contracts/**
+```
 
 **Isolation & Parallelism Notes:**
-* Workstream D may run in an isolated worktree.
-* Same-file edits must not run concurrently unless Pi optimizer approves a split.
-* Workspace validation is required before integration queue entry.
+* Foundation workspace for this phase.
+* Expected batch: batch_1
+* Worktree isolation required.
+* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
+
+### P1.C — Prediction & Bridge Contracts
+
+**Goal:** alpha_prediction_table contract typed.
+
+**Dependencies:** None (foundation)
+**Parallel Group:** batch_1
+**Risk Level:** low
+**Queue Priority:** critical
+**Can run with:** None
+
+**Requirements:
+* alpha_prediction_table contract typed.
+* V7AnalysisRequest and AnalysisResult bridge contracts defined.
+* ModelScope, Mode, and Action enums match V7 canonical values.
+
+**File Scope:**
+```text
+src/v7/alpha/contracts/**
+src/v7/alpha/runtime/**
+tests/v7/alpha/unit/contracts/**
+```
+
+**Isolation & Parallelism Notes:**
+* Foundation workspace for this phase.
+* Expected batch: batch_1
+* Worktree isolation required.
+* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
+
+### P1.D — Contract Tests
+
+**Goal:** All contracts have serialization round-trip tests.
+
+**Dependencies:** P1.A, P1.B, P1.C
+**Parallel Group:** batch_2
+**Risk Level:** low
+**Queue Priority:** normal
+**Can run with:** None
+
+**Requirements:
+* All contracts have serialization round-trip tests.
+* Schema version bumps are validated.
+
+**File Scope:**
+```text
+tests/v7/alpha/unit/contracts/**
+```
+
+**Isolation & Parallelism Notes:**
+* Depends on P1.A, P1.B, P1.C for foundation.
+* Expected batch: batch_2
+* Worktree isolation required.
+* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
+
 
 ---
 
 ## 8. Combined Implementation Order
 
 ```text
-Dependencies: P0
-Batch 1: P1.A
-Batch 2: P1.B + P1.C + P1.D, subject to same-file conflict review
-Next phase: P2
+  Batch batch_1: P1.A + P1.B + P1.C
+  Batch batch_2: P1.D
 ```
 
-Pi's computed approved graph is authoritative. Authored batches are only advisory. Continuous scheduling may run ready workspaces without waiting for batch barriers when safety constraints pass.
+The dependency graph dictates that foundation workspaces run first, followed by parallel batches where dependencies permit. The DAG batch preview and safe batch preview may differ because of file overlap, validation lock pressure, or integration queue serialization.
 
 ---
 
@@ -206,15 +232,16 @@ Pi's computed approved graph is authoritative. Authored batches are only advisor
 
 `P1` is complete when ALL are true:
 
-* [ ] All phase workstreams satisfy acceptance criteria.
-* [ ] Relevant tests pass.
-* [ ] No forbidden commands or files were used.
-* [ ] No hidden fallback, hidden simulator, or future leakage was introduced.
+* [ ] alpha_feature_table contract with all required fields is typed.
+* [ ] alpha_label_table contract with long_R_net, short_R_net, best_action_label, gap_R is typed.
+* [ ] alpha_prediction_table contract typed.
+* [ ] All contracts have serialization round-trip tests.
 * [ ] DAG batch preview has been reviewed if required.
 * [ ] Safe batch preview has been reviewed if required.
 * [ ] Selected scale mode readiness passes.
-* [ ] Worktree isolation status is correct for selected scale mode.
+* [ ] Worktree isolation is valid for selected scale mode.
 * [ ] Integration queue status is clean or intentionally blocked with handoff.
+* [ ] No forbidden commands or files were used.
 * [ ] Validation gates passed.
 * [ ] Typecheck/build/test requirements passed where applicable.
 
@@ -223,23 +250,21 @@ Pi's computed approved graph is authoritative. Authored batches are only advisor
 ## 10. Rollback Playbook
 
 **Trigger conditions:**
-* Future leakage detected.
-* Simulation truth mismatch detected.
-* Contract or schema validation fails.
 * Worktree creation or cleanup behaves unsafely.
 * Integration queue merges incorrect or unvalidated diffs.
 * Merge conflicts are not detected or no handoff artifact is produced.
 * Safe scale mode causes resource exhaustion or state corruption.
-* Dashboard or doctor reports misleading scale readiness.
+* Validation planner misses a required failure.
 
 **Rollback procedure:**
 1. Set scale mode to `stable_3`.
 2. Set `maxParallelWorkspaces` to `3` or lower.
-3. Pause integration queue processing.
-4. Preserve `.pi/worktrees/{planExecId}/` for debugging.
-5. Revert phase workspaces independently.
-6. Restore previous compatible config/schema/artifact bundle.
-7. Rerun targeted validation and final integration validation.
+3. Disable worktree mode only if safe fallback is required.
+4. Pause or disable integration queue processing.
+5. Preserve `.pi/worktrees/{planExecId}/` for debugging.
+6. Fall back to shared-working-tree execution if explicitly allowed.
+7. Keep dashboard telemetry read-only if safe.
+8. Revert phase commits independently if needed.
 
 ---
 
@@ -247,12 +272,11 @@ Pi's computed approved graph is authoritative. Authored batches are only advisor
 
 `P2` inherits:
 
-* Completed outputs from `P1`.
-* Worktree-aware execution contract.
+* `P1` execution contract with worktree mode awareness.
 * Scale-mode-aware validation rules.
 * Integration queue requirements.
-* Safe effective parallelism review.
 * Workspace-level parallelism/isolation/integration/validation metadata.
+* Review hardening invariants: Data contract schema versioning
 
 ---
 
@@ -260,55 +284,157 @@ Pi's computed approved graph is authoritative. Authored batches are only advisor
 
 ## Mission
 
-Implement `P1 — Contracts & Alpha Data Contract` for `V7 AlphaForge XGB` while preserving V7 runtime ownership, simulation-native labels, mode-specific datasets, explicit contracts, and safe Pi autonomous execution behavior.
+Implement `P1` — Feature, label, prediction, artifact, and V7 bridge contracts.
+
+The agent must optimize for safe parallelism, not maximum concurrency. Higher worker counts are allowed only when scale-mode readiness passes and the executor can preserve correctness through worktree isolation, integration queue, validation locks, and completion gates.
+
+
+
+---
 
 ## Hard Requirements
 
-1. Do not create a second simulator.
-2. Do not allow future data in features.
-3. Do not use raw model scores as calibrated confidence.
-4. Do not mix SWING, SCALP, and AGGRESSIVE_SCALP datasets unless explicitly building a report, not a model dataset.
-5. Do not exceed selected scale-mode worker cap.
-6. Do not run more than 3 workers unless worktree isolation and integration queue readiness pass.
-7. Do not merge workspace output without passed workspace validation.
-8. Do not mark a plan complete if integration validation fails.
-9. Do not treat merge conflict as ordinary worker failure.
-10. Do not start the next plan while integration queue state is dirty.
-11. Do not run watch-mode validation.
-12. Do not run `git push`.
-13. Do not run raw destructive cleanup commands.
-14. Do not access secrets or forbidden files.
-15. The executor remains the only component that mutates execution state.
+1. All P1 workstreams must pass acceptance criteria.
+2. Worktree isolation must be enabled for parallel workspaces.
+3. Integration queue must serialize merges.
+4. Global validation lock must be active for heavy validation.
+5. Watch-mode validation is forbidden.
+6. `git push` is forbidden.
+7. Raw destructive cleanup is forbidden.
+8. Do not exceed selected scale-mode worker cap (3).
+9. Do not merge workspace output without passed workspace validation.
+10. Do not mark the plan complete if integration validation fails.
+11. Do not treat merge conflict as ordinary worker failure.
+12. Do not start the next plan while integration queue state is dirty.
+
+---
 
 ## Execution Policies
 
 ```yaml
+repair_modes:
+  manual_0: autonomous_execution_allowed: false, agent_may_mutate_repo: false
+  stable_3: autonomous_execution_allowed: true,  agent_may_mutate_repo: true
+
+execution_automation:
+  autonomous_execution_enabled: true
+  agent_may_mutate_repo: true
+  agent_may_run_commands: true
+  manual_patch_application_required: false
+  human_approval_required_for_every_patch: false
+
+bounded_liveness:
+  no_indefinite_waits: true
+  llm_provider_timeout_required: true
+  llm_stream_idle_watchdog_required: true
+  validation_timeout_required: true
+  process_tree_kill_required: true
+  git_lock_bypass_forbidden: true
+  state_write_serialization_required: true
+
 scale:
-  selected_mode: experimental_6
-  max_parallel_workspaces: 6
-worktree:
-  enabled: true
-  root: .pi/worktrees
-  state_persistence_path: .pi/worktree-state.json
-  crash_recovery_enabled: true
-integration_queue:
-  enabled: true
-  process_one_merge_at_a_time: true
-  stop_on_merge_conflict: true
-  git_push_allowed: false
-queue_optimization:
-  enabled: true
-  strategy: critical_path_first
+  selected_mode: stable_3
+  max_parallel_workspaces: 3
+  worktree_required: true
+  integration_queue_required: true
+
 validation:
   global_validation_lock_required: true
   targeted_validation_enabled: true
   final_integration_validation_required: true
   watch_mode_forbidden: true
+
+queue_optimization:
+  enabled_by_default: true
+  default_strategy: priority_then_fifo
+  priority_levels: [critical, high, normal, low]
 ```
+
+---
 
 ## Safety Stops
 
-Hard stop for dependency cycles, unapproved parallelism review, worktree path escape, raw destructive cleanup, integration validation failure, merge conflict without handoff, unsafe scale mode, forbidden file access, secrets access, `git push`, watch-mode validation, optimizer patch without approval, scope mismatch, and future leakage detection.
+* Dependency cycles
+* Invalid dependency patches
+* Worktree path escaping `.pi/worktrees`
+* Integration merge without passed workspace validation
+* Validation failure
+* Merge conflict without handoff artifact
+* Unsafe scale mode
+* Queue starting next plan while integration queue is dirty
+* Forbidden file access
+* Secrets access
+* `git push`
+* Watch-mode validation
+* `autonomous_execution_requested_during_repair_mode`
+* `agent_repo_mutation_requested_during_manual_repair`
+* `scheduler_enabled_before_executor_isolation_gate`
+* `llm_call_without_provider_timeout`
+* `validation_command_without_timeout`
+* `git_lock_bypass_detected`
+* `state_store_write_without_serialization`
+* `workspace_patch_without_human_approval`
+* `promotion_gate_failed_or_missing`
+
+
+# Part 2.5 — v4 ExecutionKernel Doctrine
+
+## 2.5.1 Single Authority Model
+
+v4 replaces the previous executor-owned or multi-component execution state model with an ExecutionKernel model.
+
+```text
+Before v4:
+  Scheduler, executor, validation runner, retry router, cleanup, lease monitor,
+  diagnostics, and brain workers could each influence or write partial execution truth.
+
+After v4:
+  All actors emit events.
+  WorkspaceAttemptController mutates attempt state.
+  PlanSupervisor mutates plan state.
+  PostgreSQL stores authoritative runtime truth.
+```
+
+## 2.5.2 ExecutionKernel Components
+
+| Component | Responsibility | May mutate execution state? |
+|---|---|---:|
+| `ExecutionAdmissionGate` | Authorize or reject execution requests before runtime starts | No |
+| `ExecutionProfileDeriver` | Convert intent to required mechanisms | No |
+| `PlanSupervisor` | Own plan FSM, slot tokens, completion predicate, final validation | Yes, plan state only |
+| `WorkspaceAttemptController` | Own attempt FSM, retries, terminalization, handoff creation | Yes, attempt state only |
+| `StateStoreWriter` | Commit transitions with authority token | Yes, through token only |
+| `AttemptEventJournal` | Append versioned event records | No state mutation by itself |
+| `DeadlineWatchdog` | Detect expired attempts and emit events | No |
+| `ExecutorActor` | Run LLM/tools/bash for an attempt | No |
+| `ValidationActor` | Run validation with deadlines and process containment | No |
+| `GitRunner` | Serialize Git repo mutations | No attempt state mutation |
+
+## 2.5.3 Attempt FSM Doctrine
+
+A v4 attempt is a bounded state machine. It cannot remain in a non-terminal state forever.
+
+```text
+QUEUED -> RUNNING -> VALIDATING -> SUCCEEDED
+Failure paths: RUNNING+timeout -> TIMED_OUT, critical violation -> FAILED_FINAL
+Terminal states: SUCCEEDED, FAILED_RETRYABLE, FAILED_FINAL, TIMED_OUT, HANDOFF_REQUIRED
+Retry is legal only after terminal state.
+```
+
+## 2.5.4 PostgreSQL Truth Doctrine
+
+Runtime truth is PostgreSQL. JSON fallback is forbidden in production.
+
+Allowed filesystem data: stdout/stderr logs, raw tool output, patch artifacts, handoff Markdown.
+Forbidden as authoritative runtime truth: JSON state fallback, NDJSON-only journal, filesystem-only state.
+
+## 2.5.5 Intent-Driven Plan Doctrine
+
+v4 authors express what they want, not the low-level mechanism matrix.
+
+Human-authored: `parallelism`, `safetyLevel`, `conflictRisk`, `deadlines`, `executionEnvironment`.
+System-derived: worktree requirement, integration queue, validation lanes, drift policy, watchdog policy.
+
 
 ---
 
@@ -316,10 +442,19 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 
 ```json
 {
-  "contractVersion": "2.5.1",
+  "contractVersion": "4.1.1",
+  "templateVersion": "4.1.1",
+  "legacyCompatibility": {
+    "v3EnvelopePreserved": true,
+    "legacyValidatorMode": "v3_compatible_extensions",
+    "fallbackContractVersionForLegacyParser": "3.0.0",
+    "legacyMechanismFieldsAreHints": true,
+    "unknownV4FieldsPolicy": "ignore_for_read_only_legacy_consumers_reject_for_execution_without_v4_validator"
+  },
+  "executionClass": "implementation",
   "executionBackend": "postgres",
   "project": {
-    "name": "v7-alphaforge-xgb",
+    "name": "v7_alphaforge_xgb",
     "rootPath": ".",
     "type": "repo",
     "tags": [
@@ -329,47 +464,396 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
       "p1"
     ]
   },
+  "intent": {
+    "parallelism": 3,
+    "safetyLevel": "strict",
+    "conflictRisk": "medium",
+    "executionEnvironment": {
+      "mode": "local_sandbox",
+      "untrustedCodeAllowed": false,
+      "networkPolicy": "host_default",
+      "secretsPolicy": "forbidden_files_and_env_allowlist"
+    },
+    "deadlines": {
+      "llmRequestMs": 120000,
+      "llmStreamIdleMs": 300000,
+      "workspaceOverallMs": 1800000,
+      "validationDefaultMs": 600000,
+      "validationHeavyMs": 1200000,
+      "schedulerNoProgressMs": 300000
+    }
+  },
+  "derivedExecutionProfile": {
+    "generatedBy": "ExecutionProfileDeriver",
+    "deriverVersion": "4.1.1",
+    "readOnly": true,
+    "isolationMode": "worktree",
+    "worktreeRequired": true,
+    "patchIsolationRequired": false,
+    "patchCoordinatorRequired": false,
+    "repositoryMutationAuthority": "worktree_integration",
+    "patchApplyLanes": 0,
+    "maxCodegenWorkers": 3,
+    "integrationQueueRequired": true,
+    "gitRunnerQueueRequired": true,
+    "validationLanesRequired": true,
+    "attemptScopedArtifactsRequired": true,
+    "deadlineWatchdogRequired": true,
+    "admissionGateMode": "strict",
+    "writeSetDriftPolicy": "reject_or_handoff",
+    "explain": [
+      "stable_3 worktree mode: 3 workers, worktree isolation, integration queue",
+      "Worktree isolation required for safe parallel execution",
+      "All production execution requires PostgreSQL authoritative runtime state"
+    ]
+  },
+  "persistence": {
+    "authoritativeBackend": "postgres",
+    "jsonRuntimeFallbackAllowed": false,
+    "eventJournalBackend": "postgres",
+    "transitionBackend": "postgres",
+    "controllerInboxBackend": "postgres",
+    "handoffQueueBackend": "postgres",
+    "rawLogsBackend": "filesystem",
+    "artifactIndexBackend": "postgres",
+    "debugExportAllowed": true
+  },
+  "executionAutomation": {
+    "autonomousExecutionEnabled": true,
+    "agentMayMutateRepo": true,
+    "agentMayRunCommands": true,
+    "manualPatchApplicationRequired": false,
+    "humanApprovalRequiredForEveryPatch": false
+  },
+  "executionKernel": {
+    "enabled": true,
+    "stateAuthority": "workspace_attempt_controller",
+    "planAuthority": "plan_supervisor",
+    "stateAuthorityTokenRequired": true,
+    "admissionGateRequired": true,
+    "eventSourcedAttempts": true,
+    "attemptEventJournalRequired": true,
+    "directStateMutationForbidden": true,
+    "actorsEmitEventsOnly": true,
+    "policiesSuggestOnly": true,
+    "brainWorkersReadOnly": true,
+    "retryRequiresTerminalAttempt": true,
+    "everyNonTerminalStateHasDeadline": true,
+    "controllerSerializesDecisionsNotWork": true,
+    "controllerLeadership": {
+      "required": true,
+      "mode": "postgres_advisory_lock_plus_expected_version",
+      "transitionRequiresExpectedVersion": true,
+      "onVersionConflict": "reject_and_emit_controller_conflict"
+    }
+  },
+  "attemptLifecycle": {
+    "modeSpecificLifecycles": {
+      "worktree": {
+        "initialState": "queued",
+        "nonTerminalStates": [
+          "queued",
+          "leasing_worktree",
+          "running",
+          "validating",
+          "waiting_for_validation_lane",
+          "integration_queued",
+          "integrating"
+        ],
+        "terminalStates": [
+          "succeeded",
+          "failed_retryable",
+          "failed_final",
+          "aborted",
+          "timed_out",
+          "quarantined",
+          "handoff_required"
+        ]
+      }
+    },
+    "retryableTerminalStates": [
+      "failed_retryable",
+      "timed_out",
+      "quarantined"
+    ],
+    "retryForbiddenFromNonTerminal": true,
+    "deadlineRequiredForNonTerminalStates": true,
+    "handoffRequiredCreatesQueueItem": true
+  },
+  "planLifecycle": {
+    "completionPredicateRequired": true,
+    "cannotCompleteWithRequiredNonTerminalWorkspaces": true,
+    "cannotCompleteWithUnresolvedRequiredHandoff": true,
+    "finalValidationRequiredBeforeCompleted": true,
+    "states": [
+      "created",
+      "preflight",
+      "running",
+      "blocked_with_reason",
+      "awaiting_handoff",
+      "final_validation",
+      "completed",
+      "completed_with_warnings",
+      "failed_final",
+      "stopping",
+      "stopped"
+    ]
+  },
+  "actorPermissions": {
+    "workspaceAttemptController": {
+      "mayMutateAttemptState": true,
+      "mayCreateRetryAttempt": true
+    },
+    "planSupervisor": {
+      "mayMutatePlanState": true,
+      "mayReserveSchedulerSlots": true
+    },
+    "executorActor": {
+      "mayMutateAttemptState": false,
+      "mayMutateRepository": false,
+      "mayProducePatchArtifact": true,
+      "mayEmitEvents": true
+    },
+    "validationActor": {
+      "mayMutateAttemptState": false,
+      "mayMutateRepository": false,
+      "mayEmitEvents": true
+    },
+    "gitRunner": {
+      "mayMutateAttemptState": false,
+      "mayEmitEvents": true,
+      "note": "May perform low-level git operations only when invoked by authorized repository mutation authority."
+    },
+    "leaseMonitor": {
+      "mayMutateAttemptState": false,
+      "mayEmitEvents": true
+    },
+    "retryPolicy": {
+      "mayMutateAttemptState": false,
+      "mayCreateRetryAttempt": false,
+      "maySuggestRetry": true
+    },
+    "brainWorkers": {
+      "mayMutateExecutionState": false,
+      "mayEmitDiagnosis": true,
+      "mayProposeAction": true
+    },
+    "diagnostics": {
+      "mayMutateExecutionState": false,
+      "mayEmitEvidence": true
+    }
+  },
+  "admissionGate": {
+    "required": true,
+    "allEntrypointsMustUseGate": true,
+    "coveredEntrypoints": [
+      "cli_plan_run",
+      "dashboard_run",
+      "api_plan_run",
+      "retry_endpoint",
+      "cleanup_rerun_endpoint",
+      "brain_worker_trigger",
+      "overnight_runner",
+      "proposal_executor"
+    ],
+    "rejectWhen": [
+      "postgres_unavailable_for_authoritative_runtime",
+      "json_runtime_fallback_detected",
+      "repair_mode_autonomous_execution_disabled",
+      "promotion_gates_missing",
+      "unsafe_parallelism_requested",
+      "execution_kernel_disabled",
+      "state_authority_not_single"
+    ]
+  },
+  "resourceCoordination": {
+    "nestedLocksForbidden": true,
+    "holdLockAcrossAwaitForbidden": true,
+    "stateLocks": {
+      "scope": "attempt",
+      "maxHoldMs": 1000
+    },
+    "planLock": {
+      "scope": "plan",
+      "maxHoldMs": 1000,
+      "purpose": "slot_reservation_only"
+    },
+    "gitRunner": {
+      "mode": "queue",
+      "repoMutationTimeoutMs": 60000,
+      "lockBypassForbidden": true
+    },
+    "validationLanes": {
+      "heavy": {
+        "maxConcurrent": 1
+      },
+      "targeted": {
+        "maxConcurrent": 3
+      }
+    },
+    "worktreeLeases": {
+      "attemptScoped": true,
+      "heartbeatRequired": true,
+      "quarantineOnStale": true
+    },
+    "stateStore": {
+      "writesThroughControllerOnly": true,
+      "transactionOrWriteQueueRequired": true
+    }
+  },
+  "deadlineWatchdog": {
+    "required": true,
+    "intervalSeconds": 15,
+    "emitsEventsOnly": true,
+    "eventType": "deadline_exceeded",
+    "supervised": true,
+    "onWatchdogUnavailable": "block_new_execution_or_downgrade"
+  },
+  "handoffQueue": {
+    "required": true,
+    "createdByStates": [
+      "handoff_required"
+    ],
+    "allowedActions": [
+      "retry_requested",
+      "close_failed",
+      "manual_resolution",
+      "followup_plan_requested"
+    ],
+    "controllerMediatedRetryRequired": true
+  },
+  "boundedLiveness": {
+    "required": true,
+    "noIndefiniteWaits": true,
+    "llm": {
+      "providerRequestTimeoutMs": 120000,
+      "streamIdleTimeoutMs": 300000,
+      "workspaceOverallTimeoutMs": 1800000,
+      "maxConsecutiveProviderTimeouts": 2,
+      "onCircuitOpen": "fail_workspace_not_plan"
+    },
+    "validation": {
+      "defaultTimeoutMs": 600000,
+      "heavyTimeoutMs": 1200000,
+      "killProcessTreeOnTimeout": true,
+      "watchModeForbidden": true,
+      "stdinClosed": true,
+      "ciEnvRequired": true,
+      "maxOutputBytes": 52428800
+    },
+    "git": {
+      "repoMutationLockTimeoutMs": 60000,
+      "lockBypassForbidden": true,
+      "onLockTimeout": "fail_fast_and_retry_or_handoff"
+    },
+    "scheduler": {
+      "stallDetectionEnabled": true,
+      "noProgressTimeoutMs": 300000,
+      "onNoProgress": "emit_blocked_reason"
+    },
+    "stateStore": {
+      "transactionOrWriteQueueRequired": true,
+      "atomicSnapshotRequired": true,
+      "journalLineAtomicityRequired": true
+    }
+  },
+  "llmRuntime": {
+    "boundedProviderCallsRequired": true,
+    "providerRequestTimeoutMs": 120000,
+    "streamIdleTimeoutMs": 300000,
+    "workspaceOverallTimeoutMs": 1800000,
+    "circuitBreaker": {
+      "enabled": true,
+      "openAfterConsecutiveTimeouts": 2,
+      "cooldownMs": 300000
+    },
+    "fallbackPolicy": {
+      "enabled": false,
+      "reason": "Patches must remain deterministic."
+    }
+  },
+  "validationRuntime": {
+    "managedRunnerRequired": true,
+    "processGroupRequired": true,
+    "killTreeOnTimeout": true,
+    "maxOutputBytes": 52428800,
+    "forbiddenInteractiveCommands": [
+      "vitest --watch",
+      "jest --watch",
+      "npm run dev",
+      "vite --host"
+    ],
+    "lanes": {
+      "heavy": {
+        "maxConcurrent": 1
+      },
+      "targeted": {
+        "maxConcurrent": 3
+      }
+    }
+  },
+  "validationPolicy": {
+    "defaultMode": "deferred",
+    "workspaceCompletionRequiresTargetCommand": false,
+    "planCompletionRequiresFinalValidation": true,
+    "heavyValidationDeferredByDefault": true,
+    "allowWorkspaceImmediateValidation": true,
+    "allowSmokeValidation": true,
+    "watchModeForbidden": true,
+    "finalValidationWorkspaceRequired": true,
+    "finalRepairWorkspaceRecommended": true,
+    "validationArtifactsRequired": true,
+    "liveValidationVisibilityRequired": true
+  },
   "planExecution": {
     "phase": "P1",
     "title": "Contracts & Alpha Data Contract",
-    "mode": "autonomous",
-    "maxParallelWorkspaces": 6,
+    "mode": "implementation",
+    "maxParallelWorkspaces": 3,
     "scheduling": {
       "continuous": true,
-      "slotCount": 6,
+      "slotCount": 3,
       "priorityStrategy": "critical_path_first"
     },
     "stateBackend": "postgres",
-    "jsonFallbackEnabled": true,
+    "jsonFallbackEnabled": false,
     "dashboardEnabled": true,
     "autoCommit": true,
     "autoPush": false,
     "scale": {
-      "defaultMode": "experimental_6",
-      "selectedMode": "experimental_6",
+      "defaultMode": "stable_3",
+      "selectedMode": "stable_3",
       "modes": {
         "stable_3": {
+          "executorType": "direct",
           "maxParallelWorkspaces": 3,
           "worktreeRequired": false,
-          "integrationQueueRequired": false
+          "integrationQueueRequired": false,
+          "preserveExistingBehavior": true
         },
-        "experimental_6": {
+        "stable_6": {
+          "executorType": "patch_transaction",
+          "maxCodegenWorkers": 6,
+          "patchIsolationRequired": true,
+          "worktreeRequired": false,
+          "patchCoordinatorRequired": true,
+          "repositoryMutationAuthority": "patch_coordinator",
+          "patchApplyLanes": 1,
+          "singleRepositoryWriterRequired": true,
+          "targetedValidationRequired": true,
+          "finalIntegrationValidationRequired": true,
+          "postgresRequired": true,
+          "completionGateRequired": true
+        },
+        "experimental_worktree_6": {
+          "executorType": "worktree",
           "maxParallelWorkspaces": 6,
           "worktreeRequired": true,
           "integrationQueueRequired": true,
           "validationLockRequired": true,
           "archiveRequired": true,
-          "completionGateRequired": true
-        },
-        "scale_8": {
-          "maxParallelWorkspaces": 8,
-          "worktreeRequired": true,
-          "integrationQueueRequired": true,
-          "validationLockRequired": true,
-          "archiveRequired": true,
           "completionGateRequired": true,
-          "dogfoodPassRequired": true,
-          "explicitApprovalRequired": true
+          "explicitOptInRequired": true
         }
       }
     },
@@ -377,16 +861,15 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
       "enabled": true,
       "enabledByDefault": true,
       "root": ".pi/worktrees",
-      "prewarmCount": 6,
-      "statePersistencePath": ".pi/worktree-state.json",
-      "crashRecoveryEnabled": true,
       "quarantineFailedByDefault": true,
       "rawRmRfForbidden": true,
-      "pathScopeRequired": true,
-      "diffPreservationPath": ".pi/executions/{planExecId}/worktrees/{wsId}.patch"
+      "pathScopeRequired": true
     },
     "integrationQueue": {
       "enabled": true,
+      "enabledForExecutorTypes": [
+        "worktree"
+      ],
       "processOneMergeAtATime": true,
       "stopOnMergeConflict": true,
       "requireWorkspaceValidationPass": true,
@@ -404,7 +887,7 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
       },
       "queueOptimization": {
         "enabled": true,
-        "strategy": "critical_path_first",
+        "strategy": "priority_then_fifo",
         "availableStrategies": [
           "priority_then_fifo",
           "critical_path_first",
@@ -439,7 +922,9 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
       "runOnUpload": true,
       "parserPriority": [
         "part3_json",
-        "markdown_fallback"
+        "contractVersion_and_executionClass",
+        "doctor",
+        "execution_gate"
       ],
       "autoNormalize": true,
       "autoDoctor": true,
@@ -508,8 +993,37 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
       "execution_without_dry_run",
       "execution_without_approval",
       "optimizer_patch_without_approval",
-      "scope_mismatch",
-      "future_leakage_detected"
+      "autonomous_execution_requested_during_repair_mode",
+      "agent_repo_mutation_requested_during_manual_repair",
+      "agent_command_execution_requested_during_manual_repair",
+      "scheduler_enabled_before_executor_isolation_gate",
+      "stable_6_requested_before_promotion_gates",
+      "llm_call_without_provider_timeout",
+      "llm_stream_without_idle_watchdog",
+      "validation_command_without_timeout",
+      "validation_process_without_process_group",
+      "validation_watch_or_dev_server_command",
+      "git_lock_bypass_detected",
+      "state_store_write_without_serialization",
+      "workspace_patch_without_human_approval",
+      "repair_workspace_missing_rollback",
+      "repair_workspace_missing_targeted_validation",
+      "dogfood_required_but_missing",
+      "promotion_gate_failed_or_missing",
+      "direct_attempt_state_mutation_detected",
+      "executor_mutates_attempt_state",
+      "state_transition_outside_controller",
+      "non_terminal_state_without_deadline",
+      "deadline_watchdog_unavailable",
+      "lock_held_across_external_await",
+      "nested_resource_lock_detected",
+      "execution_entrypoint_bypasses_admission_gate",
+      "attempt_without_event_journal",
+      "postgres_unavailable_for_authoritative_runtime",
+      "json_runtime_fallback_detected",
+      "dual_authoritative_state_detected",
+      "transition_without_expected_version",
+      "handoff_required_without_queue_item"
     ],
     "forbiddenCommands": [
       "git push",
@@ -536,8 +1050,8 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
     ]
   },
   "parallelismReview": {
-    "requestedMaxParallelWorkspaces": 6,
-    "selectedScaleMode": "experimental_6",
+    "requestedMaxParallelWorkspaces": 3,
+    "selectedScaleMode": "stable_3",
     "scaleModeReadiness": {
       "ready": true,
       "blockedReasons": [],
@@ -547,7 +1061,7 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
           "key": "worktree_isolation",
           "required": true,
           "met": true,
-          "message": "Required for experimental_6 and scale_8."
+          "message": "Required for parallel execution."
         },
         {
           "key": "integration_queue",
@@ -569,8 +1083,8 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
         }
       ]
     },
-    "expectedDagEffectiveParallelismMin": 4,
-    "expectedSafeEffectiveParallelismMin": 3,
+    "expectedDagEffectiveParallelismMin": 2,
+    "expectedSafeEffectiveParallelismMin": 2,
     "dagEffectiveParallelism": null,
     "safeEffectiveParallelism": null,
     "preflightStatus": "required",
@@ -642,7 +1156,13 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
       "plan_intake_analysis",
       "optimizer_proposal",
       "graph_diff",
-      "worktree_state"
+      "worktree_state",
+      "lease_heartbeat_snapshots",
+      "lease_reconciliation_log",
+      "merge_priority_score_log",
+      "empirical_write_set",
+      "write_set_drift_report",
+      "validation_lane_saturation_log"
     ]
   },
   "workspaces": [
@@ -652,14 +1172,18 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
       "dependencies": [],
       "parallelGroup": "batch_1",
       "dependencyReason": "Foundation workspace for this phase.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
       "parallelism": {
         "expectedBatch": "batch_1",
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
           "src/v7/alpha/contracts/**",
-          "tests/v7/alpha/unit/contracts/**",
-          "schemas/**"
+          "tests/v7/alpha/unit/contracts/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -680,12 +1204,16 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
       "validation": {
         "profile": "targeted_then_final",
         "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
       },
       "allowedFiles": [
         "src/v7/alpha/contracts/**",
-        "tests/v7/alpha/unit/contracts/**",
-        "schemas/**"
+        "tests/v7/alpha/unit/contracts/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -698,19 +1226,17 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Define alpha feature row schema and forbidden leakage fields.",
-        "Relevant unit/integration tests pass.",
-        "No hidden fallback or future leakage introduced."
+        "alpha_feature_table contract with all required fields is typed.",
+        "feature_schema_version, symbol_encoding_family, symbol_universe_version are required fields."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
       "maxRetries": 3,
-      "riskLevel": "medium",
+      "riskLevel": "low",
       "capabilityManifest": {
         "canEdit": [
           "src/v7/alpha/contracts/**",
-          "tests/v7/alpha/unit/contracts/**",
-          "schemas/**"
+          "tests/v7/alpha/unit/contracts/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -754,22 +1280,21 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
     {
       "id": "P1.B",
       "title": "Label Row Contract",
-      "dependencies": [
-        "P1.A"
-      ],
-      "parallelGroup": "batch_2",
-      "dependencyReason": "Depends on phase-local foundation workstream A to establish shared contracts or base modules.",
+      "dependencies": [],
+      "parallelGroup": "batch_1",
+      "dependencyReason": "Foundation workspace for this phase.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
       "parallelism": {
-        "expectedBatch": "batch_2",
-        "canRunWith": [
-          "P1.C",
-          "P1.D"
-        ],
+        "expectedBatch": "batch_1",
+        "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
           "src/v7/alpha/contracts/**",
-          "tests/v7/alpha/unit/contracts/**",
-          "schemas/**"
+          "tests/v7/alpha/unit/contracts/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -784,18 +1309,22 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
         "requiresWorkspaceValidation": true,
         "requiresIntegrationValidation": true,
         "conflictHandoffRequired": true,
-        "queuePriority": "normal",
+        "queuePriority": "critical",
         "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
       },
       "validation": {
         "profile": "targeted_then_final",
         "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
       },
       "allowedFiles": [
         "src/v7/alpha/contracts/**",
-        "tests/v7/alpha/unit/contracts/**",
-        "schemas/**"
+        "tests/v7/alpha/unit/contracts/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -808,19 +1337,16 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Define long_R/short_R and classification label schema.",
-        "Relevant unit/integration tests pass.",
-        "No hidden fallback or future leakage introduced."
+        "alpha_label_table contract with long_R_net, short_R_net, best_action_label, gap_R is typed."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
       "maxRetries": 3,
-      "riskLevel": "medium",
+      "riskLevel": "low",
       "capabilityManifest": {
         "canEdit": [
           "src/v7/alpha/contracts/**",
-          "tests/v7/alpha/unit/contracts/**",
-          "schemas/**"
+          "tests/v7/alpha/unit/contracts/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -863,20 +1389,23 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
     },
     {
       "id": "P1.C",
-      "title": "Prediction Contract",
-      "dependencies": [
-        "P1.A"
-      ],
-      "parallelGroup": "batch_2",
-      "dependencyReason": "Depends on phase-local foundation workstream A to establish shared contracts or base modules.",
+      "title": "Prediction & Bridge Contracts",
+      "dependencies": [],
+      "parallelGroup": "batch_1",
+      "dependencyReason": "Foundation workspace for this phase.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
       "parallelism": {
-        "expectedBatch": "batch_2",
+        "expectedBatch": "batch_1",
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
           "src/v7/alpha/contracts/**",
-          "tests/v7/alpha/unit/contracts/**",
-          "schemas/**"
+          "src/v7/alpha/runtime/**",
+          "tests/v7/alpha/unit/contracts/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -891,18 +1420,23 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
         "requiresWorkspaceValidation": true,
         "requiresIntegrationValidation": true,
         "conflictHandoffRequired": true,
-        "queuePriority": "normal",
+        "queuePriority": "critical",
         "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
       },
       "validation": {
         "profile": "targeted_then_final",
         "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
       },
       "allowedFiles": [
         "src/v7/alpha/contracts/**",
-        "tests/v7/alpha/unit/contracts/**",
-        "schemas/**"
+        "src/v7/alpha/runtime/**",
+        "tests/v7/alpha/unit/contracts/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -915,19 +1449,19 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Define calibrated probability, expected-R, and alpha score output.",
-        "Relevant unit/integration tests pass.",
-        "No hidden fallback or future leakage introduced."
+        "alpha_prediction_table contract typed.",
+        "V7AnalysisRequest and AnalysisResult bridge contracts defined.",
+        "ModelScope, Mode, and Action enums match V7 canonical values."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
       "maxRetries": 3,
-      "riskLevel": "medium",
+      "riskLevel": "low",
       "capabilityManifest": {
         "canEdit": [
           "src/v7/alpha/contracts/**",
-          "tests/v7/alpha/unit/contracts/**",
-          "schemas/**"
+          "src/v7/alpha/runtime/**",
+          "tests/v7/alpha/unit/contracts/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -972,18 +1506,23 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
       "id": "P1.D",
       "title": "Contract Tests",
       "dependencies": [
-        "P1.A"
+        "P1.A",
+        "P1.B",
+        "P1.C"
       ],
       "parallelGroup": "batch_2",
-      "dependencyReason": "Depends on phase-local foundation workstream A to establish shared contracts or base modules.",
+      "dependencyReason": "Depends on P1.A, P1.B, P1.C for foundation.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
       "parallelism": {
         "expectedBatch": "batch_2",
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
-          "src/v7/alpha/contracts/**",
-          "tests/v7/alpha/unit/contracts/**",
-          "schemas/**"
+          "tests/v7/alpha/unit/contracts/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -1004,12 +1543,15 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
       "validation": {
         "profile": "targeted_then_final",
         "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
       },
       "allowedFiles": [
-        "src/v7/alpha/contracts/**",
-        "tests/v7/alpha/unit/contracts/**",
-        "schemas/**"
+        "tests/v7/alpha/unit/contracts/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -1022,19 +1564,16 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Round-trip, enum, numeric-bound, and scope compatibility tests.",
-        "Relevant unit/integration tests pass.",
-        "No hidden fallback or future leakage introduced."
+        "All contracts have serialization round-trip tests.",
+        "Schema version bumps are validated."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
       "maxRetries": 3,
-      "riskLevel": "medium",
+      "riskLevel": "low",
       "capabilityManifest": {
         "canEdit": [
-          "src/v7/alpha/contracts/**",
-          "tests/v7/alpha/unit/contracts/**",
-          "schemas/**"
+          "tests/v7/alpha/unit/contracts/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -1085,26 +1624,65 @@ Hard stop for dependency cycles, unapproved parallelism review, worktree path es
 
 ```json
 {
+  "contractVersion": "4.1.1",
   "phase": "P1",
   "title": "Contracts & Alpha Data Contract",
-  "model_name": "V7 AlphaForge XGB",
-  "model_slug": "v7_alphaforge_xgb",
-  "depends_on": [
-    "P0"
+  "executionClass": "implementation",
+  "executionAutomation": "enabled",
+  "selectedRepairMode": null,
+  "targetPromotionMode": "stable_6",
+  "autonomousExecutionAllowed": true,
+  "agentMayMutateRepo": true,
+  "schedulerRuntimeUse": "enabled",
+  "primaryGoal": "Feature, label, prediction, artifact, and V7 bridge contracts.",
+  "projectName": "v7_alphaforge_xgb",
+  "stateBackend": "postgres",
+  "selectedScaleMode": "stable_3",
+  "maxParallelWorkspaces": 3,
+  "requiresWorktreeIsolation": true,
+  "requiresPatchIsolation": false,
+  "requiresIntegrationQueue": true,
+  "requiresPatchApplyQueue": false,
+  "repositoryMutationAuthority": "worktree_integration",
+  "queueOptimizationEnabled": true,
+  "queueOptimizationStrategy": "priority_then_fifo",
+  "continuousScheduling": true,
+  "continuousSlotCount": 3,
+  "safeEffectiveParallelismTarget": 2,
+  "notInScope": [
+    "External broker execution authority",
+    "V7 runtime core modifications",
+    "Non-XGBoost model families"
   ],
-  "next_phase": "P2",
-  "scale_mode": "experimental_6",
-  "requested_max_workers": 6,
-  "expected_safe_parallelism": 3,
-  "primary_focus": "Feature, label, prediction, artifact, and V7 bridge contracts",
-  "done_when": "Phase acceptance criteria pass and Part 3 JSON validates."
+  "hardStops": [
+    "secrets",
+    "destructive_ops",
+    "forbidden_files",
+    "budget_violations",
+    "dependency_cycles",
+    "unapproved_parallelism_review",
+    "invalid_dependency_patch",
+    "worktree_path_escape",
+    "raw_destructive_cleanup",
+    "integration_merge_without_validation",
+    "integration_validation_failure",
+    "merge_conflict_without_handoff",
+    "unsafe_scale_mode",
+    "queue_next_plan_while_integration_dirty",
+    "scale_mode_approval_stale",
+    "worktree_required_for_requested_parallelism",
+    "watch_mode_validation",
+    "execution_without_dry_run",
+    "execution_without_approval",
+    "optimizer_patch_without_approval"
+  ],
+  "completionGate": "P1 complete only when all workspaces pass acceptance criteria and final validation passes.",
+  "nextPhase": "P2"
 }
 ```
 
+---
 
-## 12. Review Hardening Requirements
+## Review Hardening Requirements
 
-* [ ] Feature row contract includes anomaly artifact lineage and fit-window metadata.
-* [ ] Prediction contract includes deterministic/regime interaction fields.
-* [ ] Decision lifecycle contract supports regime reason codes and constraint levels.
-* [ ] Symbol encoding family and symbol universe version are explicit schema fields.
+* [ ] Data contract schema versioning

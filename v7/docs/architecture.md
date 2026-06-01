@@ -169,29 +169,20 @@ Rules:
 
 ## 3. Simulation and Outcome Truth (Mode-Specific)
 
-Simulation is the economic truth core — **per mode**.
+**⚠️ Simulation truth semantics now live in the top-level `/simulation` authority.**
 
-It compares:
+See:
+- `/simulation/docs/architecture.md` — component design and data flow
+- `/simulation/docs/contracts.md` — SimulationInput, SimulationOutput contracts
+- `/simulation/docs/profiles.md` — mode-specific profiles
+- `/simulation/docs/ai_summary.md` — machine-readable synthesis
 
-- `LONG_NOW`
-- `SHORT_NOW`
-- `NO_TRADE`
-
-for the same state and future path under **mode-specific** stop, target, horizon, fee, and slippage semantics.
-
-It computes:
-
-- realized R
-- fee/slippage adjusted R
-- MFE / MAE
-- path quality
-- regret
-- saved-loss and missed-opportunity scores
-- resolution status
+The `/simulation` engine compares `LONG_NOW`, `SHORT_NOW`, and `NO_TRADE` for the same state and future path under mode-specific stop, target, horizon, fee, and slippage semantics.
 
 Rules:
 
-- one simulation engine (mode-configured)
+- one simulation engine (mode-configured), owned by `/simulation`
+- V7 runtime hosts/executes simulation operationally through stable contracts
 - labels and evaluation share semantics
 - no unresolved simulation becomes a final training label
 - simulation-family version changes when meaning changes

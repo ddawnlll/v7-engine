@@ -13,7 +13,7 @@ It defines what V7 is, why it exists, what success means, what design principles
 
 ## One-Sentence Definition
 
-**V7 is a mode-centric, centralized, market-first, simulation-native learned trading engine that optimizes economic quality first, uses calibrated decision outputs, and evaluates long / short / no-trade actions through one runtime-hosted forward-simulation truth layer configured per trading mode (SWING, SCALP, AGGRESSIVE_SCALP).**
+**V7 is a mode-centric, centralized, market-first, simulation-native learned trading engine that optimizes economic quality first, uses calibrated decision outputs, and evaluates long / short / no-trade actions through one forward-simulation truth layer (owned by `/simulation` authority, hosted by V7 runtime) configured per trading mode (SWING, SCALP, AGGRESSIVE_SCALP).**
 
 ---
 
@@ -134,7 +134,7 @@ V7 is:
 * a **contract-compatible** learned trading engine
 * a **centralized** system designed for multi-symbol operation
 * a **market-first** learning system
-* a **simulation-native** system where the runtime-hosted simulation engine defines simulated truth for labeling and evaluation through side-effect-free adapters
+* a **simulation-native** system where the `/simulation` authority defines simulated truth for labeling and evaluation; V7 runtime hosts/executes it operationally
 * a **calibration-structural** decision system
 * a **multi-symbol-aware** engine designed for 60-symbol operation
 * a system optimized for **economic quality first**
@@ -282,7 +282,7 @@ They must not define the truth that V7 learns.
 
 V7’s most important architectural rule is:
 
-**one runtime-hosted simulation engine defines simulated truth for labeling, evaluation, and production outcome interpretation.**
+**one simulation engine (owned by `/simulation`, hosted by V7 runtime) defines simulated truth for labeling, evaluation, and production outcome interpretation.**
 
 This means the following must share one logic surface:
 
@@ -448,7 +448,7 @@ That means:
 * fewer hidden policies
 * one central configuration root
 * one primary CLI entrypoint
-* one runtime-hosted simulation truth layer
+* one simulation truth layer (owned by `/simulation`, hosted by V7 runtime)
 * simpler threshold policy
 * modular feature and label extensions
 * minimal required documentation
@@ -541,7 +541,7 @@ The first V7 design phase is about:
 
 * defining the right success criteria
 * defining the right contracts
-* defining runtime-hosted simulation output semantics
+* defining `/simulation` authority output semantics
 * defining the centralized architecture
 * defining modularity and configuration rules
 * creating a system that can reach economic quality faster

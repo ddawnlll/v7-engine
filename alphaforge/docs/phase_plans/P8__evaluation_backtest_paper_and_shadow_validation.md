@@ -1,12 +1,12 @@
-# P2 — Runtime Simulation Adapter & R-Label Engine
+# P8 — Evaluation, Backtest, Paper & Shadow Validation
 
 # Part 1 — Phase Plan
 
 ## 0. TL;DR / Compact Mental Model
 
-**Phase:** `P2`  
-**One-line goal:** Side-effect-free simulation adapter and mode-specific R-label generation.  
-**Why now:** Alpha labels must come from the same /simulation economic truth authority that evaluates runtime outcomes.  
+**Phase:** `P8`  
+**One-line goal:** Economic evaluation, no-trade quality, calibration quality, and shadow/paper readiness.  
+**Why now:** Model promotion requires out-of-sample economic evidence, not raw accuracy or training metrics.  
 **Blast radius:** src/v7/alpha/**, tests/v7/alpha/**, configs/v7/alpha/**, docs/v7/alpha/**  
 **Rollback path:** Revert this phase's workspaces, restore previous compatible alpha config/schema/artifact bundle, and rerun targeted + final validation.  
 **Execution class:** `implementation`  
@@ -21,13 +21,13 @@
 
 | Field | Value |
 |---|---|
-| Phase | `P2` |
-| Title | `Runtime Simulation Adapter & R-Label Engine` |
+| Phase | `P8` |
+| Title | `Evaluation, Backtest, Paper & Shadow Validation` |
 | Status | `Planned` |
 | Last updated | `2026-05-23` |
 | Delivery status | `Not started` |
 | Target environment | `Local / Staging` |
-| Primary focus | `Side-effect-free simulation adapter and mode-specific R-label generation.` |
+| Primary focus | `Economic evaluation, no-trade quality, calibration quality, and shadow/paper readiness.` |
 | Product-code changes | `Allowed` |
 | Execution class | `implementation` |
 | Execution automation | `enabled` |
@@ -49,9 +49,9 @@
 
 ## 2. Purpose
 
-Alpha labels must come from the same /simulation economic truth authority that evaluates runtime outcomes.
+Model promotion requires out-of-sample economic evidence, not raw accuracy or training metrics.
 
-The /simulation authority owns economic truth semantics. V7 runtime hosts/executes simulation operationally. AlphaForge must not create a second hidden simulator. Instead, it must consume /simulation outputs through deterministic side-effect-free adapters into a label-generation pipeline that produces R-multiple targets per mode.
+Walk-forward evaluation must measure economic quality (R-multiple), no-trade quality, calibration reliability, and regime/symbol stability. Paper and shadow modes must exist before live eligibility.
 
 This phase uses `stable_3` scale-aware execution. The executor should optimize for safe effective parallelism, not maximum concurrency. Worktree isolation, integration queue, validation locks, and completion gates remain mandatory whenever more than three workers are requested.
 
@@ -82,16 +82,16 @@ This phase uses `stable_3` scale-aware execution. The executor should optimize f
 
 ## 4. Background / What Was Wrong
 
-The /simulation authority owns economic truth semantics. V7 runtime hosts/executes simulation operationally. AlphaForge must not create a second hidden simulator. Instead, it must consume /simulation outputs through deterministic side-effect-free adapters into a label-generation pipeline that produces R-multiple targets per mode.
+Walk-forward evaluation must measure economic quality (R-multiple), no-trade quality, calibration reliability, and regime/symbol stability. Paper and shadow modes must exist before live eligibility.
 
 ---
 
 ## 5. Current Failure State / Known Blockers
 
-* `simulation_adapter` = not implemented.
-* `mode_config_resolver` = not implemented.
-* `r_label_builder` = not implemented.
-* `golden_label_tests` = not implemented.
+* `walk_forward_evaluation` = not implemented.
+* `ablations` = not implemented.
+* `paper_shadow_harness` = not implemented.
+* `promotion_report` = not implemented.
 
 ---
 
@@ -110,108 +110,105 @@ The /simulation authority owns economic truth semantics. V7 runtime hosts/execut
 
 ## 7. Workstreams
 
-### P2.A — Simulation Adapter
+### P8.A — Walk-Forward Evaluation
 
-**Goal:** Side-effect-free adapter consumes /simulation engine outputs.
-
-**Dependencies:** None (foundation)
-**Parallel Group:** batch_1
-**Risk Level:** medium
-**Queue Priority:** critical
-**Can run with:** None
-
-**Requirements:
-* Side-effect-free adapter consumes /simulation engine outputs.
-* No hidden simulator created.
-* Symbol+timestamp+mode → simulation result mapping works.
-
-**File Scope:**
-```text
-src/v7/alpha/simulation_adapter/**
-tests/v7/alpha/unit/simulation_adapter/**
-```
-
-**Isolation & Parallelism Notes:**
-* Foundation workspace for this phase.
-* Expected batch: batch_1
-* Worktree isolation required.
-* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
-
-### P2.B — Mode Config Resolver
-
-**Goal:** Resolves SWING/SCALP/AGGRESSIVE_SCALP intervals from central config.
+**Goal:** Economic quality metrics computed per fold.
 
 **Dependencies:** None (foundation)
 **Parallel Group:** batch_1
-**Risk Level:** medium
-**Queue Priority:** critical
-**Can run with:** None
-
-**Requirements:
-* Resolves SWING/SCALP/AGGRESSIVE_SCALP intervals from central config.
-* SCALP primary=1h, context=4h, refinement=15m enforced.
-
-**File Scope:**
-```text
-src/v7/alpha/config/**
-tests/v7/alpha/unit/config/**
-```
-
-**Isolation & Parallelism Notes:**
-* Foundation workspace for this phase.
-* Expected batch: batch_1
-* Worktree isolation required.
-* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
-
-### P2.C — R Label Builder
-
-**Goal:** long_R_net, short_R_net, best_action_label, gap_R computed per mode.
-
-**Dependencies:** P2.A, P2.B
-**Parallel Group:** batch_2
 **Risk Level:** high
 **Queue Priority:** critical
 **Can run with:** None
 
 **Requirements:
-* long_R_net, short_R_net, best_action_label, gap_R computed per mode.
-* NO_TRACE is first-class label.
-* min_action_edge and ambiguity_gap applied from mode config.
+* Economic quality metrics computed per fold.
+* No-trade quality, calibration, regression reliability evaluated.
 
 **File Scope:**
 ```text
-src/v7/alpha/labels/**
-tests/v7/alpha/unit/labels/**
+src/v7/alpha/evaluation/**
+tests/v7/alpha/unit/evaluation/**
 ```
 
 **Isolation & Parallelism Notes:**
-* Depends on P2.A, P2.B for foundation.
+* Foundation workspace for this phase.
+* Expected batch: batch_1
+* Worktree isolation required.
+* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
+
+### P8.B — Ablations
+
+**Goal:** Feature ablation, symbol stability, regime stability measured.
+
+**Dependencies:** P8.A
+**Parallel Group:** batch_2
+**Risk Level:** medium
+**Queue Priority:** high
+**Can run with:** None
+
+**Requirements:
+* Feature ablation, symbol stability, regime stability measured.
+
+**File Scope:**
+```text
+src/v7/alpha/evaluation/**
+tests/v7/alpha/unit/evaluation/**
+```
+
+**Isolation & Parallelism Notes:**
+* Depends on P8.A for foundation.
 * Expected batch: batch_2
 * Worktree isolation required.
 * Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
 
-### P2.D — Golden Label Tests
+### P8.C — Paper/Shadow Harness
 
-**Goal:** Golden dataset with known expected R values passes.
+**Goal:** Paper mode inference without execution exists.
 
-**Dependencies:** P2.C
-**Parallel Group:** batch_2
-**Risk Level:** medium
+**Dependencies:** None (foundation)
+**Parallel Group:** batch_1
+**Risk Level:** high
+**Queue Priority:** critical
+**Can run with:** None
+
+**Requirements:
+* Paper mode inference without execution exists.
+* Shadow mode runs alongside live without affecting decisions.
+
+**File Scope:**
+```text
+src/v7/alpha/runtime/**
+tests/v7/alpha/integration/**
+```
+
+**Isolation & Parallelism Notes:**
+* Foundation workspace for this phase.
+* Expected batch: batch_1
+* Worktree isolation required.
+* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
+
+### P8.D — Promotion Report
+
+**Goal:** Report summarizes all evaluation evidence for promotion review.
+
+**Dependencies:** P8.A, P8.B, P8.C
+**Parallel Group:** batch_3
+**Risk Level:** low
 **Queue Priority:** normal
 **Can run with:** None
 
 **Requirements:
-* Golden dataset with known expected R values passes.
-* Regression test catches label drift.
+* Report summarizes all evaluation evidence for promotion review.
+* Rollback recommendation included.
 
 **File Scope:**
 ```text
-tests/v7/alpha/golden/**
+docs/v7/alpha/**
 ```
 
 **Isolation & Parallelism Notes:**
-* Depends on P2.C for foundation.
-* Expected batch: batch_2
+* Depends on P8.A, P8.B, P8.C for foundation.
+* Expected batch: batch_3
 * Worktree isolation required.
 * Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
 
@@ -221,8 +218,9 @@ tests/v7/alpha/golden/**
 ## 8. Combined Implementation Order
 
 ```text
-  Batch batch_1: P2.A + P2.B
-  Batch batch_2: P2.C + P2.D
+  Batch batch_1: P8.A + P8.C
+  Batch batch_2: P8.B
+  Batch batch_3: P8.D
 ```
 
 The dependency graph dictates that foundation workspaces run first, followed by parallel batches where dependencies permit. The DAG batch preview and safe batch preview may differ because of file overlap, validation lock pressure, or integration queue serialization.
@@ -231,12 +229,12 @@ The dependency graph dictates that foundation workspaces run first, followed by 
 
 ## 9. Definition of Done
 
-`P2` is complete when ALL are true:
+`P8` is complete when ALL are true:
 
-* [ ] Side-effect-free adapter consumes /simulation engine outputs.
-* [ ] Resolves SWING/SCALP/AGGRESSIVE_SCALP intervals from central config.
-* [ ] long_R_net, short_R_net, best_action_label, gap_R computed per mode.
-* [ ] Golden dataset with known expected R values passes.
+* [ ] Economic quality metrics computed per fold.
+* [ ] Feature ablation, symbol stability, regime stability measured.
+* [ ] Paper mode inference without execution exists.
+* [ ] Report summarizes all evaluation evidence for promotion review.
 * [ ] DAG batch preview has been reviewed if required.
 * [ ] Safe batch preview has been reviewed if required.
 * [ ] Selected scale mode readiness passes.
@@ -271,13 +269,13 @@ The dependency graph dictates that foundation workspaces run first, followed by 
 
 ## 11. What Next Phase Inherits
 
-`P4` inherits:
+`P9` inherits:
 
-* `P2` execution contract with worktree mode awareness.
+* `P8` execution contract with worktree mode awareness.
 * Scale-mode-aware validation rules.
 * Integration queue requirements.
 * Workspace-level parallelism/isolation/integration/validation metadata.
-* Review hardening invariants: SCALP interval authority (mode config resolver)
+* Review hardening invariants: Walk-forward economic evaluation, No-trade quality visibility
 
 ---
 
@@ -285,7 +283,7 @@ The dependency graph dictates that foundation workspaces run first, followed by 
 
 ## Mission
 
-Implement `P2` — Side-effect-free simulation adapter and mode-specific R-label generation.
+Implement `P8` — Economic evaluation, no-trade quality, calibration quality, and shadow/paper readiness.
 
 The agent must optimize for safe parallelism, not maximum concurrency. Higher worker counts are allowed only when scale-mode readiness passes and the executor can preserve correctness through worktree isolation, integration queue, validation locks, and completion gates.
 
@@ -295,7 +293,7 @@ The agent must optimize for safe parallelism, not maximum concurrency. Higher wo
 
 ## Hard Requirements
 
-1. All P2 workstreams must pass acceptance criteria.
+1. All P8 workstreams must pass acceptance criteria.
 2. Worktree isolation must be enabled for parallel workspaces.
 3. Integration queue must serialize merges.
 4. Global validation lock must be active for heavy validation.
@@ -462,7 +460,7 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
       "v7",
       "alpha",
       "xgboost",
-      "p2"
+      "p8"
     ]
   },
   "intent": {
@@ -807,8 +805,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
     "liveValidationVisibilityRequired": true
   },
   "planExecution": {
-    "phase": "P2",
-    "title": "Runtime Simulation Adapter & R-Label Engine",
+    "phase": "P8",
+    "title": "Evaluation, Backtest, Paper & Shadow Validation",
     "mode": "implementation",
     "maxParallelWorkspaces": 3,
     "scheduling": {
@@ -1168,8 +1166,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
   },
   "workspaces": [
     {
-      "id": "P2.A",
-      "title": "Simulation Adapter",
+      "id": "P8.A",
+      "title": "Walk-Forward Evaluation",
       "dependencies": [],
       "parallelGroup": "batch_1",
       "dependencyReason": "Foundation workspace for this phase.",
@@ -1183,8 +1181,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
-          "src/v7/alpha/simulation_adapter/**",
-          "tests/v7/alpha/unit/simulation_adapter/**"
+          "src/v7/alpha/evaluation/**",
+          "tests/v7/alpha/unit/evaluation/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -1213,8 +1211,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "maxOutputBytes": 52428800
       },
       "allowedFiles": [
-        "src/v7/alpha/simulation_adapter/**",
-        "tests/v7/alpha/unit/simulation_adapter/**"
+        "src/v7/alpha/evaluation/**",
+        "tests/v7/alpha/unit/evaluation/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -1227,235 +1225,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Side-effect-free adapter consumes /simulation engine outputs.",
-        "No hidden simulator created.",
-        "Symbol+timestamp+mode \u2192 simulation result mapping works."
-      ],
-      "targetCommand": "pytest tests/v7/alpha -q",
-      "roleBudget": "worker",
-      "maxRetries": 3,
-      "riskLevel": "medium",
-      "capabilityManifest": {
-        "canEdit": [
-          "src/v7/alpha/simulation_adapter/**",
-          "tests/v7/alpha/unit/simulation_adapter/**"
-        ],
-        "cannotEdit": [
-          ".env*",
-          "**/*.pem",
-          "**/*.key",
-          "**/*.p12",
-          "**/*.pfx",
-          "**/id_rsa",
-          "**/credentials/**",
-          "**/secrets/**"
-        ],
-        "canRun": [
-          "pytest",
-          "python",
-          "ruff",
-          "mypy"
-        ],
-        "cannotRun": [
-          "git push",
-          "git push --force",
-          "rm -rf",
-          "npm publish",
-          "terraform destroy",
-          "kubectl delete",
-          "git reset --hard",
-          "git clean -fd",
-          "vitest --watch",
-          "jest --watch",
-          "npm run dev"
-        ]
-      },
-      "telemetry": {
-        "expectedEvents": [
-          "workspace_started",
-          "workspace_completed",
-          "workspace_validated"
-        ],
-        "logLevel": "info"
-      }
-    },
-    {
-      "id": "P2.B",
-      "title": "Mode Config Resolver",
-      "dependencies": [],
-      "parallelGroup": "batch_1",
-      "dependencyReason": "Foundation workspace for this phase.",
-      "manualApplicationRequired": false,
-      "humanApprovalRequired": false,
-      "autonomousExecutionAllowed": true,
-      "rollbackRequired": true,
-      "targetedValidationRequired": true,
-      "parallelism": {
-        "expectedBatch": "batch_1",
-        "canRunWith": [],
-        "cannotRunWith": [],
-        "conflictScope": [
-          "src/v7/alpha/config/**",
-          "tests/v7/alpha/unit/config/**"
-        ],
-        "sameFileParallelismAllowed": false,
-        "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
-      },
-      "worktree": {
-        "required": true,
-        "isolationMode": "worktree",
-        "cleanupPolicy": "quarantine_on_failure"
-      },
-      "integration": {
-        "queueRequired": true,
-        "requiresWorkspaceValidation": true,
-        "requiresIntegrationValidation": true,
-        "conflictHandoffRequired": true,
-        "queuePriority": "critical",
-        "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
-      },
-      "validation": {
-        "profile": "targeted_then_final",
-        "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true,
-        "timeoutMs": 600000,
-        "managedRunnerRequired": true,
-        "processGroupRequired": true,
-        "killTreeOnTimeout": true,
-        "maxOutputBytes": 52428800
-      },
-      "allowedFiles": [
-        "src/v7/alpha/config/**",
-        "tests/v7/alpha/unit/config/**"
-      ],
-      "forbiddenFiles": [
-        ".env*",
-        "**/*.pem",
-        "**/*.key",
-        "**/*.p12",
-        "**/*.pfx",
-        "**/id_rsa",
-        "**/credentials/**",
-        "**/secrets/**"
-      ],
-      "acceptanceCriteria": [
-        "Resolves SWING/SCALP/AGGRESSIVE_SCALP intervals from central config.",
-        "SCALP primary=1h, context=4h, refinement=15m enforced."
-      ],
-      "targetCommand": "pytest tests/v7/alpha -q",
-      "roleBudget": "worker",
-      "maxRetries": 3,
-      "riskLevel": "medium",
-      "capabilityManifest": {
-        "canEdit": [
-          "src/v7/alpha/config/**",
-          "tests/v7/alpha/unit/config/**"
-        ],
-        "cannotEdit": [
-          ".env*",
-          "**/*.pem",
-          "**/*.key",
-          "**/*.p12",
-          "**/*.pfx",
-          "**/id_rsa",
-          "**/credentials/**",
-          "**/secrets/**"
-        ],
-        "canRun": [
-          "pytest",
-          "python",
-          "ruff",
-          "mypy"
-        ],
-        "cannotRun": [
-          "git push",
-          "git push --force",
-          "rm -rf",
-          "npm publish",
-          "terraform destroy",
-          "kubectl delete",
-          "git reset --hard",
-          "git clean -fd",
-          "vitest --watch",
-          "jest --watch",
-          "npm run dev"
-        ]
-      },
-      "telemetry": {
-        "expectedEvents": [
-          "workspace_started",
-          "workspace_completed",
-          "workspace_validated"
-        ],
-        "logLevel": "info"
-      }
-    },
-    {
-      "id": "P2.C",
-      "title": "R Label Builder",
-      "dependencies": [
-        "P2.A",
-        "P2.B"
-      ],
-      "parallelGroup": "batch_2",
-      "dependencyReason": "Depends on P2.A, P2.B for foundation.",
-      "manualApplicationRequired": false,
-      "humanApprovalRequired": false,
-      "autonomousExecutionAllowed": true,
-      "rollbackRequired": true,
-      "targetedValidationRequired": true,
-      "parallelism": {
-        "expectedBatch": "batch_2",
-        "canRunWith": [],
-        "cannotRunWith": [],
-        "conflictScope": [
-          "src/v7/alpha/labels/**",
-          "tests/v7/alpha/unit/labels/**"
-        ],
-        "sameFileParallelismAllowed": false,
-        "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
-      },
-      "worktree": {
-        "required": true,
-        "isolationMode": "worktree",
-        "cleanupPolicy": "quarantine_on_failure"
-      },
-      "integration": {
-        "queueRequired": true,
-        "requiresWorkspaceValidation": true,
-        "requiresIntegrationValidation": true,
-        "conflictHandoffRequired": true,
-        "queuePriority": "critical",
-        "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
-      },
-      "validation": {
-        "profile": "targeted_then_final",
-        "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true,
-        "timeoutMs": 600000,
-        "managedRunnerRequired": true,
-        "processGroupRequired": true,
-        "killTreeOnTimeout": true,
-        "maxOutputBytes": 52428800
-      },
-      "allowedFiles": [
-        "src/v7/alpha/labels/**",
-        "tests/v7/alpha/unit/labels/**"
-      ],
-      "forbiddenFiles": [
-        ".env*",
-        "**/*.pem",
-        "**/*.key",
-        "**/*.p12",
-        "**/*.pfx",
-        "**/id_rsa",
-        "**/credentials/**",
-        "**/secrets/**"
-      ],
-      "acceptanceCriteria": [
-        "long_R_net, short_R_net, best_action_label, gap_R computed per mode.",
-        "NO_TRACE is first-class label.",
-        "min_action_edge and ambiguity_gap applied from mode config."
+        "Economic quality metrics computed per fold.",
+        "No-trade quality, calibration, regression reliability evaluated."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
@@ -1463,8 +1234,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
       "riskLevel": "high",
       "capabilityManifest": {
         "canEdit": [
-          "src/v7/alpha/labels/**",
-          "tests/v7/alpha/unit/labels/**"
+          "src/v7/alpha/evaluation/**",
+          "tests/v7/alpha/unit/evaluation/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -1506,13 +1277,13 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
       }
     },
     {
-      "id": "P2.D",
-      "title": "Golden Label Tests",
+      "id": "P8.B",
+      "title": "Ablations",
       "dependencies": [
-        "P2.C"
+        "P8.A"
       ],
       "parallelGroup": "batch_2",
-      "dependencyReason": "Depends on P2.C for foundation.",
+      "dependencyReason": "Depends on P8.A for foundation.",
       "manualApplicationRequired": false,
       "humanApprovalRequired": false,
       "autonomousExecutionAllowed": true,
@@ -1523,7 +1294,232 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
-          "tests/v7/alpha/golden/**"
+          "src/v7/alpha/evaluation/**",
+          "tests/v7/alpha/unit/evaluation/**"
+        ],
+        "sameFileParallelismAllowed": false,
+        "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
+      },
+      "worktree": {
+        "required": true,
+        "isolationMode": "worktree",
+        "cleanupPolicy": "quarantine_on_failure"
+      },
+      "integration": {
+        "queueRequired": true,
+        "requiresWorkspaceValidation": true,
+        "requiresIntegrationValidation": true,
+        "conflictHandoffRequired": true,
+        "queuePriority": "high",
+        "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
+      },
+      "validation": {
+        "profile": "targeted_then_final",
+        "heavyCommandUsesGlobalLock": true,
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
+      },
+      "allowedFiles": [
+        "src/v7/alpha/evaluation/**",
+        "tests/v7/alpha/unit/evaluation/**"
+      ],
+      "forbiddenFiles": [
+        ".env*",
+        "**/*.pem",
+        "**/*.key",
+        "**/*.p12",
+        "**/*.pfx",
+        "**/id_rsa",
+        "**/credentials/**",
+        "**/secrets/**"
+      ],
+      "acceptanceCriteria": [
+        "Feature ablation, symbol stability, regime stability measured."
+      ],
+      "targetCommand": "pytest tests/v7/alpha -q",
+      "roleBudget": "worker",
+      "maxRetries": 3,
+      "riskLevel": "medium",
+      "capabilityManifest": {
+        "canEdit": [
+          "src/v7/alpha/evaluation/**",
+          "tests/v7/alpha/unit/evaluation/**"
+        ],
+        "cannotEdit": [
+          ".env*",
+          "**/*.pem",
+          "**/*.key",
+          "**/*.p12",
+          "**/*.pfx",
+          "**/id_rsa",
+          "**/credentials/**",
+          "**/secrets/**"
+        ],
+        "canRun": [
+          "pytest",
+          "python",
+          "ruff",
+          "mypy"
+        ],
+        "cannotRun": [
+          "git push",
+          "git push --force",
+          "rm -rf",
+          "npm publish",
+          "terraform destroy",
+          "kubectl delete",
+          "git reset --hard",
+          "git clean -fd",
+          "vitest --watch",
+          "jest --watch",
+          "npm run dev"
+        ]
+      },
+      "telemetry": {
+        "expectedEvents": [
+          "workspace_started",
+          "workspace_completed",
+          "workspace_validated"
+        ],
+        "logLevel": "info"
+      }
+    },
+    {
+      "id": "P8.C",
+      "title": "Paper/Shadow Harness",
+      "dependencies": [],
+      "parallelGroup": "batch_1",
+      "dependencyReason": "Foundation workspace for this phase.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
+      "parallelism": {
+        "expectedBatch": "batch_1",
+        "canRunWith": [],
+        "cannotRunWith": [],
+        "conflictScope": [
+          "src/v7/alpha/runtime/**",
+          "tests/v7/alpha/integration/**"
+        ],
+        "sameFileParallelismAllowed": false,
+        "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
+      },
+      "worktree": {
+        "required": true,
+        "isolationMode": "worktree",
+        "cleanupPolicy": "quarantine_on_failure"
+      },
+      "integration": {
+        "queueRequired": true,
+        "requiresWorkspaceValidation": true,
+        "requiresIntegrationValidation": true,
+        "conflictHandoffRequired": true,
+        "queuePriority": "critical",
+        "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
+      },
+      "validation": {
+        "profile": "targeted_then_final",
+        "heavyCommandUsesGlobalLock": true,
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
+      },
+      "allowedFiles": [
+        "src/v7/alpha/runtime/**",
+        "tests/v7/alpha/integration/**"
+      ],
+      "forbiddenFiles": [
+        ".env*",
+        "**/*.pem",
+        "**/*.key",
+        "**/*.p12",
+        "**/*.pfx",
+        "**/id_rsa",
+        "**/credentials/**",
+        "**/secrets/**"
+      ],
+      "acceptanceCriteria": [
+        "Paper mode inference without execution exists.",
+        "Shadow mode runs alongside live without affecting decisions."
+      ],
+      "targetCommand": "pytest tests/v7/alpha -q",
+      "roleBudget": "worker",
+      "maxRetries": 3,
+      "riskLevel": "high",
+      "capabilityManifest": {
+        "canEdit": [
+          "src/v7/alpha/runtime/**",
+          "tests/v7/alpha/integration/**"
+        ],
+        "cannotEdit": [
+          ".env*",
+          "**/*.pem",
+          "**/*.key",
+          "**/*.p12",
+          "**/*.pfx",
+          "**/id_rsa",
+          "**/credentials/**",
+          "**/secrets/**"
+        ],
+        "canRun": [
+          "pytest",
+          "python",
+          "ruff",
+          "mypy"
+        ],
+        "cannotRun": [
+          "git push",
+          "git push --force",
+          "rm -rf",
+          "npm publish",
+          "terraform destroy",
+          "kubectl delete",
+          "git reset --hard",
+          "git clean -fd",
+          "vitest --watch",
+          "jest --watch",
+          "npm run dev"
+        ]
+      },
+      "telemetry": {
+        "expectedEvents": [
+          "workspace_started",
+          "workspace_completed",
+          "workspace_validated"
+        ],
+        "logLevel": "info"
+      }
+    },
+    {
+      "id": "P8.D",
+      "title": "Promotion Report",
+      "dependencies": [
+        "P8.A",
+        "P8.B",
+        "P8.C"
+      ],
+      "parallelGroup": "batch_3",
+      "dependencyReason": "Depends on P8.A, P8.B, P8.C for foundation.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
+      "parallelism": {
+        "expectedBatch": "batch_3",
+        "canRunWith": [],
+        "cannotRunWith": [],
+        "conflictScope": [
+          "docs/v7/alpha/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -1552,7 +1548,7 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "maxOutputBytes": 52428800
       },
       "allowedFiles": [
-        "tests/v7/alpha/golden/**"
+        "docs/v7/alpha/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -1565,16 +1561,16 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Golden dataset with known expected R values passes.",
-        "Regression test catches label drift."
+        "Report summarizes all evaluation evidence for promotion review.",
+        "Rollback recommendation included."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
       "maxRetries": 3,
-      "riskLevel": "medium",
+      "riskLevel": "low",
       "capabilityManifest": {
         "canEdit": [
-          "tests/v7/alpha/golden/**"
+          "docs/v7/alpha/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -1626,8 +1622,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
 ```json
 {
   "contractVersion": "4.1.1",
-  "phase": "P2",
-  "title": "Runtime Simulation Adapter & R-Label Engine",
+  "phase": "P8",
+  "title": "Evaluation, Backtest, Paper & Shadow Validation",
   "executionClass": "implementation",
   "executionAutomation": "enabled",
   "selectedRepairMode": null,
@@ -1635,7 +1631,7 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
   "autonomousExecutionAllowed": true,
   "agentMayMutateRepo": true,
   "schedulerRuntimeUse": "enabled",
-  "primaryGoal": "Side-effect-free simulation adapter and mode-specific R-label generation.",
+  "primaryGoal": "Economic evaluation, no-trade quality, calibration quality, and shadow/paper readiness.",
   "projectName": "v7_alphaforge_xgb",
   "stateBackend": "postgres",
   "selectedScaleMode": "stable_3",
@@ -1677,8 +1673,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
     "execution_without_approval",
     "optimizer_patch_without_approval"
   ],
-  "completionGate": "P2 complete only when all workspaces pass acceptance criteria and final validation passes.",
-  "nextPhase": "P4"
+  "completionGate": "P8 complete only when all workspaces pass acceptance criteria and final validation passes.",
+  "nextPhase": "P9"
 }
 ```
 
@@ -1686,4 +1682,5 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
 
 ## Review Hardening Requirements
 
-* [ ] SCALP interval authority (mode config resolver)
+* [ ] Walk-forward economic evaluation
+* [ ] No-trade quality visibility

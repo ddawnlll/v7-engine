@@ -1,8 +1,17 @@
 {
-  "contractVersion": "2.5.1",
+  "contractVersion": "4.1.1",
+  "templateVersion": "4.1.1",
+  "legacyCompatibility": {
+    "v3EnvelopePreserved": true,
+    "legacyValidatorMode": "v3_compatible_extensions",
+    "fallbackContractVersionForLegacyParser": "3.0.0",
+    "legacyMechanismFieldsAreHints": true,
+    "unknownV4FieldsPolicy": "ignore_for_read_only_legacy_consumers_reject_for_execution_without_v4_validator"
+  },
+  "executionClass": "implementation",
   "executionBackend": "postgres",
   "project": {
-    "name": "v7-alphaforge-xgb",
+    "name": "v7_alphaforge_xgb",
     "rootPath": ".",
     "type": "repo",
     "tags": [
@@ -12,47 +21,396 @@
       "p5"
     ]
   },
+  "intent": {
+    "parallelism": 3,
+    "safetyLevel": "strict",
+    "conflictRisk": "medium",
+    "executionEnvironment": {
+      "mode": "local_sandbox",
+      "untrustedCodeAllowed": false,
+      "networkPolicy": "host_default",
+      "secretsPolicy": "forbidden_files_and_env_allowlist"
+    },
+    "deadlines": {
+      "llmRequestMs": 120000,
+      "llmStreamIdleMs": 300000,
+      "workspaceOverallMs": 1800000,
+      "validationDefaultMs": 600000,
+      "validationHeavyMs": 1200000,
+      "schedulerNoProgressMs": 300000
+    }
+  },
+  "derivedExecutionProfile": {
+    "generatedBy": "ExecutionProfileDeriver",
+    "deriverVersion": "4.1.1",
+    "readOnly": true,
+    "isolationMode": "worktree",
+    "worktreeRequired": true,
+    "patchIsolationRequired": false,
+    "patchCoordinatorRequired": false,
+    "repositoryMutationAuthority": "worktree_integration",
+    "patchApplyLanes": 0,
+    "maxCodegenWorkers": 3,
+    "integrationQueueRequired": true,
+    "gitRunnerQueueRequired": true,
+    "validationLanesRequired": true,
+    "attemptScopedArtifactsRequired": true,
+    "deadlineWatchdogRequired": true,
+    "admissionGateMode": "strict",
+    "writeSetDriftPolicy": "reject_or_handoff",
+    "explain": [
+      "stable_3 worktree mode: 3 workers, worktree isolation, integration queue",
+      "Worktree isolation required for safe parallel execution",
+      "All production execution requires PostgreSQL authoritative runtime state"
+    ]
+  },
+  "persistence": {
+    "authoritativeBackend": "postgres",
+    "jsonRuntimeFallbackAllowed": false,
+    "eventJournalBackend": "postgres",
+    "transitionBackend": "postgres",
+    "controllerInboxBackend": "postgres",
+    "handoffQueueBackend": "postgres",
+    "rawLogsBackend": "filesystem",
+    "artifactIndexBackend": "postgres",
+    "debugExportAllowed": true
+  },
+  "executionAutomation": {
+    "autonomousExecutionEnabled": true,
+    "agentMayMutateRepo": true,
+    "agentMayRunCommands": true,
+    "manualPatchApplicationRequired": false,
+    "humanApprovalRequiredForEveryPatch": false
+  },
+  "executionKernel": {
+    "enabled": true,
+    "stateAuthority": "workspace_attempt_controller",
+    "planAuthority": "plan_supervisor",
+    "stateAuthorityTokenRequired": true,
+    "admissionGateRequired": true,
+    "eventSourcedAttempts": true,
+    "attemptEventJournalRequired": true,
+    "directStateMutationForbidden": true,
+    "actorsEmitEventsOnly": true,
+    "policiesSuggestOnly": true,
+    "brainWorkersReadOnly": true,
+    "retryRequiresTerminalAttempt": true,
+    "everyNonTerminalStateHasDeadline": true,
+    "controllerSerializesDecisionsNotWork": true,
+    "controllerLeadership": {
+      "required": true,
+      "mode": "postgres_advisory_lock_plus_expected_version",
+      "transitionRequiresExpectedVersion": true,
+      "onVersionConflict": "reject_and_emit_controller_conflict"
+    }
+  },
+  "attemptLifecycle": {
+    "modeSpecificLifecycles": {
+      "worktree": {
+        "initialState": "queued",
+        "nonTerminalStates": [
+          "queued",
+          "leasing_worktree",
+          "running",
+          "validating",
+          "waiting_for_validation_lane",
+          "integration_queued",
+          "integrating"
+        ],
+        "terminalStates": [
+          "succeeded",
+          "failed_retryable",
+          "failed_final",
+          "aborted",
+          "timed_out",
+          "quarantined",
+          "handoff_required"
+        ]
+      }
+    },
+    "retryableTerminalStates": [
+      "failed_retryable",
+      "timed_out",
+      "quarantined"
+    ],
+    "retryForbiddenFromNonTerminal": true,
+    "deadlineRequiredForNonTerminalStates": true,
+    "handoffRequiredCreatesQueueItem": true
+  },
+  "planLifecycle": {
+    "completionPredicateRequired": true,
+    "cannotCompleteWithRequiredNonTerminalWorkspaces": true,
+    "cannotCompleteWithUnresolvedRequiredHandoff": true,
+    "finalValidationRequiredBeforeCompleted": true,
+    "states": [
+      "created",
+      "preflight",
+      "running",
+      "blocked_with_reason",
+      "awaiting_handoff",
+      "final_validation",
+      "completed",
+      "completed_with_warnings",
+      "failed_final",
+      "stopping",
+      "stopped"
+    ]
+  },
+  "actorPermissions": {
+    "workspaceAttemptController": {
+      "mayMutateAttemptState": true,
+      "mayCreateRetryAttempt": true
+    },
+    "planSupervisor": {
+      "mayMutatePlanState": true,
+      "mayReserveSchedulerSlots": true
+    },
+    "executorActor": {
+      "mayMutateAttemptState": false,
+      "mayMutateRepository": false,
+      "mayProducePatchArtifact": true,
+      "mayEmitEvents": true
+    },
+    "validationActor": {
+      "mayMutateAttemptState": false,
+      "mayMutateRepository": false,
+      "mayEmitEvents": true
+    },
+    "gitRunner": {
+      "mayMutateAttemptState": false,
+      "mayEmitEvents": true,
+      "note": "May perform low-level git operations only when invoked by authorized repository mutation authority."
+    },
+    "leaseMonitor": {
+      "mayMutateAttemptState": false,
+      "mayEmitEvents": true
+    },
+    "retryPolicy": {
+      "mayMutateAttemptState": false,
+      "mayCreateRetryAttempt": false,
+      "maySuggestRetry": true
+    },
+    "brainWorkers": {
+      "mayMutateExecutionState": false,
+      "mayEmitDiagnosis": true,
+      "mayProposeAction": true
+    },
+    "diagnostics": {
+      "mayMutateExecutionState": false,
+      "mayEmitEvidence": true
+    }
+  },
+  "admissionGate": {
+    "required": true,
+    "allEntrypointsMustUseGate": true,
+    "coveredEntrypoints": [
+      "cli_plan_run",
+      "dashboard_run",
+      "api_plan_run",
+      "retry_endpoint",
+      "cleanup_rerun_endpoint",
+      "brain_worker_trigger",
+      "overnight_runner",
+      "proposal_executor"
+    ],
+    "rejectWhen": [
+      "postgres_unavailable_for_authoritative_runtime",
+      "json_runtime_fallback_detected",
+      "repair_mode_autonomous_execution_disabled",
+      "promotion_gates_missing",
+      "unsafe_parallelism_requested",
+      "execution_kernel_disabled",
+      "state_authority_not_single"
+    ]
+  },
+  "resourceCoordination": {
+    "nestedLocksForbidden": true,
+    "holdLockAcrossAwaitForbidden": true,
+    "stateLocks": {
+      "scope": "attempt",
+      "maxHoldMs": 1000
+    },
+    "planLock": {
+      "scope": "plan",
+      "maxHoldMs": 1000,
+      "purpose": "slot_reservation_only"
+    },
+    "gitRunner": {
+      "mode": "queue",
+      "repoMutationTimeoutMs": 60000,
+      "lockBypassForbidden": true
+    },
+    "validationLanes": {
+      "heavy": {
+        "maxConcurrent": 1
+      },
+      "targeted": {
+        "maxConcurrent": 3
+      }
+    },
+    "worktreeLeases": {
+      "attemptScoped": true,
+      "heartbeatRequired": true,
+      "quarantineOnStale": true
+    },
+    "stateStore": {
+      "writesThroughControllerOnly": true,
+      "transactionOrWriteQueueRequired": true
+    }
+  },
+  "deadlineWatchdog": {
+    "required": true,
+    "intervalSeconds": 15,
+    "emitsEventsOnly": true,
+    "eventType": "deadline_exceeded",
+    "supervised": true,
+    "onWatchdogUnavailable": "block_new_execution_or_downgrade"
+  },
+  "handoffQueue": {
+    "required": true,
+    "createdByStates": [
+      "handoff_required"
+    ],
+    "allowedActions": [
+      "retry_requested",
+      "close_failed",
+      "manual_resolution",
+      "followup_plan_requested"
+    ],
+    "controllerMediatedRetryRequired": true
+  },
+  "boundedLiveness": {
+    "required": true,
+    "noIndefiniteWaits": true,
+    "llm": {
+      "providerRequestTimeoutMs": 120000,
+      "streamIdleTimeoutMs": 300000,
+      "workspaceOverallTimeoutMs": 1800000,
+      "maxConsecutiveProviderTimeouts": 2,
+      "onCircuitOpen": "fail_workspace_not_plan"
+    },
+    "validation": {
+      "defaultTimeoutMs": 600000,
+      "heavyTimeoutMs": 1200000,
+      "killProcessTreeOnTimeout": true,
+      "watchModeForbidden": true,
+      "stdinClosed": true,
+      "ciEnvRequired": true,
+      "maxOutputBytes": 52428800
+    },
+    "git": {
+      "repoMutationLockTimeoutMs": 60000,
+      "lockBypassForbidden": true,
+      "onLockTimeout": "fail_fast_and_retry_or_handoff"
+    },
+    "scheduler": {
+      "stallDetectionEnabled": true,
+      "noProgressTimeoutMs": 300000,
+      "onNoProgress": "emit_blocked_reason"
+    },
+    "stateStore": {
+      "transactionOrWriteQueueRequired": true,
+      "atomicSnapshotRequired": true,
+      "journalLineAtomicityRequired": true
+    }
+  },
+  "llmRuntime": {
+    "boundedProviderCallsRequired": true,
+    "providerRequestTimeoutMs": 120000,
+    "streamIdleTimeoutMs": 300000,
+    "workspaceOverallTimeoutMs": 1800000,
+    "circuitBreaker": {
+      "enabled": true,
+      "openAfterConsecutiveTimeouts": 2,
+      "cooldownMs": 300000
+    },
+    "fallbackPolicy": {
+      "enabled": false,
+      "reason": "Patches must remain deterministic."
+    }
+  },
+  "validationRuntime": {
+    "managedRunnerRequired": true,
+    "processGroupRequired": true,
+    "killTreeOnTimeout": true,
+    "maxOutputBytes": 52428800,
+    "forbiddenInteractiveCommands": [
+      "vitest --watch",
+      "jest --watch",
+      "npm run dev",
+      "vite --host"
+    ],
+    "lanes": {
+      "heavy": {
+        "maxConcurrent": 1
+      },
+      "targeted": {
+        "maxConcurrent": 3
+      }
+    }
+  },
+  "validationPolicy": {
+    "defaultMode": "deferred",
+    "workspaceCompletionRequiresTargetCommand": false,
+    "planCompletionRequiresFinalValidation": true,
+    "heavyValidationDeferredByDefault": true,
+    "allowWorkspaceImmediateValidation": true,
+    "allowSmokeValidation": true,
+    "watchModeForbidden": true,
+    "finalValidationWorkspaceRequired": true,
+    "finalRepairWorkspaceRecommended": true,
+    "validationArtifactsRequired": true,
+    "liveValidationVisibilityRequired": true
+  },
   "planExecution": {
     "phase": "P5",
     "title": "XGBoost Hybrid Model Training",
-    "mode": "autonomous",
-    "maxParallelWorkspaces": 6,
+    "mode": "implementation",
+    "maxParallelWorkspaces": 3,
     "scheduling": {
       "continuous": true,
-      "slotCount": 6,
+      "slotCount": 3,
       "priorityStrategy": "critical_path_first"
     },
     "stateBackend": "postgres",
-    "jsonFallbackEnabled": true,
+    "jsonFallbackEnabled": false,
     "dashboardEnabled": true,
     "autoCommit": true,
     "autoPush": false,
     "scale": {
-      "defaultMode": "experimental_6",
-      "selectedMode": "experimental_6",
+      "defaultMode": "stable_3",
+      "selectedMode": "stable_3",
       "modes": {
         "stable_3": {
+          "executorType": "direct",
           "maxParallelWorkspaces": 3,
           "worktreeRequired": false,
-          "integrationQueueRequired": false
+          "integrationQueueRequired": false,
+          "preserveExistingBehavior": true
         },
-        "experimental_6": {
+        "stable_6": {
+          "executorType": "patch_transaction",
+          "maxCodegenWorkers": 6,
+          "patchIsolationRequired": true,
+          "worktreeRequired": false,
+          "patchCoordinatorRequired": true,
+          "repositoryMutationAuthority": "patch_coordinator",
+          "patchApplyLanes": 1,
+          "singleRepositoryWriterRequired": true,
+          "targetedValidationRequired": true,
+          "finalIntegrationValidationRequired": true,
+          "postgresRequired": true,
+          "completionGateRequired": true
+        },
+        "experimental_worktree_6": {
+          "executorType": "worktree",
           "maxParallelWorkspaces": 6,
           "worktreeRequired": true,
           "integrationQueueRequired": true,
           "validationLockRequired": true,
           "archiveRequired": true,
-          "completionGateRequired": true
-        },
-        "scale_8": {
-          "maxParallelWorkspaces": 8,
-          "worktreeRequired": true,
-          "integrationQueueRequired": true,
-          "validationLockRequired": true,
-          "archiveRequired": true,
           "completionGateRequired": true,
-          "dogfoodPassRequired": true,
-          "explicitApprovalRequired": true
+          "explicitOptInRequired": true
         }
       }
     },
@@ -60,16 +418,15 @@
       "enabled": true,
       "enabledByDefault": true,
       "root": ".pi/worktrees",
-      "prewarmCount": 6,
-      "statePersistencePath": ".pi/worktree-state.json",
-      "crashRecoveryEnabled": true,
       "quarantineFailedByDefault": true,
       "rawRmRfForbidden": true,
-      "pathScopeRequired": true,
-      "diffPreservationPath": ".pi/executions/{planExecId}/worktrees/{wsId}.patch"
+      "pathScopeRequired": true
     },
     "integrationQueue": {
       "enabled": true,
+      "enabledForExecutorTypes": [
+        "worktree"
+      ],
       "processOneMergeAtATime": true,
       "stopOnMergeConflict": true,
       "requireWorkspaceValidationPass": true,
@@ -87,7 +444,7 @@
       },
       "queueOptimization": {
         "enabled": true,
-        "strategy": "critical_path_first",
+        "strategy": "priority_then_fifo",
         "availableStrategies": [
           "priority_then_fifo",
           "critical_path_first",
@@ -122,7 +479,9 @@
       "runOnUpload": true,
       "parserPriority": [
         "part3_json",
-        "markdown_fallback"
+        "contractVersion_and_executionClass",
+        "doctor",
+        "execution_gate"
       ],
       "autoNormalize": true,
       "autoDoctor": true,
@@ -142,10 +501,7 @@
         "minimize_critical_path",
         "minimize_same_file_conflicts",
         "minimize_validation_lock_contention",
-        "prioritize_critical_path_queue_merges",
-        "prevent_fold_scope_anomaly_leakage",
-        "maximize_regime_override_visibility",
-        "enforce_interval_authority"
+        "prioritize_critical_path_queue_merges"
       ],
       "allowedPatches": [
         "dependencies",
@@ -194,12 +550,37 @@
       "execution_without_dry_run",
       "execution_without_approval",
       "optimizer_patch_without_approval",
-      "scope_mismatch",
-      "future_leakage_detected",
-      "fold_scope_anomaly_leakage",
-      "silent_regime_veto",
-      "symbol_encoding_schema_mismatch",
-      "mode_interval_mismatch"
+      "autonomous_execution_requested_during_repair_mode",
+      "agent_repo_mutation_requested_during_manual_repair",
+      "agent_command_execution_requested_during_manual_repair",
+      "scheduler_enabled_before_executor_isolation_gate",
+      "stable_6_requested_before_promotion_gates",
+      "llm_call_without_provider_timeout",
+      "llm_stream_without_idle_watchdog",
+      "validation_command_without_timeout",
+      "validation_process_without_process_group",
+      "validation_watch_or_dev_server_command",
+      "git_lock_bypass_detected",
+      "state_store_write_without_serialization",
+      "workspace_patch_without_human_approval",
+      "repair_workspace_missing_rollback",
+      "repair_workspace_missing_targeted_validation",
+      "dogfood_required_but_missing",
+      "promotion_gate_failed_or_missing",
+      "direct_attempt_state_mutation_detected",
+      "executor_mutates_attempt_state",
+      "state_transition_outside_controller",
+      "non_terminal_state_without_deadline",
+      "deadline_watchdog_unavailable",
+      "lock_held_across_external_await",
+      "nested_resource_lock_detected",
+      "execution_entrypoint_bypasses_admission_gate",
+      "attempt_without_event_journal",
+      "postgres_unavailable_for_authoritative_runtime",
+      "json_runtime_fallback_detected",
+      "dual_authoritative_state_detected",
+      "transition_without_expected_version",
+      "handoff_required_without_queue_item"
     ],
     "forbiddenCommands": [
       "git push",
@@ -226,8 +607,8 @@
     ]
   },
   "parallelismReview": {
-    "requestedMaxParallelWorkspaces": 6,
-    "selectedScaleMode": "experimental_6",
+    "requestedMaxParallelWorkspaces": 3,
+    "selectedScaleMode": "stable_3",
     "scaleModeReadiness": {
       "ready": true,
       "blockedReasons": [],
@@ -237,7 +618,7 @@
           "key": "worktree_isolation",
           "required": true,
           "met": true,
-          "message": "Required for experimental_6 and scale_8."
+          "message": "Required for parallel execution."
         },
         {
           "key": "integration_queue",
@@ -259,8 +640,8 @@
         }
       ]
     },
-    "expectedDagEffectiveParallelismMin": 4,
-    "expectedSafeEffectiveParallelismMin": 3,
+    "expectedDagEffectiveParallelismMin": 2,
+    "expectedSafeEffectiveParallelismMin": 2,
     "dagEffectiveParallelism": null,
     "safeEffectiveParallelism": null,
     "preflightStatus": "required",
@@ -333,10 +714,12 @@
       "optimizer_proposal",
       "graph_diff",
       "worktree_state",
-      "anomaly_fit_lineage",
-      "regime_override_metrics",
-      "symbol_encoding_family_snapshot",
-      "interval_authority_snapshot"
+      "lease_heartbeat_snapshots",
+      "lease_reconciliation_log",
+      "merge_priority_score_log",
+      "empirical_write_set",
+      "write_set_drift_report",
+      "validation_lane_saturation_log"
     ]
   },
   "workspaces": [
@@ -346,14 +729,18 @@
       "dependencies": [],
       "parallelGroup": "batch_1",
       "dependencyReason": "Foundation workspace for this phase.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
       "parallelism": {
         "expectedBatch": "batch_1",
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
           "src/v7/alpha/model/**",
-          "tests/v7/alpha/integration/model/**",
-          "artifacts/v7/alpha/**"
+          "tests/v7/alpha/unit/model/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -374,12 +761,16 @@
       "validation": {
         "profile": "targeted_then_final",
         "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
       },
       "allowedFiles": [
         "src/v7/alpha/model/**",
-        "tests/v7/alpha/integration/model/**",
-        "artifacts/v7/alpha/**"
+        "tests/v7/alpha/unit/model/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -392,19 +783,17 @@
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Train P(LONG_NOW), P(SHORT_NOW), P(NO_TRADE) per mode.",
-        "Relevant unit/integration tests pass.",
-        "No hidden fallback or future leakage introduced."
+        "Mode-specific XGBoost classifier trains on SWING/SCALP/AGGRESSIVE datasets.",
+        "NO_TRADE is first-class output class."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
       "maxRetries": 3,
-      "riskLevel": "medium",
+      "riskLevel": "high",
       "capabilityManifest": {
         "canEdit": [
           "src/v7/alpha/model/**",
-          "tests/v7/alpha/integration/model/**",
-          "artifacts/v7/alpha/**"
+          "tests/v7/alpha/unit/model/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -448,22 +837,21 @@
     {
       "id": "P5.B",
       "title": "Regressor Training",
-      "dependencies": [
-        "P5.A"
-      ],
-      "parallelGroup": "batch_2",
-      "dependencyReason": "Depends on phase-local foundation workstream A to establish shared contracts or base modules.",
+      "dependencies": [],
+      "parallelGroup": "batch_1",
+      "dependencyReason": "Foundation workspace for this phase.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
       "parallelism": {
-        "expectedBatch": "batch_2",
-        "canRunWith": [
-          "P5.C",
-          "P5.D"
-        ],
+        "expectedBatch": "batch_1",
+        "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
           "src/v7/alpha/model/**",
-          "tests/v7/alpha/integration/model/**",
-          "artifacts/v7/alpha/**"
+          "tests/v7/alpha/unit/model/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -478,18 +866,22 @@
         "requiresWorkspaceValidation": true,
         "requiresIntegrationValidation": true,
         "conflictHandoffRequired": true,
-        "queuePriority": "normal",
+        "queuePriority": "critical",
         "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
       },
       "validation": {
         "profile": "targeted_then_final",
         "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
       },
       "allowedFiles": [
         "src/v7/alpha/model/**",
-        "tests/v7/alpha/integration/model/**",
-        "artifacts/v7/alpha/**"
+        "tests/v7/alpha/unit/model/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -502,19 +894,17 @@
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Train expected_R_long and expected_R_short per mode.",
-        "Relevant unit/integration tests pass.",
-        "No hidden fallback or future leakage introduced."
+        "Separate long_R and short_R regressors train per mode.",
+        "Expected-R surfaces are reproducible."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
       "maxRetries": 3,
-      "riskLevel": "medium",
+      "riskLevel": "high",
       "capabilityManifest": {
         "canEdit": [
           "src/v7/alpha/model/**",
-          "tests/v7/alpha/integration/model/**",
-          "artifacts/v7/alpha/**"
+          "tests/v7/alpha/unit/model/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -559,18 +949,23 @@
       "id": "P5.C",
       "title": "Artifact Bundles",
       "dependencies": [
-        "P5.A"
+        "P5.A",
+        "P5.B"
       ],
       "parallelGroup": "batch_2",
-      "dependencyReason": "Depends on phase-local foundation workstream A to establish shared contracts or base modules.",
+      "dependencyReason": "Depends on P5.A, P5.B for foundation.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
       "parallelism": {
         "expectedBatch": "batch_2",
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
           "src/v7/alpha/model/**",
-          "tests/v7/alpha/integration/model/**",
-          "artifacts/v7/alpha/**"
+          "configs/v7/alpha/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -585,18 +980,22 @@
         "requiresWorkspaceValidation": true,
         "requiresIntegrationValidation": true,
         "conflictHandoffRequired": true,
-        "queuePriority": "normal",
+        "queuePriority": "high",
         "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
       },
       "validation": {
         "profile": "targeted_then_final",
         "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
       },
       "allowedFiles": [
         "src/v7/alpha/model/**",
-        "tests/v7/alpha/integration/model/**",
-        "artifacts/v7/alpha/**"
+        "configs/v7/alpha/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -609,9 +1008,8 @@
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Persist model bundle metadata and compatibility checks.",
-        "Relevant unit/integration tests pass.",
-        "No hidden fallback or future leakage introduced."
+        "Model + calibration + policy artifacts bundled per mode.",
+        "Full lineage metadata stored in each bundle."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
@@ -620,8 +1018,7 @@
       "capabilityManifest": {
         "canEdit": [
           "src/v7/alpha/model/**",
-          "tests/v7/alpha/integration/model/**",
-          "artifacts/v7/alpha/**"
+          "configs/v7/alpha/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -666,18 +1063,23 @@
       "id": "P5.D",
       "title": "Training Metrics",
       "dependencies": [
-        "P5.A"
+        "P5.A",
+        "P5.B"
       ],
       "parallelGroup": "batch_2",
-      "dependencyReason": "Depends on phase-local foundation workstream A to establish shared contracts or base modules.",
+      "dependencyReason": "Depends on P5.A, P5.B for foundation.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
       "parallelism": {
         "expectedBatch": "batch_2",
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
-          "src/v7/alpha/model/**",
-          "tests/v7/alpha/integration/model/**",
-          "artifacts/v7/alpha/**"
+          "src/v7/alpha/evaluation/**",
+          "tests/v7/alpha/unit/evaluation/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -698,12 +1100,16 @@
       "validation": {
         "profile": "targeted_then_final",
         "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
       },
       "allowedFiles": [
-        "src/v7/alpha/model/**",
-        "tests/v7/alpha/integration/model/**",
-        "artifacts/v7/alpha/**"
+        "src/v7/alpha/evaluation/**",
+        "tests/v7/alpha/unit/evaluation/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -716,9 +1122,8 @@
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Produce classification and regression validation summaries.",
-        "Relevant unit/integration tests pass.",
-        "No hidden fallback or future leakage introduced."
+        "Classification report, regression metrics, and feature importance logged.",
+        "Metrics are temporally-aware, not IID."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
@@ -726,9 +1131,8 @@
       "riskLevel": "medium",
       "capabilityManifest": {
         "canEdit": [
-          "src/v7/alpha/model/**",
-          "tests/v7/alpha/integration/model/**",
-          "artifacts/v7/alpha/**"
+          "src/v7/alpha/evaluation/**",
+          "tests/v7/alpha/unit/evaluation/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -773,20 +1177,25 @@
       "id": "P5.E",
       "title": "Symbol Encoding Metadata",
       "dependencies": [
-        "P5.C"
+        "P5.A"
       ],
-      "parallelGroup": "hardening",
-      "dependencyReason": "Review hardening invariant closes implementation leakage/visibility risk.",
+      "parallelGroup": "batch_2",
+      "dependencyReason": "Depends on P5.A for foundation.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
       "parallelism": {
-        "expectedBatch": "hardening",
+        "expectedBatch": "batch_2",
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
           "src/v7/alpha/model/**",
-          "tests/v7/alpha/unit/model/**"
+          "configs/v7/alpha/**"
         ],
         "sameFileParallelismAllowed": false,
-        "safeParallelismNotes": "May run in parallel only if Pi confirms no same-file overlap."
+        "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
       },
       "worktree": {
         "required": true,
@@ -798,52 +1207,81 @@
         "requiresWorkspaceValidation": true,
         "requiresIntegrationValidation": true,
         "conflictHandoffRequired": true,
-        "queuePriority": "high",
-        "queueOptimizationNotes": "Hardening workspace protects correctness invariants and should merge before dependent implementation."
+        "queuePriority": "normal",
+        "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
       },
       "validation": {
         "profile": "targeted_then_final",
         "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
       },
       "allowedFiles": [
         "src/v7/alpha/model/**",
-        "tests/v7/alpha/unit/model/**"
+        "configs/v7/alpha/**"
       ],
       "forbiddenFiles": [
         ".env*",
         "**/*.pem",
-        "**/*.key"
+        "**/*.key",
+        "**/*.p12",
+        "**/*.pfx",
+        "**/id_rsa",
+        "**/credentials/**",
+        "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Artifacts record symbol_encoding_family and symbol_universe_version.",
-        "Training fails on symbols outside approved universe version."
+        "symbol_encoding_family and symbol_universe_version stored.",
+        "MVP uses symbol_one_hot_v1."
       ],
-      "targetCommand": null,
+      "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
       "maxRetries": 3,
-      "riskLevel": "high",
+      "riskLevel": "low",
       "capabilityManifest": {
         "canEdit": [
           "src/v7/alpha/model/**",
-          "tests/v7/alpha/unit/model/**"
+          "configs/v7/alpha/**"
         ],
         "cannotEdit": [
           ".env*",
           "**/*.pem",
-          "**/*.key"
+          "**/*.key",
+          "**/*.p12",
+          "**/*.pfx",
+          "**/id_rsa",
+          "**/credentials/**",
+          "**/secrets/**"
         ],
-        "canRun": [],
+        "canRun": [
+          "pytest",
+          "python",
+          "ruff",
+          "mypy"
+        ],
         "cannotRun": [
           "git push",
+          "git push --force",
           "rm -rf",
-          "npm publish"
+          "npm publish",
+          "terraform destroy",
+          "kubectl delete",
+          "git reset --hard",
+          "git clean -fd",
+          "vitest --watch",
+          "jest --watch",
+          "npm run dev"
         ]
       },
       "telemetry": {
         "expectedEvents": [
           "workspace_started",
-          "workspace_completed"
+          "workspace_completed",
+          "workspace_validated"
         ],
         "logLevel": "info"
       }

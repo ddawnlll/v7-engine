@@ -1,12 +1,12 @@
-# P2 — Runtime Simulation Adapter & R-Label Engine
+# P0.5 — Shared Lib Foundation
 
 # Part 1 — Phase Plan
 
 ## 0. TL;DR / Compact Mental Model
 
-**Phase:** `P2`  
-**One-line goal:** Side-effect-free simulation adapter and mode-specific R-label generation.  
-**Why now:** Alpha labels must come from the same /simulation economic truth authority that evaluates runtime outcomes.  
+**Phase:** `P0.5`  
+**One-line goal:** Focused lib/ directory with shared Binance client, indicators, costs, and time utilities.  
+**Why now:** Shared primitives with nearly identical usage between v7 and alphaforge must be extracted before phase work begins.  
 **Blast radius:** src/v7/alpha/**, tests/v7/alpha/**, configs/v7/alpha/**, docs/v7/alpha/**  
 **Rollback path:** Revert this phase's workspaces, restore previous compatible alpha config/schema/artifact bundle, and rerun targeted + final validation.  
 **Execution class:** `implementation`  
@@ -21,13 +21,13 @@
 
 | Field | Value |
 |---|---|
-| Phase | `P2` |
-| Title | `Runtime Simulation Adapter & R-Label Engine` |
+| Phase | `P0.5` |
+| Title | `Shared Lib Foundation` |
 | Status | `Planned` |
 | Last updated | `2026-05-23` |
 | Delivery status | `Not started` |
 | Target environment | `Local / Staging` |
-| Primary focus | `Side-effect-free simulation adapter and mode-specific R-label generation.` |
+| Primary focus | `Focused lib/ directory with shared Binance client, indicators, costs, and time utilities.` |
 | Product-code changes | `Allowed` |
 | Execution class | `implementation` |
 | Execution automation | `enabled` |
@@ -49,9 +49,9 @@
 
 ## 2. Purpose
 
-Alpha labels must come from the same /simulation economic truth authority that evaluates runtime outcomes.
+Shared primitives with nearly identical usage between v7 and alphaforge must be extracted before phase work begins.
 
-The /simulation authority owns economic truth semantics. V7 runtime hosts/executes simulation operationally. AlphaForge must not create a second hidden simulator. Instead, it must consume /simulation outputs through deterministic side-effect-free adapters into a label-generation pipeline that produces R-multiple targets per mode.
+Both v7 and alphaforge need market data, indicators, cost models, and time utilities. A focused lib/ prevents duplication without becoming a shared-everything dumping ground.
 
 This phase uses `stable_3` scale-aware execution. The executor should optimize for safe effective parallelism, not maximum concurrency. Worktree isolation, integration queue, validation locks, and completion gates remain mandatory whenever more than three workers are requested.
 
@@ -82,16 +82,17 @@ This phase uses `stable_3` scale-aware execution. The executor should optimize f
 
 ## 4. Background / What Was Wrong
 
-The /simulation authority owns economic truth semantics. V7 runtime hosts/executes simulation operationally. AlphaForge must not create a second hidden simulator. Instead, it must consume /simulation outputs through deterministic side-effect-free adapters into a label-generation pipeline that produces R-multiple targets per mode.
+Both v7 and alphaforge need market data, indicators, cost models, and time utilities. A focused lib/ prevents duplication without becoming a shared-everything dumping ground.
 
 ---
 
 ## 5. Current Failure State / Known Blockers
 
-* `simulation_adapter` = not implemented.
-* `mode_config_resolver` = not implemented.
-* `r_label_builder` = not implemented.
-* `golden_label_tests` = not implemented.
+* `lib/` = not implemented.
+* `lib/market_data/` = not implemented.
+* `lib/indicators/` = not implemented.
+* `lib/costs/` = not implemented.
+* `lib/time/` = not implemented.
 
 ---
 
@@ -110,36 +111,9 @@ The /simulation authority owns economic truth semantics. V7 runtime hosts/execut
 
 ## 7. Workstreams
 
-### P2.A — Simulation Adapter
+### P05.A — Market Data Service
 
-**Goal:** Side-effect-free adapter consumes /simulation engine outputs.
-
-**Dependencies:** None (foundation)
-**Parallel Group:** batch_1
-**Risk Level:** medium
-**Queue Priority:** critical
-**Can run with:** None
-
-**Requirements:
-* Side-effect-free adapter consumes /simulation engine outputs.
-* No hidden simulator created.
-* Symbol+timestamp+mode → simulation result mapping works.
-
-**File Scope:**
-```text
-src/v7/alpha/simulation_adapter/**
-tests/v7/alpha/unit/simulation_adapter/**
-```
-
-**Isolation & Parallelism Notes:**
-* Foundation workspace for this phase.
-* Expected batch: batch_1
-* Worktree isolation required.
-* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
-
-### P2.B — Mode Config Resolver
-
-**Goal:** Resolves SWING/SCALP/AGGRESSIVE_SCALP intervals from central config.
+**Goal:** Binance HTTP client, klines/funding service, standard schema exist.
 
 **Dependencies:** None (foundation)
 **Parallel Group:** batch_1
@@ -148,13 +122,13 @@ tests/v7/alpha/unit/simulation_adapter/**
 **Can run with:** None
 
 **Requirements:
-* Resolves SWING/SCALP/AGGRESSIVE_SCALP intervals from central config.
-* SCALP primary=1h, context=4h, refinement=15m enforced.
+* Binance HTTP client, klines/funding service, standard schema exist.
+* Direct Binance API calls from v7/ or alphaforge/ are caught by hard stop.
 
 **File Scope:**
 ```text
-src/v7/alpha/config/**
-tests/v7/alpha/unit/config/**
+lib/market_data/**
+tests/lib/market_data/**
 ```
 
 **Isolation & Parallelism Notes:**
@@ -163,54 +137,82 @@ tests/v7/alpha/unit/config/**
 * Worktree isolation required.
 * Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
 
-### P2.C — R Label Builder
+### P05.B — Indicators & Costs
 
-**Goal:** long_R_net, short_R_net, best_action_label, gap_R computed per mode.
+**Goal:** ATR, returns, volatility, rolling window indicators exist.
 
-**Dependencies:** P2.A, P2.B
+**Dependencies:** None (foundation)
+**Parallel Group:** batch_1
+**Risk Level:** medium
+**Queue Priority:** critical
+**Can run with:** None
+
+**Requirements:
+* ATR, returns, volatility, rolling window indicators exist.
+* Fee % and slippage estimation exist.
+* No /simulation truth or regime logic in lib/. /simulation is a top-level authority.
+
+**File Scope:**
+```text
+lib/indicators/**
+lib/costs/**
+tests/lib/indicators/**
+tests/lib/costs/**
+```
+
+**Isolation & Parallelism Notes:**
+* Foundation workspace for this phase.
+* Expected batch: batch_1
+* Worktree isolation required.
+* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
+
+### P05.C — Time Utilities
+
+**Goal:** Interval conversion and fold generation exist.
+
+**Dependencies:** None (foundation)
+**Parallel Group:** batch_1
+**Risk Level:** low
+**Queue Priority:** high
+**Can run with:** None
+
+**Requirements:
+* Interval conversion and fold generation exist.
+
+**File Scope:**
+```text
+lib/time/**
+tests/lib/time/**
+```
+
+**Isolation & Parallelism Notes:**
+* Foundation workspace for this phase.
+* Expected batch: batch_1
+* Worktree isolation required.
+* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
+
+### P05.D — Lib Boundary Tests
+
+**Goal:** Import boundary violations are caught.
+
+**Dependencies:** P05.A, P05.B, P05.C
 **Parallel Group:** batch_2
 **Risk Level:** high
-**Queue Priority:** critical
+**Queue Priority:** high
 **Can run with:** None
 
 **Requirements:
-* long_R_net, short_R_net, best_action_label, gap_R computed per mode.
-* NO_TRACE is first-class label.
-* min_action_edge and ambiguity_gap applied from mode config.
+* Import boundary violations are caught.
+* lib/ must not import v7.* or alphaforge.*.
+* No shared_everything_mistake (regime/risk/IO/adapters in lib/).
 
 **File Scope:**
 ```text
-src/v7/alpha/labels/**
-tests/v7/alpha/unit/labels/**
+tests/lib/**
 ```
 
 **Isolation & Parallelism Notes:**
-* Depends on P2.A, P2.B for foundation.
-* Expected batch: batch_2
-* Worktree isolation required.
-* Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
-
-### P2.D — Golden Label Tests
-
-**Goal:** Golden dataset with known expected R values passes.
-
-**Dependencies:** P2.C
-**Parallel Group:** batch_2
-**Risk Level:** medium
-**Queue Priority:** normal
-**Can run with:** None
-
-**Requirements:
-* Golden dataset with known expected R values passes.
-* Regression test catches label drift.
-
-**File Scope:**
-```text
-tests/v7/alpha/golden/**
-```
-
-**Isolation & Parallelism Notes:**
-* Depends on P2.C for foundation.
+* Depends on P05.A, P05.B, P05.C for foundation.
 * Expected batch: batch_2
 * Worktree isolation required.
 * Same-file parallel edits should not run concurrently unless Pi optimizer explicitly approves a split.
@@ -221,8 +223,8 @@ tests/v7/alpha/golden/**
 ## 8. Combined Implementation Order
 
 ```text
-  Batch batch_1: P2.A + P2.B
-  Batch batch_2: P2.C + P2.D
+  Batch batch_1: P05.A + P05.B + P05.C
+  Batch batch_2: P05.D
 ```
 
 The dependency graph dictates that foundation workspaces run first, followed by parallel batches where dependencies permit. The DAG batch preview and safe batch preview may differ because of file overlap, validation lock pressure, or integration queue serialization.
@@ -231,12 +233,12 @@ The dependency graph dictates that foundation workspaces run first, followed by 
 
 ## 9. Definition of Done
 
-`P2` is complete when ALL are true:
+`P0.5` is complete when ALL are true:
 
-* [ ] Side-effect-free adapter consumes /simulation engine outputs.
-* [ ] Resolves SWING/SCALP/AGGRESSIVE_SCALP intervals from central config.
-* [ ] long_R_net, short_R_net, best_action_label, gap_R computed per mode.
-* [ ] Golden dataset with known expected R values passes.
+* [ ] Binance HTTP client, klines/funding service, standard schema exist.
+* [ ] ATR, returns, volatility, rolling window indicators exist.
+* [ ] Interval conversion and fold generation exist.
+* [ ] Import boundary violations are caught.
 * [ ] DAG batch preview has been reviewed if required.
 * [ ] Safe batch preview has been reviewed if required.
 * [ ] Selected scale mode readiness passes.
@@ -271,13 +273,13 @@ The dependency graph dictates that foundation workspaces run first, followed by 
 
 ## 11. What Next Phase Inherits
 
-`P4` inherits:
+`P1` inherits:
 
-* `P2` execution contract with worktree mode awareness.
+* `P0.5` execution contract with worktree mode awareness.
 * Scale-mode-aware validation rules.
 * Integration queue requirements.
 * Workspace-level parallelism/isolation/integration/validation metadata.
-* Review hardening invariants: SCALP interval authority (mode config resolver)
+* Review hardening invariants: Shared lib authority, Import boundary enforcement
 
 ---
 
@@ -285,7 +287,7 @@ The dependency graph dictates that foundation workspaces run first, followed by 
 
 ## Mission
 
-Implement `P2` — Side-effect-free simulation adapter and mode-specific R-label generation.
+Implement `P0.5` — Focused lib/ directory with shared Binance client, indicators, costs, and time utilities.
 
 The agent must optimize for safe parallelism, not maximum concurrency. Higher worker counts are allowed only when scale-mode readiness passes and the executor can preserve correctness through worktree isolation, integration queue, validation locks, and completion gates.
 
@@ -295,7 +297,7 @@ The agent must optimize for safe parallelism, not maximum concurrency. Higher wo
 
 ## Hard Requirements
 
-1. All P2 workstreams must pass acceptance criteria.
+1. All P0.5 workstreams must pass acceptance criteria.
 2. Worktree isolation must be enabled for parallel workspaces.
 3. Integration queue must serialize merges.
 4. Global validation lock must be active for heavy validation.
@@ -462,7 +464,7 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
       "v7",
       "alpha",
       "xgboost",
-      "p2"
+      "p0_5"
     ]
   },
   "intent": {
@@ -807,8 +809,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
     "liveValidationVisibilityRequired": true
   },
   "planExecution": {
-    "phase": "P2",
-    "title": "Runtime Simulation Adapter & R-Label Engine",
+    "phase": "P0.5",
+    "title": "Shared Lib Foundation",
     "mode": "implementation",
     "maxParallelWorkspaces": 3,
     "scheduling": {
@@ -1168,8 +1170,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
   },
   "workspaces": [
     {
-      "id": "P2.A",
-      "title": "Simulation Adapter",
+      "id": "P05.A",
+      "title": "Market Data Service",
       "dependencies": [],
       "parallelGroup": "batch_1",
       "dependencyReason": "Foundation workspace for this phase.",
@@ -1183,8 +1185,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
-          "src/v7/alpha/simulation_adapter/**",
-          "tests/v7/alpha/unit/simulation_adapter/**"
+          "lib/market_data/**",
+          "tests/lib/market_data/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -1213,8 +1215,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "maxOutputBytes": 52428800
       },
       "allowedFiles": [
-        "src/v7/alpha/simulation_adapter/**",
-        "tests/v7/alpha/unit/simulation_adapter/**"
+        "lib/market_data/**",
+        "tests/lib/market_data/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -1227,9 +1229,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Side-effect-free adapter consumes /simulation engine outputs.",
-        "No hidden simulator created.",
-        "Symbol+timestamp+mode \u2192 simulation result mapping works."
+        "Binance HTTP client, klines/funding service, standard schema exist.",
+        "Direct Binance API calls from v7/ or alphaforge/ are caught by hard stop."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
@@ -1237,8 +1238,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
       "riskLevel": "medium",
       "capabilityManifest": {
         "canEdit": [
-          "src/v7/alpha/simulation_adapter/**",
-          "tests/v7/alpha/unit/simulation_adapter/**"
+          "lib/market_data/**",
+          "tests/lib/market_data/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -1280,8 +1281,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
       }
     },
     {
-      "id": "P2.B",
-      "title": "Mode Config Resolver",
+      "id": "P05.B",
+      "title": "Indicators & Costs",
       "dependencies": [],
       "parallelGroup": "batch_1",
       "dependencyReason": "Foundation workspace for this phase.",
@@ -1295,8 +1296,10 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
-          "src/v7/alpha/config/**",
-          "tests/v7/alpha/unit/config/**"
+          "lib/indicators/**",
+          "lib/costs/**",
+          "tests/lib/indicators/**",
+          "tests/lib/costs/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -1325,8 +1328,10 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "maxOutputBytes": 52428800
       },
       "allowedFiles": [
-        "src/v7/alpha/config/**",
-        "tests/v7/alpha/unit/config/**"
+        "lib/indicators/**",
+        "lib/costs/**",
+        "tests/lib/indicators/**",
+        "tests/lib/costs/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -1339,8 +1344,9 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "Resolves SWING/SCALP/AGGRESSIVE_SCALP intervals from central config.",
-        "SCALP primary=1h, context=4h, refinement=15m enforced."
+        "ATR, returns, volatility, rolling window indicators exist.",
+        "Fee % and slippage estimation exist.",
+        "No /simulation truth or regime logic in lib/. /simulation is a top-level authority."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
@@ -1348,8 +1354,10 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
       "riskLevel": "medium",
       "capabilityManifest": {
         "canEdit": [
-          "src/v7/alpha/config/**",
-          "tests/v7/alpha/unit/config/**"
+          "lib/indicators/**",
+          "lib/costs/**",
+          "tests/lib/indicators/**",
+          "tests/lib/costs/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -1391,14 +1399,125 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
       }
     },
     {
-      "id": "P2.C",
-      "title": "R Label Builder",
+      "id": "P05.C",
+      "title": "Time Utilities",
+      "dependencies": [],
+      "parallelGroup": "batch_1",
+      "dependencyReason": "Foundation workspace for this phase.",
+      "manualApplicationRequired": false,
+      "humanApprovalRequired": false,
+      "autonomousExecutionAllowed": true,
+      "rollbackRequired": true,
+      "targetedValidationRequired": true,
+      "parallelism": {
+        "expectedBatch": "batch_1",
+        "canRunWith": [],
+        "cannotRunWith": [],
+        "conflictScope": [
+          "lib/time/**",
+          "tests/lib/time/**"
+        ],
+        "sameFileParallelismAllowed": false,
+        "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
+      },
+      "worktree": {
+        "required": true,
+        "isolationMode": "worktree",
+        "cleanupPolicy": "quarantine_on_failure"
+      },
+      "integration": {
+        "queueRequired": true,
+        "requiresWorkspaceValidation": true,
+        "requiresIntegrationValidation": true,
+        "conflictHandoffRequired": true,
+        "queuePriority": "high",
+        "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
+      },
+      "validation": {
+        "profile": "targeted_then_final",
+        "heavyCommandUsesGlobalLock": true,
+        "watchModeForbidden": true,
+        "timeoutMs": 600000,
+        "managedRunnerRequired": true,
+        "processGroupRequired": true,
+        "killTreeOnTimeout": true,
+        "maxOutputBytes": 52428800
+      },
+      "allowedFiles": [
+        "lib/time/**",
+        "tests/lib/time/**"
+      ],
+      "forbiddenFiles": [
+        ".env*",
+        "**/*.pem",
+        "**/*.key",
+        "**/*.p12",
+        "**/*.pfx",
+        "**/id_rsa",
+        "**/credentials/**",
+        "**/secrets/**"
+      ],
+      "acceptanceCriteria": [
+        "Interval conversion and fold generation exist."
+      ],
+      "targetCommand": "pytest tests/v7/alpha -q",
+      "roleBudget": "worker",
+      "maxRetries": 3,
+      "riskLevel": "low",
+      "capabilityManifest": {
+        "canEdit": [
+          "lib/time/**",
+          "tests/lib/time/**"
+        ],
+        "cannotEdit": [
+          ".env*",
+          "**/*.pem",
+          "**/*.key",
+          "**/*.p12",
+          "**/*.pfx",
+          "**/id_rsa",
+          "**/credentials/**",
+          "**/secrets/**"
+        ],
+        "canRun": [
+          "pytest",
+          "python",
+          "ruff",
+          "mypy"
+        ],
+        "cannotRun": [
+          "git push",
+          "git push --force",
+          "rm -rf",
+          "npm publish",
+          "terraform destroy",
+          "kubectl delete",
+          "git reset --hard",
+          "git clean -fd",
+          "vitest --watch",
+          "jest --watch",
+          "npm run dev"
+        ]
+      },
+      "telemetry": {
+        "expectedEvents": [
+          "workspace_started",
+          "workspace_completed",
+          "workspace_validated"
+        ],
+        "logLevel": "info"
+      }
+    },
+    {
+      "id": "P05.D",
+      "title": "Lib Boundary Tests",
       "dependencies": [
-        "P2.A",
-        "P2.B"
+        "P05.A",
+        "P05.B",
+        "P05.C"
       ],
       "parallelGroup": "batch_2",
-      "dependencyReason": "Depends on P2.A, P2.B for foundation.",
+      "dependencyReason": "Depends on P05.A, P05.B, P05.C for foundation.",
       "manualApplicationRequired": false,
       "humanApprovalRequired": false,
       "autonomousExecutionAllowed": true,
@@ -1409,8 +1528,7 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "canRunWith": [],
         "cannotRunWith": [],
         "conflictScope": [
-          "src/v7/alpha/labels/**",
-          "tests/v7/alpha/unit/labels/**"
+          "tests/lib/**"
         ],
         "sameFileParallelismAllowed": false,
         "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
@@ -1425,7 +1543,7 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "requiresWorkspaceValidation": true,
         "requiresIntegrationValidation": true,
         "conflictHandoffRequired": true,
-        "queuePriority": "critical",
+        "queuePriority": "high",
         "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
       },
       "validation": {
@@ -1439,8 +1557,7 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "maxOutputBytes": 52428800
       },
       "allowedFiles": [
-        "src/v7/alpha/labels/**",
-        "tests/v7/alpha/unit/labels/**"
+        "tests/lib/**"
       ],
       "forbiddenFiles": [
         ".env*",
@@ -1453,9 +1570,9 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
         "**/secrets/**"
       ],
       "acceptanceCriteria": [
-        "long_R_net, short_R_net, best_action_label, gap_R computed per mode.",
-        "NO_TRACE is first-class label.",
-        "min_action_edge and ambiguity_gap applied from mode config."
+        "Import boundary violations are caught.",
+        "lib/ must not import v7.* or alphaforge.*.",
+        "No shared_everything_mistake (regime/risk/IO/adapters in lib/)."
       ],
       "targetCommand": "pytest tests/v7/alpha -q",
       "roleBudget": "worker",
@@ -1463,118 +1580,7 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
       "riskLevel": "high",
       "capabilityManifest": {
         "canEdit": [
-          "src/v7/alpha/labels/**",
-          "tests/v7/alpha/unit/labels/**"
-        ],
-        "cannotEdit": [
-          ".env*",
-          "**/*.pem",
-          "**/*.key",
-          "**/*.p12",
-          "**/*.pfx",
-          "**/id_rsa",
-          "**/credentials/**",
-          "**/secrets/**"
-        ],
-        "canRun": [
-          "pytest",
-          "python",
-          "ruff",
-          "mypy"
-        ],
-        "cannotRun": [
-          "git push",
-          "git push --force",
-          "rm -rf",
-          "npm publish",
-          "terraform destroy",
-          "kubectl delete",
-          "git reset --hard",
-          "git clean -fd",
-          "vitest --watch",
-          "jest --watch",
-          "npm run dev"
-        ]
-      },
-      "telemetry": {
-        "expectedEvents": [
-          "workspace_started",
-          "workspace_completed",
-          "workspace_validated"
-        ],
-        "logLevel": "info"
-      }
-    },
-    {
-      "id": "P2.D",
-      "title": "Golden Label Tests",
-      "dependencies": [
-        "P2.C"
-      ],
-      "parallelGroup": "batch_2",
-      "dependencyReason": "Depends on P2.C for foundation.",
-      "manualApplicationRequired": false,
-      "humanApprovalRequired": false,
-      "autonomousExecutionAllowed": true,
-      "rollbackRequired": true,
-      "targetedValidationRequired": true,
-      "parallelism": {
-        "expectedBatch": "batch_2",
-        "canRunWith": [],
-        "cannotRunWith": [],
-        "conflictScope": [
-          "tests/v7/alpha/golden/**"
-        ],
-        "sameFileParallelismAllowed": false,
-        "safeParallelismNotes": "Use worktree isolation. Same-file edits should not run concurrently unless Pi optimizer explicitly approves a split."
-      },
-      "worktree": {
-        "required": true,
-        "isolationMode": "worktree",
-        "cleanupPolicy": "quarantine_on_failure"
-      },
-      "integration": {
-        "queueRequired": true,
-        "requiresWorkspaceValidation": true,
-        "requiresIntegrationValidation": true,
-        "conflictHandoffRequired": true,
-        "queuePriority": "normal",
-        "queueOptimizationNotes": "Critical-path or phase-unblocking work should merge first; leaf QA/report work can merge later."
-      },
-      "validation": {
-        "profile": "targeted_then_final",
-        "heavyCommandUsesGlobalLock": true,
-        "watchModeForbidden": true,
-        "timeoutMs": 600000,
-        "managedRunnerRequired": true,
-        "processGroupRequired": true,
-        "killTreeOnTimeout": true,
-        "maxOutputBytes": 52428800
-      },
-      "allowedFiles": [
-        "tests/v7/alpha/golden/**"
-      ],
-      "forbiddenFiles": [
-        ".env*",
-        "**/*.pem",
-        "**/*.key",
-        "**/*.p12",
-        "**/*.pfx",
-        "**/id_rsa",
-        "**/credentials/**",
-        "**/secrets/**"
-      ],
-      "acceptanceCriteria": [
-        "Golden dataset with known expected R values passes.",
-        "Regression test catches label drift."
-      ],
-      "targetCommand": "pytest tests/v7/alpha -q",
-      "roleBudget": "worker",
-      "maxRetries": 3,
-      "riskLevel": "medium",
-      "capabilityManifest": {
-        "canEdit": [
-          "tests/v7/alpha/golden/**"
+          "tests/lib/**"
         ],
         "cannotEdit": [
           ".env*",
@@ -1626,8 +1632,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
 ```json
 {
   "contractVersion": "4.1.1",
-  "phase": "P2",
-  "title": "Runtime Simulation Adapter & R-Label Engine",
+  "phase": "P0.5",
+  "title": "Shared Lib Foundation",
   "executionClass": "implementation",
   "executionAutomation": "enabled",
   "selectedRepairMode": null,
@@ -1635,7 +1641,7 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
   "autonomousExecutionAllowed": true,
   "agentMayMutateRepo": true,
   "schedulerRuntimeUse": "enabled",
-  "primaryGoal": "Side-effect-free simulation adapter and mode-specific R-label generation.",
+  "primaryGoal": "Focused lib/ directory with shared Binance client, indicators, costs, and time utilities.",
   "projectName": "v7_alphaforge_xgb",
   "stateBackend": "postgres",
   "selectedScaleMode": "stable_3",
@@ -1677,8 +1683,8 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
     "execution_without_approval",
     "optimizer_patch_without_approval"
   ],
-  "completionGate": "P2 complete only when all workspaces pass acceptance criteria and final validation passes.",
-  "nextPhase": "P4"
+  "completionGate": "P0.5 complete only when all workspaces pass acceptance criteria and final validation passes.",
+  "nextPhase": "P1"
 }
 ```
 
@@ -1686,4 +1692,5 @@ System-derived: worktree requirement, integration queue, validation lanes, drift
 
 ## Review Hardening Requirements
 
-* [ ] SCALP interval authority (mode config resolver)
+* [ ] Shared lib authority
+* [ ] Import boundary enforcement
