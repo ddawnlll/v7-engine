@@ -1,0 +1,969 @@
+accp_onefile_chain:
+  template_id: ACCP_V2_STRICT_YAML_ONEFILE_CHAIN
+  accp_version: 2.0.0
+  chain_id: V7_ENGINE_COMPONENT_SCORING_CHAIN
+  chain_purpose: V7 engine komponent scoring için kanıt toplama
+  plan_id: V7-COMPONENT-SCORE-001
+  generated_at: 2026-06-13 16:25:00+00:00
+  total_reports: 6
+  reports:
+  - report_id: RIR_V7_PIPELINE
+    component_name: V7 Pipeline
+    component_path: v7/
+    report_type: RIR
+    inspected_at: 2026-06-13 16:25:00+00:00
+    repo_tree:
+      directory_tree:
+      - v7/
+      - v7/docs/
+      - v7/docs/contracts/
+      - v7/docs/implementation/
+      - v7/docs/pipeline/
+      - v7/docs/runtime/
+      - v7/docs/v7_executor_support_pack/
+      - v7/src/ (empty)
+      total_file_count: 46
+      total_code_lines:
+        python_ts_tsx: 0
+        note: v7/src/ is empty — no implementation code exists yet; only documentation
+          files present
+      last_5_commits:
+      - 194fd8d chore: commit pre-existing docs and config changes
+      - 8297898 P0.6: add contract control plane and integration skeleton
+      - d245b2a re-design repo
+      - 1e24baa change repo style
+    domain_map:
+      responsibility: 'V7 Pipeline defines the complete mode-centric learned trading
+        pipeline: simulation truth → labels → features → dataset → model → calibration
+        → policy → portfolio → risk → evaluation → monitoring. It owns the four lifecycle
+        contracts (AnalysisRequest, AnalysisResult, DecisionEvent, TradeOutcome),
+        all config surfaces, invariants, test requirements, and 9 implementation phases.
+
+        '
+      ecosystem_position: Central authority for V7-internal trading semantics. Simulation
+        truth is owned by /simulation/ and consumed here. Runtime (operational engine)
+        is owned by /runtime/ and consumes V7 contract surfaces. Interface is owned
+        by /interface/ and consumes the runtime API.
+      upstream_dependencies:
+      - simulation/ (simulation output semantics, profiles)
+      - contracts/ (schema definitions, compatibility matrix)
+      downstream_consumers:
+      - runtime/ (consumes AnalysisRequest/Result lifecycle)
+      - interface/ (consumes lifecycle records through runtime API)
+      integration_contract_points:
+      - AnalysisRequest → AnalysisResult (engine contract)
+      - AnalysisResult → DecisionEvent (lifecycle contract)
+      - DecisionEvent → TradeOutcome (outcome lifecycle)
+      - SimulationOutput → TradeOutcome (simulation truth in outcome)
+    authority_docs:
+      ai_summary_md:
+        exists: true
+        path: v7/docs/ai_summary.md
+        total_sections: 42
+        section_headings:
+        - 1. SYSTEM IDENTITY — VISION (docs/vision.md)
+        - 2. ARCHITECTURE (docs/architecture.md)
+        - 3. CONTRACT FAMILY (docs/contracts/README.md)
+        - 4. ANALYSISREQUEST CONTRACT (docs/contracts/analysis_request.md)
+        - 5. ANALYSISRESULT CONTRACT (docs/contracts/analysis_result.md)
+        - 6. DECISIONEVENT CONTRACT (docs/contracts/decision_event.md)
+        - 7. TRADEOUTCOME CONTRACT (docs/contracts/trade_outcome.md)
+        - 8. RUNTIME SIMULATION ENGINE — ⚠️ Migrated to /simulation
+        - 9. RUNTIME INTEGRATION (docs/runtime/runtime_integration.md)
+        - 10. FALLBACK POLICY (docs/runtime/fallback_policy.md)
+        - 11. DEPLOYMENT SAFETY (docs/runtime/deployment_safety.md)
+        - 12. PIPELINE SIMULATION (docs/pipeline/simulation.md)
+        - 13. PIPELINE LABELS (docs/pipeline/labels.md)
+        - 14. PIPELINE FEATURES (docs/pipeline/features.md)
+        - 15. PIPELINE DATASET (docs/pipeline/dataset.md)
+        - 16. PIPELINE MODEL (docs/pipeline/model.md)
+        - 17. PIPELINE TRAINING (docs/pipeline/training.md)
+        - 18. PIPELINE CALIBRATION (docs/pipeline/calibration.md)
+        - 19. PIPELINE POLICY (docs/pipeline/policy.md)
+        - 20. PIPELINE PORTFOLIO (docs/pipeline/portfolio.md)
+        - 21. PIPELINE RISK (docs/pipeline/risk.md)
+        - 22. PIPELINE EVALUATION (docs/pipeline/evaluation.md)
+        - 23. PIPELINE MONITORING (docs/pipeline/monitoring.md)
+        - 24. LLM WORKING RULES (docs/v7_llm_rules.md)
+        - 25. DOC WRITING GUIDE (docs/v7_doc_writing_guide.md)
+        - 26. IMPLEMENTATION PHASES (docs/implementation/)
+        - 27. EXECUTOR SUPPORT PACK
+        - 28. COMPLETE CONFIG SURFACE INDEX
+        - 29. COMPLETE INVARIANT INDEX
+        - 30. COMPLETE TEST REQUIREMENT INDEX (by phase/doc)
+        - 31. COMPLETE PIPELINE DATA FLOW (for AI reference)
+        - 32. COMPLETE ENUM AND FIELD VALUE INDEX
+        - 33. COMPLETE CROSS-REFERENCE TABLE (doc-to-doc)
+        - 34. COMPLETE TERM GLOSSARY
+        - 35. COMPLETE ERROR AND EXCEPTION REFERENCE
+        - 36. COMPLETE VALIDATION RULE REFERENCE (by lifecycle stage)
+        - 37. COMPLETE CONFIG LOADER SPECIFICATION
+        - 38. COMPLETE TEST COMMAND REFERENCE
+        - 39. COMPLETE PRIORITY AND SEQUENCING RULES
+        - 40. COMPLETE FILE AND MODULE NAMING CONVENTIONS
+        - 41. COMPLETE ARCHITECTURAL DIAGRAM (textual)
+        - 42. COMPLETE CONTRACT FIELD MAP (cross-file consistency)
+        documentation_quality: comprehensive
+        missing_sections: none
+      implementation_phases:
+        defined: true
+        path: v7/docs/implementation/
+        phases_count: 10 (master_plan + P0 through P9)
+        completed_phases:
+        - P0 (Repo Alignment & Hybrid Foundations) — documented but v7/src/ empty
+        - P1 (Contracts & Hybrid Validation) — documented, no schema implementations
+          in v7/src/
+        - P2–P9 — documented plans only, no implementation code
+        note: All 10 phase documents exist as .md plans. Zero implementation code
+          in v7/src/. Phases are documented, not implemented.
+      invariants:
+        defined: true
+        count: 8
+        listed:
+        - Atomicity invariant
+        - Scope invariant
+        - Simulation truth layer invariant
+        - No future leakage invariant
+        - No unresolved training invariant
+        - No silent fallback invariant
+        - No hidden deterministic veto invariant
+        - No-trade first-class invariant
+      config_surface:
+        defined: true
+        sections: 13 (System, Simulation, Labels, Features, Dataset, Model, Calibration,
+          Policy, Portfolio, Risk, Deployment, Monitoring, Runtime)
+        completeness: comprehensive — all config families documented with field-level
+          detail
+      exception_reference:
+        defined: true
+        domain_exception_classes:
+        - ValidationError
+        - ConfigError
+        - ArtifactCompatibilityError
+        - SimulationError
+        - LabelGenerationError
+      contract_docs:
+        defined: true
+        path: v7/docs/contracts/
+        files:
+        - README.md
+        - analysis_request.md
+        - analysis_result.md
+        - decision_event.md
+        - trade_outcome.md
+        note: Contracts documented in .md files only; no Python Pydantic/schema implementations
+          in v7/src/
+      legacy_references:
+        count: 0
+        note: V7 docs do not reference legacy V4 paths; they reference v7/docs/ only
+    contracts_and_schemas:
+      produced:
+      - AnalysisRequest (documented in v7/docs/contracts/analysis_request.md)
+      - AnalysisResult (documented)
+      - DecisionEvent (documented)
+      - TradeOutcome (documented + canonical schema in contracts/schemas/trade_outcome.schema.json)
+      - TradeOutcome consumer only (schema owned by v7 per registry.json)
+      consumed:
+      - SimulationOutput (from simulation/)
+      - SimulationProfile (from simulation/)
+      schema_validation: not_implemented
+      contract_versioning: not_implemented
+      cross_domain_contract_compliance: partial
+      note: All 4 contracts documented in .md. TradeOutcome has a JSON Schema in contracts/.
+        No Python validation code exists in v7/.
+    gaps_and_risks:
+      critical_v4_migration_gaps:
+      - v7/src/ is empty — zero implementation code exists
+      - V7 pipeline has no Python package structure
+      - V7 contracts exist as .md only, no Pydantic/schema validation code
+      critical_documentation_gaps:
+      - No implementation code exists to match the documentation
+      - Documentation defines 42 sections but 0% is implemented
+      critical_test_coverage_gaps:
+      - Zero test files in v7/
+      - test.sh exists but targets runtime (v4) tests, not V7
+      critical_contract_integration_gaps:
+      - AnalysisRequest/AnalysisResult/DecisionEvent have no code implementation
+      - No schema validation in v7/ pipeline
+      - No integration tests linking V7 contracts to runtime/
+      architectural_risks:
+      - V7 pipeline is purely documentation at this stage
+      - Implementation must bootstrap from scratch
+      - Risk of documentation-code drift if implementation starts without syncing
+        to doc plans
+      technical_debt_indicators:
+      - v7/src/ empty directory
+      - v7/docs/ai_summary.md 2759 lines of dense reference with zero executable code
+    final_status:
+      status: partial
+      safe_to_continue: conditional
+      requires_hir: true
+      reason: 'V7 Pipeline documentation is comprehensive (42 sections, 10 phase plans,
+        8 invariants, full config surface). However, v7/src/ contains zero implementation
+        code — no Python modules, no contract validation, no tests. This is purely
+        a reference architecture at this stage. Requires HIR to assess whether the
+        documented phases are ready for implementation or need re-syncing with actual
+        runtime/contracts state.
+
+        '
+      self_assessment:
+        evidence_coverage: 0.85
+        note: Documentation evidence is complete; implementation evidence is 0%
+  - report_id: RIR_RUNTIME
+    component_name: Runtime
+    component_path: runtime/
+    report_type: RIR
+    inspected_at: 2026-06-13 16:25:00+00:00
+    repo_tree:
+      directory_tree:
+      - runtime/ (root)
+      - runtime/api/
+      - runtime/api/routes/
+      - runtime/db/
+      - runtime/db/repos/
+      - runtime/docs/
+      - runtime/migrations/
+      - runtime/migrations/versions/
+      - runtime/runtime/
+      - runtime/services/
+      - runtime/__init__.py
+      - runtime/requirements.txt
+      - runtime/alembic.ini
+      total_file_count: 155
+      total_code_lines:
+        python_ts_tsx: 36864 (Python only)
+      last_5_commits:
+      - 194fd8d chore: commit pre-existing docs and config changes (shared root commit)
+      test_files:
+        count: 0
+        note: No test files found in runtime/ despite extensive source code
+    domain_map:
+      responsibility: 'Runtime is the operational Python backend. It owns the FastAPI
+        surface (50+ routes under /api/v3/* and /api/admin/*), the scan loop with
+        concurrent market-fetch + serial analysis, the layered analyzer decision pipeline
+        (12-step: circuit breaker → regime → trend → structure → confirmation → probability
+        → stop model → timing → execution quality → learning → gating → output), the
+        adaptive learning/correction layer, the self-learning foundation, PostgreSQL
+        operational schema (20+ tables), 22 migration files, circuit breaker, universe
+        throttling, paper execution, and runbook/operational diagnostics.
+
+        '
+      ecosystem_position: 'Runtime is the execution and orchestration layer between
+        the V7 pipeline (contracts) and the React interface. It consumes V7 AnalysisRequest/Result
+        contracts, hosts the simulation engine operationally (truth defined by /simulation/),
+        and serves the interface through FastAPI.
+
+        '
+      upstream_dependencies:
+      - v7/ (AnalysisRequest/AnalysisResult contract shapes)
+      - simulation/ (simulation truth semantics hosted by runtime)
+      - contracts/ (schema definitions for TradeOutcome)
+      - PostgreSQL (operational database)
+      - Binance exchange (market data via REST/Websocket)
+      downstream_consumers:
+      - interface/ (consumes all /api/v3/* routes)
+      integration_contract_points:
+      - v7 AnalysisRequest → analyzer input
+      - analyzer output → signal → DecisionEvent
+      - paper execution → TradeOutcome
+      - /api/v3/* → React interface consumption
+    authority_docs:
+      ai_summary_md:
+        exists: true
+        path: runtime/docs/ai_summary.md
+        total_sections: 10 (R.1 through R.10)
+        section_headings:
+        - R.1 Runtime Architecture
+        - R.2 Runtime Flow
+        - R.3 Analyzer
+        - R.4 Learning Layer
+        - R.5 Self-Learning Layer
+        - R.6 Operational Schema
+        - R.7 API Surface
+        - R.8 Runbook
+        - R.9 Change Analysis Snapshot
+        - R.10 Engine Diagnostic Fix Plan
+        documentation_quality: comprehensive
+        missing_sections: none (all 13 source docs synthesized)
+      total_doc_files: 13
+      doc_files_list:
+      - README.md, architecture.md, runtime.md, scanning.md, analyzer.md
+      - learning.md, self_learning.md, schema.md, api.md
+      - api_architecture_rule.md, runbook.md
+      - engine_change_analysis_2026-04-02.md
+      - engine_diagnostic_fix_plan.md
+      legacy_references:
+        count: 68
+        note: 68 legacy V4 path references (e.g. /Users/hootie/src/trading-bot/v4/...)
+          in runtime/docs/*.md files. No legacy refs in .py files.
+    contracts_and_schemas:
+      produced:
+      - DecisionEvent (runtime lifecycle, persisted)
+      - TradeOutcome (runtime lifecycle, persisted)
+      - Signal records (v4_signals table)
+      - Order/Fill/Position records
+      consumed:
+      - V7 AnalysisRequest (contract shape, routed through engine adapter)
+      - V7 AnalysisResult (produced via engine adapter)
+      - SimulationOutput (from simulation engine, hosted by runtime)
+      schema_validation:
+        status: partial
+        detail: PostgreSQL schema models exist in runtime/db/models.py. No formal
+          JSON Schema validation referenced. API response models via FastAPI/Pydantic.
+      contract_versioning:
+        status: not_implemented
+        detail: No explicit contract version checks in runtime code paths
+      cross_domain_contract_compliance:
+        status: partial
+    gaps_and_risks:
+      critical_v4_migration_gaps:
+      - 68 legacy V4 file path references in docs (not yet normalized to current repo
+        layout)
+      - Runtime is still functionally V4 code — not yet integrated with V7 contract
+        Python packages
+      - No V7 AnalysisRequest/Result Python schema implementations consumed by runtime
+      critical_documentation_gaps:
+      - No doc explaining V7 contract integration points for runtime engineers
+      - Runbook references external doc (top-level runbook.md)
+      critical_test_coverage_gaps:
+      - Zero test files in runtime/ — despite 36,864 lines of Python and 50+ API routes
+      - No integration tests for API endpoints, analyzer pipeline, schema models,
+        or migrations
+      - test.sh references test directories not found in current runtime/ layout
+      critical_contract_integration_gaps:
+      - analyzer_engine_adapter.py exists but V7 AnalysisRequest/Result Python types
+        are not defined (v7/src/ empty)
+      - Engine registry exists but contract versioning/gating not implemented
+      architectural_risks:
+      - No test suite means changes are untested — high regression risk
+      - 68 legacy path references will cause confusion for new engineers
+      - V4→V7 migration path unclear — runtime docs say 'migrated' but code is still
+        V4
+      technical_debt_indicators:
+      - No tests despite 36K+ lines of code
+      - 20+ migration files suggesting schema instability over time
+      - Two Python versions in __pycache__ (3.12 and 3.14)
+    final_status:
+      status: partial
+      safe_to_continue: conditional
+      requires_hir: true
+      reason: 'Runtime has the most implementation code (36,864 lines) and is operationally
+        the most complete component. However, zero test coverage is a critical risk.
+        68 legacy V4 references and no V7 contract Python package integration indicate
+        the migration is partially done. The engine adapter exists but has nothing
+        to adapt from V7 side.
+
+        '
+      self_assessment:
+        evidence_coverage: 0.9
+  - report_id: RIR_INTERFACE
+    component_name: Interface
+    component_path: interface/
+    report_type: RIR
+    inspected_at: 2026-06-13 16:25:00+00:00
+    repo_tree:
+      directory_tree:
+      - interface/ (root)
+      - interface/docs/ (newly created ai_summary.md)
+      - interface/src/
+      - interface/src/app/ (App.tsx, main.tsx)
+      - interface/src/components/
+      - interface/src/contexts/
+      - interface/src/hooks/
+      - interface/src/lib/
+      - interface/src/modules/
+      - interface/src/routes/
+      - interface/src/test/
+      - interface/public/
+      - interface/package.json
+      - interface/vite.config.ts
+      - interface/vitest.config.ts
+      - interface/tsconfig.json, tsconfig.app.json, tsconfig.node.json
+      - interface/eslint.config.js
+      - interface/index.html
+      - interface/bun.lock
+      total_file_count: 107 (excluding node_modules, dist, .cache)
+      total_code_lines:
+        python_ts_tsx: 53701 (TS/TSX/CSS)
+      last_5_commits:
+      - 194fd8d chore: commit pre-existing docs and config changes (shared root commit)
+      test_files:
+        count: 14 (TypeScript test files)
+        list:
+        - interface/src/routes/TradesRoute.test.tsx
+        - interface/src/routes/SimulationsRoute.test.tsx
+        - interface/src/routes/OperateControlPageRoute.test.tsx
+        - interface/src/routes/TradeOverviewRoute.test.tsx
+        - interface/src/routes/PortfolioRoute.test.tsx
+        - interface/src/hooks/useScanEventStream.test.tsx
+        - interface/src/hooks/useSimulationEventStream.test.tsx
+        - interface/src/components/scans/LiveScanEventPanel.test.tsx
+        - interface/src/components/forms/ScanJobForm.test.tsx
+        - interface/src/components/profile/ProfileScopeBar.test.tsx
+        - interface/src/components/navigation/WorkspaceShell.test.tsx
+        - interface/src/components/navigation/Navbar.test.tsx
+        - interface/src/lib/api.test.ts
+        - interface/src/lib/profileScope.test.ts
+    domain_map:
+      responsibility: 'Interface is the React + TypeScript + Vite operator UI. It
+        owns the workspace navigation (Trade/Review/Operate/System), 25+ route pages,
+        component library, data fetching hooks, API client layer, and state management.
+        Rich feature modules for scan review, trades, portfolio, admin controls, simulations,
+        and analytics.
+
+        '
+      ecosystem_position: 'Top-level operator surface. Consumes all backend functionality
+        through runtime/ FastAPI routes (/api/v3/*). No direct dependency on v7/ or
+        simulation/ — all integration is through the runtime API.
+
+        '
+      upstream_dependencies:
+      - runtime/ (API surface consumed via fetch/axios — 554 API client references)
+      downstream_consumers: not_applicable
+      integration_contract_points:
+      - All /api/v3/* routes bound to page components
+      - Analysis response ↔ Markets/MarketOverview
+      - Scan runs ↔ Scans routes
+      - Orders/Trades ↔ Trades/Portfolio routes
+      - Runtime config ↔ Operate Config/Control routes
+      - Learning profile ↔ Review Learning page
+      - Engine performance ↔ Review Engine Performance page
+      - Engine behavior ↔ Review Engine Behavior page
+    authority_docs:
+      ai_summary_md:
+        exists: true
+        path: interface/docs/ai_summary.md
+        total_sections: 11 (I.1 through I.11)
+        section_headings:
+        - I.1 Interface README
+        - I.2 Current Information Architecture
+        - I.3 Target Information Architecture
+        - I.4 Canonical Page Responsibilities
+        - I.5 Proposed Component Architecture
+        - I.6 Domain Consolidation Plans
+        - I.7 Migration Plan
+        - I.8 Immediate Fixes
+        - I.9 Definition of Done
+        - I.10 Current-State Weaknesses
+        - I.11 Adjacent Interface Documents
+        documentation_quality: comprehensive
+        missing_sections: none
+      total_doc_files: 5
+      doc_files_list:
+      - README.md
+      - INTERFACE_MAP.md
+      - INTERFACE_MAP_proposed.md
+      - INTERFACE_MAP proposed.phase21.md
+      - interface-current-state-report.md
+      legacy_references:
+        count: 0
+        note: interface/src/ has zero legacy V4 path references. Only INTERFACE_MAP.md
+          docs reference legacy paths (in prose discussion of old architecture).
+    contracts_and_schemas:
+      produced: not_applicable (UI consumes, does not produce domain contracts)
+      consumed:
+      - Runtime API responses (typed via lib/api.ts, lib/apiRoutes.ts, lib/types.ts)
+      - Via runtime: AnalysisRequest/Result, DecisionEvent, TradeOutcome lifecycle
+          records
+      schema_validation:
+        status: partial
+        detail: TypeScript types defined in lib/types.ts and lib/api.ts. No formal
+          contract validation — relies on backend Pydantic models for type safety.
+      contract_versioning:
+        status: not_applicable
+      cross_domain_contract_compliance:
+        status: partial
+    gaps_and_risks:
+      critical_v4_migration_gaps:
+      - Workspace structure updated but some pages still bear legacy layout symptoms
+      - Admin route still mixed (control + config) — migration to split pages partially
+        done
+      - No profile-aware execution model yet (paper/binance/bybit profiles)
+      critical_documentation_gaps:
+      - INTERFACE_MAP.md still references legacy V4 paths in doc text (cosmetic)
+      - No OpenAPI/TypeScript type generation pipeline from runtime backend
+      critical_test_coverage_gaps:
+      - 14 test files for ~53K lines of TS/TSX — very low coverage
+      - 'Missing tests for: AdminRoute, AlertsRoute, AnalyticsRoute, DashboardRoute,
+        MarketsRoute, StorageRoute, SettingsRoute, LoggingRoute, RuntimeConfigRoute'
+      - No E2E or integration tests against a running backend
+      critical_contract_integration_gaps:
+      - No formal contract alignment with V7 AnalysisRequest/Result shapes
+      - Types in lib/types.ts may be out of sync with backend response schemas
+      architectural_risks:
+      - Shell (App.tsx + Navbar.tsx) still too heavy — documented risk per INTERFACE_MAP
+      - No profile-awareness means live execution UI will require significant rework
+      - Data freshness cadence documented in target architecture but not yet implemented
+      technical_debt_indicators:
+      - 25+ route files — some still oversized (AdminRoute, ScansRoute, DashboardRoute)
+      - Multiple proposed INTERFACE_MAP documents suggest ongoing architectural churn
+      - bun.lock is large (104KB) suggesting heavy dependency tree
+    final_status:
+      status: partial
+      safe_to_continue: conditional
+      requires_hir: true
+      reason: 'Interface has significant implementation (53K lines, 25+ routes, 14
+        test files) and comprehensive documentation. However, very low test coverage,
+        oversized shell components, no profile-aware execution model, and no formal
+        contract alignment with V7 pipeline are risks. The migration from V4 layout
+        is partially done but incomplete in meaningful ways.
+
+        '
+      self_assessment:
+        evidence_coverage: 0.9
+  - report_id: RIR_SIMULATION
+    component_name: Simulation
+    component_path: simulation/
+    report_type: RIR
+    inspected_at: 2026-06-13 16:25:00+00:00
+    repo_tree:
+      directory_tree:
+      - simulation/
+      - simulation/docs/
+      - simulation/docs/phases/
+      - simulation/README.md
+      total_file_count: 21
+      total_code_lines:
+        python_ts_tsx: 0
+        note: simulation/ contains only documentation and a README — no implementation
+          code
+      last_5_commits:
+      - 194fd8d chore: commit pre-existing docs and config changes
+      - 8297898 P0.6: add contract control plane and integration skeleton
+      test_files:
+        count: 0
+    domain_map:
+      responsibility: 'Simulation is the root authority for simulation truth semantics.
+        It defines stop/target/horizon/fee/slippage models, R-multiple computation,
+        MFE/MAE path quality metrics, exit families, no-trade quality, Monte Carlo
+        robustness, and all simulation profiles (SWING/SCALP/AGGRESSIVE_SCALP). It
+        produces SimulationOutput and SimulationProfile schemas consumed by V7 pipeline
+        and AlphaForge.
+
+        '
+      ecosystem_position: 'Independent simulation truth authority. V7 pipeline consumes
+        simulation outputs through side-effect-free adapters. Runtime hosts the simulation
+        engine operationally but does not define simulation semantics. This separation
+        is explicitly documented.
+
+        '
+      upstream_dependencies:
+      - Market data (via runtime, conceptually)
+      downstream_consumers:
+      - v7/ (SimulationOutput → labels, features, evaluation, outcomes)
+      - alphaforge/ (SimulationOutput → AlphaForgeLabel)
+      - runtime/ (hosts simulation engine operationally)
+      integration_contract_points:
+      - SimulationOutput → TradeOutcome (mapping in contracts/mappings/simulation_to_v7.json)
+      - SimulationOutput → AlphaForgeLabel (mapping in contracts/mappings/simulation_to_alphaforge.json)
+      - SimulationProfile → simulation engine configuration
+      - Side-effect-free adapters for replay/training/evaluation
+    authority_docs:
+      ai_summary_md:
+        exists: true
+        path: simulation/docs/ai_summary.md
+        total_sections: 13 (META + Reading Order + 11 numbered sections)
+        section_headings:
+        - 1. SYSTEM IDENTITY
+        - 2. CONTRACT SURFACES
+        - 3. MODE PROFILES
+        - 4. COST MODEL
+        - 5. EXIT FAMILIES
+        - 6. NO-TRADE QUALITY
+        - 7. LINEAGE AND VERSIONING
+        - 8. ADAPTER RULES
+        - 9. MONTE CARLO
+        - 10. VALIDATION GATES
+        - 11. PHASE SUMMARY
+        - 12. FORBIDDEN PATTERNS
+        - 13. SEARCH TERMS
+        documentation_quality: comprehensive
+        missing_sections: none
+      total_doc_files: 20
+      doc_files_list:
+      - ai_summary.md, architecture.md, contracts.md, cost_model.md
+      - exits_and_horizons.md, lineage_and_versioning.md, migration_from_v7.md
+      - monte_carlo.md, no_trade_quality.md, profiles.md
+      - replay_paper_and_runtime_hosting.md, validation.md, vision.md
+      - phases/S0 through S6 phase docs
+      legacy_references:
+        count: 0
+        note: Simulation docs reference current repo layout (simulation/docs/), not
+          legacy V4 paths
+    contracts_and_schemas:
+      produced:
+      - SimulationOutput (JSON Schema at contracts/schemas/simulation_output.schema.json)
+      - SimulationProfile (JSON Schema at contracts/schemas/simulation_profile.schema.json)
+      consumed:
+      - Market data (conceptually — no formal contract)
+      schema_validation:
+        status: not_implemented
+        detail: JSON Schema files exist in contracts/ but no Python code validates
+          against them in simulation/
+      contract_versioning:
+        status: documented
+        detail: compatibility.json defines version pair matrix for SimulationOutput
+          ↔ AlphaForgeLabel and SimulationOutput ↔ TradeOutcome. Profile ↔ Output
+          also defined.
+      cross_domain_contract_compliance:
+        status: documented
+        detail: Simulation → AlphaForge and Simulation → V7 field mappings exist in
+          contracts/mappings/
+    gaps_and_risks:
+      critical_v4_migration_gaps:
+      - Simulation was extracted from V7 runtime docs — migration mostly documented
+      - EXPRESSION migration_from_v7.md exists and details the extraction
+      critical_documentation_gaps:
+      - No implementation plan for simulation engine Python code
+      - No code examples or sequence diagrams for adapter patterns
+      critical_test_coverage_gaps:
+      - Zero test files — no simulation engine code to test
+      - Golden tests and replay parity promised in Phase S5 but not implemented
+      critical_contract_integration_gaps:
+      - JSON Schemas exist but no Python code validates or produces them
+      - No side-effect-free adapters implemented
+      - No runtime simulation hosting code in simulation/ (hosted by runtime/)
+      architectural_risks:
+      - Comprehensive documentation but zero implementation = risk of drift
+      - Simulation truth is authoritative but runtime must host it — unclear where
+        hosting code lives
+      - S6 phase (V7/AlphaForge integration) is last phase — not started
+      technical_debt_indicators:
+      - No code at all in simulation/ — only docs
+      - 20 doc files for 0 lines of implementation
+    final_status:
+      status: partial
+      safe_to_continue: conditional
+      requires_hir: true
+      reason: 'Simulation has the most comprehensive documentation relative to its
+        scope (20 docs, 13-section ai_summary, JSON Schemas, field mappings, version
+        compatibility). However, zero implementation code exists. The separation of
+        concerns (simulation defines truth, runtime hosts it) is well-documented but
+        not yet realized in code.
+
+        '
+      self_assessment:
+        evidence_coverage: 0.85
+  - report_id: RIR_CONTRACTS
+    component_name: Contracts
+    component_path: contracts/
+    report_type: RIR
+    inspected_at: 2026-06-13 16:25:00+00:00
+    repo_tree:
+      directory_tree:
+      - contracts/
+      - contracts/schemas/
+      - contracts/fixtures/
+      - contracts/mappings/
+      - contracts/registry.json
+      - contracts/compatibility.json
+      - contracts/README.md
+      total_file_count: 12
+      total_code_lines:
+        python_ts_tsx: 0 (JSON only)
+      last_5_commits:
+      - 8297898 P0.6: add contract control plane and integration skeleton
+      test_files:
+        count: 0
+    domain_map:
+      responsibility: 'Contracts is the canonical root contract registry for the entire
+        monorepo. It holds JSON Schema definitions for every cross-domain contract
+        object, version compatibility rules, field-level mappings between subsystems,
+        and minimal valid fixture files for testing. Contains no Python code — it
+        is data read by integration tests and domain implementations.
+
+        '
+      ecosystem_position: 'Passive authority — contracts/ is the single source of
+        truth for all cross-subsystem data shapes. Every subsystem (simulation, alphaforge,
+        v7, runtime) references contract schemas from here. The registry.json enumerates
+        which domain produces and consumes each contract.
+
+        '
+      upstream_dependencies: none
+      downstream_consumers:
+      - simulation/ (SimulationProfile, SimulationOutput schemas)
+      - alphaforge/ (AlphaForgeLabel schema)
+      - v7/ (TradeOutcome schema)
+      - runtime/ (TradeOutcome consumed during production)
+      integration_contract_points:
+      - contracts/registry.json → master contract enumeration
+      - contracts/schemas/*.schema.json → each contract's canonical shape
+      - contracts/fixtures/*.json → minimum valid examples for testing
+      - contracts/mappings/*.json → field-level mapping between schemas
+      - contracts/compatibility.json → allowed version pairs
+    authority_docs:
+      ai_summary_md:
+        exists: false
+        note: Contracts docs are self-contained in README.md + registry.json. No ai_summary.md
+          needed per repo decision.
+      total_doc_files: 1 (README.md)
+      documentation_quality: concise and complete
+      legacy_references:
+        count: 0
+    contracts_and_schemas:
+      schemas_defined:
+      - object_name: SimulationProfile
+        version: 1.0.0
+        owner: simulation
+        schema_file: contracts/schemas/simulation_profile.schema.json
+        producers:
+        - simulation
+        consumers:
+        - simulation
+      - object_name: SimulationOutput
+        version: 1.0.0
+        owner: simulation
+        schema_file: contracts/schemas/simulation_output.schema.json
+        producers:
+        - simulation
+        consumers:
+        - alphaforge
+        - v7
+      - object_name: AlphaForgeLabel
+        version: 1.0.0
+        owner: alphaforge
+        schema_file: contracts/schemas/alphaforge_label.schema.json
+        producers:
+        - alphaforge
+        consumers:
+        - alphaforge
+      - object_name: TradeOutcome
+        version: 1.0.0
+        owner: v7
+        schema_file: contracts/schemas/trade_outcome.schema.json
+        producers:
+        - v7
+        consumers:
+        - v7
+      missing_schemas:
+      - AnalysisRequest (only documented in v7/docs/contracts/ — no JSON Schema)
+      - AnalysisResult (only documented in v7/docs/contracts/ — no JSON Schema)
+      - DecisionEvent (only documented in v7/docs/contracts/ — no JSON Schema)
+      schema_validation:
+        status: not_implemented
+        detail: JSON Schemas exist but no validation code implements them. No integration
+          tests validate fixtures against schemas.
+      contract_versioning:
+        status: defined
+        detail: compatibility.json defines 3 contract pairs with version compatibility
+          rules, breaking change rules, and required validation gates.
+      cross_domain_contract_compliance:
+        status: partial
+        detail: 4 of 7 potential contracts have JSON Schemas. AnalysisRequest/AnalysisResult/DecisionEvent
+          are documented but lack schemas. Mappings exist for Simulation→AlphaForge
+          and Simulation→V7.
+    gaps_and_risks:
+      critical_v4_migration_gaps:
+      - No V4 contract artifacts to migrate — contracts/ is new
+      critical_documentation_gaps:
+      - AnalysisRequest, AnalysisResult, DecisionEvent have no JSON Schemas (only
+        .md docs in v7/)
+      - No fixture files for AnalysisRequest/AnalysisResult/DecisionEvent
+      critical_test_coverage_gaps:
+      - Zero test files validate schemas, fixtures, mappings, or compatibility rules
+      - No schema parity tests, no fixture roundtrip tests, no mapping field existence
+        tests (all listed as required in compatibility.json)
+      critical_contract_integration_gaps:
+      - No Python/TS code validates against JSON Schemas
+      - TradeOutcome schema exists but runtime/ has no validation code for it
+      - Three lifecycle contracts (AnalysisRequest/AnalysisResult/DecisionEvent) have
+        no canonical schema at all
+      architectural_risks:
+      - Contracts are data-only (JSON) — no validation code means schemas can drift
+        from implementation
+      - Missing schemas for 3/7 lifecycle contracts undermines cross-domain contract
+        compliance
+      - No consumer-side schema validation in any subsystem
+      technical_debt_indicators:
+      - No tests despite 12 files being highly testable (schema fixtures, mappings,
+        compatibility rules)
+      - registry.json lists source_authority paths that don't exist yet (simulation/docs/contracts.md,
+        alphaforge/docs/schemas/label_schema_v1.json)
+    final_status:
+      status: partial
+      safe_to_continue: conditional
+      requires_hir: true
+      reason: 'Contracts/ has a clean structure (registry, schemas, mappings, compatibility,
+        fixtures) and covers 4 of 7 needed contracts. However, three core V7 lifecycle
+        contracts (AnalysisRequest, AnalysisResult, DecisionEvent) have no JSON Schema.
+        Zero validation code exists anywhere. The registry and compatibility matrix
+        are well-designed but not yet enforced by any test or CI gate.
+
+        '
+      self_assessment:
+        evidence_coverage: 0.8
+  - report_id: RIR_ALPHAFORGE
+    component_name: AlphaForge
+    component_path: alphaforge/
+    report_type: RIR
+    inspected_at: 2026-06-13 16:25:00+00:00
+    repo_tree:
+      directory_tree:
+      - alphaforge/
+      - alphaforge/docs/
+      - alphaforge/docs/checklists/
+      - alphaforge/docs/configs/
+      - alphaforge/docs/diagrams/
+      - alphaforge/docs/execution_contracts/
+      - alphaforge/docs/phase_plans/
+      - alphaforge/docs/schemas/
+      - alphaforge/src/ (empty — contains only .gitkeep)
+      total_file_count: 32
+      total_code_lines:
+        python_ts_tsx: 0
+        note: alphaforge/src/ is empty — only documentation and JSON schemas exist
+      last_5_commits:
+      - 194fd8d chore: commit pre-existing docs and config changes
+      - 8297898 P0.6: add contract control plane and integration skeleton
+      - 5727dc6 P0.5: Shared Lib Foundation — focused lib/ skeleton with docs, schemas,
+          and package structure
+      - d245b2a re-design repo
+      - 1e24baa change repo style
+      test_files:
+        count: 0
+    domain_map:
+      responsibility: 'AlphaForge is the V7-compatible alpha generation system. It
+        defines the XGBoost-first hybrid supervised alpha model pipeline: label generation
+        from simulation outputs, multi-timeframe feature engine, dataset assembly
+        with walk-forward splits, XGBoost hybrid model training (classification +
+        regression), calibration and reliability scoring, and integration with V7
+        policy/portfolio/risk stages.
+
+        '
+      ecosystem_position: 'AlphaForge sits between simulation/ (truth source) and
+        v7/ (policy consumer). It consumes SimulationOutput to produce AlphaForgeLabel
+        training rows, then produces model predictions consumed by V7 policy gates.
+        Its artifact bundles are mode-scoped (SWING/SCALP/ AGGRESSIVE_SCALP).
+
+        '
+      upstream_dependencies:
+      - simulation/ (SimulationOutput, SimulationProfile)
+      - lib/ (shared library — P0.5 foundation)
+      - contracts/ (AlphaForgeLabel schema)
+      downstream_consumers:
+      - v7/ (model predictions → policy/portfolio/risk stages)
+      integration_contract_points:
+      - SimulationOutput → AlphaForgeLabel (mapping in contracts/mappings/simulation_to_alphaforge.json)
+      - AlphaForgeLabel → model training (dataset row)
+      - Model predictions → V7 policy gates
+      - Execution contracts (P0–P9) define phase-level contracts with v7
+    authority_docs:
+      ai_summary_md:
+        exists: true
+        path: alphaforge/docs/ai_summary__v7_alphaforge_xgb.md
+        note: Named ai_summary__v7_alphaforge_xgb.md (not ai_summary.md) — contains
+          dense ML-focused implementation reference
+        section_count: unknown (file read limited — confirmed comprehensive XGB-focused
+          reference)
+      total_doc_files: 31
+      doc_files_list:
+      - 1 ai_summary
+      - 10 execution contracts (P0–P9)
+      - 10 phase plans (P0 through P9 + combined)
+      - 3 JSON schemas (label, feature, prediction)
+      - 1 config defaults JSON
+      - 2 Mermaid diagrams (architecture, label_generation)
+      - 1 checklist, 1 combined phase plan
+      - alphaforge/src/ empty (.gitkeep)
+      legacy_references:
+        count: 0
+    contracts_and_schemas:
+      produced:
+      - AlphaForgeLabel (JSON Schema at contracts/schemas/alphaforge_label.schema.json)
+      - Prediction schema (alphaforge docs only)
+      - Feature schema (alphaforge docs only)
+      consumed:
+      - SimulationOutput (from simulation/)
+      - SimulationProfile (from simulation/)
+      schema_validation:
+        status: not_implemented
+        detail: JSON Schemas exist in contracts/ and alphaforge/docs/schemas/. No
+          validation code.
+      contract_versioning:
+        status: documented
+        detail: compatibility.json defines SimulationOutput ↔ AlphaForgeLabel version
+          pair rules
+      cross_domain_contract_compliance:
+        status: partial
+        detail: Label schema registered in contracts/registry.json. Prediction/feature
+          schemas are alphaforge-local.
+    gaps_and_risks:
+      critical_v4_migration_gaps:
+      - AlphaForge is a new subsystem (no V4 legacy)
+      critical_documentation_gaps:
+      - alphaforge/src/ empty — no code to match the comprehensive docs
+      - No implementation code for XGBoost model, feature engine, label engine, or
+        dataset assembly
+      critical_test_coverage_gaps:
+      - Zero test files — no model training tests, no label generation tests, no feature
+        pipeline tests
+      critical_contract_integration_gaps:
+      - No Python code producing AlphaForgeLabel from SimulationOutput
+      - No model prediction → V7 policy integration code
+      - No side-effect-free adapters implemented
+      architectural_risks:
+      - Most phase plans assume lib/ shared library exists — alphaforge/src/ empty
+        means nothing depends on lib/ yet
+      - 10 execution contracts + 10 phase plans = 20 planning documents for 0 lines
+        of implementation
+      - MVP targets 20 high-liquidity symbols — no evidence this is scoped correctly
+      - Model artifact structure (3 mode-specific bundles) documented but not implemented
+      technical_debt_indicators:
+      - src/ directory is empty placeholder
+      - 'High documentation-to-implementation ratio (31 docs : 0 LOC)'
+      - ai_summary filename doesn't follow standard naming (ai_summary__v7_alphaforge_xgb.md
+        vs ai_summary.md)
+    final_status:
+      status: partial
+      safe_to_continue: conditional
+      requires_hir: true
+      reason: 'AlphaForge has the most extensive documentation of any subsystem (31
+        doc files, 10 execution contracts, 10 phase plans, full label/ feature/prediction
+        schemas). However, alphaforge/src/ is completely empty. The subsystem is well-designed
+        on paper but has zero implementation — not even a package init file. Requires
+        HIR to align the 10-phase plan with actual implementation sequencing given
+        lib/ and V7 pipeline are both empty.
+
+        '
+      self_assessment:
+        evidence_coverage: 0.8
+  scoring_context:
+    purpose: 'Bu chain, V7 Engine komponentlerinin 10 üzerinden puanlanması için kanıt
+      zemini oluşturuyor. Puanlama kriterleri aşağıdadır.
+
+      '
+    scoring_criteria:
+      documentation_weight: 0.25
+      implementation_completeness_weight: 0.25
+      v7_migration_status_weight: 0.2
+      test_coverage_weight: 0.15
+      contract_integration_weight: 0.15
+    components_to_score:
+    - id: C1
+      name: V7 Pipeline
+      report_ref: RIR_V7_PIPELINE
+    - id: C2
+      name: Runtime
+      report_ref: RIR_RUNTIME
+    - id: C3
+      name: Interface
+      report_ref: RIR_INTERFACE
+    - id: C4
+      name: Simulation
+      report_ref: RIR_SIMULATION
+    - id: C5
+      name: Contracts
+      report_ref: RIR_CONTRACTS
+    - id: C6
+      name: AlphaForge
+      report_ref: RIR_ALPHAFORGE
+    notes:
+    - Runtime ve Interface V4'ten V7'ye migrate edilmekte, eksiklikler bekleniyor
+    - Migration tamamlanmamış bileşenler için puanlama mimarideki potansiyeli de içermeli
+    - Her bileşen için gap listesi açık ve somut olmalı
+    - HIR (Human-in-the-loop Review) önerilen bileşenler: tumu — hiçbiri tam durumda
+        degil
+    - Implementation durumu: Runtime ve Interface kod var, diger 4 bileşen kod yok
+    - Test durumu: Interface 14 test, digerlerinde 0 test
+    - Contract integration: Contracts/ en temiz yapiya sahip ama 3/7 kontrat JSON
+        Schema eksik

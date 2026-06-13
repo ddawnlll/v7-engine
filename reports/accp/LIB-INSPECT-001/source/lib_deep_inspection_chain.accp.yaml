@@ -1,0 +1,472 @@
+accp_onefile_chain:
+  template_id: ACCP_V2_STRICT_YAML_ONEFILE_CHAIN
+  accp_version: 2.0.0
+  chain_id: LIB_DEEP_INSPECTION_CHAIN
+  chain_purpose: lib/ subsystem deep inspection + simulation/alphaforge readiness
+    gate
+  plan_id: LIB-INSPECT-001
+  generated_at: '2026-06-13T16:50:00Z'
+  total_reports: 2
+  reports:
+  - report_id: RIR_LIB_DEEP
+    component_name: lib - Shared Primitives & Services
+    component_path: lib/
+    report_type: RIR
+    inspected_at: '2026-06-13T16:50:00Z'
+    repo_tree:
+      directory_tree:
+      - lib/ (root)
+      - lib/docs/
+      - lib/docs/phase_plans/
+      - lib/docs/schemas/
+      - lib/__init__.py
+      - lib/indicators/
+      - lib/indicators/__init__.py
+      - lib/indicators/atr.py
+      - lib/indicators/returns.py
+      - lib/indicators/rolling.py
+      - lib/indicators/volatility.py
+      - lib/costs/
+      - lib/costs/__init__.py
+      - lib/costs/fees.py
+      - lib/costs/slippage.py
+      - lib/time/
+      - lib/time/__init__.py
+      - lib/time/folds.py
+      - lib/time/intervals.py
+      - lib/market_data/
+      - lib/market_data/__init__.py
+      - lib/market_data/contracts.py
+      - lib/market_data/quality.py
+      - lib/market_data/binance/
+      - lib/market_data/binance/__init__.py
+      - lib/market_data/binance/client.py
+      - lib/market_data/binance/funding_service.py
+      - lib/market_data/binance/klines_service.py
+      - lib/market_data/binance/market_data_service.py
+      - lib/tests/
+      - lib/tests/test_costs.py
+      - lib/tests/test_import_boundary.py
+      - lib/tests/test_indicators.py
+      - lib/tests/test_market_data_binance.py
+      - lib/tests/test_market_data_contracts.py
+      - lib/tests/test_market_data_quality.py
+      - lib/tests/test_time.py
+      total_py_file_count: 27
+      total_code_lines: 2044
+      per_module_lines:
+        source:
+          lib/market_data/binance/klines_service.py: 129
+          lib/market_data/binance/client.py: 125
+          lib/time/folds.py: 81
+          lib/market_data/quality.py: 77
+          lib/market_data/binance/market_data_service.py: 64
+          lib/market_data/contracts.py: 52
+          lib/time/intervals.py: 51
+          lib/market_data/binance/funding_service.py: 50
+          lib/indicators/volatility.py: 49
+          lib/indicators/atr.py: 48
+          lib/costs/fees.py: 45
+          lib/indicators/returns.py: 42
+          lib/indicators/rolling.py: 40
+          lib/costs/slippage.py: 37
+          lib/__init__.py: 20
+          lib/market_data/binance/__init__.py: 17
+          lib/indicators/__init__.py: 15
+          lib/time/__init__.py: 11
+          lib/costs/__init__.py: 11
+          lib/market_data/__init__.py: 9
+        tests:
+          lib/tests/test_market_data_binance.py: 247
+          lib/tests/test_indicators.py: 226
+          lib/tests/test_time.py: 174
+          lib/tests/test_market_data_quality.py: 163
+          lib/tests/test_market_data_contracts.py: 116
+          lib/tests/test_costs.py: 78
+          lib/tests/test_import_boundary.py: 67
+        note: test_lib.py referenced in prompt but does not exist in repo
+      test_results:
+        total_collected: 117
+        total_passed: 117
+        total_failed: 0
+        total_skipped: 0
+        execution_time_seconds: 0.16
+        import_boundary_test: PASSED - lib/ does NOT import v7.* or alphaforge.*
+        circular_import_check: PASSED - all imports clean
+      last_commits:
+      - '194fd8d chore: commit pre-existing docs and config changes'
+      - '5727dc6 P0.5: Shared Lib Foundation - focused lib/ skeleton with docs, schemas,
+        and package structure'
+    domain_map:
+      responsibility: 'lib/ provides minimal, reusable primitives shared between v7/
+        (semantic/simulation authority) and alphaforge/ (training/research authority).
+        Four subdomains: market_data (Binance HTTP client, klines/funding services,
+        standard schema via dataclasses, quality checks), indicators (ATR, log/simple
+        returns, rolling std, Parkinson volatility, generic rolling_apply), costs
+        (maker/taker fee estimation, slippage estimation), time (interval conversion,
+        walk-forward fold generation). All functions are pure math with no external
+        dependencies (no numpy, no pandas, no pydantic).'
+      ecosystem_position: 'Downstream primitive layer for v7/, alphaforge/, and simulation/.
+        lib/ must NOT import v7.*, alphaforge.*, or simulation.* (enforced by test).
+        v7/ and alphaforge/ may import lib/ directly. The separation of concerns is
+        explicit: lib/ provides math/schema primitives; v7/ and simulation/ own domain
+        semantics.'
+      upstream_dependencies:
+      - requests (HTTP library, only in binance/client.py)
+      - Python stdlib (math, dataclasses, typing, logging, time, urllib)
+      downstream_consumers:
+      - v7/ (consumes indicators, time folds, market data, costs)
+      - alphaforge/ (consumes indicators, time folds, market data, costs)
+      - simulation/ (may consume indicators, costs, time folds)
+      integration_contract_points:
+      - MarketDataResult (KlineRecord + DataQualityReport) - shared contract for raw
+        market data
+      - market_data_result_schema_v1.json documents the schema (schema file exists
+        but no Python code validates against it)
+      - Fold dataclass - shared contract for walk-forward temporal splits
+    authority_docs:
+      doc_count: 6
+      doc_list:
+      - lib/docs/README.md (51 lines - purpose, contents, import rules, cross-domain)
+      - lib/docs/market_data.md (47 lines - scope, kline schema, consumption pattern)
+      - lib/docs/phase_plans/P0_5__shared_lib_foundation.md (79 lines - TL;DR, acceptance
+        criteria, hard stops)
+      - lib/docs/phase_plans/P1__indicators_rsi_candle_momentum_rolling.md (586 lines
+        - full phase plan with agent brief, execution contract)
+      - lib/docs/phase_plans/P2__costs_r_terms.md (420 lines - full phase plan with
+        R-normalized cost functions)
+      - lib/docs/schemas/market_data_result_schema_v1.json (12 fields - JSON Schema
+        for MarketDataResult)
+      phase_plan_coverage:
+        P0_5__shared_lib_foundation:
+          status: implemented
+          defined_modules:
+          - market_data/binance/client.py
+          - market_data/binance/klines_service.py
+          - market_data/binance/funding_service.py
+          - market_data/binance/market_data_service.py
+          - market_data/contracts.py
+          - market_data/quality.py
+          - indicators/atr.py
+          - indicators/returns.py
+          - indicators/volatility.py
+          - indicators/rolling.py
+          - costs/fees.py
+          - costs/slippage.py
+          - time/intervals.py
+          - time/folds.py
+          acceptance_criteria_met_count: 8
+          acceptance_criteria_total: 8
+          all_acceptance_criteria_met: true
+          note: All P0.5 modules present and tested.
+        P1__indicators_rsi_candle_momentum_rolling:
+          status: not_implemented
+          workstreams:
+            P1_A_RSI:
+              defined: true
+              implemented: false
+              expected_file: lib/indicators/rsi.py
+              expected_function: rsi(prices, period=14) -> list[float]
+              note: RSI file does not exist. P1 phase plan explicitly says 'lib/indicators/rsi.py
+                = not implemented'.
+            P1_B_CANDLE_GEOMETRY:
+              defined: true
+              implemented: false
+              expected_file: lib/indicators/candle.py
+              expected_functions: body_ratio, upper_wick_ratio, lower_wick_ratio
+              note: candle.py does not exist.
+            P1_C_MOMENTUM_ROC:
+              defined: true
+              implemented: false
+              expected_file: lib/indicators/momentum.py
+              expected_functions: momentum, rate_of_change
+              note: momentum.py does not exist.
+            P1_D_ROLLING_EXTENSIONS:
+              defined: true
+              implemented: partial
+              note: Only generic rolling_apply exists. No specialized rolling_min/max/mean.
+          acceptance_criteria_met: false
+        P2__costs_r_terms:
+          status: not_implemented
+          workstreams:
+            P2_A_R_NORMALIZED_COSTS:
+              defined: true
+              implemented: false
+              expected_files:
+              - lib/costs/r_terms.py
+              - lib/tests/test_costs_r_terms.py
+              expected_functions:
+              - compute_r_multiple(profit, atr_value, stop_multiplier)
+              - compute_r_multiple_from_abs(absolute_cost, atr_value, stop_multiplier)
+              note: P2 phase plan fully documents these functions but none exist.
+                grep for r_multiple/r_term/RMultiple in lib/ returned zero results.
+          acceptance_criteria_met: false
+    contracts_and_schemas:
+      schemas_defined:
+      - MarketDataResult schema (lib/docs/schemas/market_data_result_schema_v1.json)
+      schemas_used:
+      - KlineRecord, MarketDataResult, DataQualityReport (Python dataclasses, code
+        uses these directly)
+      schema_validation:
+        status: not_implemented
+        detail: market_data_result_schema_v1.json exists as a JSON Schema doc but
+          no Python code validates incoming data against it. The dataclasses in contracts.py
+          are the de facto schema.
+    code_quality_metrics:
+      type_annotation_coverage: near_complete
+      docstring_count: 202
+      magic_number_issues:
+      - 'lib/costs/slippage.py: base slippage 0.01 is a magic number (documented but
+        hardcoded)'
+      - 'lib/time/folds.py: MS_PER_DAY = 86_400_000 used inline, not as module-level
+        constant'
+      max_function_lines:
+        folds.py generate_folds: ~45 lines (longest function, borderline)
+        atr.py compute_atr: ~20 lines (reasonable)
+      exception_quality:
+      - ValueError raised with meaningful messages (unknown interval, dataset too
+        short)
+      - BinanceClientError with wrapped exception chain (from e)
+      - No bare 'except:' blocks found
+      logging:
+      - 'logging.getLogger used in: client.py, klines_service.py, funding_service.py,
+        market_data_service.py'
+      - Logging in client.py is meaningful (retry attempts with path/attempt/error)
+      external_dependencies:
+      - requests (only in binance/client.py)
+      - pytest (tests only)
+      - No numpy, no pandas, no pydantic, no scipy
+      docstring_coverage: good
+      todo_fixme_hack_count: 0
+    gaps_and_risks:
+      critical_gaps:
+      - P1 indicators (RSI, candle geometry, momentum/ROC, rolling min/max/mean) not
+        implemented - alphaforge P3.A and v7 features.md both require these
+      - P2 R-normalized cost functions (R-multiple computation) not implemented -
+        required by simulation and alphaforge label generation
+      moderate_gaps:
+      - market_data_result_schema_v1.json exists as doc but no Python code validates
+        against it
+      - No RFC 3339 / UTC enforcement in lib/time/ (intervals work in ms timestamps,
+        no timezone handling)
+      - test_lib.py referenced in prompt but does not exist
+      simulation_readiness_gaps:
+      - 'R-multiple computation: NOT in lib/ (P2 planned but not started)'
+      - 'MFE/MAE: NOT in lib/ (owned by simulation per docs)'
+      - 'Stop/target: NOT in lib/ (owned by simulation per docs)'
+      - 'RSI: NOT in lib/ (P1 planned but not started)'
+      - 'Candle geometry: NOT in lib/ (P1 planned but not started)'
+      - 'Gap list: simulation needs cost -> R-term -> MFE/MAE -> stop/target chain.
+        lib/ provides cost primitives but NOT R-term, MFE/MAE, or stop/target.'
+      alphaforge_readiness_gaps:
+      - 'RSI: NOT in lib/ - needed for feature pipeline'
+      - 'Candle geometry: NOT in lib/ - needed for feature pipeline'
+      - 'Momentum/ROC: NOT in lib/ - needed for feature pipeline'
+      - 'R-multiple: NOT in lib/ - needed for label generation from simulation output'
+      - 'Gap list: alphaforge P3.A requires RSI, candle, momentum from lib/ before
+        feature pipeline can start'
+      technical_debt:
+      - P1 and P2 are fully documented (1006 total lines across both phase plans)
+        but zero implementation
+      - 'Bidirectional drift risk: if v7/ or alphaforge/ implement their own RSI while
+        lib/ is waiting, the shared primitive pattern breaks'
+      - No mypy available in environment for static type checking
+    final_status:
+      status: partial
+      safe_to_continue: conditional
+      requires_hir: true
+      reason: 'lib/ is well-implemented for P0.5 scope: clean code, comprehensive
+        tests (117/117 pass), clean import boundary, good docs, zero external debt
+        markers. However, P1 (RSI, candle, momentum, rolling extensions) and P2 (R-normalized
+        cost functions) are both fully documented in phase plans but have zero implementation
+        code. For simulation/alphaforge to begin, these missing modules must be implemented
+        first. The code that exists is high quality and ready. Risk: P1 and P2 docs
+        are 1006 lines - if implementation diverges from docs, the docs become debt.'
+      self_assessment:
+        evidence_coverage: 0.95
+        note: Every .py file read fully, every test run, all grep searches executed.
+          No phantom evidence.
+  - report_id: PIR_LIB_READINESS
+    component_name: lib - Simulation/AlphaForge Readiness
+    component_path: lib/
+    report_type: PIR
+    inspected_at: '2026-06-13T16:50:00Z'
+    plan_summary:
+      phase_plan_completion:
+        P0_5__shared_lib_foundation:
+          status: complete
+          implementation_progress_pct: 100
+          acceptance_criteria_met: 8/8
+        P1__indicators_rsi_candle_momentum_rolling:
+          status: not_started
+          implementation_progress_pct: 0
+          acceptance_criteria_met: 0/8
+          note: None of the 4 workstreams implemented
+        P2__costs_r_terms:
+          status: not_started
+          implementation_progress_pct: 0
+          acceptance_criteria_met: 0/4
+          note: No R-normalized cost functions
+      overall_implementation_progress_pct: 30
+      note: Phase plans are documentation-complete (1006 lines across P1+P2) but code-implementation-empty.
+        This is a conscious architectural pattern - plans written before code.
+    scope_review:
+      simulation_needs_from_lib:
+        required_implemented:
+        - indicators/atr.py (for stop/target computation)
+        - costs/fees.py (for cost deduction in simulation)
+        - costs/slippage.py (for cost deduction)
+        - time/intervals.py (for temporal logic)
+        - time/folds.py (for walk-forward validation)
+        - market_data/contracts.py (for data schemas)
+        - market_data/quality.py (for data validation)
+        - market_data/binance/ (for data fetching)
+        required_missing:
+        - 'costs/r_terms.py: R-normalized cost functions (R-multiple from absolute
+          cost) - P2 defined but not implemented'
+        - 'indicators/rsi.py: RSI for simulation feature generation - P1.A defined
+          but not implemented'
+        owned_by_simulation_not_lib:
+        - MFE/MAE computation (simulation own domain)
+        - Stop/target computation (simulation own domain)
+        - R-multiple from profit (simulation own domain - lib provides the primitive,
+          simulation wraps and versions)
+        - Exit families (simulation own domain)
+        - No-trade quality (simulation own domain)
+        - Monte Carlo (simulation own domain)
+      alphaforge_needs_from_lib:
+        required_implemented:
+        - indicators/atr.py (for feature engineering)
+        - indicators/returns.py (for feature engineering)
+        - indicators/volatility.py (for feature engineering)
+        - indicators/rolling.py (for feature engineering)
+        - costs/fees.py (for label cost computation)
+        - costs/slippage.py (for label cost computation)
+        - time/intervals.py (for temporal logic)
+        - time/folds.py (for walk-forward splits)
+        - market_data/contracts.py (for data schemas)
+        - market_data/binance/ (for data fetching)
+        required_missing:
+        - 'indicators/rsi.py: RSI for feature matrix (alphaforge P3.A explicitly lists
+          RSI) - NOT IMPLEMENTED'
+        - 'indicators/candle.py: Candle geometry for feature matrix (P3.A explicitly
+          lists candle geometry) - NOT IMPLEMENTED'
+        - 'indicators/momentum.py: Momentum/ROC for feature matrix - NOT IMPLEMENTED'
+        - 'costs/r_terms.py: R-normalized cost for label generation from simulation
+          output - NOT IMPLEMENTED'
+        - 'rolling extensions (min/max/mean): Specialized rolling functions for feature
+          engineering - PARTIAL (only rolling_apply exists)'
+    contract_review:
+      market_data_contracts:
+        contracts:
+        - KlineRecord
+        - MarketDataResult
+        - DataQualityReport (Python dataclasses)
+        - market_data_result_schema_v1.json (JSON Schema document)
+        simulation_compatible: true
+        detail: Dataclass contracts are clean and complete. KlineRecord includes all
+          fields needed by simulation for replay (open/high/low/close/volume/timestamp).
+          No contract versioning or compatibility checks implemented yet.
+        gap: No Python code validates incoming data against the JSON Schema. Simulation
+          may produce KlineRecord instances that violate schema constraints silently.
+      Fold_contract:
+        contracts:
+        - Fold dataclass (train_start/train_end/val_start/val_end)
+        simulation_compatible: true
+        detail: Fold generation works in Unix ms timestamps (int). Compatible with
+          simulation temporal semantics. No timezone handling needed since all times
+          are epoch-based.
+    workspace_review:
+      test_passing_rate: 117/117 (100%)
+      import_boundary: CLEAN - no v7/alphaforge/simulation imports from lib/
+      circular_imports: NONE - all 4 submodules import cleanly
+      mypy_status: Not available in environment - cannot verify static type safety
+      code_quality_index: high
+      note: Workspace is clean. Tests run in 0.16s. No test failures, no import issues.
+        The existing code is well-factored and testable.
+    decisions:
+      must_complete_before_simulation_starts:
+      - 'Implement P2: add costs/r_terms.py with compute_r_multiple() and related
+        R-normalized cost functions - simulation needs R-term computation from absolute
+        costs'
+      must_complete_before_alphaforge_starts:
+      - 'Implement P1.A: add indicators/rsi.py with rsi(prices, period=14) using Wilder''s
+        smoothed EMA'
+      - 'Implement P1.B: add indicators/candle.py with body_ratio, upper_wick_ratio,
+        lower_wick_ratio'
+      - 'Implement P1.C: add indicators/momentum.py with momentum and rate_of_change'
+      - 'Implement P1.D: add rolling_min, rolling_max, rolling_mean specializations
+        to indicators/'
+      - 'Implement P2: add costs/r_terms.py with R-multiple computation'
+      recommended_before_either_starts:
+      - Add mypy to dev dependencies and fix any type issues discovered
+      - Move MS_PER_DAY to module-level constant in time/folds.py
+      - Add schema validation test that reads market_data_result_schema_v1.json and
+        validates KlineRecord against it
+      explicit_non_blockers:
+      - MFE/MAE not needed in lib/ - owned by simulation domain
+      - Stop/target not needed in lib/ - owned by simulation domain
+      - Regime detection not needed in lib/ - owned by v7 and alphaforge separately
+      - No-trade quality not needed in lib/ - owned by simulation
+    final_status:
+      status: conditional
+      ready_for_simulation: false
+      ready_for_alphaforge: false
+      condition: lib/ is ready for simulation and alphaforge to use its existing P0.5
+        primitives (ATR, costs, time folds, market data) RIGHT NOW. However, both
+        subsystems also need P1 and P2 modules that are documented but not implemented.
+        Simulation specifically needs R-multiple (P2). AlphaForge needs RSI, candle
+        geometry, momentum/ROC (P1) and R-multiple (P2).
+      blocking_gaps:
+        simulation_blockers:
+        - 'costs/r_terms.py: R-normalized cost functions - P2 documented, not implemented'
+        alphaforge_blockers:
+        - 'indicators/rsi.py: RSI - P1.A documented, not implemented'
+        - 'indicators/candle.py: Candle geometry - P1.B documented, not implemented'
+        - 'indicators/momentum.py: Momentum/ROC - P1.C documented, not implemented'
+        - 'rolling min/max/mean: P1.D documented, partially implemented (only rolling_apply
+          exists)'
+        - 'costs/r_terms.py: R-normalized cost - P2 documented, not implemented'
+      recommendation: 'Implement P1 and P2 in order: P1.A (RSI) -> P1.B (candle) ->
+        P1.C (momentum) -> P1.D (rolling extensions) -> P2 (R-normalized costs). Each
+        workstream has fully documented acceptance criteria in the phase plans. Total
+        estimated new code: ~300 lines of source + ~400 lines of tests. Existing code
+        quality is excellent and provides a strong foundation.'
+      self_assessment:
+        evidence_coverage: 0.9
+        confidence_in_readiness_assessment: high
+  scoring_context:
+    purpose: Bu chain, lib/ subsysteminin simulation ve alphaforge icin hazir olup
+      olmadigini degerlendiriyor.
+    scoring_criteria:
+      code_quality: 0.3
+      test_coverage: 0.25
+      documentation_implementation_parity: 0.25
+      simulation_readiness: 0.1
+      alphaforge_readiness: 0.1
+    components_to_score:
+    - id: LIB_MD
+      name: lib/market_data
+      report_ref: RIR_LIB_DEEP
+    - id: LIB_IND
+      name: lib/indicators
+      report_ref: RIR_LIB_DEEP
+    - id: LIB_COST
+      name: lib/costs
+      report_ref: RIR_LIB_DEEP
+    - id: LIB_TIME
+      name: lib/time
+      report_ref: RIR_LIB_DEEP
+    notes:
+    - 'P0.5 implementasyonu tamam: tum moduller var, testler geciyor, import boundary
+      temiz'
+    - P1 (RSI, candle, momentum, rolling) ve P2 (R-normalized costs) plan-dokuman
+      tam ancak kod yok
+    - simulation/ baslamak icin P2 kritik (R-multiple hesabi)
+    - alphaforge/ baslamak icin P1 (RSI, candle, momentum) + P2 kritik
+    - 'Kod kalitesi yuksek: tip annotationlar tam, docstringler var, edge case''ler
+      kapsanmis'
+    - 'Test coverage guclu: 117 testin hepsi geciyor, 0.16 saniyede tamamlaniyor'
+    - HICBIR numpy/pandas/pydantic bagimliligi yok - pure Python ve requests sadece
+    - 'Kritik borc: P1+P2 dokumanlari 1006 satir ama kod sifir satir'
+    - 'HIR onerisi: P1 ve P2 implementasyon siralamasi icin insan karari gerekli'

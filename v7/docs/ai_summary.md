@@ -6,13 +6,17 @@ This document is a lossless dense synthesis of every V7 markdown file in the rep
 
 **Reading order for an AI:** Read this entire file first. Then consult specific authority docs for implementation details. This file is authoritative only where it directly quotes or faithfully restates authority docs; in case of conflict, the original doc wins.
 
-**File count synthesized:** ~45 markdown files
-**Source tree:** /home/erfolg/src/v7-engine/docs/
+**File count synthesized:** ~45 V7 markdown files (plus newly migrated runtime + interface authorities)
+**Source tree:** /home/erfolg/src/v7-engine/docs/ (V7-local) + /home/erfolg/src/v7-engine/runtime/docs/ + /home/erfolg/src/v7-engine/interface/
 
 ### Cross-Domain Authority Notice
 
 The root cross-domain contract authority now lives in **`contracts/`** at the repo root.
 The root cross-domain governance lives in **`docs/architecture/governance.md`**.
+
+The previously-separate V4 **runtime** and **interface** subsystems have been migrated into the V7 authority tree as top-level siblings:
+- **`runtime/`** — Python backend, scan runtime, autonomous loop, analyzer services, learning layer, operational schema, FastAPI surface, runbook.
+- **`interface/`** — React + TypeScript + Vite operator UI, workspace map, components, modules, routes.
 
 This document is a **V7-local** authority summary. For cross-domain contract definitions
 (TradeOutcome schema, SimulationOutput schema, field mappings, version compatibility), consult:
@@ -23,9 +27,26 @@ This document is a **V7-local** authority summary. For cross-domain contract def
 - `contracts/mappings/simulation_to_v7.json` — field-level mapping to TradeOutcome
 - `contracts/compatibility.json` — version compatibility rules
 - `integration/adapters/v7_adapter.py` — V7 adapter stub (future boundary)
+- `runtime/docs/` — V4 runtime authorities (now under V7): architecture, runtime flow, analyzer, learning, schema, API, runbook, scanning
+- `interface/` — V4 interface authorities (now under V7): routing, component map, module ownership, current-state report
 
 V7-local docs remain authoritative for V7-internal semantics.
 For cross-domain conflicts, `docs/architecture/governance.md` wins.
+
+---
+
+## MIGRATED SUBSYSTEMS — `runtime/` and `interface/`
+
+The previously-separate V4 **runtime** and **interface** subsystems have been promoted into the V7 authority tree as top-level siblings. They are no longer parallel; they are now part of V7.
+
+V7-local pipeline docs in `v7/docs/runtime/` (simulation_engine, runtime_integration, fallback_policy, deployment_safety) remain authoritative for V7-internal lifecycle semantics. The new `runtime/` and `interface/` trees are authoritative for the operational Python engine, scan loop, analyzer, learning layer, schema, API binding, and React UI.
+
+**Dense syntheses live in dedicated per-subsystem summaries:**
+- `runtime/docs/ai_summary.md` — full synthesis: architecture, runtime flow, analyzer pipeline, learning layer, self-learning, schema tables, API route groups, runbook, diagnostic snapshots
+- `interface/docs/ai_summary.md` — full synthesis: workspace structure, page ownership, component architecture, migration plan, data freshness, current-state analysis
+- `ai_summary.md` at repo root — meta-hub linking all subsystem summaries
+
+**Migration status:** Cross-doc links in the migrated trees still reference the V4 layout (e.g. `/Users/hootie/src/trading-bot/v4/...`); those are legacy anchors awaiting path normalization. The operational semantics are authoritative for the V7 operational stack going forward and supersede the V4 originals for V7-internal work.
 
 ---
 
@@ -2756,3 +2777,21 @@ This document contains the complete lossless synthesis of every V7 markdown file
 - docs/v7_executor_support_pack/executor_prompt_pack.md
 - docs/v7_executor_support_pack/naming_and_path_consistency.md
 - docs/v7_executor_support_pack/phase_to_doc_authority_matrix.md
+- runtime/docs/README.md
+- runtime/docs/architecture.md
+- runtime/docs/runtime.md
+- runtime/docs/scanning.md
+- runtime/docs/analyzer.md
+- runtime/docs/learning.md
+- runtime/docs/self_learning.md
+- runtime/docs/schema.md
+- runtime/docs/api.md
+- runtime/docs/api_architecture_rule.md
+- runtime/docs/runbook.md
+- runtime/docs/engine_change_analysis_2026-04-02.md
+- runtime/docs/engine_diagnostic_fix_plan.md
+- interface/README.md
+- interface/INTERFACE_MAP.md
+- interface/INTERFACE_MAP_proposed.md
+- interface/INTERFACE_MAP proposed.phase21.md
+- interface/interface-current-state-report.md

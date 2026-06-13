@@ -27,6 +27,12 @@ SimulationProfile schema, field mappings to alphaforge/v7), consult:
 - `contracts/compatibility.json` — version compatibility rules
 - `docs/architecture/governance.md` — conflict resolution and domain ownership
 
+**Sibling subsystem summaries (for complete context):**
+- `ai_summary.md` at repo root — meta-hub linking all subsystem summaries
+- `v7/docs/ai_summary.md` — V7 pipeline: contracts, labels, features, model, calibration, policy, portfolio, risk, evaluation, monitoring, implementation phases
+- `runtime/docs/ai_summary.md` — operational Python backend: scan loop, analyzer, learning, schema, API routes
+- `interface/docs/ai_summary.md` — React operator UI: workspace structure, page ownership, component architecture, migration plan
+
 Simulation-local docs remain authoritative for simulation-internal details.
 For cross-domain conflicts, `docs/architecture/governance.md` wins.
 
