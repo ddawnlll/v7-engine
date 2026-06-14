@@ -1,0 +1,509 @@
+{
+  "$schema": "./02_planspec_v5_alpha2_schema.json",
+  "planSpecVersion": "5.0.0-alpha2",
+  "kind": "ImplementationPlan",
+  "metadata": {
+    "phaseId": "P0.5",
+    "title": "Shared Lib Foundation (Focused)",
+    "description": "Create a minimal lib/ with only the primitives that are nearly identical usage between v7 and alphaforge: Binance data fetching, pure math indicators, basic cost formulas, and time utilities.",
+    "createdAt": "2026-05-23T00:00:00Z",
+    "updatedAt": "2026-05-23T00:00:00Z",
+    "owner": "pi",
+    "status": "planned",
+    "sourceDocument": "P0_5__shared_lib_foundation.md"
+  },
+  "compatibility": {
+    "runtimeContractVersion": "4.1.1",
+    "runtimeTemplateVersion": "4.1.1",
+    "legacyTemplateCompatible": true,
+    "generatedFromV411": true,
+    "v411AdapterRequired": false,
+    "notes": [
+      "P0.5 is a focused lib/ foundation phase — no runtime adapter needed.",
+      "ACCP is evidence/report protocol only."
+    ]
+  },
+  "intent": {
+    "executionClass": "implementation",
+    "safetyLevel": "strict",
+    "executionMode": "stable_3_wave_batch",
+    "parallelism": 2,
+    "targetPromotionMode": "stable_3",
+    "p45ImplementationAllowed": false,
+    "humanReviewRecommended": true
+  },
+  "authority": {
+    "executionState": {
+      "owner": "ExecutionKernel",
+      "workersMayMutateState": false,
+      "stateTransitionRequiresGate": true
+    },
+    "completion": {
+      "workerSelfReportIsClaimOnly": true,
+      "completionGate": "CompletionGateV2",
+      "evidenceLedgerRequired": true,
+      "missingEvidenceBlocksCompletion": true,
+      "staleAttemptVerdictIgnored": true
+    },
+    "repositoryMutation": {
+      "writeGateRequired": true,
+      "workspaceCommitGateRequired": true,
+      "allowedFilesRequired": true,
+      "largeOverwriteBlockedByDefault": true
+    },
+    "reports": {
+      "protocol": "ACCP",
+      "version": "1.2.0",
+      "reportsAreEvidenceOnly": true,
+      "reportsDoNotAuthorizeExecution": true
+    }
+  },
+  "enforcementRegistry": {
+    "mechanisms": [
+      "json_schema",
+      "admission_gate",
+      "plan_lock_verifier",
+      "workspace_lock_verifier",
+      "tool_runtime",
+      "command_policy_engine",
+      "runtime_command_grant",
+      "write_gate",
+      "smart_mutation_engine",
+      "workspace_commit_gate",
+      "completion_gate_v2",
+      "terminal_reconciler",
+      "evidence_ledger",
+      "accp_report_validator",
+      "final_promotion_gate",
+      "p45_bridge_boundary_guard"
+    ]
+  },
+  "security": {
+    "schemaValidationRequired": true,
+    "lockRequiredForExecution": true,
+    "canonicalJsonHashRequired": true,
+    "signatureRequired": false,
+    "signatureAlgorithm": "none",
+    "hardStops": [
+      "direct_binance_call_outside_lib",
+      "lib_import_boundary_violation",
+      "shared_everything_mistake",
+      "external_dependency_detected",
+      "existing_test_regression",
+      "worktree_path_escape",
+      "integration_merge_without_validation",
+      "watch_mode_validation",
+      "git_push"
+    ],
+    "forbiddenFiles": [
+      ".env",
+      ".env.*",
+      "node_modules/**",
+      ".git/**",
+      "package-lock.json",
+      "pnpm-lock.yaml"
+    ]
+  },
+  "commands": {
+    "policy": "risk_tiered",
+    "defaultMode": "deny_unless_class_or_grant",
+    "shellDefault": "forbidden",
+    "exactAllowedCommands": [
+      {
+        "id": "CMD-FINAL-MAKE-TEST",
+        "kind": "final_validation",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": ".",
+        "executable": "make",
+        "args": ["test"],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 900,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-P05-UNIT",
+        "kind": "targeted_test",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": "lib",
+        "executable": "pytest",
+        "args": ["lib/tests/", "-q"],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 240,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-P05-IMPORT-BOUNDARY",
+        "kind": "targeted_test",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": "lib",
+        "executable": "pytest",
+        "args": ["lib/tests/test_import_boundary.py", "-q"],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 120,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      }
+    ],
+    "commandClasses": [
+      {
+        "id": "CLASS-READONLY-DISCOVERY",
+        "title": "Read-only local discovery commands",
+        "risk": "low",
+        "sideEffects": "none",
+        "mode": "argv",
+        "executables": ["pwd", "ls", "find", "rg", "grep", "cat", "sed", "awk", "git", "python3", "pytest"],
+        "networkAllowed": false,
+        "evidenceRequired": false,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": false,
+          "commandNotFoundIsFailure": false,
+          "timeoutIsFailure": false
+        }
+      }
+    ],
+    "hardDeniedCommands": [
+      {
+        "id": "DENY-GIT-PUSH",
+        "match": { "executable": "git", "argsPrefix": ["push"] },
+        "reason": "Remote mutation forbidden."
+      },
+      {
+        "id": "DENY-PIP-INSTALL",
+        "match": { "executable": "pip", "argsPrefix": ["install"] },
+        "reason": "External dependencies forbidden."
+      },
+      {
+        "id": "DENY-RM-RF",
+        "match": { "executable": "rm", "argsPrefix": ["-rf"] },
+        "reason": "Destructive filesystem deletion forbidden."
+      }
+    ],
+    "validationEvidenceRules": {
+      "finalPromotionRequiresExactAllowedCommand": true,
+      "discoveryCommandsMayNotSatisfyFinalValidation": true,
+      "runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose": true
+    }
+  },
+  "locking": {
+    "lockVersion": "1.0.0",
+    "lockFile": "04_planlock_P05.generated.json",
+    "lockRequired": true,
+    "workerMustEchoPlanLockHash": true,
+    "workerMustEchoWorkspaceLockHash": true,
+    "hashes": [
+      "canonicalJsonHash",
+      "workspaceGraphHash",
+      "allowedFilesHash",
+      "acceptanceCriteriaHash",
+      "validationPolicyHash",
+      "instructionHash",
+      "reportContractHash",
+      "p45BridgeHash",
+      "commandPolicyHash"
+    ],
+    "lifecycle": [
+      "DRAFT",
+      "VALIDATED",
+      "LOCKED",
+      "ADMITTED",
+      "RUNNING",
+      "FINAL_VALIDATION",
+      "COMPLETED"
+    ],
+    "mutationRules": {
+      "DRAFT": "spec_mutable",
+      "VALIDATED": "spec_mutable_lock_invalidated",
+      "LOCKED": "immutable_new_lock_required",
+      "ADMITTED": "immutable_new_execution_required",
+      "RUNNING": "immutable_amendment_required",
+      "FINAL_VALIDATION": "immutable",
+      "COMPLETED": "immutable"
+    }
+  },
+  "brief": {
+    "mission": {
+      "id": "MISSION-P05",
+      "text": "Create a minimal lib/ foundation with shared primitives: Binance data fetching, ATR/returns/volatility indicators, fee/slippage costs, and time utilities. No regime, risk, IO, or adapter logic in lib/."
+    },
+    "hardRequirements": [
+      {
+        "id": "HR001",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "lib/ must NOT import v7, alphaforge, or simulation packages.",
+        "enforcedBy": ["json_schema", "admission_gate", "import_boundary_test"]
+      },
+      {
+        "id": "HR002",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "No external dependencies (no pandas, no numpy, no ta-lib).",
+        "enforcedBy": ["command_policy_engine", "admission_gate"]
+      },
+      {
+        "id": "HR003",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "Binance API calls must originate from lib/market_data/binance/, not from v7/ or alphaforge/.",
+        "enforcedBy": ["tool_runtime", "write_gate"]
+      },
+      {
+        "id": "HR004",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "No regime, risk, IO, or adapter logic goes in lib/.",
+        "enforcedBy": ["completion_gate_v2", "accp_report_validator"]
+      }
+    ],
+    "antiPatterns": [
+      {
+        "id": "AP001",
+        "text": "Do not put regime enums/detectors in lib/ — v7 uses for policy, alphaforge uses for features.",
+        "enforcedBy": ["completion_gate_v2"]
+      },
+      {
+        "id": "AP002",
+        "text": "Do not put R-multiple in lib/ — v7 uses ATR+mode truth, research uses fixed %.",
+        "enforcedBy": ["completion_gate_v2"]
+      },
+      {
+        "id": "AP003",
+        "text": "Do not put IO utilities or generic serialization in lib/ — each system writes output differently.",
+        "enforcedBy": ["admission_gate"]
+      }
+    ],
+    "operatorNotes": [
+      {
+        "id": "ON001",
+        "text": "lib/ is curated, not comprehensive. Only primitives with nearly identical usage between v7 and alphaforge belong here."
+      },
+      {
+        "id": "ON002",
+        "text": "P0 was a prerequisite — P0.5 depends on P0 completion."
+      }
+    ]
+  },
+  "waves": [
+    {
+      "id": "W1",
+      "title": "Lib Foundation",
+      "description": "Create minimal lib/ skeleton with shared primitives.",
+      "workspaceIds": ["P0.5.A"],
+      "dependencies": [],
+      "batchSize": 1,
+      "gate": {
+        "required": true,
+        "commandRefs": ["CMD-P05-UNIT", "CMD-P05-IMPORT-BOUNDARY"],
+        "requiredArtifacts": ["reports/accp/P0.5/tvr_wave_W1.md"]
+      }
+    }
+  ],
+  "workspaces": [
+    {
+      "id": "P0.5.A",
+      "title": "Shared Lib Foundation — All Modules",
+      "waveId": "W1",
+      "dependencies": [],
+      "role": "implementation",
+      "allowedFiles": [
+        "lib/market_data/binance/",
+        "lib/market_data/contracts.py",
+        "lib/market_data/quality.py",
+        "lib/indicators/atr.py",
+        "lib/indicators/returns.py",
+        "lib/indicators/volatility.py",
+        "lib/indicators/rolling.py",
+        "lib/indicators/__init__.py",
+        "lib/costs/fees.py",
+        "lib/costs/slippage.py",
+        "lib/costs/__init__.py",
+        "lib/time/intervals.py",
+        "lib/time/folds.py",
+        "lib/time/__init__.py",
+        "lib/__init__.py",
+        "lib/tests/",
+        "docs/lib/",
+        "lib/README.md"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**",
+        "v7/**",
+        "alphaforge/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P05-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Create lib/ skeleton with only the modules listed in What Goes in lib/. No regime, risk, IO, or adapter logic.",
+          "enforcedBy": ["json_schema", "accp_report_validator"]
+        },
+        {
+          "id": "WI-P05-002",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Migrate Binance client from v7 and alphaforge into lib/market_data/binance/. No direct Binance calls from outside lib/.",
+          "enforcedBy": ["tool_runtime", "write_gate"]
+        },
+        {
+          "id": "WI-P05-003",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Import-boundary test must pass — lib/ must NOT import v7 or alphaforge.",
+          "enforcedBy": ["completion_gate_v2", "evidence_ledger"]
+        },
+        {
+          "id": "WI-P05-004",
+          "priority": "should",
+          "kind": "documentation",
+          "text": "Docs clearly state what's shared and what's not (this file + lib/README.md).",
+          "enforcedBy": ["completion_gate_v2"]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P05-001",
+          "title": "lib/ skeleton exists",
+          "text": "lib/ skeleton exists with only the modules listed above.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "report"],
+          "validationRefs": ["VAL-P05-001"]
+        },
+        {
+          "id": "AC-P05-002",
+          "title": "Binance client in lib/",
+          "text": "Binance client does NOT live in v7 or alphaforge — it's in lib/market_data/binance/.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "report"],
+          "validationRefs": ["VAL-P05-001"]
+        },
+        {
+          "id": "AC-P05-003",
+          "title": "Pure math in lib/indicators/",
+          "text": "Pure math functions (ATR, returns, vol) live in lib/indicators/ not in any system package.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "report"],
+          "validationRefs": ["VAL-P05-001"]
+        },
+        {
+          "id": "AC-P05-004",
+          "title": "Fee/slippage in lib/costs/",
+          "text": "Fee/slippage estimation lives in lib/costs/ not in simulation or labels.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "report"],
+          "validationRefs": ["VAL-P05-001"]
+        },
+        {
+          "id": "AC-P05-005",
+          "title": "Fold generation in lib/time/",
+          "text": "Fold generation lives in lib/time/ not in dataset assembly.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "report"],
+          "validationRefs": ["VAL-P05-001"]
+        },
+        {
+          "id": "AC-P05-006",
+          "title": "No forbidden logic in lib/",
+          "text": "No regime, risk, IO, or adapter logic lives in lib/.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "report"],
+          "validationRefs": ["VAL-P05-001"]
+        },
+        {
+          "id": "AC-P05-007",
+          "title": "Import-boundary test passes",
+          "text": "Import-boundary test passes: lib/ must NOT import v7 or alphaforge.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["test", "report"],
+          "validationRefs": ["VAL-P05-002"]
+        },
+        {
+          "id": "AC-P05-008",
+          "title": "Docs exist",
+          "text": "Docs clearly state what's shared and what's not (this file + lib/README.md).",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "report"],
+          "validationRefs": ["VAL-P05-001"]
+        },
+        {
+          "id": "AC-P05-009",
+          "title": "Existing tests pass",
+          "text": "All existing tests still pass after migration.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["test", "report"],
+          "validationRefs": ["VAL-P05-002", "VAL-P05-003"]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P05-001",
+            "type": "command_ref",
+            "commandRef": "CMD-P05-UNIT",
+            "evidenceRequired": true
+          },
+          {
+            "id": "VAL-P05-002",
+            "type": "command_ref",
+            "commandRef": "CMD-P05-IMPORT-BOUNDARY",
+            "evidenceRequired": true
+          },
+          {
+            "id": "VAL-P05-003",
+            "type": "command_ref",
+            "commandRef": "CMD-FINAL-MAKE-TEST",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          { "type": "IPR", "after": "workspace_mutation" },
+          { "type": "TVR", "after": "workspace_validation" }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Revert lib/ additions, restore v7 and alphaforge Binance clients if migrated."
+      }
+    }
+  ]
+}

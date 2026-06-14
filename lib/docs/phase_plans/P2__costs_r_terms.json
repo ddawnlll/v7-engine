@@ -1,0 +1,684 @@
+{
+  "$schema": "./02_planspec_v5_alpha2_schema.json",
+  "planSpecVersion": "5.0.0-alpha2",
+  "kind": "ImplementationPlan",
+  "metadata": {
+    "phaseId": "P2",
+    "title": "Costs: R-Normalized Cost Functions",
+    "description": "Add fee_cost_r, slippage_cost_r, total_cost_r to lib/costs/ — R-normalized cost functions calling existing lib primitives (fees, slippage). Pure math cost estimation with ATR-based R-multiple convention.",
+    "createdAt": "2026-06-01T00:00:00Z",
+    "updatedAt": "2026-06-01T00:00:00Z",
+    "owner": "pi",
+    "status": "planned",
+    "sourceDocument": "P2__costs_r_terms.md"
+  },
+  "compatibility": {
+    "runtimeContractVersion": "4.1.1",
+    "runtimeTemplateVersion": "4.1.1",
+    "legacyTemplateCompatible": true,
+    "generatedFromV411": true,
+    "v411AdapterRequired": false,
+    "notes": [
+      "P2 is pure math cost estimation — no runtime adapter needed.",
+      "ACCP is evidence/report protocol only."
+    ]
+  },
+  "intent": {
+    "executionClass": "implementation",
+    "safetyLevel": "strict",
+    "executionMode": "stable_3_wave_batch",
+    "parallelism": 2,
+    "targetPromotionMode": "stable_3",
+    "p45ImplementationAllowed": false,
+    "humanReviewRecommended": true
+  },
+  "authority": {
+    "executionState": {
+      "owner": "ExecutionKernel",
+      "workersMayMutateState": false,
+      "stateTransitionRequiresGate": true
+    },
+    "completion": {
+      "workerSelfReportIsClaimOnly": true,
+      "completionGate": "CompletionGateV2",
+      "evidenceLedgerRequired": true,
+      "missingEvidenceBlocksCompletion": true,
+      "staleAttemptVerdictIgnored": true
+    },
+    "repositoryMutation": {
+      "writeGateRequired": true,
+      "workspaceCommitGateRequired": true,
+      "allowedFilesRequired": true,
+      "largeOverwriteBlockedByDefault": true
+    },
+    "reports": {
+      "protocol": "ACCP",
+      "version": "1.2.0",
+      "reportsAreEvidenceOnly": true,
+      "reportsDoNotAuthorizeExecution": true
+    }
+  },
+  "enforcementRegistry": {
+    "mechanisms": [
+      "json_schema",
+      "admission_gate",
+      "plan_lock_verifier",
+      "workspace_lock_verifier",
+      "tool_runtime",
+      "command_policy_engine",
+      "runtime_command_grant",
+      "write_gate",
+      "smart_mutation_engine",
+      "workspace_commit_gate",
+      "completion_gate_v2",
+      "terminal_reconciler",
+      "evidence_ledger",
+      "accp_report_validator",
+      "final_promotion_gate",
+      "p45_bridge_boundary_guard"
+    ]
+  },
+  "security": {
+    "schemaValidationRequired": true,
+    "lockRequiredForExecution": true,
+    "canonicalJsonHashRequired": true,
+    "signatureRequired": false,
+    "signatureAlgorithm": "none",
+    "hardStops": [
+      "import_boundary_violation",
+      "fee_slippage_reimplementation",
+      "division_by_zero_unhandled",
+      "existing_test_regression",
+      "worktree_path_escape",
+      "integration_merge_without_validation",
+      "watch_mode_validation",
+      "git_push"
+    ],
+    "forbiddenFiles": [
+      ".env",
+      ".env.*",
+      "node_modules/**",
+      ".git/**",
+      "package-lock.json",
+      "pnpm-lock.yaml"
+    ]
+  },
+  "commands": {
+    "policy": "risk_tiered",
+    "defaultMode": "deny_unless_class_or_grant",
+    "shellDefault": "forbidden",
+    "exactAllowedCommands": [
+      {
+        "id": "CMD-FINAL-MAKE-TEST",
+        "kind": "final_validation",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": ".",
+        "executable": "make",
+        "args": ["test"],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 900,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-P2-UNIT",
+        "kind": "targeted_test",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": "lib",
+        "executable": "pytest",
+        "args": ["lib/tests/", "-q"],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 240,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-P2-TEST-COSTS",
+        "kind": "targeted_test",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": "lib",
+        "executable": "pytest",
+        "args": ["lib/tests/test_costs.py", "-q"],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 120,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-P2-IMPORT-BOUNDARY",
+        "kind": "targeted_test",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": "lib",
+        "executable": "pytest",
+        "args": ["lib/tests/test_import_boundary.py", "-q"],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 120,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-P2A-RCOST",
+        "kind": "targeted_test",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": "lib",
+        "executable": "pytest",
+        "args": ["lib/tests/test_costs_r.py", "-q"],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 60,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      }
+    ],
+    "commandClasses": [
+      {
+        "id": "CLASS-READONLY-DISCOVERY",
+        "title": "Read-only local discovery commands",
+        "risk": "low",
+        "sideEffects": "none",
+        "mode": "argv",
+        "executables": ["pwd", "ls", "find", "rg", "grep", "cat", "sed", "awk", "git", "python3", "pytest"],
+        "networkAllowed": false,
+        "evidenceRequired": false,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": false,
+          "commandNotFoundIsFailure": false,
+          "timeoutIsFailure": false
+        }
+      }
+    ],
+    "hardDeniedCommands": [
+      {
+        "id": "DENY-GIT-PUSH",
+        "match": { "executable": "git", "argsPrefix": ["push"] },
+        "reason": "Remote mutation forbidden."
+      },
+      {
+        "id": "DENY-PIP-INSTALL",
+        "match": { "executable": "pip", "argsPrefix": ["install"] },
+        "reason": "External dependencies forbidden."
+      },
+      {
+        "id": "DENY-RM-RF",
+        "match": { "executable": "rm", "argsPrefix": ["-rf"] },
+        "reason": "Destructive filesystem deletion forbidden."
+      }
+    ],
+    "validationEvidenceRules": {
+      "finalPromotionRequiresExactAllowedCommand": true,
+      "discoveryCommandsMayNotSatisfyFinalValidation": true,
+      "runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose": true
+    }
+  },
+  "locking": {
+    "lockVersion": "1.0.0",
+    "lockFile": "04_planlock_P2.generated.json",
+    "lockRequired": true,
+    "workerMustEchoPlanLockHash": true,
+    "workerMustEchoWorkspaceLockHash": true,
+    "hashes": [
+      "canonicalJsonHash",
+      "workspaceGraphHash",
+      "allowedFilesHash",
+      "acceptanceCriteriaHash",
+      "validationPolicyHash",
+      "instructionHash",
+      "reportContractHash",
+      "p45BridgeHash",
+      "commandPolicyHash"
+    ],
+    "lifecycle": [
+      "DRAFT",
+      "VALIDATED",
+      "LOCKED",
+      "ADMITTED",
+      "RUNNING",
+      "FINAL_VALIDATION",
+      "COMPLETED"
+    ],
+    "mutationRules": {
+      "DRAFT": "spec_mutable",
+      "VALIDATED": "spec_mutable_lock_invalidated",
+      "LOCKED": "immutable_new_lock_required",
+      "ADMITTED": "immutable_new_execution_required",
+      "RUNNING": "immutable_amendment_required",
+      "FINAL_VALIDATION": "immutable",
+      "COMPLETED": "immutable"
+    }
+  },
+  "brief": {
+    "mission": {
+      "id": "MISSION-P2",
+      "text": "Add fee_cost_r, slippage_cost_r, total_cost_r to lib/costs/ — R-normalized cost functions that call existing lib primitives (estimate_fee from lib.costs.fees, get_slippage from lib.costs.slippage). No reimplementation of underlying cost logic."
+    },
+    "hardRequirements": [
+      {
+        "id": "HR001",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "fee_cost_r must call estimate_fee from lib.costs.fees — no reimplementation.",
+        "enforcedBy": ["completion_gate_v2", "evidence_ledger"]
+      },
+      {
+        "id": "HR002",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "slippage_cost_r must call get_slippage from lib.costs.slippage — no reimplementation.",
+        "enforcedBy": ["completion_gate_v2", "evidence_ledger"]
+      },
+      {
+        "id": "HR003",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "total_cost_r = fee_cost_r + slippage_cost_r (within float epsilon).",
+        "enforcedBy": ["completion_gate_v2"]
+      },
+      {
+        "id": "HR004",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "atr=0 returns 0.0 (no division by zero). stop_multiplier=0 returns 0.0. atr < 0 returns 0.0.",
+        "enforcedBy": ["completion_gate_v2"]
+      },
+      {
+        "id": "HR005",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "1R = atr * stop_multiplier convention must be used.",
+        "enforcedBy": ["json_schema", "completion_gate_v2"]
+      },
+      {
+        "id": "HR006",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "No imports from v7, alphaforge, or simulation.",
+        "enforcedBy": ["completion_gate_v2", "evidence_ledger"]
+      },
+      {
+        "id": "HR007",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "Existing tests must not break.",
+        "enforcedBy": ["final_promotion_gate"]
+      },
+      {
+        "id": "HR008",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "Import boundary test must pass.",
+        "enforcedBy": ["evidence_ledger"]
+      },
+      {
+        "id": "HR009",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "git push is forbidden.",
+        "enforcedBy": ["command_policy_engine"]
+      }
+    ],
+    "antiPatterns": [
+      {
+        "id": "AP001",
+        "text": "Do not reimplement fee or slippage calculation — call existing lib.costs.fees and lib.costs.slippage primitives.",
+        "enforcedBy": ["completion_gate_v2", "evidence_ledger"]
+      },
+      {
+        "id": "AP002",
+        "text": "Do not use fixed R-multiple convention from research — v7 uses ATR * stop_multiplier for 1R.",
+        "enforcedBy": ["completion_gate_v2"]
+      },
+      {
+        "id": "AP003",
+        "text": "Do not leave atr=0, multiplier=0, or atr<0 unhandled.",
+        "enforcedBy": ["completion_gate_v2"]
+      }
+    ],
+    "operatorNotes": [
+      {
+        "id": "ON001",
+        "text": "P2.A is the sole implementation workspace. P2.B is test gates. Serial execution (batch_1 then batch_2) with parallelism target 1."
+      },
+      {
+        "id": "ON002",
+        "text": "P2 depends on P1 (lib/indicators/atr.py for ATR) and P0.5 (lib/costs/fees.py, lib/costs/slippage.py for underlying primitives)."
+      }
+    ]
+  },
+  "waves": [
+    {
+      "id": "W1",
+      "title": "R-Normalized Cost Functions",
+      "description": "Implement fee_cost_r, slippage_cost_r, total_cost_r in lib/costs/r_costs.py.",
+      "workspaceIds": ["P2.A"],
+      "dependencies": [],
+      "batchSize": 1,
+      "gate": {
+        "required": true,
+        "commandRefs": ["CMD-P2A-RCOST", "CMD-P2-IMPORT-BOUNDARY", "CMD-P2-TEST-COSTS"],
+        "requiredArtifacts": ["reports/accp/P2/tvr_wave_W1.md"]
+      }
+    },
+    {
+      "id": "W2",
+      "title": "Test Gates & Integration",
+      "description": "Run full test suite, verify no regressions.",
+      "workspaceIds": ["P2.B"],
+      "dependencies": ["W1"],
+      "batchSize": 1,
+      "gate": {
+        "required": true,
+        "commandRefs": ["CMD-P2-UNIT", "CMD-FINAL-MAKE-TEST"],
+        "requiredArtifacts": ["reports/accp/P2/tvr_wave_W2.md"]
+      }
+    }
+  ],
+  "workspaces": [
+    {
+      "id": "P2.A",
+      "title": "R-Normalized Cost Functions",
+      "waveId": "W1",
+      "dependencies": [],
+      "role": "implementation",
+      "allowedFiles": [
+        "lib/costs/r_costs.py",
+        "lib/costs/__init__.py",
+        "lib/tests/test_costs_r.py"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P2A-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement fee_cost_r(notional, entry_price, atr, stop_multiplier, tier='taker') -> float. Must call estimate_fee from lib.costs.fees — no reimplementation.",
+          "enforcedBy": ["json_schema", "completion_gate_v2"]
+        },
+        {
+          "id": "WI-P2A-002",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement slippage_cost_r(notional, entry_price, atr, stop_multiplier, avg_liquidity=0.0) -> float. Must call get_slippage from lib.costs.slippage — no reimplementation.",
+          "enforcedBy": ["json_schema", "completion_gate_v2"]
+        },
+        {
+          "id": "WI-P2A-003",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement total_cost_r(notional, entry_price, atr, stop_multiplier, tier='taker', avg_liquidity=0.0) -> float = fee_cost_r + slippage_cost_r.",
+          "enforcedBy": ["json_schema", "completion_gate_v2"]
+        },
+        {
+          "id": "WI-P2A-004",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Edge cases: atr=0 returns 0.0, stop_multiplier=0 returns 0.0, atr<0 returns 0.0.",
+          "enforcedBy": ["completion_gate_v2"]
+        },
+        {
+          "id": "WI-P2A-005",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Use 1R = atr * stop_multiplier convention.",
+          "enforcedBy": ["completion_gate_v2"]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P2A-001",
+          "title": "fee_cost_r implemented",
+          "text": "fee_cost_r(notional, entry_price, atr, stop_multiplier, tier='taker') -> float.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "test"],
+          "validationRefs": ["VAL-P2A-001"]
+        },
+        {
+          "id": "AC-P2A-002",
+          "title": "slippage_cost_r implemented",
+          "text": "slippage_cost_r(notional, entry_price, atr, stop_multiplier, avg_liquidity=0.0) -> float.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "test"],
+          "validationRefs": ["VAL-P2A-001"]
+        },
+        {
+          "id": "AC-P2A-003",
+          "title": "total_cost_r implemented",
+          "text": "total_cost_r(notional, entry_price, atr, stop_multiplier, tier='taker', avg_liquidity=0.0) -> float = fee_cost_r + slippage_cost_r.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "test"],
+          "validationRefs": ["VAL-P2A-001"]
+        },
+        {
+          "id": "AC-P2A-004",
+          "title": "No reimplementation",
+          "text": "fee_cost_r calls estimate_fee from lib.costs.fees — no reimplementation. slippage_cost_r calls get_slippage from lib.costs.slippage — no reimplementation.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "test"],
+          "validationRefs": ["VAL-P2A-001"]
+        },
+        {
+          "id": "AC-P2A-005",
+          "title": "total_cost_r = sum",
+          "text": "total_cost_r = fee_cost_r + slippage_cost_r (within float epsilon).",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["test"],
+          "validationRefs": ["VAL-P2A-001"]
+        },
+        {
+          "id": "AC-P2A-006",
+          "title": "Zero/negative ATR handling",
+          "text": "atr=0 returns 0.0. stop_multiplier=0 returns 0.0. atr < 0 returns 0.0.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["test"],
+          "validationRefs": ["VAL-P2A-001"]
+        },
+        {
+          "id": "AC-P2A-007",
+          "title": "Known numeric example",
+          "text": "Known numeric example: notional=10000, atr=100, stop_multiplier=2.0, taker -> fee=4.0, cost_r=0.02.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["test"],
+          "validationRefs": ["VAL-P2A-001"]
+        },
+        {
+          "id": "AC-P2A-008",
+          "title": "1R convention",
+          "text": "1R = atr * stop_multiplier convention used.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["source", "test"],
+          "validationRefs": ["VAL-P2A-001"]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P2A-001",
+            "type": "command_ref",
+            "commandRef": "CMD-P2A-RCOST",
+            "evidenceRequired": true
+          },
+          {
+            "id": "VAL-P2A-002",
+            "type": "command_ref",
+            "commandRef": "CMD-P2-IMPORT-BOUNDARY",
+            "evidenceRequired": true
+          },
+          {
+            "id": "VAL-P2A-003",
+            "type": "command_ref",
+            "commandRef": "CMD-P2-TEST-COSTS",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          { "type": "IPR", "after": "workspace_mutation" },
+          { "type": "TVR", "after": "workspace_validation" }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Remove lib/costs/r_costs.py, revert lib/costs/__init__.py (remove r_cost exports), remove lib/tests/test_costs_r.py."
+      }
+    },
+    {
+      "id": "P2.B",
+      "title": "Test Gates & Integration",
+      "waveId": "W2",
+      "dependencies": ["P2.A"],
+      "role": "test",
+      "allowedFiles": [
+        "lib/tests/test_costs_r.py",
+        "lib/tests/test_costs.py",
+        "lib/tests/test_import_boundary.py"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P2B-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "All test files must pass with zero failures.",
+          "enforcedBy": ["completion_gate_v2", "evidence_ledger"]
+        },
+        {
+          "id": "WI-P2B-002",
+          "priority": "must",
+          "kind": "test_coverage",
+          "text": "Tests cover: fee_cost_r, slippage_cost_r, total_cost_r, zero atr, zero multiplier, negative atr, known example.",
+          "enforcedBy": ["evidence_ledger"]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P2B-001",
+          "title": "R-cost tests pass",
+          "text": "pytest lib/tests/test_costs_r.py -q passes with zero failures.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["test", "report"],
+          "validationRefs": ["VAL-P2B-001"]
+        },
+        {
+          "id": "AC-P2B-002",
+          "title": "All tests pass",
+          "text": "pytest lib/tests/ -q passes with zero failures.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["test", "report"],
+          "validationRefs": ["VAL-P2B-001"]
+        },
+        {
+          "id": "AC-P2B-003",
+          "title": "Import boundary passes",
+          "text": "test_import_boundary.py passes.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["test"],
+          "validationRefs": ["VAL-P2B-001"]
+        },
+        {
+          "id": "AC-P2B-004",
+          "title": "No regressions",
+          "text": "test_costs.py passes (no regressions).",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["test"],
+          "validationRefs": ["VAL-P2B-001"]
+        },
+        {
+          "id": "AC-P2B-005",
+          "title": "Full coverage",
+          "text": "Covers: fee_cost_r, slippage_cost_r, total_cost_r, zero atr, zero multiplier, negative atr, known example.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": ["test"],
+          "validationRefs": ["VAL-P2B-001"]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P2B-001",
+            "type": "command_ref",
+            "commandRef": "CMD-P2-UNIT",
+            "evidenceRequired": true
+          },
+          {
+            "id": "VAL-P2B-002",
+            "type": "command_ref",
+            "commandRef": "CMD-FINAL-MAKE-TEST",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          { "type": "IPR", "after": "workspace_mutation" },
+          { "type": "TVR", "after": "workspace_validation" }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Remove test_costs_r.py. If integration queue blocked, create handoff artifact and stop."
+      }
+    }
+  ]
+}

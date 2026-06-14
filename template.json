@@ -1,0 +1,2615 @@
+{
+  "$schema": "./02_planspec_v5_alpha2_schema.json",
+  "planSpecVersion": "5.0.0-alpha2",
+  "kind": "ImplementationPlan",
+  "metadata": {
+    "phaseId": "P44",
+    "title": "Verified Execution, Mutation, Completion, Commit, and P45-Ready Artifact Safety",
+    "description": "PlanSpec v5 alpha2 example with strict schema, risk-tiered command policy, runtime grants, enforcement registry, and real validation cases.",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "owner": "pi",
+    "status": "draft",
+    "sourceDocument": "01_planspec_v5_alpha2_template.example.json"
+  },
+  "compatibility": {
+    "runtimeContractVersion": "4.1.1",
+    "runtimeTemplateVersion": "4.1.1",
+    "legacyTemplateCompatible": true,
+    "generatedFromV411": true,
+    "v411AdapterRequired": true,
+    "notes": [
+      "PlanSpec v5 alpha2 is canonical.",
+      "v4.1.1 adapter compiles to executable lock.",
+      "ACCP is evidence/report protocol only."
+    ]
+  },
+  "intent": {
+    "executionClass": "implementation",
+    "safetyLevel": "strict",
+    "executionMode": "stable_3_wave_batch",
+    "parallelism": 3,
+    "targetPromotionMode": "stable_3",
+    "p45ImplementationAllowed": false,
+    "humanReviewRecommended": true
+  },
+  "authority": {
+    "executionState": {
+      "owner": "ExecutionKernel",
+      "workersMayMutateState": false,
+      "stateTransitionRequiresGate": true
+    },
+    "completion": {
+      "workerSelfReportIsClaimOnly": true,
+      "completionGate": "CompletionGateV2",
+      "evidenceLedgerRequired": true,
+      "missingEvidenceBlocksCompletion": true,
+      "staleAttemptVerdictIgnored": true
+    },
+    "repositoryMutation": {
+      "writeGateRequired": true,
+      "workspaceCommitGateRequired": true,
+      "allowedFilesRequired": true,
+      "largeOverwriteBlockedByDefault": true
+    },
+    "reports": {
+      "protocol": "ACCP",
+      "version": "1.2.0",
+      "reportsAreEvidenceOnly": true,
+      "reportsDoNotAuthorizeExecution": true
+    }
+  },
+  "enforcementRegistry": {
+    "mechanisms": [
+      "json_schema",
+      "admission_gate",
+      "plan_lock_verifier",
+      "workspace_lock_verifier",
+      "tool_runtime",
+      "command_policy_engine",
+      "runtime_command_grant",
+      "write_gate",
+      "smart_mutation_engine",
+      "workspace_commit_gate",
+      "completion_gate_v2",
+      "terminal_reconciler",
+      "evidence_ledger",
+      "accp_report_validator",
+      "final_promotion_gate",
+      "p45_bridge_boundary_guard"
+    ]
+  },
+  "security": {
+    "schemaValidationRequired": true,
+    "lockRequiredForExecution": true,
+    "canonicalJsonHashRequired": true,
+    "signatureRequired": false,
+    "signatureAlgorithm": "none",
+    "hardStops": [
+      "unsupported_planSpecVersion",
+      "missing_plan_lock",
+      "plan_lock_hash_mismatch",
+      "workspace_lock_hash_mismatch",
+      "spec_changed_after_lock",
+      "unknown_execution_mode",
+      "parallelism_exceeds_mode_cap",
+      "missing_allowedFiles",
+      "workspace_edits_outside_allowedFiles",
+      "forbidden_file_access",
+      "validation_command_not_allowed",
+      "validation_silent_pass_pattern",
+      "watch_mode_validation",
+      "no_tests_found",
+      "missing_ac_evidence",
+      "missing_accp_report",
+      "repo_base_sha_mismatch",
+      "p45_runtime_write_forbidden"
+    ],
+    "forbiddenFiles": [
+      ".env",
+      ".env.*",
+      "node_modules/**",
+      ".git/**",
+      "package-lock.json",
+      "pnpm-lock.yaml",
+      "packages/coding-agent/src/p45/**",
+      "packages/coding-agent/src/async-assembly/**",
+      "packages/coding-agent/src/static-partitioner/**",
+      "packages/coding-agent/src/deterministic-assembler/**"
+    ]
+  },
+  "commands": {
+    "policy": "risk_tiered",
+    "defaultMode": "deny_unless_class_or_grant",
+    "shellDefault": "forbidden",
+    "exactAllowedCommands": [
+      {
+        "id": "CMD-FINAL-MAKE-TEST",
+        "kind": "final_validation",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": ".",
+        "executable": "make",
+        "args": [
+          "test"
+        ],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 900,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-FINAL-MAKE-TEST-FULL",
+        "kind": "final_validation",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": ".",
+        "executable": "make",
+        "args": [
+          "test-full"
+        ],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 1800,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-TYPECHECK-TSGO",
+        "kind": "typecheck",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": ".",
+        "executable": "npx",
+        "args": [
+          "tsgo",
+          "--noEmit"
+        ],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 300,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": false,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-P4401-UNIT",
+        "kind": "targeted_test",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": "packages/coding-agent",
+        "executable": "npx",
+        "args": [
+          "vitest",
+          "run",
+          "test/completion/acceptance-criteria.test.ts"
+        ],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 240,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-P4402-UNIT",
+        "kind": "targeted_test",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": "packages/coding-agent",
+        "executable": "npx",
+        "args": [
+          "vitest",
+          "run",
+          "test/completion/evidence-ledger.test.ts"
+        ],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 240,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-P4403-UNIT",
+        "kind": "targeted_test",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": "packages/coding-agent",
+        "executable": "npx",
+        "args": [
+          "vitest",
+          "run",
+          "test/completion/completion-gate-v2.test.ts"
+        ],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 240,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      },
+      {
+        "id": "CMD-P44WG-UNIT",
+        "kind": "targeted_test",
+        "mode": "argv",
+        "risk": "medium",
+        "cwd": "packages/coding-agent",
+        "executable": "npx",
+        "args": [
+          "vitest",
+          "run",
+          "test/completion/write-gate-tool-wiring.test.ts"
+        ],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "evidenceRequired": true,
+        "timeoutSeconds": 240,
+        "falsePositiveGuards": {
+          "watchModeForbidden": true,
+          "noTestsFoundIsFailure": true,
+          "commandNotFoundIsFailure": true,
+          "timeoutIsFailure": true
+        }
+      }
+    ],
+    "commandClasses": [
+      {
+        "id": "CLASS-READONLY-DISCOVERY",
+        "title": "Read-only local discovery commands",
+        "risk": "low",
+        "sideEffects": "none",
+        "mode": "argv",
+        "executables": [
+          "pwd",
+          "ls",
+          "find",
+          "rg",
+          "grep",
+          "cat",
+          "sed",
+          "awk",
+          "git",
+          "node"
+        ],
+        "allowedGitSubcommands": [
+          "status",
+          "diff",
+          "log",
+          "show",
+          "branch",
+          "rev-parse",
+          "ls-files"
+        ],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "timeoutSeconds": 30,
+        "maxOutputBytes": 200000,
+        "recordAsEvidence": true,
+        "grantRequired": false
+      },
+      {
+        "id": "CLASS-TARGETED-VITEST",
+        "title": "Bounded targeted vitest command family",
+        "risk": "medium",
+        "sideEffects": "read_mostly",
+        "mode": "argvPattern",
+        "executable": "npx",
+        "argSchema": [
+          {
+            "literal": "vitest"
+          },
+          {
+            "literal": "run"
+          },
+          {
+            "regex": "^test/(completion|p44|gauntlet|template)/[A-Za-z0-9_.-]+\\.test\\.(ts|tsx|js)$"
+          }
+        ],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "timeoutSeconds": 300,
+        "evidenceRequired": true,
+        "recordAsEvidence": true,
+        "grantRequired": false
+      },
+      {
+        "id": "CLASS-TYPECHECK",
+        "title": "Known local typecheck command family",
+        "risk": "medium",
+        "sideEffects": "read_mostly",
+        "mode": "argvPattern",
+        "executables": [
+          "npx",
+          "pnpm",
+          "npm"
+        ],
+        "argPatterns": [
+          "^tsgo --noEmit$",
+          "^tsc --noEmit$",
+          "^run typecheck$"
+        ],
+        "shellAllowed": false,
+        "networkAllowed": false,
+        "timeoutSeconds": 600,
+        "evidenceRequired": true,
+        "recordAsEvidence": true,
+        "grantRequired": false
+      }
+    ],
+    "runtimeCommandGrant": {
+      "enabled": true,
+      "requiresJustification": true,
+      "grantScope": "workspace_attempt",
+      "grantExpires": "on_workspace_completion",
+      "recordAsEvidence": true,
+      "autoGrantRules": [
+        {
+          "id": "GRANT-LOW-READONLY",
+          "risk": "low",
+          "sideEffects": "none",
+          "networkAllowed": false,
+          "shellAllowed": false,
+          "maxTimeoutSeconds": 60,
+          "decision": "auto_grant"
+        },
+        {
+          "id": "GRANT-MEDIUM-BOUNDED-TEST",
+          "risk": "medium",
+          "sideEffects": "read_mostly",
+          "networkAllowed": false,
+          "shellAllowed": false,
+          "maxTimeoutSeconds": 300,
+          "decision": "manager_or_policy_grant"
+        },
+        {
+          "id": "GRANT-HIGH-RISK",
+          "risk": "high",
+          "decision": "human_approval_required"
+        }
+      ],
+      "grantRequestSchema": {
+        "requiredFields": [
+          "workspaceId",
+          "reason",
+          "proposedCommand",
+          "expectedSideEffects",
+          "expectedOutput",
+          "risk"
+        ]
+      }
+    },
+    "hardDeniedCommands": [
+      {
+        "id": "DENY-GIT-PUSH",
+        "match": {
+          "executable": "git",
+          "argsPrefix": [
+            "push"
+          ]
+        },
+        "reason": "Remote mutation forbidden."
+      },
+      {
+        "id": "DENY-GIT-RESET-HARD",
+        "match": {
+          "executable": "git",
+          "argsPrefix": [
+            "reset",
+            "--hard"
+          ]
+        },
+        "reason": "Destructive reset forbidden."
+      },
+      {
+        "id": "DENY-GIT-CLEAN",
+        "match": {
+          "executable": "git",
+          "argsPrefix": [
+            "clean"
+          ]
+        },
+        "reason": "Destructive cleanup forbidden."
+      },
+      {
+        "id": "DENY-RM-RF",
+        "match": {
+          "executable": "rm",
+          "argsPrefix": [
+            "-rf"
+          ]
+        },
+        "reason": "Destructive filesystem deletion forbidden."
+      },
+      {
+        "id": "DENY-CURL",
+        "match": {
+          "executable": "curl"
+        },
+        "reason": "Network forbidden by default."
+      },
+      {
+        "id": "DENY-WGET",
+        "match": {
+          "executable": "wget"
+        },
+        "reason": "Network forbidden by default."
+      },
+      {
+        "id": "DENY-SUDO",
+        "match": {
+          "executable": "sudo"
+        },
+        "reason": "Privilege escalation forbidden."
+      }
+    ],
+    "validationEvidenceRules": {
+      "finalPromotionRequiresExactAllowedCommand": true,
+      "discoveryCommandsMayNotSatisfyFinalValidation": true,
+      "runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose": true
+    }
+  },
+  "locking": {
+    "lockVersion": "1.0.0",
+    "lockFile": "04_planlock_v1_example.generated.json",
+    "lockRequired": true,
+    "workerMustEchoPlanLockHash": true,
+    "workerMustEchoWorkspaceLockHash": true,
+    "hashes": [
+      "canonicalJsonHash",
+      "workspaceGraphHash",
+      "allowedFilesHash",
+      "acceptanceCriteriaHash",
+      "validationPolicyHash",
+      "instructionHash",
+      "reportContractHash",
+      "p45BridgeHash",
+      "commandPolicyHash"
+    ],
+    "lifecycle": [
+      "DRAFT",
+      "VALIDATED",
+      "LOCKED",
+      "ADMITTED",
+      "RUNNING",
+      "FINAL_VALIDATION",
+      "COMPLETED"
+    ],
+    "mutationRules": {
+      "DRAFT": "spec_mutable",
+      "VALIDATED": "spec_mutable_lock_invalidated",
+      "LOCKED": "immutable_new_lock_required",
+      "ADMITTED": "immutable_new_execution_required",
+      "RUNNING": "immutable_amendment_required",
+      "FINAL_VALIDATION": "immutable",
+      "COMPLETED": "immutable"
+    }
+  },
+  "brief": {
+    "mission": {
+      "id": "MISSION-P44",
+      "text": "Implement P44 as a verified completion and safety foundation. Compile PlanSpec JSON to PlanLock before execution."
+    },
+    "hardRequirements": [
+      {
+        "id": "HR001",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "Runtime compatibility target is v4.1.1.",
+        "enforcedBy": [
+          "json_schema",
+          "admission_gate",
+          "plan_lock_verifier"
+        ]
+      },
+      {
+        "id": "HR002",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "Worker self-report is claim-only.",
+        "enforcedBy": [
+          "completion_gate_v2",
+          "terminal_reconciler"
+        ]
+      },
+      {
+        "id": "HR003",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "Write/edit operations must pass WriteGate or SmartMutationEngine.",
+        "enforcedBy": [
+          "tool_runtime",
+          "write_gate",
+          "smart_mutation_engine"
+        ]
+      },
+      {
+        "id": "HR004",
+        "priority": "must",
+        "kind": "implementation_rule",
+        "text": "Final validation must use exact allowed commands.",
+        "enforcedBy": [
+          "command_policy_engine",
+          "final_promotion_gate"
+        ]
+      }
+    ],
+    "antiPatterns": [
+      {
+        "id": "AP001",
+        "text": "Do not create a module and leave it unwired.",
+        "enforcedBy": [
+          "completion_gate_v2",
+          "accp_report_validator"
+        ]
+      },
+      {
+        "id": "AP002",
+        "text": "Do not hide machine-critical behavior in prose.",
+        "enforcedBy": [
+          "json_schema"
+        ]
+      },
+      {
+        "id": "AP003",
+        "text": "Do not parse generated Markdown preview for execution.",
+        "enforcedBy": [
+          "admission_gate"
+        ]
+      }
+    ],
+    "operatorNotes": [
+      {
+        "id": "ON001",
+        "text": "Human preview is generated from JSON and non-authoritative."
+      },
+      {
+        "id": "ON002",
+        "text": "Spec changes after locking require new lock or approved amendment."
+      }
+    ]
+  },
+  "waves": [
+    {
+      "id": "W1",
+      "title": "Foundation",
+      "description": "AC schema, EvidenceLedger, and Worker Report Contract.",
+      "workspaceIds": [
+        "P44.01",
+        "P44.02",
+        "P44.06"
+      ],
+      "dependencies": [],
+      "batchSize": 3,
+      "gate": {
+        "required": true,
+        "commandRefs": [
+          "CMD-TYPECHECK-TSGO",
+          "CMD-P4401-UNIT",
+          "CMD-P4402-UNIT"
+        ],
+        "requiredArtifacts": [
+          "reports/accp/P44/tvr_wave_W1.md"
+        ]
+      }
+    },
+    {
+      "id": "W2",
+      "title": "Gate Core",
+      "description": "CompletionGate v2, terminal reconciler, and negative scanner.",
+      "workspaceIds": [
+        "P44.03",
+        "P44.04",
+        "P44.05"
+      ],
+      "dependencies": [
+        "W1"
+      ],
+      "batchSize": 3,
+      "gate": {
+        "required": true,
+        "commandRefs": [
+          "CMD-TYPECHECK-TSGO",
+          "CMD-P4403-UNIT"
+        ],
+        "requiredArtifacts": [
+          "reports/accp/P44/tvr_wave_W2.md"
+        ]
+      }
+    },
+    {
+      "id": "W3",
+      "title": "Commit Safety",
+      "description": "WorkspaceCommitGate and scoped commit integration.",
+      "workspaceIds": [
+        "P44.08",
+        "P44.09"
+      ],
+      "dependencies": [
+        "W2"
+      ],
+      "batchSize": 2,
+      "gate": {
+        "required": true,
+        "commandRefs": [
+          "CMD-TYPECHECK-TSGO"
+        ],
+        "requiredArtifacts": [
+          "reports/accp/P44/tvr_wave_W3.md"
+        ]
+      }
+    },
+    {
+      "id": "W4",
+      "title": "Audit and Mutation Wiring",
+      "description": "PostImplementationAuditor and WriteGate/SmartMutation tool wiring.",
+      "workspaceIds": [
+        "P44.07",
+        "P44.WG"
+      ],
+      "dependencies": [
+        "W2"
+      ],
+      "batchSize": 2,
+      "gate": {
+        "required": true,
+        "commandRefs": [
+          "CMD-TYPECHECK-TSGO",
+          "CMD-P44WG-UNIT"
+        ],
+        "requiredArtifacts": [
+          "reports/accp/P44/tvr_wave_W4.md"
+        ]
+      }
+    },
+    {
+      "id": "W5",
+      "title": "Visibility",
+      "description": "Read model truth fields.",
+      "workspaceIds": [
+        "P44.10"
+      ],
+      "dependencies": [
+        "W3",
+        "W4"
+      ],
+      "batchSize": 1,
+      "gate": {
+        "required": true,
+        "commandRefs": [
+          "CMD-TYPECHECK-TSGO"
+        ],
+        "requiredArtifacts": [
+          "reports/accp/P44/tvr_wave_W5.md"
+        ]
+      }
+    },
+    {
+      "id": "W6",
+      "title": "Gauntlets",
+      "description": "Fake-complete, commit-scope, and mutation-safety gauntlets.",
+      "workspaceIds": [
+        "P44.11"
+      ],
+      "dependencies": [
+        "W3",
+        "W4",
+        "W5"
+      ],
+      "batchSize": 1,
+      "gate": {
+        "required": true,
+        "commandRefs": [
+          "CMD-TYPECHECK-TSGO"
+        ],
+        "requiredArtifacts": [
+          "reports/accp/P44/tvr_wave_W6.md"
+        ]
+      }
+    },
+    {
+      "id": "W7",
+      "title": "Bridge",
+      "description": "v4.1.1-compatible template extension and P45 bridge outputs.",
+      "workspaceIds": [
+        "P44.12",
+        "P45.B1",
+        "P45.B2",
+        "P45.B3"
+      ],
+      "dependencies": [
+        "W6"
+      ],
+      "batchSize": 3,
+      "gate": {
+        "required": true,
+        "commandRefs": [
+          "CMD-TYPECHECK-TSGO"
+        ],
+        "requiredArtifacts": [
+          "reports/p44-verified-completion/accepted-write-set.json",
+          "reports/p44-verified-completion/ownership-summary.json",
+          "reports/p44-verified-completion/evidence-ledger-export.json",
+          "reports/p44-verified-completion/mutation-report.json",
+          "reports/p44-verified-completion/p45-readiness-report.json"
+        ]
+      }
+    },
+    {
+      "id": "W8",
+      "title": "Final Promotion",
+      "description": "Final validation and promotion readiness.",
+      "workspaceIds": [
+        "P44.13"
+      ],
+      "dependencies": [
+        "W7"
+      ],
+      "batchSize": 1,
+      "gate": {
+        "required": true,
+        "commandRefs": [
+          "CMD-FINAL-MAKE-TEST",
+          "CMD-FINAL-MAKE-TEST-FULL"
+        ],
+        "requiredArtifacts": [
+          "reports/accp/P44/prr_promotion_readiness.md",
+          "reports/p44-verified-completion/final-promotion-report.md"
+        ]
+      }
+    }
+  ],
+  "workspaces": [
+    {
+      "id": "P44.01",
+      "title": "Acceptance Criteria and Traceability Schema",
+      "waveId": "W1",
+      "dependencies": [],
+      "role": "schema",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/completion/acceptance-criteria.ts",
+        "packages/coding-agent/test/completion/acceptance-criteria.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4401-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Define stable acceptance criterion IDs, levels, evidence requirements, and validation references.",
+          "enforcedBy": [
+            "json_schema",
+            "evidence_ledger"
+          ]
+        },
+        {
+          "id": "WI-P4401-002",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Acceptance criteria must be referenced by evidence items and completion gates using explicit stable IDs.",
+          "enforcedBy": [
+            "completion_gate_v2",
+            "evidence_ledger"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4401-001",
+          "title": "Stable AC schema exists",
+          "text": "AcceptanceCriterion validates id, title, text, level, evidenceRequired, evidenceTypes, and validationRefs.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4401-001"
+          ]
+        },
+        {
+          "id": "AC-P4401-002",
+          "title": "Negative ACs supported",
+          "text": "Schema can represent negative assertions requiring negative evidence.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4401-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4401-001",
+            "type": "command_ref",
+            "commandRef": "CMD-P4401-UNIT",
+            "evidenceRequired": true
+          },
+          {
+            "id": "VAL-P4401-002",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.02",
+      "title": "EvidenceLedger",
+      "waveId": "W1",
+      "dependencies": [
+        "P44.01"
+      ],
+      "role": "evidence",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/completion/evidence-ledger.ts",
+        "packages/coding-agent/src/core/completion/evidence-types.ts",
+        "packages/coding-agent/test/completion/evidence-ledger.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4402-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement EvidenceLedger with typed evidence items and AC traceability.",
+          "enforcedBy": [
+            "evidence_ledger",
+            "json_schema"
+          ]
+        },
+        {
+          "id": "WI-P4402-002",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Evidence confidence must be one of high, medium, or low.",
+          "enforcedBy": [
+            "json_schema",
+            "accp_report_validator"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4402-001",
+          "title": "EvidenceLedger implemented",
+          "text": "EvidenceLedger has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4402-001"
+          ]
+        },
+        {
+          "id": "AC-P4402-002",
+          "title": "EvidenceLedger block path covered",
+          "text": "EvidenceLedger includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4402-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4402-001",
+            "type": "command_ref",
+            "commandRef": "CMD-P4402-UNIT",
+            "evidenceRequired": true
+          },
+          {
+            "id": "VAL-P4402-002",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.06",
+      "title": "Worker Report Contract",
+      "waveId": "W1",
+      "dependencies": [
+        "P44.01"
+      ],
+      "role": "report",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/completion/worker-report-contract.ts",
+        "packages/coding-agent/test/completion/worker-report-contract.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4406-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Worker Report Contract with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4406-001",
+          "title": "Worker Report Contract implemented",
+          "text": "Worker Report Contract has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4406-001"
+          ]
+        },
+        {
+          "id": "AC-P4406-002",
+          "title": "Worker Report Contract block path covered",
+          "text": "Worker Report Contract includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4406-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4406-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.03",
+      "title": "CompletionGate v2",
+      "waveId": "W2",
+      "dependencies": [
+        "P44.01",
+        "P44.02",
+        "P44.06"
+      ],
+      "role": "gate",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/completion/completion-gate-v2.ts",
+        "packages/coding-agent/src/core/completion/completion-gate-adapter.ts",
+        "packages/coding-agent/test/completion/completion-gate-v2.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4403-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "CompletionGate v2 is authoritative; worker self-report is claim-only.",
+          "enforcedBy": [
+            "completion_gate_v2",
+            "terminal_reconciler"
+          ]
+        },
+        {
+          "id": "WI-P4403-002",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "CompletionGate v2 rejects missing evidence, stale attempt verdicts, validation shortcuts, and unexpected zero-tests-found output.",
+          "enforcedBy": [
+            "completion_gate_v2",
+            "command_policy_engine"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4403-001",
+          "title": "CompletionGate v2 implemented",
+          "text": "CompletionGate v2 has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4403-001"
+          ]
+        },
+        {
+          "id": "AC-P4403-002",
+          "title": "CompletionGate v2 block path covered",
+          "text": "CompletionGate v2 includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4403-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4403-001",
+            "type": "command_ref",
+            "commandRef": "CMD-P4403-UNIT",
+            "evidenceRequired": true
+          },
+          {
+            "id": "VAL-P4403-002",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.WG",
+      "title": "WriteGate and SmartMutation Tool Wiring",
+      "waveId": "W4",
+      "dependencies": [
+        "P44.01",
+        "P44.02"
+      ],
+      "role": "mutation_safety",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/write-gate.ts",
+        "packages/coding-agent/src/core/mutation/smart-mutation-engine.ts",
+        "packages/coding-agent/src/core/tools/write.ts",
+        "packages/coding-agent/src/core/tools/edit.ts",
+        "packages/coding-agent/test/completion/write-gate-tool-wiring.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P44WG-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Production write and edit tool paths must call WriteGate or SmartMutationEngine.",
+          "enforcedBy": [
+            "tool_runtime",
+            "write_gate",
+            "smart_mutation_engine"
+          ]
+        },
+        {
+          "id": "WI-P44WG-002",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Large existing source-file overwrite is blocked by default.",
+          "enforcedBy": [
+            "write_gate",
+            "smart_mutation_engine"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P44WG-001",
+          "title": "WriteGate and SmartMutation Tool Wiring implemented",
+          "text": "WriteGate and SmartMutation Tool Wiring has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P44WG-001"
+          ]
+        },
+        {
+          "id": "AC-P44WG-002",
+          "title": "WriteGate and SmartMutation Tool Wiring block path covered",
+          "text": "WriteGate and SmartMutation Tool Wiring includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P44WG-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P44WG-001",
+            "type": "command_ref",
+            "commandRef": "CMD-P44WG-UNIT",
+            "evidenceRequired": true
+          },
+          {
+            "id": "VAL-P44WG-002",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.04",
+      "title": "Terminal Verdict Reconciliation",
+      "waveId": "W2",
+      "dependencies": [
+        "P44.03",
+        "P44.06"
+      ],
+      "role": "terminal_reconciler",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p44_04.ts",
+        "packages/coding-agent/test/p44/p44_04.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4404-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Terminal Verdict Reconciliation with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4404-001",
+          "title": "Terminal Verdict Reconciliation implemented",
+          "text": "Terminal Verdict Reconciliation has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4404-001"
+          ]
+        },
+        {
+          "id": "AC-P4404-002",
+          "title": "Terminal Verdict Reconciliation block path covered",
+          "text": "Terminal Verdict Reconciliation includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4404-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4404-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.05",
+      "title": "Negative Assertion and Forbidden Shortcut Scanner",
+      "waveId": "W2",
+      "dependencies": [
+        "P44.01",
+        "P44.02"
+      ],
+      "role": "negative_scanner",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p44_05.ts",
+        "packages/coding-agent/test/p44/p44_05.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4405-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Negative Assertion and Forbidden Shortcut Scanner with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4405-001",
+          "title": "Negative Assertion and Forbidden Shortcut Scanner implemented",
+          "text": "Negative Assertion and Forbidden Shortcut Scanner has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4405-001"
+          ]
+        },
+        {
+          "id": "AC-P4405-002",
+          "title": "Negative Assertion and Forbidden Shortcut Scanner block path covered",
+          "text": "Negative Assertion and Forbidden Shortcut Scanner includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4405-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4405-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.08",
+      "title": "WorkspaceCommitGate",
+      "waveId": "W3",
+      "dependencies": [
+        "P44.02",
+        "P44.06"
+      ],
+      "role": "commit_safety",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p44_08.ts",
+        "packages/coding-agent/test/p44/p44_08.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4408-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement WorkspaceCommitGate with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4408-001",
+          "title": "WorkspaceCommitGate implemented",
+          "text": "WorkspaceCommitGate has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4408-001"
+          ]
+        },
+        {
+          "id": "AC-P4408-002",
+          "title": "WorkspaceCommitGate block path covered",
+          "text": "WorkspaceCommitGate includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4408-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4408-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.09",
+      "title": "Scoped Commit Integration",
+      "waveId": "W3",
+      "dependencies": [
+        "P44.08"
+      ],
+      "role": "commit_integration",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p44_09.ts",
+        "packages/coding-agent/test/p44/p44_09.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4409-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Scoped Commit Integration with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4409-001",
+          "title": "Scoped Commit Integration implemented",
+          "text": "Scoped Commit Integration has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4409-001"
+          ]
+        },
+        {
+          "id": "AC-P4409-002",
+          "title": "Scoped Commit Integration block path covered",
+          "text": "Scoped Commit Integration includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4409-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4409-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.07",
+      "title": "Post-Implementation Auditor",
+      "waveId": "W4",
+      "dependencies": [
+        "P44.01",
+        "P44.02",
+        "P44.06"
+      ],
+      "role": "auditor",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p44_07.ts",
+        "packages/coding-agent/test/p44/p44_07.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4407-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Post-Implementation Auditor with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4407-001",
+          "title": "Post-Implementation Auditor implemented",
+          "text": "Post-Implementation Auditor has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4407-001"
+          ]
+        },
+        {
+          "id": "AC-P4407-002",
+          "title": "Post-Implementation Auditor block path covered",
+          "text": "Post-Implementation Auditor includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4407-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4407-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.10",
+      "title": "Read Model Visibility",
+      "waveId": "W5",
+      "dependencies": [
+        "P44.03",
+        "P44.04",
+        "P44.08",
+        "P44.09"
+      ],
+      "role": "visibility",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p44_10.ts",
+        "packages/coding-agent/test/p44/p44_10.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4410-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Read Model Visibility with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4410-001",
+          "title": "Read Model Visibility implemented",
+          "text": "Read Model Visibility has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4410-001"
+          ]
+        },
+        {
+          "id": "AC-P4410-002",
+          "title": "Read Model Visibility block path covered",
+          "text": "Read Model Visibility includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4410-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4410-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.11",
+      "title": "Fake Complete, Commit Scope, and Mutation Safety Gauntlets",
+      "waveId": "W6",
+      "dependencies": [
+        "P44.03",
+        "P44.04",
+        "P44.05",
+        "P44.07",
+        "P44.09",
+        "P44.WG"
+      ],
+      "role": "gauntlet",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p44_11.ts",
+        "packages/coding-agent/test/p44/p44_11.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4411-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Fake Complete, Commit Scope, and Mutation Safety Gauntlets with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4411-001",
+          "title": "Fake Complete, Commit Scope, and Mutation Safety Gauntlets implemented",
+          "text": "Fake Complete, Commit Scope, and Mutation Safety Gauntlets has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4411-001"
+          ]
+        },
+        {
+          "id": "AC-P4411-002",
+          "title": "Fake Complete, Commit Scope, and Mutation Safety Gauntlets block path covered",
+          "text": "Fake Complete, Commit Scope, and Mutation Safety Gauntlets includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4411-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4411-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.12",
+      "title": "Master Template v4.1.1-Compatible Extension Update",
+      "waveId": "W7",
+      "dependencies": [
+        "P44.01",
+        "P44.02",
+        "P44.03"
+      ],
+      "role": "template_extension",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p44_12.ts",
+        "packages/coding-agent/test/p44/p44_12.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4412-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Master Template v4.1.1-Compatible Extension Update with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4412-001",
+          "title": "Master Template v4.1.1-Compatible Extension Update implemented",
+          "text": "Master Template v4.1.1-Compatible Extension Update has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4412-001"
+          ]
+        },
+        {
+          "id": "AC-P4412-002",
+          "title": "Master Template v4.1.1-Compatible Extension Update block path covered",
+          "text": "Master Template v4.1.1-Compatible Extension Update includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4412-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4412-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P45.B1",
+      "title": "Accepted WriteSet Export and Ownership Summary",
+      "waveId": "W7",
+      "dependencies": [
+        "P44.08",
+        "P44.09",
+        "P44.11"
+      ],
+      "role": "p45_bridge",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p45_b1.ts",
+        "packages/coding-agent/test/p44/p45_b1.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P45B1-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Accepted WriteSet Export and Ownership Summary with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P45B1-001",
+          "title": "Accepted WriteSet Export and Ownership Summary implemented",
+          "text": "Accepted WriteSet Export and Ownership Summary has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P45B1-001"
+          ]
+        },
+        {
+          "id": "AC-P45B1-002",
+          "title": "Accepted WriteSet Export and Ownership Summary block path covered",
+          "text": "Accepted WriteSet Export and Ownership Summary includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P45B1-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P45B1-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P45.B2",
+      "title": "Assembler-Only Candidate Discovery and P45 Readiness Doctor",
+      "waveId": "W7",
+      "dependencies": [
+        "P45.B1"
+      ],
+      "role": "p45_bridge",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p45_b2.ts",
+        "packages/coding-agent/test/p44/p45_b2.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P45B2-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Assembler-Only Candidate Discovery and P45 Readiness Doctor with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P45B2-001",
+          "title": "Assembler-Only Candidate Discovery and P45 Readiness Doctor implemented",
+          "text": "Assembler-Only Candidate Discovery and P45 Readiness Doctor has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P45B2-001"
+          ]
+        },
+        {
+          "id": "AC-P45B2-002",
+          "title": "Assembler-Only Candidate Discovery and P45 Readiness Doctor block path covered",
+          "text": "Assembler-Only Candidate Discovery and P45 Readiness Doctor includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P45B2-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P45B2-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P45.B3",
+      "title": "Evidence Ledger and Mutation Report Export",
+      "waveId": "W7",
+      "dependencies": [
+        "P44.02",
+        "P44.WG",
+        "P44.11"
+      ],
+      "role": "p45_bridge",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p45_b3.ts",
+        "packages/coding-agent/test/p44/p45_b3.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P45B3-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Evidence Ledger and Mutation Report Export with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P45B3-001",
+          "title": "Evidence Ledger and Mutation Report Export implemented",
+          "text": "Evidence Ledger and Mutation Report Export has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P45B3-001"
+          ]
+        },
+        {
+          "id": "AC-P45B3-002",
+          "title": "Evidence Ledger and Mutation Report Export block path covered",
+          "text": "Evidence Ledger and Mutation Report Export includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P45B3-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P45B3-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    },
+    {
+      "id": "P44.13",
+      "title": "Final Promotion Report",
+      "waveId": "W8",
+      "dependencies": [
+        "P44.11",
+        "P44.12",
+        "P45.B1",
+        "P45.B2",
+        "P45.B3"
+      ],
+      "role": "final",
+      "allowedFiles": [
+        "packages/coding-agent/src/core/p44/p44_13.ts",
+        "packages/coding-agent/test/p44/p44_13.test.ts"
+      ],
+      "forbiddenFiles": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".env",
+        ".env.*",
+        "node_modules/**",
+        ".git/**"
+      ],
+      "instructions": [
+        {
+          "id": "WI-P4413-001",
+          "priority": "must",
+          "kind": "implementation_rule",
+          "text": "Implement Final Promotion Report with production wiring or explicit artifact-only status.",
+          "enforcedBy": [
+            "json_schema",
+            "admission_gate",
+            "completion_gate_v2"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "AC-P4413-001",
+          "title": "Final Promotion Report implemented",
+          "text": "Final Promotion Report has source, test, and evidence artifacts.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4413-001"
+          ]
+        },
+        {
+          "id": "AC-P4413-002",
+          "title": "Final Promotion Report block path covered",
+          "text": "Final Promotion Report includes at least one failure/blocking path test.",
+          "level": "required",
+          "evidenceRequired": true,
+          "evidenceTypes": [
+            "source",
+            "unit_test",
+            "report"
+          ],
+          "validationRefs": [
+            "VAL-P4413-001"
+          ]
+        }
+      ],
+      "validation": {
+        "requirements": [
+          {
+            "id": "VAL-P4413-001",
+            "type": "command_ref",
+            "commandRef": "CMD-TYPECHECK-TSGO",
+            "evidenceRequired": true
+          }
+        ]
+      },
+      "reports": {
+        "required": [
+          {
+            "type": "IPR",
+            "after": "workspace_mutation"
+          },
+          {
+            "type": "TVR",
+            "after": "workspace_validation"
+          }
+        ]
+      },
+      "rollback": {
+        "strategy": "revert_workspace_files_only",
+        "notes": "Rollback only files owned by this workspace. Preserve ACCP reports."
+      }
+    }
+  ],
+  "validation": {
+    "finalRequired": true,
+    "watchModeForbidden": true,
+    "noTestsFoundIsFailure": true,
+    "commandEvidenceRequired": true,
+    "forbiddenPatterns": [
+      "|| true",
+      "|| exit 0",
+      "; true"
+    ],
+    "finalValidationCommandRefs": [
+      "CMD-FINAL-MAKE-TEST",
+      "CMD-FINAL-MAKE-TEST-FULL"
+    ],
+    "discoveryCommandsMayNotSatisfyFinalValidation": true
+  },
+  "evidence": {
+    "ledgerRequired": true,
+    "confidenceEnum": [
+      "high",
+      "medium",
+      "low"
+    ],
+    "requiredEvidenceTypes": [
+      "source",
+      "unit_test",
+      "integration_test",
+      "command",
+      "diff",
+      "report",
+      "negative",
+      "mutation",
+      "commit"
+    ],
+    "evidenceItemRequiredFields": [
+      "id",
+      "type",
+      "workspaceId",
+      "acRefs",
+      "createdAt",
+      "confidence"
+    ],
+    "hashWhenAvailable": true
+  },
+  "reports": {
+    "protocol": "ACCP",
+    "version": "1.2.0",
+    "required": [
+      {
+        "type": "RIR",
+        "when": "repo_inspection"
+      },
+      {
+        "type": "PIR",
+        "when": "plan_inspection"
+      },
+      {
+        "type": "IPR",
+        "when": "workspace_mutation"
+      },
+      {
+        "type": "TVR",
+        "when": "validation_completed"
+      },
+      {
+        "type": "HIR",
+        "when": "handoff_required"
+      },
+      {
+        "type": "RAR",
+        "when": "regression_detected"
+      },
+      {
+        "type": "PRR",
+        "when": "final_promotion"
+      },
+      {
+        "type": "CAR",
+        "when": "report_correction_required"
+      }
+    ],
+    "artifactDirectory": "reports/accp/{phaseId}/",
+    "stableIdsRequired": true,
+    "commandEvidenceRequired": true,
+    "rollbackPlanRequiredForMutation": true
+  },
+  "p45Bridge": {
+    "implementationAllowed": false,
+    "allowedArtifactPaths": [
+      "reports/p44-verified-completion/accepted-artifacts.json",
+      "reports/p44-verified-completion/accepted-write-set.json",
+      "reports/p44-verified-completion/ownership-summary.json",
+      "reports/p44-verified-completion/assembler-only-files.json",
+      "reports/p44-verified-completion/evidence-ledger-export.json",
+      "reports/p44-verified-completion/mutation-report.json",
+      "reports/p44-verified-completion/p45-readiness-report.json"
+    ],
+    "forbiddenRuntimePaths": [
+      "packages/coding-agent/src/p45/**",
+      "packages/coding-agent/src/async-assembly/**",
+      "packages/coding-agent/src/static-partitioner/**",
+      "packages/coding-agent/src/deterministic-assembler/**"
+    ],
+    "artifactExports": [
+      {
+        "type": "acceptedArtifacts",
+        "path": "reports/p44-verified-completion/accepted-artifacts.json"
+      },
+      {
+        "type": "acceptedWriteSet",
+        "path": "reports/p44-verified-completion/accepted-write-set.json"
+      },
+      {
+        "type": "ownershipSummary",
+        "path": "reports/p44-verified-completion/ownership-summary.json"
+      },
+      {
+        "type": "assemblerOnlyFiles",
+        "path": "reports/p44-verified-completion/assembler-only-files.json"
+      },
+      {
+        "type": "evidenceLedgerExport",
+        "path": "reports/p44-verified-completion/evidence-ledger-export.json"
+      },
+      {
+        "type": "mutationReport",
+        "path": "reports/p44-verified-completion/mutation-report.json"
+      },
+      {
+        "type": "p45ReadinessReport",
+        "path": "reports/p44-verified-completion/p45-readiness-report.json"
+      }
+    ]
+  },
+  "renderHints": {
+    "generatedMarkdownPath": "06_human_preview_example.generated.md",
+    "includeBrief": true,
+    "includeWaves": true,
+    "includeWorkspaces": true,
+    "includeAcceptanceCriteria": true,
+    "includeValidation": true,
+    "markPreviewNonAuthoritative": true
+  },
+  "migration": {
+    "from": "Implementation Template v4.1.1",
+    "strategy": "extract_part3_json_then_expand_to_planspec",
+    "adapterRequired": true,
+    "legacyFieldsMapped": [
+      {
+        "v411": "contractVersion",
+        "planspec": "compatibility.runtimeContractVersion"
+      },
+      {
+        "v411": "templateVersion",
+        "planspec": "compatibility.runtimeTemplateVersion"
+      },
+      {
+        "v411": "workspaces",
+        "planspec": "workspaces"
+      },
+      {
+        "v411": "validation",
+        "planspec": "validation"
+      },
+      {
+        "v411": "reports",
+        "planspec": "reports"
+      }
+    ]
+  }
+}
