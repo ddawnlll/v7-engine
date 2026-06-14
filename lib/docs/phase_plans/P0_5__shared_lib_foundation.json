@@ -4,6 +4,7 @@
   "kind": "ImplementationPlan",
   "title": "Shared Lib Foundation (Focused)",
   "planId": "P0.5",
+  "dependencies": [],
   "allowedFiles": [
     "lib/market_data/binance/",
     "lib/market_data/contracts.py",
@@ -19,10 +20,7 @@
     "lib/time/intervals.py",
     "lib/time/folds.py",
     "lib/time/__init__.py",
-    "lib/__init__.py",
-    "lib/tests/",
-    "docs/lib/",
-    "lib/README.md"
+    "lib/__init__.py"
   ],
   "forbiddenFiles": [
     "package.json",
@@ -431,7 +429,7 @@
           "id": "WI-P05-003",
           "priority": "must",
           "kind": "implementation_rule",
-          "text": "Import-boundary test must pass — lib/ must NOT import v7 or alphaforge.",
+          "text": "Create lib/tests/test_import_boundary.py — import-boundary test must pass; lib/ must NOT import v7 or alphaforge.",
           "enforcedBy": ["completion_gate_v2", "evidence_ledger"]
         },
         {

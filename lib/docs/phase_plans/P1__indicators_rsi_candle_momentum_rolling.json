@@ -4,7 +4,8 @@
   "kind": "ImplementationPlan",
   "title": "Indicators: RSI, Candle Geometry, Momentum, Rolling Extensions",
   "planId": "P1",
-  "allowedFiles": ["lib/indicators/", "lib/tests/", "lib/indicators/__init__.py"],
+  "dependencies": ["P0.5"],
+  "allowedFiles": ["lib/indicators/"],
   "forbiddenFiles": [
     "package.json",
     "pnpm-lock.yaml",
@@ -1062,24 +1063,20 @@
       "id": "P1.E",
       "title": "Test Gates & Integration",
       "waveId": "W2",
-      "dependencies": ["P1.A", "P1.B", "P1.C", "P1.D"],
+      "dependencies": [],
       "role": "test",
       "allowedFiles": [
         "lib/tests/test_indicators_rsi.py",
         "lib/tests/test_indicators_candle.py",
         "lib/tests/test_indicators_momentum.py",
-        "lib/tests/test_indicators_rolling_extensions.py",
-        "lib/tests/test_import_boundary.py",
-        "lib/tests/test_indicators.py"
+        "lib/tests/test_indicators_rolling_extensions.py"
       ],
       "capabilities": {
         "canEdit": [
           "lib/tests/test_indicators_rsi.py",
           "lib/tests/test_indicators_candle.py",
           "lib/tests/test_indicators_momentum.py",
-          "lib/tests/test_indicators_rolling_extensions.py",
-          "lib/tests/test_import_boundary.py",
-          "lib/tests/test_indicators.py"
+          "lib/tests/test_indicators_rolling_extensions.py"
         ]
       },
       "forbiddenFiles": [

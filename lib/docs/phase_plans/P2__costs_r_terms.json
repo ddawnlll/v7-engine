@@ -4,7 +4,8 @@
   "kind": "ImplementationPlan",
   "title": "Costs: R-Normalized Cost Functions",
   "planId": "P2",
-  "allowedFiles": ["lib/costs/", "lib/tests/"],
+  "dependencies": ["P0.5", "P1"],
+  "allowedFiles": ["lib/costs/"],
   "forbiddenFiles": [
     "package.json",
     "pnpm-lock.yaml",
@@ -600,18 +601,14 @@
       "id": "P2.B",
       "title": "Test Gates & Integration",
       "waveId": "W2",
-      "dependencies": ["P2.A"],
+      "dependencies": [],
       "role": "test",
       "allowedFiles": [
-        "lib/tests/test_costs_r.py",
-        "lib/tests/test_costs.py",
-        "lib/tests/test_import_boundary.py"
+        "lib/tests/test_costs_r.py"
       ],
       "capabilities": {
         "canEdit": [
-          "lib/tests/test_costs_r.py",
-          "lib/tests/test_costs.py",
-          "lib/tests/test_import_boundary.py"
+          "lib/tests/test_costs_r.py"
         ]
       },
       "forbiddenFiles": [
