@@ -2,6 +2,27 @@
   "$schema": "./02_planspec_v5_alpha2_schema.json",
   "planSpecVersion": "5.0.0-alpha2",
   "kind": "ImplementationPlan",
+  "title": "Indicators: RSI, Candle Geometry, Momentum, Rolling Extensions",
+  "planId": "P1",
+  "allowedFiles": ["lib/indicators/", "lib/tests/", "lib/indicators/__init__.py"],
+  "forbiddenFiles": [
+    "package.json",
+    "pnpm-lock.yaml",
+    ".env",
+    ".env.*",
+    "node_modules/**",
+    ".git/**"
+  ],
+  "validationCommands": [
+    "CMD-P1-UNIT",
+    "CMD-P1A-RSI",
+    "CMD-P1B-CANDLE",
+    "CMD-P1C-MOMENTUM",
+    "CMD-P1D-ROLLING",
+    "CMD-P1-TEST-INDICATORS",
+    "CMD-P1-IMPORT-BOUNDARY",
+    "CMD-FINAL-MAKE-TEST"
+  ],
   "metadata": {
     "phaseId": "P1",
     "title": "Indicators: RSI, Candle Geometry, Momentum, Rolling Extensions",
@@ -9,7 +30,7 @@
     "createdAt": "2026-06-01T00:00:00Z",
     "updatedAt": "2026-06-01T00:00:00Z",
     "owner": "pi",
-    "status": "planned",
+    "status": "draft",
     "sourceDocument": "P1__indicators_rsi_candle_momentum_rolling.md"
   },
   "compatibility": {
@@ -518,6 +539,13 @@
         "lib/indicators/__init__.py",
         "lib/tests/test_indicators_rsi.py"
       ],
+      "capabilities": {
+        "canEdit": [
+          "lib/indicators/rsi.py",
+          "lib/indicators/__init__.py",
+          "lib/tests/test_indicators_rsi.py"
+        ]
+      },
       "forbiddenFiles": [
         "package.json",
         "pnpm-lock.yaml",
@@ -634,6 +662,13 @@
         "lib/indicators/__init__.py",
         "lib/tests/test_indicators_candle.py"
       ],
+      "capabilities": {
+        "canEdit": [
+          "lib/indicators/candle.py",
+          "lib/indicators/__init__.py",
+          "lib/tests/test_indicators_candle.py"
+        ]
+      },
       "forbiddenFiles": [
         "package.json",
         "pnpm-lock.yaml",
@@ -764,6 +799,13 @@
         "lib/indicators/__init__.py",
         "lib/tests/test_indicators_momentum.py"
       ],
+      "capabilities": {
+        "canEdit": [
+          "lib/indicators/momentum.py",
+          "lib/indicators/__init__.py",
+          "lib/tests/test_indicators_momentum.py"
+        ]
+      },
       "forbiddenFiles": [
         "package.json",
         "pnpm-lock.yaml",
@@ -880,6 +922,13 @@
         "lib/indicators/__init__.py",
         "lib/tests/test_indicators_rolling_extensions.py"
       ],
+      "capabilities": {
+        "canEdit": [
+          "lib/indicators/rolling.py",
+          "lib/indicators/__init__.py",
+          "lib/tests/test_indicators_rolling_extensions.py"
+        ]
+      },
       "forbiddenFiles": [
         "package.json",
         "pnpm-lock.yaml",
@@ -1023,6 +1072,16 @@
         "lib/tests/test_import_boundary.py",
         "lib/tests/test_indicators.py"
       ],
+      "capabilities": {
+        "canEdit": [
+          "lib/tests/test_indicators_rsi.py",
+          "lib/tests/test_indicators_candle.py",
+          "lib/tests/test_indicators_momentum.py",
+          "lib/tests/test_indicators_rolling_extensions.py",
+          "lib/tests/test_import_boundary.py",
+          "lib/tests/test_indicators.py"
+        ]
+      },
       "forbiddenFiles": [
         "package.json",
         "pnpm-lock.yaml",
@@ -1124,5 +1183,101 @@
         "notes": "Remove four new test files. If integration queue blocked, create handoff artifact and stop."
       }
     }
-  ]
+  ],
+  "validation": {
+    "finalRequired": true,
+    "watchModeForbidden": true,
+    "noTestsFoundIsFailure": true,
+    "commandEvidenceRequired": true,
+    "forbiddenPatterns": [
+      "|| true",
+      "|| exit 0",
+      "; true"
+    ],
+    "finalValidationCommandRefs": [
+      "CMD-FINAL-MAKE-TEST"
+    ],
+    "discoveryCommandsMayNotSatisfyFinalValidation": true
+  },
+  "evidence": {
+    "ledgerRequired": true,
+    "confidenceEnum": [
+      "high",
+      "medium",
+      "low"
+    ],
+    "requiredEvidenceTypes": [
+      "source",
+      "unit_test",
+      "integration_test",
+      "command",
+      "diff",
+      "report",
+      "negative",
+      "mutation",
+      "commit"
+    ],
+    "evidenceItemRequiredFields": [
+      "id",
+      "type",
+      "workspaceId",
+      "acRefs",
+      "createdAt",
+      "confidence"
+    ],
+    "hashWhenAvailable": true
+  },
+  "reports": {
+    "protocol": "ACCP",
+    "version": "1.2.0",
+    "required": [
+      { "type": "RIR", "when": "repo_inspection" },
+      { "type": "PIR", "when": "plan_inspection" },
+      { "type": "IPR", "when": "workspace_mutation" },
+      { "type": "TVR", "when": "validation_completed" },
+      { "type": "HIR", "when": "handoff_required" },
+      { "type": "RAR", "when": "regression_detected" },
+      { "type": "PRR", "when": "promotion_readiness" }
+    ],
+    "artifactDirectory": "reports/accp/P1/",
+    "stableIdsRequired": true,
+    "commandEvidenceRequired": true,
+    "rollbackPlanRequiredForMutation": true,
+    "sourceFormat": "planspec_v5_alpha2",
+    "reportsAreEvidenceOnly": true,
+    "reportsDoNotAuthorizeExecution": true,
+    "routeSignalsAreAdvisory": true
+  },
+  "p45Bridge": {
+    "implementationAllowed": false,
+    "allowedArtifactPaths": [
+      "reports/accp/P1/accepted-artifacts.json",
+      "reports/accp/P1/accepted-write-set.json",
+      "reports/accp/P1/evidence-ledger-export.json"
+    ],
+    "forbiddenRuntimePaths": [
+      "packages/coding-agent/src/p45/**"
+    ],
+    "artifactExports": []
+  },
+  "renderHints": {
+    "generatedMarkdownPath": "06_human_preview_P1.generated.md",
+    "includeBrief": true,
+    "includeWaves": true,
+    "includeWorkspaces": true,
+    "includeAcceptanceCriteria": true,
+    "includeValidation": true,
+    "markPreviewNonAuthoritative": true
+  },
+  "migration": {
+    "from": "Implementation Template v4.1.1",
+    "strategy": "extract_part3_json_then_expand_to_planspec",
+    "adapterRequired": false,
+    "legacyFieldsMapped": [
+      { "v411": "contractVersion", "planspec": "compatibility.runtimeContractVersion" },
+      { "v411": "templateVersion", "planspec": "compatibility.runtimeTemplateVersion" },
+      { "v411": "workspaces", "planspec": "workspaces" },
+      { "v411": "validation", "planspec": "validation" }
+    ]
+  }
 }

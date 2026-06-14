@@ -2,6 +2,24 @@
   "$schema": "./02_planspec_v5_alpha2_schema.json",
   "planSpecVersion": "5.0.0-alpha2",
   "kind": "ImplementationPlan",
+  "title": "Costs: R-Normalized Cost Functions",
+  "planId": "P2",
+  "allowedFiles": ["lib/costs/", "lib/tests/"],
+  "forbiddenFiles": [
+    "package.json",
+    "pnpm-lock.yaml",
+    ".env",
+    ".env.*",
+    "node_modules/**",
+    ".git/**"
+  ],
+  "validationCommands": [
+    "CMD-P2-UNIT",
+    "CMD-P2A-RCOST",
+    "CMD-P2-TEST-COSTS",
+    "CMD-P2-IMPORT-BOUNDARY",
+    "CMD-FINAL-MAKE-TEST"
+  ],
   "metadata": {
     "phaseId": "P2",
     "title": "Costs: R-Normalized Cost Functions",
@@ -9,7 +27,7 @@
     "createdAt": "2026-06-01T00:00:00Z",
     "updatedAt": "2026-06-01T00:00:00Z",
     "owner": "pi",
-    "status": "planned",
+    "status": "draft",
     "sourceDocument": "P2__costs_r_terms.md"
   },
   "compatibility": {
@@ -419,6 +437,13 @@
         "lib/costs/__init__.py",
         "lib/tests/test_costs_r.py"
       ],
+      "capabilities": {
+        "canEdit": [
+          "lib/costs/r_costs.py",
+          "lib/costs/__init__.py",
+          "lib/tests/test_costs_r.py"
+        ]
+      },
       "forbiddenFiles": [
         "package.json",
         "pnpm-lock.yaml",
@@ -582,6 +607,13 @@
         "lib/tests/test_costs.py",
         "lib/tests/test_import_boundary.py"
       ],
+      "capabilities": {
+        "canEdit": [
+          "lib/tests/test_costs_r.py",
+          "lib/tests/test_costs.py",
+          "lib/tests/test_import_boundary.py"
+        ]
+      },
       "forbiddenFiles": [
         "package.json",
         "pnpm-lock.yaml",
@@ -680,5 +712,101 @@
         "notes": "Remove test_costs_r.py. If integration queue blocked, create handoff artifact and stop."
       }
     }
-  ]
+  ],
+  "validation": {
+    "finalRequired": true,
+    "watchModeForbidden": true,
+    "noTestsFoundIsFailure": true,
+    "commandEvidenceRequired": true,
+    "forbiddenPatterns": [
+      "|| true",
+      "|| exit 0",
+      "; true"
+    ],
+    "finalValidationCommandRefs": [
+      "CMD-FINAL-MAKE-TEST"
+    ],
+    "discoveryCommandsMayNotSatisfyFinalValidation": true
+  },
+  "evidence": {
+    "ledgerRequired": true,
+    "confidenceEnum": [
+      "high",
+      "medium",
+      "low"
+    ],
+    "requiredEvidenceTypes": [
+      "source",
+      "unit_test",
+      "integration_test",
+      "command",
+      "diff",
+      "report",
+      "negative",
+      "mutation",
+      "commit"
+    ],
+    "evidenceItemRequiredFields": [
+      "id",
+      "type",
+      "workspaceId",
+      "acRefs",
+      "createdAt",
+      "confidence"
+    ],
+    "hashWhenAvailable": true
+  },
+  "reports": {
+    "protocol": "ACCP",
+    "version": "1.2.0",
+    "required": [
+      { "type": "RIR", "when": "repo_inspection" },
+      { "type": "PIR", "when": "plan_inspection" },
+      { "type": "IPR", "when": "workspace_mutation" },
+      { "type": "TVR", "when": "validation_completed" },
+      { "type": "HIR", "when": "handoff_required" },
+      { "type": "RAR", "when": "regression_detected" },
+      { "type": "PRR", "when": "promotion_readiness" }
+    ],
+    "artifactDirectory": "reports/accp/P2/",
+    "stableIdsRequired": true,
+    "commandEvidenceRequired": true,
+    "rollbackPlanRequiredForMutation": true,
+    "sourceFormat": "planspec_v5_alpha2",
+    "reportsAreEvidenceOnly": true,
+    "reportsDoNotAuthorizeExecution": true,
+    "routeSignalsAreAdvisory": true
+  },
+  "p45Bridge": {
+    "implementationAllowed": false,
+    "allowedArtifactPaths": [
+      "reports/accp/P2/accepted-artifacts.json",
+      "reports/accp/P2/accepted-write-set.json",
+      "reports/accp/P2/evidence-ledger-export.json"
+    ],
+    "forbiddenRuntimePaths": [
+      "packages/coding-agent/src/p45/**"
+    ],
+    "artifactExports": []
+  },
+  "renderHints": {
+    "generatedMarkdownPath": "06_human_preview_P2.generated.md",
+    "includeBrief": true,
+    "includeWaves": true,
+    "includeWorkspaces": true,
+    "includeAcceptanceCriteria": true,
+    "includeValidation": true,
+    "markPreviewNonAuthoritative": true
+  },
+  "migration": {
+    "from": "Implementation Template v4.1.1",
+    "strategy": "extract_part3_json_then_expand_to_planspec",
+    "adapterRequired": false,
+    "legacyFieldsMapped": [
+      { "v411": "contractVersion", "planspec": "compatibility.runtimeContractVersion" },
+      { "v411": "templateVersion", "planspec": "compatibility.runtimeTemplateVersion" },
+      { "v411": "workspaces", "planspec": "workspaces" },
+      { "v411": "validation", "planspec": "validation" }
+    ]
+  }
 }

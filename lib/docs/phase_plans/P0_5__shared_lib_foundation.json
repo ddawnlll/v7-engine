@@ -2,6 +2,37 @@
   "$schema": "./02_planspec_v5_alpha2_schema.json",
   "planSpecVersion": "5.0.0-alpha2",
   "kind": "ImplementationPlan",
+  "title": "Shared Lib Foundation (Focused)",
+  "planId": "P0.5",
+  "allowedFiles": [
+    "lib/market_data/binance/",
+    "lib/market_data/contracts.py",
+    "lib/market_data/quality.py",
+    "lib/indicators/atr.py",
+    "lib/indicators/returns.py",
+    "lib/indicators/volatility.py",
+    "lib/indicators/rolling.py",
+    "lib/indicators/__init__.py",
+    "lib/costs/fees.py",
+    "lib/costs/slippage.py",
+    "lib/costs/__init__.py",
+    "lib/time/intervals.py",
+    "lib/time/folds.py",
+    "lib/time/__init__.py",
+    "lib/__init__.py",
+    "lib/tests/",
+    "docs/lib/",
+    "lib/README.md"
+  ],
+  "forbiddenFiles": [
+    "package.json",
+    "pnpm-lock.yaml",
+    ".env",
+    ".env.*",
+    "node_modules/**",
+    ".git/**"
+  ],
+  "validationCommands": ["CMD-P05-UNIT", "CMD-P05-IMPORT-BOUNDARY", "CMD-FINAL-MAKE-TEST"],
   "metadata": {
     "phaseId": "P0.5",
     "title": "Shared Lib Foundation (Focused)",
@@ -9,7 +40,7 @@
     "createdAt": "2026-05-23T00:00:00Z",
     "updatedAt": "2026-05-23T00:00:00Z",
     "owner": "pi",
-    "status": "planned",
+    "status": "draft",
     "sourceDocument": "P0_5__shared_lib_foundation.md"
   },
   "compatibility": {
@@ -349,6 +380,28 @@
         "docs/lib/",
         "lib/README.md"
       ],
+      "capabilities": {
+        "canEdit": [
+          "lib/market_data/binance/",
+          "lib/market_data/contracts.py",
+          "lib/market_data/quality.py",
+          "lib/indicators/atr.py",
+          "lib/indicators/returns.py",
+          "lib/indicators/volatility.py",
+          "lib/indicators/rolling.py",
+          "lib/indicators/__init__.py",
+          "lib/costs/fees.py",
+          "lib/costs/slippage.py",
+          "lib/costs/__init__.py",
+          "lib/time/intervals.py",
+          "lib/time/folds.py",
+          "lib/time/__init__.py",
+          "lib/__init__.py",
+          "lib/tests/",
+          "docs/lib/",
+          "lib/README.md"
+        ]
+      },
       "forbiddenFiles": [
         "package.json",
         "pnpm-lock.yaml",
@@ -505,5 +558,101 @@
         "notes": "Rollback only files owned by this workspace. Revert lib/ additions, restore v7 and alphaforge Binance clients if migrated."
       }
     }
-  ]
+  ],
+  "validation": {
+    "finalRequired": true,
+    "watchModeForbidden": true,
+    "noTestsFoundIsFailure": true,
+    "commandEvidenceRequired": true,
+    "forbiddenPatterns": [
+      "|| true",
+      "|| exit 0",
+      "; true"
+    ],
+    "finalValidationCommandRefs": [
+      "CMD-FINAL-MAKE-TEST"
+    ],
+    "discoveryCommandsMayNotSatisfyFinalValidation": true
+  },
+  "evidence": {
+    "ledgerRequired": true,
+    "confidenceEnum": [
+      "high",
+      "medium",
+      "low"
+    ],
+    "requiredEvidenceTypes": [
+      "source",
+      "unit_test",
+      "integration_test",
+      "command",
+      "diff",
+      "report",
+      "negative",
+      "mutation",
+      "commit"
+    ],
+    "evidenceItemRequiredFields": [
+      "id",
+      "type",
+      "workspaceId",
+      "acRefs",
+      "createdAt",
+      "confidence"
+    ],
+    "hashWhenAvailable": true
+  },
+  "reports": {
+    "protocol": "ACCP",
+    "version": "1.2.0",
+    "required": [
+      { "type": "RIR", "when": "repo_inspection" },
+      { "type": "PIR", "when": "plan_inspection" },
+      { "type": "IPR", "when": "workspace_mutation" },
+      { "type": "TVR", "when": "validation_completed" },
+      { "type": "HIR", "when": "handoff_required" },
+      { "type": "RAR", "when": "regression_detected" },
+      { "type": "PRR", "when": "promotion_readiness" }
+    ],
+    "artifactDirectory": "reports/accp/P0.5/",
+    "stableIdsRequired": true,
+    "commandEvidenceRequired": true,
+    "rollbackPlanRequiredForMutation": true,
+    "sourceFormat": "planspec_v5_alpha2",
+    "reportsAreEvidenceOnly": true,
+    "reportsDoNotAuthorizeExecution": true,
+    "routeSignalsAreAdvisory": true
+  },
+  "p45Bridge": {
+    "implementationAllowed": false,
+    "allowedArtifactPaths": [
+      "reports/accp/P0.5/accepted-artifacts.json",
+      "reports/accp/P0.5/accepted-write-set.json",
+      "reports/accp/P0.5/evidence-ledger-export.json"
+    ],
+    "forbiddenRuntimePaths": [
+      "packages/coding-agent/src/p45/**"
+    ],
+    "artifactExports": []
+  },
+  "renderHints": {
+    "generatedMarkdownPath": "06_human_preview_P05.generated.md",
+    "includeBrief": true,
+    "includeWaves": true,
+    "includeWorkspaces": true,
+    "includeAcceptanceCriteria": true,
+    "includeValidation": true,
+    "markPreviewNonAuthoritative": true
+  },
+  "migration": {
+    "from": "Implementation Template v4.1.1",
+    "strategy": "extract_part3_json_then_expand_to_planspec",
+    "adapterRequired": false,
+    "legacyFieldsMapped": [
+      { "v411": "contractVersion", "planspec": "compatibility.runtimeContractVersion" },
+      { "v411": "templateVersion", "planspec": "compatibility.runtimeTemplateVersion" },
+      { "v411": "workspaces", "planspec": "workspaces" },
+      { "v411": "validation", "planspec": "validation" }
+    ]
+  }
 }
