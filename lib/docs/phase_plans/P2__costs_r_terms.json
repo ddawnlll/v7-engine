@@ -4,8 +4,10 @@
   "kind": "ImplementationPlan",
   "title": "Costs: R-Normalized Cost Functions",
   "planId": "P2",
+  "id": "P2",
+  "phase": "P2",
   "dependencies": ["P0.5", "P1"],
-  "allowedFiles": ["lib/costs/"],
+  "allowedFiles": [],
   "forbiddenFiles": [
     "package.json",
     "pnpm-lock.yaml",

@@ -4,8 +4,11 @@
   "kind": "ImplementationPlan",
   "title": "Indicators: RSI, Candle Geometry, Momentum, Rolling Extensions",
   "planId": "P1",
+  "id": "P1",
+  "phase": "P1",
   "dependencies": ["P0.5"],
-  "allowedFiles": ["lib/indicators/"],
+  "allowedFiles": ["lib/indicators/rsi.py"],
+  "executionClass": "implementation",
   "forbiddenFiles": [
     "package.json",
     "pnpm-lock.yaml",
