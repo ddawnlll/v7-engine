@@ -1,0 +1,365 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report:
+  accp_version: "2.0.0"
+  source_format: "ACCP-YAML"
+  report_id: "V7-P0_6-LOCK-READINESS-AUDIT-001"
+  report_type: RIR
+  report_family: core
+  report_name: "V7 Engine Lock Readiness Audit"
+  support_level: schema_lite
+  plan_id: "P0.6"
+  workspace_id: "root_reality_lock"
+  repo_root: "/home/erfolg/src/v7-engine"
+  git_commit: "b46ffea"
+  git_branch: "main"
+  report_generated_at: "2026-06-16T00:00:00Z"
+  report_stale_after: on_next_commit
+  inspection_mode: read_only
+  confidence: high
+  authority:
+    reports_are_evidence_only: true
+    route_signals_are_advisory: true
+    runtime_must_read_compiled_json: true
+    raw_yaml_is_not_runtime_authority: true
+    rendered_markdown_is_human_preview_only: true
+  agent:
+    agent_id: "architect-reviewer-v1"
+    agent_role: "repo_agent_planner_validator_reviewer_repair_agent_coordinator"
+    model_name: "claude-ocgo-minimax-m3"
+    model_version: "unknown"
+    session_id: "current-session"
+    prompt_hash: "embedded-in-accp-prompt"
+  lineage:
+    parent_report: null
+    supersedes: null
+    triggered_by: "V7-P0_6-LOCK-READINESS-AUDIT"
+    continuation_of: null
+    validates: null
+  references:
+    - id: R001
+      ref: "README.md"
+      purpose: "claimed project structure and phase roadmap"
+    - id: R002
+      ref: "ai_summary.md"
+      purpose: "AI meta hub with subsystem authority map"
+    - id: R003
+      ref: "contracts/registry.json"
+      purpose: "contract inventory and ownership"
+    - id: R004
+      ref: "Makefile"
+      purpose: "CI gate targets and test commands"
+    - id: R005
+      ref: "lib/tests/test_import_boundary.py"
+      purpose: "lib import boundary enforcement"
+    - id: R006
+      ref: "lib/docs/phase_plans/"
+      purpose: "completed lib phase plans (P0.5, P1, P2)"
+  assumptions:
+    - id: AS001
+      assumption: "No GitHub Actions workflows are configured"
+      reason: "No .github/workflows/ directory found"
+      confidence: high
+      how_to_verify: "ls .github/workflows/"
+  sections:
+    repo_tree:
+      summary: "Actual top-level repo structure compared against README claims."
+      items:
+        - id: F001
+          label: FACT
+          text: "Top-level directories: alphaforge/, contracts/, data/, docs/, integration/, interface/, lib/, reports/, runtime/, scripts/, simulation/, v7/"
+          evidence_refs:
+            - "find /home/erfolg/src/v7-engine -maxdepth 1 -type d | sort"
+          confidence: high
+        - id: F002
+          label: FACT
+          text: "Top-level files: accp.yaml, ai_summary.md, Makefile, README.md, test.sh, template.json, .gitignore"
+          evidence_refs:
+            - "find /home/erfolg/src/v7-engine -maxdepth 1 -type f | sort"
+          confidence: high
+        - id: G001
+          label: GAP
+          text: "README phase table lists P0.5 as 'Done' but P1-P9 as 'Planned'. The lib/ phase plans (P1 indicators, P2 costs) are completed but not reflected in README phase table."
+          evidence_refs:
+            - "README.md lines 68-78"
+            - "git log - recent commits add indicators and R-costs"
+          confidence: high
+        - id: G002
+          label: GAP
+          text: "runtime/ and interface/ exist (migrated from V4) but are not listed in README's top-level directory tree. ai_summary.md correctly lists them but README does not."
+          evidence_refs:
+            - "README.md Structure section shows simulation/ alphaforge/ v7/ but not runtime/ interface/"
+            - "ai_summary.md Repo Layout section includes runtime/ and interface/"
+          confidence: high
+        - id: G003
+          label: GAP
+          text: "reports/ and .pi/ directories exist at root but are not documented in any README or ai_summary."
+          evidence_refs:
+            - "ls /home/erfolg/src/v7-engine - reports/ and .pi/ exist"
+          confidence: high
+    domain_map:
+      summary: "Subsystem authority, implementation status, and ownership assessment."
+      items:
+        - id: D001
+          label: FACT
+          text: "lib/ — 36 Python files, 12 test files. Indicators, costs, market_data, time modules implemented. Import boundary test exists and passes. Pytest test discovery is broken (no __init__.py in tests/)."
+          evidence_refs:
+            - "find lib -name '*.py' | wc -l = 36"
+            - "ls lib/tests/ = 12 files"
+            - "python -m pytest lib/tests/test_import_boundary.py -v = 1 passed"
+            - "python -m pytest lib/tests/ -v = 'No tests collected'"
+          confidence: high
+        - id: D002
+          label: FACT
+          text: "simulation/ — docs only (7 phase plans S0-S6, contracts.md, architecture.md, profiles.md). Zero Python source files. Zero tests."
+          evidence_refs:
+            - "find simulation -name '*.py' = empty"
+            - "ls simulation/docs/phases/ = S0 through S6"
+          confidence: high
+        - id: D003
+          label: FACT
+          text: "alphaforge/ — docs only (10 phase plans P1-P9). Zero Python source files. Has 625KB ai_summary__v7_alphaforge_xgb.md. No dedicated ai_summary.md at alphaforge/docs/ai_summary.md."
+          evidence_refs:
+            - "find alphaforge -name '*.py' = empty"
+            - "ls alphaforge/docs/ai_summary.md = does not exist"
+            - "ls alphaforge/docs/phase_plans/ = P1 through P9"
+          confidence: high
+        - id: D004
+          label: FACT
+          text: "v7/ — docs only (ai_summary.md, contract docs, pipeline docs). Zero Python source files."
+          evidence_refs:
+            - "find v7 -name '*.py' = empty"
+          confidence: high
+        - id: D005
+          label: FACT
+          text: "runtime/ — 138 Python files. Operational backend from V4 migration. Has api/, db/, runtime/, services/, migrations/. Fully implemented but not yet contracted to v7 pipeline."
+          evidence_refs:
+            - "find runtime -name '*.py' | wc -l = 138"
+            - "ls runtime/ = api/ db/ docs/ migrations/ runtime/ services/"
+          confidence: high
+        - id: D006
+          label: FACT
+          text: "interface/ — ~20k files (includes node_modules). React/TypeScript/Vite UI from V4 migration. Has src/, docs/, public/. bun.lock = 102KB."
+          evidence_refs:
+            - "find interface -type f | wc -l = 20737"
+            - "ls interface/ = docs/ public/ src/ + config files"
+          confidence: high
+        - id: D007
+          label: FACT
+          text: "contracts/ — 4 contracts registered (SimulationProfile, SimulationOutput, AlphaForgeLabel, TradeOutcome). 4 schemas exist. 3 fixtures exist (SimulationProfile missing fixture). 2 field mappings (simulation_to_alphaforge, simulation_to_v7)."
+          evidence_refs:
+            - "contracts/registry.json"
+            - "ls contracts/schemas/ = 4 files"
+            - "ls contracts/fixtures/ = 3 files (no simulation_profile fixture)"
+            - "ls contracts/mappings/ = 2 files"
+          confidence: high
+        - id: D008
+          label: FACT
+          text: "integration/ — 3 adapter stubs (SimulationAdapter, AlphaForgeAdapter, V7Adapter) all raise NotImplementedError. 4 test files. All adapter tests fail with 'No module named integration'."
+          evidence_refs:
+            - "ls integration/adapters/ = 3 adapter files"
+            - "ls integration/tests/ = 4 test files"
+            - "python -m pytest integration/tests/ = 8 failures"
+          confidence: high
+    authority_docs:
+      summary: "Presence and quality of authority documentation per subsystem."
+      items:
+        - id: A001
+          label: FACT
+          text: "Root ai_summary.md exists (7.9KB). Provides reading order, subsystem authority map, truth hierarchy, cross-domain rules."
+          evidence_refs:
+            - "ai_summary.md — comprehensive meta hub"
+          confidence: high
+        - id: A002
+          label: GAP
+          text: "alphaforge/docs/ai_summary.md does NOT exist. Only a combined 625KB doc exists at alphaforge/docs/ai_summary__v7_alphaforge_xgb.md."
+          evidence_refs:
+            - "ls alphaforge/docs/ai_summary.md = missing"
+          confidence: high
+        - id: A003
+          label: GAP
+          text: "No docs/architecture/domain_ownership.md, docs/architecture/import_boundaries.md, docs/architecture/data_artifact_policy.md, or docs/architecture/ci_gates.md exist. Only governance.md and feature_workflow.md are present."
+          evidence_refs:
+            - "ls docs/architecture/ = governance.md, feature_workflow.md"
+          confidence: high
+        - id: A004
+          label: GAP
+          text: "No phase_exit_criteria.md found. Phase plans individually define exit criteria but no consolidated gate document exists."
+          evidence_refs:
+            - "ls docs/architecture/phase_exit_criteria.md = missing"
+          confidence: medium
+    contracts_and_schemas:
+      summary: "Contract registry, schema-fixture parity, mapping coverage."
+      items:
+        - id: C001
+          label: FACT
+          text: "4 contracts registered. 4 schemas exist. 3 fixtures exist."
+          evidence_refs:
+            - "contracts/registry.json"
+          confidence: high
+        - id: C002
+          label: GAP
+          text: "SimulationProfile has NO fixture (fixture_file: null in registry). Can't validate schema roundtrip."
+          evidence_refs:
+            - "contracts/registry.json — SimulationProfile entry fixture_file: null"
+          confidence: high
+        - id: C003
+          label: GAP
+          text: "No schema parity validation tests for SimulationProfile → SimulationOutput mapping. Only 1 of 3 compatibility rules has explicit tests."
+          evidence_refs:
+            - "integration/tests/test_schema_parity.py"
+            - "contracts/compatibility.json — 3 rules but limited test coverage"
+          confidence: medium
+        - id: C004
+          label: GAP
+          text: "Integration tests fail entirely due to 'No module named integration' — Python package resolution issue. integration/ has __init__.py but maybe not installed or path issue."
+          evidence_refs:
+            - "python -m pytest integration/tests/ = 8 failures, all ModuleNotFoundError"
+          confidence: high
+        - id: C005
+          label: FACT
+          text: "2 cross-domain field mappings exist: simulation_to_alphaforge.json and simulation_to_v7.json."
+          evidence_refs:
+            - "contracts/mappings/ = 2 files"
+          confidence: high
+        - id: C006
+          label: RISK
+          text: "Contract schemas define SimulationOutput (alphaforge+v7 consumers) but neither simulation/ nor alphaforge/ nor v7/ have any implementation to produce or consume these. Contracts exist in isolation."
+          evidence_refs:
+            - "find simulation -name '*.py' = empty"
+            - "find alphaforge -name '*.py' = empty"
+            - "find v7 -name '*.py' = empty"
+          confidence: high
+    gaps_and_risks:
+      summary: "Critical gaps blocking implementation and overall readiness assessment."
+      items:
+        - id: X001
+          label: BLOCKER
+          text: "CRITICAL: Pytest discovers zero tests in lib/tests/. Test infrastructure is broken — cannot validate lib/ changes. Fix: add __init__.py or conftest.py."
+          evidence_refs:
+            - "python -m pytest lib/tests/ -v = 'No tests collected'"
+            - "ls lib/tests/__init__.py = missing"
+          confidence: high
+        - id: X002
+          label: BLOCKER
+          text: "CRITICAL: Integration tests all fail with ModuleNotFoundError. Contract validation, schema parity, and boundary enforcement cannot run."
+          evidence_refs:
+            - "python -m pytest integration/tests/ = 8 failures"
+          confidence: high
+        - id: X003
+          label: BLOCKER
+          text: "HIGH: Simulation, AlphaForge, and V7 have zero implementation code (0 Python files each). Only docs and contracts exist. The entire cross-domain pipeline (simulation → alphaforge → v7) is unimplemented."
+          evidence_refs:
+            - "simulation: 0 py files, alphaforge: 0 py files, v7: 0 py files"
+          confidence: high
+        - id: X004
+          label: RISK
+          text: "MEDIUM: runtime/ (138 files) and interface/ (20k+ files) are migrated from V4 but not yet integrated with the new contract system. They may have silent architectural drift."
+          evidence_refs:
+            - "runtime/ exists with full implementation"
+            - "interface/ exists with full implementation"
+            - "no adapter code connects them to simulation/alphaforge/v7 contracts"
+          confidence: medium
+        - id: X005
+          label: GAP
+          text: "LOW: SimulationProfile contract has no fixture. Cannot validate profile schema roundtrip."
+          evidence_refs:
+            - "contracts/registry.json"
+          confidence: high
+        - id: X006
+          label: GAP
+          text: "No .github/workflows/ directory. CI pipeline exists only as local Makefile targets — no automated CI enforcement on push/PR."
+          evidence_refs:
+            - "ls .github/workflows/ = directory does not exist"
+          confidence: high
+    final_status:
+      status: partial
+      safe_to_continue: conditional
+      requires_hir: true
+      reason:
+        - "Pytest test collection is broken — cannot validate lib/ changes"
+        - "Integration tests fail completely — contract validation is non-functional"
+        - "simulation/alphaforge/v7 have zero implementation — only docs and contracts"
+        - "runtime/ and interface/ exist from V4 but are not contract-integrated"
+        - "No CI pipeline (no GitHub Actions workflows)"
+      self_assessment:
+        required_sections_complete: "yes"
+        evidence_coverage: high
+        unresolved_gaps:
+          - "Pytest discovery broken in lib/tests/ (no __init__.py)"
+          - "Integration tests fail (ModuleNotFoundError for integration package)"
+          - "SimulationProfile fixture missing"
+          - "No CI automation"
+        confidence_in_own_completeness: high
+  compiler_expectations:
+    source_path: "docs/architecture/v7_lock_readiness_audit.accp.yaml"
+    compiled_json: null
+    ir_json: null
+    gate_verdict_json: null
+    route_signal_json: null
+
+---
+# ===== SCORECARD =====
+# Section: Executive Summary
+vision_clarity: 7
+root_layout_consistency: 6
+domain_ownership: 6
+lib_readiness: 5
+market_data_readiness: 6
+contracts_readiness: 5
+simulation_readiness: 3
+alphaforge_readiness: 2
+v7_pipeline_readiness: 2
+runtime_readiness: 7
+interface_readiness: 6
+integration_readiness: 2
+data_reproducibility: 4
+phase_plan_readiness: 7
+ci_gate_readiness: 3
+ai_agent_readiness: 6
+production_path_readiness: 2
+overall_lock_readiness: 4
+
+# ===== LOCK MATRIX =====
+# Subsystem          Score  Lock Status           Can Code?  Main Blocker
+# lib/               5/10   DO_NOT_LOCK           No         Tests broken (pytest collects 0)
+# simulation/        3/10   DO_NOT_LOCK           No         Zero implementation; S1 not started
+# alphaforge/        2/10   DO_NOT_LOCK           No         Depends on simulation; no src/
+# v7/                2/10   DO_NOT_LOCK           No         Depends on alphaforge; no src/
+# runtime/           7/10   CONDITIONAL_LOCK      Yes*       V4 migration — needs contract integration
+# interface/         6/10   CONDITIONAL_LOCK      Yes*       V4 migration — needs runtime API contract
+# contracts/         5/10   DO_NOT_LOCK           No         Tests broken; SimulationProfile missing fixture
+# integration/       2/10   DO_NOT_LOCK           No         All tests fail (ModuleNotFoundError)
+# data/              4/10   CONDITIONAL_LOCK      Yes        Exists but no artifact manifests/lineage
+# docs/architecture/ 6/10   CONDITIONAL_LOCK      Yes        2 of 7 planned docs exist
+
+# ===== TOP 5 BLOCKERS =====
+# 1. Pytest discovers zero tests in lib/tests/ — Severity: CRITICAL
+# 2. Integration tests all fail (8/8) — Severity: CRITICAL
+# 3. simulation/alphaforge/v7 have 0 implementation — Severity: HIGH
+# 4. No CI automation (.github/workflows/ missing) — Severity: MEDIUM
+# 5. runtime/ and interface/ not contract-integrated — Severity: MEDIUM
+
+# ===== P0.6 ROOT REALITY LOCK PLAN =====
+# Goal: Fix test infrastructure and validate contract system before S1 implementation
+# Scope:
+#   1. Fix pytest discovery — add __init__.py or conftest.py to lib/tests/
+#   2. Fix integration package resolution — ensure integration/ is on sys.path
+#   3. Add SimulationProfile fixture
+#   4. Verify all existing lib/ tests actually pass and count is recorded
+#   5. Verify all integration tests pass
+# Definition of Done:
+#   - python -m pytest lib/tests/ -q returns >0 collected and all pass
+#   - python -m pytest integration/tests/ -q returns 0 failures
+#   - make check-contracts passes
+#   - make check-boundaries passes
+#   - make test-all passes
+#
+# ===== NEXT PHASE ORDER (after P0.6 lock) =====
+# 1. Simulation S1 — Core Comparative Engine Standardization (LONG_NOW/SHORT_NOW/NO_TRADE)
+# 2. Simulation S2 — Profiles, Costs, Exits & Horizons
+# 3. Simulation S3 — Side-effect-free adapters & runtime hosting
+# 4. AlphaForge P1 — Contracts & Alpha Data Contract
+# 5. AlphaForge P2 — R-Label Engine (depends on simulation)
+# 6. AlphaForge P3 — Multi-Timeframe Feature Engine
+# ... onward through P9

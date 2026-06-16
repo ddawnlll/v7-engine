@@ -1,0 +1,3916 @@
+accp_onefile_master:
+  template_id: ACCP_V2_STRICT_YAML_ONEFILE_MASTER
+  template_version: 2.0.1
+  accp_version: 2.0.0
+  source_format: ACCP-YAML
+  status: draft
+  generated_at: '2026-06-10T18:08:26.117427+00:00'
+  canonical_file: accp_v2_0_package/onefile/accp_v2_0_strict_yaml_onefile_master.accp.yaml
+  purpose:
+    summary: Strict YAML-only master template for generating one or more ACCP v2.0 reports from all 26 report types.
+    examples_remain_examples: true
+    production_generation_uses_this_file: true
+  authority_boundary:
+    reports_are_evidence_only: true
+    reports_do_not_authorize_execution: true
+    route_signals_are_advisory: true
+    compiled_json_is_runtime_input: true
+    raw_yaml_is_not_runtime_authority: true
+    rendered_markdown_is_human_preview_only: true
+  generator_input_schema:
+    target_report_types:
+    - '{{one_or_more_of_26_report_types}}'
+    requested_output_mode: '{{single_report_multi_report_chain_selector_only}}'
+    plan_id: '{{plan_id}}'
+    workspace_id: '{{workspace_id_or_none}}'
+    task_summary: '{{task_summary}}'
+    repo_context:
+      repo_root: '{{repo_root_or_unknown}}'
+      git_commit: '{{git_commit_or_unknown}}'
+      git_branch: '{{git_branch_or_unknown}}'
+      dirty_state: '{{clean_dirty_unknown}}'
+    evidence_context:
+      inspected_files:
+      - '{{path_or_none}}'
+      changed_files:
+      - '{{path_or_none}}'
+      commands_run:
+      - command: '{{command_or_none}}'
+        cwd: '{{cwd_or_unknown}}'
+        exit_code: '{{integer_or_unknown}}'
+        output_excerpt: '{{excerpt_or_unknown}}'
+      prior_reports:
+      - '{{report_ref_or_none}}'
+      artifacts:
+      - '{{path_or_none}}'
+  output_modes:
+    single_report:
+      description: Generate exactly one ACCP report source YAML.
+      target_report_types_count: 1
+    multi_report_chain:
+      description: Generate multiple independent ACCP report source YAML documents in one chain.
+      target_report_types_count: '>=2'
+      chain_templates:
+        bugfix_full_chain:
+        - BSR
+        - BRR
+        - RCA
+        - FPR
+        - FVR
+        - PRR
+        implementation_minimum_chain:
+        - IPR
+        - TVR
+        - PRR
+        feature_design_chain:
+        - FER
+        - FDR
+        - FCR
+        feature_implementation_chain:
+        - FIR
+        - FGR
+        - PRR
+        blocker_chain:
+        - HIR
+        - DCR
+        evidence_bridge_chain:
+        - ECR
+        - TVR
+        - PRR
+        execution_trace_chain:
+        - EXR
+        - MER
+        - IPR
+        - TVR
+        - PRR
+    selector_only:
+      description: Select report type(s), do not generate final reports.
+      selector_output_schema:
+        selected_report_types:
+        - '{{REPORT_TYPE}}'
+        rejected_report_types:
+        - report_type: '{{REPORT_TYPE}}'
+          reason: '{{reason}}'
+        confidence: '{{high_medium_low}}'
+        next_step: '{{generate_selected_report_ask_for_context_handoff}}'
+  strict_generation_rules:
+    forbid_markdown_fences: true
+    forbid_markdown_headings: true
+    forbid_prose_before_or_after_yaml: true
+    forbid_phantom_evidence: true
+    forbid_invented_command_results: true
+    forbid_invented_hashes: true
+    require_unknown_or_not_applicable_instead_of_blank: true
+    require_command_evidence_for_validation_claims: true
+    require_diff_integrity_for_mutation: true
+    require_rollback_plan_for_mutation: true
+    require_hir_for_critical_blockers: true
+  report_type_registry:
+    RIR:
+      type: RIR
+      family: core
+      name: Repo Inspection Report
+      support_level: schema_lite
+      inspection_mode: read_only
+      selection_signals: &id001
+      - repo_discovery
+      - architecture_inventory
+      - baseline_inspection
+      required_sections:
+      - repo_tree
+      - domain_map
+      - authority_docs
+      - contracts_and_schemas
+      - gaps_and_risks
+      - final_status
+    PIR:
+      type: PIR
+      family: core
+      name: Plan Inspection Report
+      support_level: schema_lite
+      inspection_mode: read_only
+      selection_signals: &id002
+      - plan_review
+      - planspec_review
+      - readiness_assessment
+      required_sections:
+      - plan_summary
+      - scope_review
+      - contract_review
+      - workspace_review
+      - decisions
+      - final_status
+    EXR:
+      type: EXR
+      family: core
+      name: Execution Run Report
+      support_level: schema_strict
+      inspection_mode: execution_observation
+      selection_signals: &id025
+      - planspec_execution
+      - execution_run
+      - execution_kernel_trace
+      - wave_orchestration
+      - workspace_attempts
+      - gate_transitions
+      required_sections:
+      - execution_target
+      - admission_state
+      - plan_lock_state
+      - wave_execution_summary
+      - workspace_attempts
+      - command_grants
+      - mutation_events
+      - gate_transitions
+      - emitted_reports
+      - completion_state
+      - final_status
+    MER:
+      type: MER
+      family: core
+      name: Manual Execution Report
+      support_level: schema_strict
+      inspection_mode: manual_execution_trace
+      selection_signals: &id026
+      - manual_execution
+      - planspec_manual_run
+      - code_write_test_next_workspace
+      - continuous_workspace_execution
+      - execute_until_terminal_state
+      required_sections:
+      - execution_target
+      - manual_executor_contract
+      - admission_and_lock_state
+      - current_workspace_selection
+      - workspace_execution_loop
+      - code_mutation_summary
+      - command_results
+      - validation_and_gate_results
+      - emitted_reports
+      - next_workspace_decision
+      - terminal_state
+      - final_status
+    IPR:
+      type: IPR
+      family: core
+      name: Implementation Patch Report
+      support_level: schema_strict
+      inspection_mode: mutation_or_patch_proposal
+      selection_signals: &id003
+      - implementation_patch
+      - changed_files
+      - patch_proposal
+      required_sections:
+      - scope_declaration
+      - implementation_summary
+      - changes
+      - diff_integrity
+      - validation_handoff
+      - rollback_plan
+      - final_status
+    TVR:
+      type: TVR
+      family: core
+      name: Test Validation Report
+      support_level: schema_strict
+      inspection_mode: validation_only
+      selection_signals: &id004
+      - validation_commands
+      - test_results
+      - validation_not_run
+      required_sections:
+      - validation_summary
+      - command_results
+      - validation_not_run
+      - regressions
+      - final_status
+    HIR:
+      type: HIR
+      family: core
+      name: Handoff / Intervention Report
+      support_level: schema_strict
+      inspection_mode: pause_or_handoff
+      selection_signals: &id005
+      - blocked
+      - unsafe
+      - authority_ambiguous
+      - human_intervention_required
+      required_sections:
+      - blocker_summary
+      - state_at_pause
+      - rollback_plan
+      - options
+      - next_required_input
+      - final_status
+    RAR:
+      type: RAR
+      family: core
+      name: Regression Analysis Report
+      support_level: schema_lite
+      inspection_mode: validation_or_analysis
+      selection_signals: &id006
+      - regression
+      - newly_broken_test
+      - validation_regression_analysis
+      required_sections:
+      - regression_summary
+      - evidence
+      - candidate_causes
+      - blast_radius
+      - minimal_fix_scope
+      - decisions
+      - final_status
+    PRR:
+      type: PRR
+      family: core
+      name: Promotion Readiness Report
+      support_level: schema_strict
+      inspection_mode: promotion_review
+      selection_signals: &id007
+      - promotion_readiness
+      - workspace_promotion
+      - phase_promotion
+      required_sections:
+      - promotion_target
+      - gate_checks
+      - open_risks
+      - signoff_requirements
+      - decisions
+      - final_status
+    CAR:
+      type: CAR
+      family: core
+      name: Correction / Amendment Report
+      support_level: schema_strict
+      inspection_mode: correction
+      selection_signals: &id008
+      - correction
+      - amendment
+      - supersede_prior_report
+      required_sections:
+      - corrections
+      - affected_downstream_reports
+      - final_status
+    BSR:
+      type: BSR
+      family: bugfix
+      name: Bug Search Report
+      support_level: schema_strict
+      inspection_mode: read_only
+      selection_signals: &id009
+      - bug_search
+      - symptom_search
+      - suspect_area
+      required_sections:
+      - bug_search_summary
+      - symptoms
+      - search_scope
+      - suspect_areas
+      - evidence
+      - missing_evidence
+      - decisions
+      - final_status
+    BRR:
+      type: BRR
+      family: bugfix
+      name: Bug Reproduction Report
+      support_level: schema_lite
+      inspection_mode: validation_only
+      selection_signals: &id010
+      - bug_reproduction
+      - repro_steps
+      - observed_vs_expected
+      required_sections:
+      - reproduction_target
+      - reproduction_steps
+      - command_results
+      - observed_vs_expected
+      - environment
+      - final_status
+    RCA:
+      type: RCA
+      family: bugfix
+      name: Root Cause Analysis Report
+      support_level: schema_lite
+      inspection_mode: analysis
+      selection_signals: &id011
+      - root_cause
+      - cause_chain
+      - minimal_fix_boundary
+      required_sections:
+      - root_cause_summary
+      - cause_chain
+      - evidence
+      - rejected_hypotheses
+      - minimal_fix_boundary
+      - final_status
+    FPR:
+      type: FPR
+      family: bugfix
+      name: Fix Patch Report
+      support_level: schema_strict
+      inspection_mode: mutation_or_patch_proposal
+      selection_signals: &id012
+      - fix_patch
+      - bug_fix_changes
+      required_sections:
+      - scope_declaration
+      - fix_summary
+      - changes
+      - diff_integrity
+      - bug_linkage
+      - validation_handoff
+      - rollback_plan
+      - final_status
+    FVR:
+      type: FVR
+      family: bugfix
+      name: Fix Validation Report
+      support_level: schema_lite
+      inspection_mode: validation_only
+      selection_signals: &id013
+      - fix_validation
+      - repro_before_after
+      required_sections:
+      - fix_validation_summary
+      - reproduction_before_after
+      - command_results
+      - regression_checks
+      - final_status
+    FER:
+      type: FER
+      family: feature
+      name: Feature Exploration Report
+      support_level: template_available
+      inspection_mode: read_only
+      selection_signals: &id014
+      - feature_exploration
+      - repo_fit
+      - feature_risk
+      required_sections:
+      - feature_request_summary
+      - existing_surfaces
+      - user_value
+      - risks
+      - open_questions
+      - recommendation
+      - final_status
+    FDR:
+      type: FDR
+      family: feature
+      name: Feature Design Report
+      support_level: template_available
+      inspection_mode: design
+      selection_signals: &id015
+      - feature_design
+      - architecture_design
+      required_sections:
+      - design_summary
+      - architecture
+      - contracts
+      - files_and_ownership
+      - routes_events_types
+      - validation_strategy
+      - final_status
+    FCR:
+      type: FCR
+      family: feature
+      name: Feature Contract Report
+      support_level: template_available
+      inspection_mode: contract_freeze
+      selection_signals: &id016
+      - feature_contract_freeze
+      - types_routes_events_ownership
+      required_sections:
+      - contract_freeze_summary
+      - frozen_types
+      - frozen_routes
+      - frozen_events
+      - ownership_manifest
+      - amendment_policy
+      - final_status
+    FIR:
+      type: FIR
+      family: feature
+      name: Feature Implementation Report
+      support_level: template_available
+      inspection_mode: mutation_or_patch_proposal
+      selection_signals: &id017
+      - feature_implementation
+      required_sections:
+      - scope_declaration
+      - feature_implementation_summary
+      - changes
+      - contract_adherence
+      - diff_integrity
+      - validation_handoff
+      - rollback_plan
+      - final_status
+    FGR:
+      type: FGR
+      family: feature
+      name: Feature Gate Report
+      support_level: template_available
+      inspection_mode: validation_only
+      selection_signals: &id018
+      - feature_gate
+      - rollout_gate
+      required_sections:
+      - feature_gate_target
+      - acceptance_criteria_checks
+      - command_results
+      - rollout_or_hold_decision
+      - open_risks
+      - final_status
+    WBR:
+      type: WBR
+      family: writing
+      name: Writing Brief Report
+      support_level: template_available
+      inspection_mode: brief
+      selection_signals: &id019
+      - writing_brief
+      required_sections:
+      - writing_brief
+      - audience
+      - constraints
+      - source_material
+      - success_criteria
+      - final_status
+    WDR:
+      type: WDR
+      family: writing
+      name: Writing Draft Report
+      support_level: template_available
+      inspection_mode: draft
+      selection_signals: &id020
+      - writing_draft
+      required_sections:
+      - draft_summary
+      - draft_content_or_pointer
+      - source_usage
+      - assumptions
+      - unresolved_items
+      - final_status
+    WER:
+      type: WER
+      family: writing
+      name: Writing Edit Report
+      support_level: template_available
+      inspection_mode: edit
+      selection_signals: &id021
+      - writing_edit
+      required_sections:
+      - edit_summary
+      - changed_sections
+      - rationale
+      - factuality_risks
+      - style_constraints
+      - final_status
+    WQR:
+      type: WQR
+      family: writing
+      name: Writing Quality Review Report
+      support_level: template_available
+      inspection_mode: review
+      selection_signals: &id022
+      - writing_quality_review
+      required_sections:
+      - quality_review_target
+      - structure_review
+      - factuality_review
+      - completeness_review
+      - risks
+      - decisions
+      - final_status
+    ECR:
+      type: ECR
+      family: coordination
+      name: Evidence Capsule Report
+      support_level: schema_lite
+      inspection_mode: evidence_bundle
+      selection_signals: &id023
+      - evidence_capsule
+      - gate_evidence
+      - bridge_evidence
+      required_sections:
+      - evidence_capsule_summary
+      - evidence_items
+      - hashes
+      - command_refs
+      - report_refs
+      - usable_by
+      - limitations
+      - final_status
+    DCR:
+      type: DCR
+      family: coordination
+      name: Decision / Conflict Report
+      support_level: schema_lite
+      inspection_mode: decision_record
+      selection_signals: &id024
+      - decision
+      - conflict
+      - tradeoff
+      - authority_issue
+      required_sections:
+      - decision_context
+      - conflict_summary
+      - options
+      - authority
+      - decision
+      - downstream_impact
+      - final_status
+  selection_rules:
+    RIR: *id001
+    PIR: *id002
+    EXR: *id025
+    MER: *id026
+    IPR: *id003
+    TVR: *id004
+    HIR: *id005
+    RAR: *id006
+    PRR: *id007
+    CAR: *id008
+    BSR: *id009
+    BRR: *id010
+    RCA: *id011
+    FPR: *id012
+    FVR: *id013
+    FER: *id014
+    FDR: *id015
+    FCR: *id016
+    FIR: *id017
+    FGR: *id018
+    WBR: *id019
+    WDR: *id020
+    WER: *id021
+    WQR: *id022
+    ECR: *id023
+    DCR: *id024
+  report_templates:
+    RIR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: RIR
+        report_family: core
+        report_name: Repo Inspection Report
+        support_level: schema_lite
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: read_only
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          repo_tree:
+            summary: '{{fill_repo_tree_for_RIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          domain_map:
+            summary: '{{fill_domain_map_for_RIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          authority_docs:
+            summary: '{{fill_authority_docs_for_RIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          contracts_and_schemas:
+            summary: '{{fill_contracts_and_schemas_for_RIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          gaps_and_risks:
+            summary: '{{fill_gaps_and_risks_for_RIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    PIR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: PIR
+        report_family: core
+        report_name: Plan Inspection Report
+        support_level: schema_lite
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: read_only
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          plan_summary:
+            summary: '{{fill_plan_summary_for_PIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          scope_review:
+            summary: '{{fill_scope_review_for_PIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          contract_review:
+            summary: '{{fill_contract_review_for_PIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          workspace_review:
+            summary: '{{fill_workspace_review_for_PIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          decisions:
+            summary: '{{fill_decisions_for_PIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    EXR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: EXR
+        report_family: core
+        report_name: Execution Run Report
+        support_level: schema_strict
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_multi_workspace_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: execution_observation
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          reports_do_not_authorize_execution: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+          execution_authority_owner: ExecutionKernel
+          exr_is_observational_trace_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator_execution_kernel}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref_or_planspec_ref_or_planlock_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          execution_target:
+            summary: '{{fill_execution_target_for_EXR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          admission_state:
+            summary: '{{fill_admission_state_for_EXR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          plan_lock_state:
+            summary: '{{fill_plan_lock_state_for_EXR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          wave_execution_summary:
+            summary: '{{fill_wave_execution_summary_for_EXR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          workspace_attempts:
+            summary: '{{fill_workspace_attempts_for_EXR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          command_grants:
+            summary: '{{fill_command_grants_for_EXR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          mutation_events:
+            summary: '{{fill_mutation_events_for_EXR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          gate_transitions:
+            summary: '{{fill_gate_transitions_for_EXR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          emitted_reports:
+            summary: '{{fill_emitted_reports_for_EXR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          completion_state:
+            summary: '{{fill_completion_state_for_EXR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    MER:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: MER
+        report_family: core
+        report_name: Manual Execution Report
+        support_level: schema_strict
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_multi_workspace_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: manual_execution_trace
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          reports_do_not_authorize_execution: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+          execution_authority_owner: ExecutionKernel
+          mer_is_manual_trace_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator_manual_executor}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event_or_human_operator}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref_or_planspec_ref_or_planlock_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          execution_target:
+            summary: '{{fill_execution_target_for_MER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          manual_executor_contract:
+            summary: '{{fill_manual_executor_contract_for_MER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          admission_and_lock_state:
+            summary: '{{fill_admission_and_lock_state_for_MER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          current_workspace_selection:
+            summary: '{{fill_current_workspace_selection_for_MER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          workspace_execution_loop:
+            summary: '{{fill_workspace_execution_loop_for_MER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          code_mutation_summary:
+            summary: '{{fill_code_mutation_summary_for_MER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          command_results:
+            items:
+            - id: V001
+              command: '{{command_or_not_run}}'
+              cwd: '{{cwd_or_unknown}}'
+              started_at: '{{iso_timestamp_or_unknown}}'
+              duration_seconds: '{{number_or_unknown}}'
+              exit_code: '{{integer_or_unknown}}'
+              output_excerpt: '{{excerpt_or_unknown}}'
+              output_truncated: '{{true_false}}'
+              validation_satisfied: '{{yes_no_partial}}'
+              false_positive_guards:
+                watch_mode: false
+                no_tests_found: false
+                command_not_found: false
+                timeout: false
+              evidence_refs:
+              - '{{artifact_or_log_path}}'
+              confidence: '{{high_medium_low}}'
+          validation_and_gate_results:
+            summary: '{{fill_validation_and_gate_results_for_MER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          emitted_reports:
+            summary: '{{fill_emitted_reports_for_MER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          next_workspace_decision:
+            summary: '{{fill_next_workspace_decision_for_MER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          terminal_state:
+            status: '{{completed_blocked_hard_stopped_in_progress}}'
+            reason:
+            - '{{terminal_reason_or_continue_reason}}'
+            next_action: '{{none_next_workspace_hir_required_fix_required_final_validation}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    IPR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: IPR
+        report_family: core
+        report_name: Implementation Patch Report
+        support_level: schema_strict
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: mutation_or_patch_proposal
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          scope_declaration:
+            summary: '{{fill_scope_declaration_for_IPR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          implementation_summary:
+            summary: '{{fill_implementation_summary_for_IPR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          changes:
+            summary: '{{fill_changes_for_IPR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          diff_integrity:
+            base_git_commit: '{{sha_or_unknown}}'
+            working_tree_clean_before: '{{yes_no_unknown}}'
+            working_tree_clean_after: '{{yes_no_unknown}}'
+            files_changed_count: '{{number}}'
+            total_added_lines: '{{number_or_unknown}}'
+            total_removed_lines: '{{number_or_unknown}}'
+            diff_hash: '{{sha256_or_unknown}}'
+            changed_files:
+            - id: F001
+              path: '{{path}}'
+              change_type: '{{created_modified_deleted_renamed}}'
+              before_hash: '{{sha256_or_unknown}}'
+              after_hash: '{{sha256_or_unknown}}'
+              confidence: '{{high_medium_low}}'
+          validation_handoff:
+            summary: '{{fill_validation_handoff_for_IPR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          rollback_plan:
+            rollback_required: '{{true_false}}'
+            no_repo_mutation_performed: '{{true_false}}'
+            steps:
+            - id: RB001
+              action: '{{rollback_action}}'
+              target_files:
+              - '{{path_or_none}}'
+              command_or_manual_step: '{{step}}'
+              risk: '{{low_medium_high}}'
+              validation_after_rollback:
+              - '{{command_or_manual_check}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    TVR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: TVR
+        report_family: core
+        report_name: Test Validation Report
+        support_level: schema_strict
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: validation_only
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          validation_summary:
+            summary: '{{fill_validation_summary_for_TVR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          command_results:
+            items:
+            - id: V001
+              command: '{{command_or_not_run}}'
+              cwd: '{{cwd_or_unknown}}'
+              started_at: '{{iso_timestamp_or_unknown}}'
+              duration_seconds: '{{number_or_unknown}}'
+              exit_code: '{{integer_or_unknown}}'
+              output_excerpt: '{{excerpt_or_unknown}}'
+              output_truncated: '{{true_false}}'
+              validation_satisfied: '{{yes_no_partial}}'
+              false_positive_guards:
+                watch_mode: false
+                no_tests_found: false
+                command_not_found: false
+                timeout: false
+              evidence_refs:
+              - '{{artifact_or_log_path}}'
+              confidence: '{{high_medium_low}}'
+          validation_not_run:
+            summary: '{{fill_validation_not_run_for_TVR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          regressions:
+            summary: '{{fill_regressions_for_TVR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    HIR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: HIR
+        report_family: core
+        report_name: Handoff / Intervention Report
+        support_level: schema_strict
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: pause_or_handoff
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          blocker_summary:
+            summary: '{{fill_blocker_summary_for_HIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          state_at_pause:
+            summary: '{{fill_state_at_pause_for_HIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          rollback_plan:
+            rollback_required: '{{true_false}}'
+            no_repo_mutation_performed: '{{true_false}}'
+            steps:
+            - id: RB001
+              action: '{{rollback_action}}'
+              target_files:
+              - '{{path_or_none}}'
+              command_or_manual_step: '{{step}}'
+              risk: '{{low_medium_high}}'
+              validation_after_rollback:
+              - '{{command_or_manual_check}}'
+          options:
+            summary: '{{fill_options_for_HIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          next_required_input:
+            summary: '{{fill_next_required_input_for_HIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    RAR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: RAR
+        report_family: core
+        report_name: Regression Analysis Report
+        support_level: schema_lite
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: validation_or_analysis
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          regression_summary:
+            summary: '{{fill_regression_summary_for_RAR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          evidence:
+            summary: '{{fill_evidence_for_RAR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          candidate_causes:
+            summary: '{{fill_candidate_causes_for_RAR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          blast_radius:
+            summary: '{{fill_blast_radius_for_RAR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          minimal_fix_scope:
+            summary: '{{fill_minimal_fix_scope_for_RAR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          decisions:
+            summary: '{{fill_decisions_for_RAR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    PRR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: PRR
+        report_family: core
+        report_name: Promotion Readiness Report
+        support_level: schema_strict
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: promotion_review
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          promotion_target:
+            summary: '{{fill_promotion_target_for_PRR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          gate_checks:
+            summary: '{{fill_gate_checks_for_PRR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          open_risks:
+            summary: '{{fill_open_risks_for_PRR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          signoff_requirements:
+            summary: '{{fill_signoff_requirements_for_PRR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          decisions:
+            summary: '{{fill_decisions_for_PRR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    CAR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: CAR
+        report_family: core
+        report_name: Correction / Amendment Report
+        support_level: schema_strict
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: correction
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          corrections:
+            summary: '{{fill_corrections_for_CAR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          affected_downstream_reports:
+            summary: '{{fill_affected_downstream_reports_for_CAR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    BSR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: BSR
+        report_family: bugfix
+        report_name: Bug Search Report
+        support_level: schema_strict
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: read_only
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          bug_search_summary:
+            summary: '{{fill_bug_search_summary_for_BSR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          symptoms:
+            summary: '{{fill_symptoms_for_BSR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          search_scope:
+            summary: '{{fill_search_scope_for_BSR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          suspect_areas:
+            summary: '{{fill_suspect_areas_for_BSR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          evidence:
+            summary: '{{fill_evidence_for_BSR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          missing_evidence:
+            summary: '{{fill_missing_evidence_for_BSR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          decisions:
+            summary: '{{fill_decisions_for_BSR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    BRR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: BRR
+        report_family: bugfix
+        report_name: Bug Reproduction Report
+        support_level: schema_lite
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: validation_only
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          reproduction_target:
+            summary: '{{fill_reproduction_target_for_BRR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          reproduction_steps:
+            summary: '{{fill_reproduction_steps_for_BRR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          command_results:
+            items:
+            - id: V001
+              command: '{{command_or_not_run}}'
+              cwd: '{{cwd_or_unknown}}'
+              started_at: '{{iso_timestamp_or_unknown}}'
+              duration_seconds: '{{number_or_unknown}}'
+              exit_code: '{{integer_or_unknown}}'
+              output_excerpt: '{{excerpt_or_unknown}}'
+              output_truncated: '{{true_false}}'
+              validation_satisfied: '{{yes_no_partial}}'
+              false_positive_guards:
+                watch_mode: false
+                no_tests_found: false
+                command_not_found: false
+                timeout: false
+              evidence_refs:
+              - '{{artifact_or_log_path}}'
+              confidence: '{{high_medium_low}}'
+          observed_vs_expected:
+            summary: '{{fill_observed_vs_expected_for_BRR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          environment:
+            summary: '{{fill_environment_for_BRR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    RCA:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: RCA
+        report_family: bugfix
+        report_name: Root Cause Analysis Report
+        support_level: schema_lite
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: analysis
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          root_cause_summary:
+            summary: '{{fill_root_cause_summary_for_RCA}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          cause_chain:
+            summary: '{{fill_cause_chain_for_RCA}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          evidence:
+            summary: '{{fill_evidence_for_RCA}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          rejected_hypotheses:
+            summary: '{{fill_rejected_hypotheses_for_RCA}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          minimal_fix_boundary:
+            summary: '{{fill_minimal_fix_boundary_for_RCA}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    FPR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: FPR
+        report_family: bugfix
+        report_name: Fix Patch Report
+        support_level: schema_strict
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: mutation_or_patch_proposal
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          scope_declaration:
+            summary: '{{fill_scope_declaration_for_FPR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          fix_summary:
+            summary: '{{fill_fix_summary_for_FPR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          changes:
+            summary: '{{fill_changes_for_FPR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          diff_integrity:
+            base_git_commit: '{{sha_or_unknown}}'
+            working_tree_clean_before: '{{yes_no_unknown}}'
+            working_tree_clean_after: '{{yes_no_unknown}}'
+            files_changed_count: '{{number}}'
+            total_added_lines: '{{number_or_unknown}}'
+            total_removed_lines: '{{number_or_unknown}}'
+            diff_hash: '{{sha256_or_unknown}}'
+            changed_files:
+            - id: F001
+              path: '{{path}}'
+              change_type: '{{created_modified_deleted_renamed}}'
+              before_hash: '{{sha256_or_unknown}}'
+              after_hash: '{{sha256_or_unknown}}'
+              confidence: '{{high_medium_low}}'
+          bug_linkage:
+            summary: '{{fill_bug_linkage_for_FPR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          validation_handoff:
+            summary: '{{fill_validation_handoff_for_FPR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          rollback_plan:
+            rollback_required: '{{true_false}}'
+            no_repo_mutation_performed: '{{true_false}}'
+            steps:
+            - id: RB001
+              action: '{{rollback_action}}'
+              target_files:
+              - '{{path_or_none}}'
+              command_or_manual_step: '{{step}}'
+              risk: '{{low_medium_high}}'
+              validation_after_rollback:
+              - '{{command_or_manual_check}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    FVR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: FVR
+        report_family: bugfix
+        report_name: Fix Validation Report
+        support_level: schema_lite
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: validation_only
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          fix_validation_summary:
+            summary: '{{fill_fix_validation_summary_for_FVR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          reproduction_before_after:
+            summary: '{{fill_reproduction_before_after_for_FVR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          command_results:
+            items:
+            - id: V001
+              command: '{{command_or_not_run}}'
+              cwd: '{{cwd_or_unknown}}'
+              started_at: '{{iso_timestamp_or_unknown}}'
+              duration_seconds: '{{number_or_unknown}}'
+              exit_code: '{{integer_or_unknown}}'
+              output_excerpt: '{{excerpt_or_unknown}}'
+              output_truncated: '{{true_false}}'
+              validation_satisfied: '{{yes_no_partial}}'
+              false_positive_guards:
+                watch_mode: false
+                no_tests_found: false
+                command_not_found: false
+                timeout: false
+              evidence_refs:
+              - '{{artifact_or_log_path}}'
+              confidence: '{{high_medium_low}}'
+          regression_checks:
+            summary: '{{fill_regression_checks_for_FVR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    FER:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: FER
+        report_family: feature
+        report_name: Feature Exploration Report
+        support_level: template_available
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: read_only
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          feature_request_summary:
+            summary: '{{fill_feature_request_summary_for_FER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          existing_surfaces:
+            summary: '{{fill_existing_surfaces_for_FER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          user_value:
+            summary: '{{fill_user_value_for_FER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          risks:
+            summary: '{{fill_risks_for_FER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          open_questions:
+            summary: '{{fill_open_questions_for_FER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          recommendation:
+            summary: '{{fill_recommendation_for_FER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    FDR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: FDR
+        report_family: feature
+        report_name: Feature Design Report
+        support_level: template_available
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: design
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          design_summary:
+            summary: '{{fill_design_summary_for_FDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          architecture:
+            summary: '{{fill_architecture_for_FDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          contracts:
+            summary: '{{fill_contracts_for_FDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          files_and_ownership:
+            summary: '{{fill_files_and_ownership_for_FDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          routes_events_types:
+            summary: '{{fill_routes_events_types_for_FDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          validation_strategy:
+            summary: '{{fill_validation_strategy_for_FDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    FCR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: FCR
+        report_family: feature
+        report_name: Feature Contract Report
+        support_level: template_available
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: contract_freeze
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          contract_freeze_summary:
+            summary: '{{fill_contract_freeze_summary_for_FCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          frozen_types:
+            summary: '{{fill_frozen_types_for_FCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          frozen_routes:
+            summary: '{{fill_frozen_routes_for_FCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          frozen_events:
+            summary: '{{fill_frozen_events_for_FCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          ownership_manifest:
+            summary: '{{fill_ownership_manifest_for_FCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          amendment_policy:
+            summary: '{{fill_amendment_policy_for_FCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    FIR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: FIR
+        report_family: feature
+        report_name: Feature Implementation Report
+        support_level: template_available
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: mutation_or_patch_proposal
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          scope_declaration:
+            summary: '{{fill_scope_declaration_for_FIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          feature_implementation_summary:
+            summary: '{{fill_feature_implementation_summary_for_FIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          changes:
+            summary: '{{fill_changes_for_FIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          contract_adherence:
+            summary: '{{fill_contract_adherence_for_FIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          diff_integrity:
+            base_git_commit: '{{sha_or_unknown}}'
+            working_tree_clean_before: '{{yes_no_unknown}}'
+            working_tree_clean_after: '{{yes_no_unknown}}'
+            files_changed_count: '{{number}}'
+            total_added_lines: '{{number_or_unknown}}'
+            total_removed_lines: '{{number_or_unknown}}'
+            diff_hash: '{{sha256_or_unknown}}'
+            changed_files:
+            - id: F001
+              path: '{{path}}'
+              change_type: '{{created_modified_deleted_renamed}}'
+              before_hash: '{{sha256_or_unknown}}'
+              after_hash: '{{sha256_or_unknown}}'
+              confidence: '{{high_medium_low}}'
+          validation_handoff:
+            summary: '{{fill_validation_handoff_for_FIR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          rollback_plan:
+            rollback_required: '{{true_false}}'
+            no_repo_mutation_performed: '{{true_false}}'
+            steps:
+            - id: RB001
+              action: '{{rollback_action}}'
+              target_files:
+              - '{{path_or_none}}'
+              command_or_manual_step: '{{step}}'
+              risk: '{{low_medium_high}}'
+              validation_after_rollback:
+              - '{{command_or_manual_check}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    FGR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: FGR
+        report_family: feature
+        report_name: Feature Gate Report
+        support_level: template_available
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: validation_only
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          feature_gate_target:
+            summary: '{{fill_feature_gate_target_for_FGR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          acceptance_criteria_checks:
+            summary: '{{fill_acceptance_criteria_checks_for_FGR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          command_results:
+            items:
+            - id: V001
+              command: '{{command_or_not_run}}'
+              cwd: '{{cwd_or_unknown}}'
+              started_at: '{{iso_timestamp_or_unknown}}'
+              duration_seconds: '{{number_or_unknown}}'
+              exit_code: '{{integer_or_unknown}}'
+              output_excerpt: '{{excerpt_or_unknown}}'
+              output_truncated: '{{true_false}}'
+              validation_satisfied: '{{yes_no_partial}}'
+              false_positive_guards:
+                watch_mode: false
+                no_tests_found: false
+                command_not_found: false
+                timeout: false
+              evidence_refs:
+              - '{{artifact_or_log_path}}'
+              confidence: '{{high_medium_low}}'
+          rollout_or_hold_decision:
+            summary: '{{fill_rollout_or_hold_decision_for_FGR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          open_risks:
+            summary: '{{fill_open_risks_for_FGR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    WBR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: WBR
+        report_family: writing
+        report_name: Writing Brief Report
+        support_level: template_available
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: brief
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          writing_brief:
+            summary: '{{fill_writing_brief_for_WBR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          audience:
+            summary: '{{fill_audience_for_WBR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          constraints:
+            summary: '{{fill_constraints_for_WBR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          source_material:
+            summary: '{{fill_source_material_for_WBR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          success_criteria:
+            summary: '{{fill_success_criteria_for_WBR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    WDR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: WDR
+        report_family: writing
+        report_name: Writing Draft Report
+        support_level: template_available
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: draft
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          draft_summary:
+            summary: '{{fill_draft_summary_for_WDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          draft_content_or_pointer:
+            summary: '{{fill_draft_content_or_pointer_for_WDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          source_usage:
+            summary: '{{fill_source_usage_for_WDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          assumptions:
+            summary: '{{fill_assumptions_for_WDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          unresolved_items:
+            summary: '{{fill_unresolved_items_for_WDR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    WER:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: WER
+        report_family: writing
+        report_name: Writing Edit Report
+        support_level: template_available
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: edit
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          edit_summary:
+            summary: '{{fill_edit_summary_for_WER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          changed_sections:
+            summary: '{{fill_changed_sections_for_WER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          rationale:
+            summary: '{{fill_rationale_for_WER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          factuality_risks:
+            summary: '{{fill_factuality_risks_for_WER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          style_constraints:
+            summary: '{{fill_style_constraints_for_WER}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    WQR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: WQR
+        report_family: writing
+        report_name: Writing Quality Review Report
+        support_level: template_available
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: review
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          quality_review_target:
+            summary: '{{fill_quality_review_target_for_WQR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          structure_review:
+            summary: '{{fill_structure_review_for_WQR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          factuality_review:
+            summary: '{{fill_factuality_review_for_WQR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          completeness_review:
+            summary: '{{fill_completeness_review_for_WQR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          risks:
+            summary: '{{fill_risks_for_WQR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          decisions:
+            summary: '{{fill_decisions_for_WQR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    ECR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: ECR
+        report_family: coordination
+        report_name: Evidence Capsule Report
+        support_level: schema_lite
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: evidence_bundle
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          evidence_capsule_summary:
+            summary: '{{fill_evidence_capsule_summary_for_ECR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          evidence_items:
+            summary: '{{fill_evidence_items_for_ECR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          hashes:
+            summary: '{{fill_hashes_for_ECR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          command_refs:
+            summary: '{{fill_command_refs_for_ECR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          report_refs:
+            summary: '{{fill_report_refs_for_ECR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          usable_by:
+            summary: '{{fill_usable_by_for_ECR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          limitations:
+            summary: '{{fill_limitations_for_ECR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+    DCR:
+      report:
+        accp_version: 2.0.0
+        source_format: ACCP-YAML
+        report_id: '{{report_id}}'
+        report_type: DCR
+        report_family: coordination
+        report_name: Decision / Conflict Report
+        support_level: schema_lite
+        plan_id: '{{plan_id}}'
+        workspace_id: '{{workspace_id_or_none}}'
+        repo_root: '{{repo_root_or_unknown}}'
+        git_commit: '{{git_commit_or_unknown}}'
+        git_branch: '{{git_branch_or_unknown}}'
+        report_generated_at: '{{iso_timestamp}}'
+        report_stale_after: on_next_commit
+        inspection_mode: decision_record
+        confidence: '{{high_medium_low}}'
+        authority:
+          reports_are_evidence_only: true
+          route_signals_are_advisory: true
+          runtime_must_read_compiled_json: true
+          raw_yaml_is_not_runtime_authority: true
+          rendered_markdown_is_human_preview_only: true
+        agent:
+          agent_id: '{{agent_id}}'
+          agent_role: '{{repo_agent_planner_validator_reviewer_repair_agent_coordinator}}'
+          model_name: '{{model_name_or_unknown}}'
+          model_version: '{{model_version_or_unknown}}'
+          session_id: '{{session_id_or_unknown}}'
+          prompt_hash: '{{prompt_hash_or_unknown}}'
+        lineage:
+          parent_report: '{{none_or_report_ref}}'
+          supersedes: '{{none_or_report_ref}}'
+          triggered_by: '{{none_or_report_ref_or_runtime_event}}'
+          continuation_of: '{{none_or_report_ref}}'
+          validates: '{{none_or_report_ref}}'
+        references:
+        - id: R001
+          ref: '{{none_or_report_ref}}'
+          purpose: '{{purpose}}'
+        assumptions:
+        - id: AS001
+          assumption: '{{assumption_or_none}}'
+          reason: '{{reason}}'
+          confidence: '{{low_medium_high}}'
+          how_to_verify: '{{verification_step}}'
+        skipped_inspections:
+        - id: S001
+          item: '{{skipped_item_or_none}}'
+          reason: '{{reason}}'
+          risk: '{{low_medium_high}}'
+          needed_next: '{{next_step_or_none}}'
+        sections:
+          decision_context:
+            summary: '{{fill_decision_context_for_DCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          conflict_summary:
+            summary: '{{fill_conflict_summary_for_DCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          options:
+            summary: '{{fill_options_for_DCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          authority:
+            summary: '{{fill_authority_for_DCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          decision:
+            summary: '{{fill_decision_for_DCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          downstream_impact:
+            summary: '{{fill_downstream_impact_for_DCR}}'
+            items:
+            - id: '{{stable_id}}'
+              label: '{{FACT_INFERENCE_RISK_GAP_MISSING_EVIDENCE_ASSUMPTION_SKIPPED_DECISION_BLOCKER}}'
+              text: '{{structured_item}}'
+              evidence_refs:
+              - '{{path_command_or_artifact_ref_or_none}}'
+              confidence: '{{high_medium_low}}'
+          final_status:
+            status: '{{complete_partial_blocked_pass_fail_ready_not_ready_conditional}}'
+            safe_to_continue: '{{yes_no_conditional}}'
+            requires_hir: '{{yes_no}}'
+            reason:
+            - '{{reason}}'
+            self_assessment:
+              required_sections_complete: '{{yes_no_partial}}'
+              evidence_coverage: '{{high_medium_low}}'
+              unresolved_gaps:
+              - '{{gap_or_none}}'
+              confidence_in_own_completeness: '{{high_medium_low}}'
+        compiler_expectations:
+          source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
+          compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
+          ir_json: reports/accp/{{plan_id}}/ir/{{report_id}}.ir.json
+          gate_verdict_json: reports/accp/{{plan_id}}/verdict/{{report_id}}.gate-verdict.json
+          route_signal_json: reports/accp/{{plan_id}}/route/{{report_id}}.route-signal.json
+  final_generation_checklist:
+  - output_is_valid_yaml
+  - no_markdown_headings
+  - no_markdown_fences
+  - all_required_fields_present
+  - all_target_report_types_generated
+  - all_report_ids_unique
+  - all_validation_claims_have_command_evidence
+  - all_mutation_reports_have_diff_integrity
+  - all_mutation_reports_have_rollback_plan
+  - critical_blockers_emit_or_recommend_hir
+  - runtime_will_compile_yaml_before_use

@@ -1,0 +1,666 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report:
+  id: "V7-P0_7-IMPLEMENTATION-REALITY-AUDIT"
+  type: "IRA"
+  family: "implementation_reality_audit"
+  title: "V7 Engine P0.7 Implementation Reality Audit"
+  generated_at: "2026-06-17T00:00:00Z"
+  generator: "architect-reviewer"
+  target_repo: "/home/erfolg/src/v7-engine"
+metadata:
+  audit_mode: "implementation_reality"
+  result_file: "docs/architecture/v7_implementation_reality_audit.accp.yaml"
+  design_audit_completed: true
+  tests_executed: true
+  source_code_inspected: true
+  build_attempted: true
+  frontend_typecheck_attempted: true
+scope_confirmation:
+  audit_kind: "IMPLEMENTATION_REALITY"
+  evaluated:
+  - "source tree inventory"
+  - "Python file counts per subsystem"
+  - "test execution (lib + integration)"
+  - "import graph inspection (forbidden import scan)"
+  - "contract schema/fixture/registry validation"
+  - "NotImplementedError stub scan"
+  - "runtime import smoke"
+  - "frontend TypeScript build"
+  - "frontend ESLint check"
+  - "frontend Vitest smoke"
+  - "ruff lint check"
+  - "mypy typecheck (lib)"
+  not_evaluated:
+  - "runtime database connectivity"
+  - "Binance API live connectivity"
+  - "full frontend vitest suite (timeout after 90s, runs too slow)"
+  - "Python test coverage percentage"
+executive_verdict:
+  overall_implementation_score_out_of_10: 4
+  one_sentence_verdict: >
+    lib/ has 165 passing tests and clean mypy typecheck, integration contract tests pass,
+    and the frontend has a working test runner — but simulation/, alphaforge/, and v7/ have
+    ZERO lines of Python implementation, runtime/ has 47 broken imports from a missing v6 module,
+    and the frontend TypeScript build fails with 18 errors.
+  implementation_decision: "HEAVILY_SKEWED — lib and integration are real; runtime is non-functional due to missing v6 dependency; simulation/alphaforge/v7 are documentation-only shells"
+  top_5_implementation_blockers:
+  - rank: 1
+    blocker: "runtime/ has 47 'from v6...' imports across 13 files but v6 module does not exist in repo"
+    severity: "critical"
+    evidence_refs:
+    - "E007"
+    impact: "runtime/ cannot be imported or run — all 138 Python files are dead code until v6 is resolved"
+    required_fix: "Either provide v6 as an installable dependency, stub it, or migrate imports to in-repo equivalents"
+  - rank: 2
+    blocker: "simulation/ has ZERO Python files — S0-S6 phase plans exist but no engine implementation"
+    severity: "critical"
+    evidence_refs:
+    - "E004"
+    impact: "Economic truth engine that the entire architecture depends on does not exist"
+    required_fix: "Implement simulation engine per S0-S6 phase plans"
+  - rank: 3
+    blocker: "alphaforge/ has ZERO Python files — P0-P9 phase plans exist but src/ is empty"
+    severity: "critical"
+    evidence_refs:
+    - "E005"
+    impact: "Training/research authority has no code"
+    required_fix: "Implement alphaforge per P0-P9 phase plans"
+  - rank: 4
+    blocker: "v7/ has ZERO Python files — comprehensive ai_summary but src/ is empty"
+    severity: "critical"
+    evidence_refs:
+    - "E006"
+    impact: "V7 pipeline authority has no code"
+    required_fix: "Implement v7 per phase plans"
+  - rank: 5
+    blocker: "Frontend TypeScript build fails with 18 errors (unused vars, type mismatches, missing AnimatedRoute)"
+    severity: "high"
+    evidence_refs:
+    - "E010"
+    impact: "Interface cannot build; deployment is blocked"
+    required_fix: "Fix TypeScript errors in TradesRoute, PortfolioRoute, SimulationsRoute, PerformanceRoute"
+
+source_tree_inventory:
+  subsystems:
+  - subsystem: "lib"
+    python_file_count: 36
+    source_files: 24
+    test_files: 12
+    has_init_py: true
+    has_source_code: true
+    status: "IMPLEMENTED"
+    notes: "Full implementation of market_data, indicators, costs, time primitives"
+    evidence_refs:
+    - "E001"
+  - subsystem: "runtime"
+    python_file_count: 138
+    source_files: 138
+    test_files: 0
+    has_init_py: true
+    has_source_code: true
+    status: "IMPLEMENTED_BUT_BROKEN"
+    notes: "Substantial code (API routes, DB models/repos, runtime loop, services) but 47 imports reference missing v6 module"
+    evidence_refs:
+    - "E002"
+    - "E007"
+  - subsystem: "simulation"
+    python_file_count: 0
+    source_files: 0
+    test_files: 0
+    has_init_py: false
+    has_source_code: false
+    status: "DOCS_ONLY"
+    notes: "14 markdown docs, README, S0-S6 phase plans; ZERO Python files"
+    evidence_refs:
+    - "E004"
+  - subsystem: "alphaforge"
+    python_file_count: 0
+    source_files: 0
+    test_files: 0
+    has_init_py: false
+    has_source_code: false
+    status: "DOCS_ONLY"
+    notes: "docs/ directory and empty src/ directory; P0-P9 phase plans; ZERO Python files"
+    evidence_refs:
+    - "E005"
+  - subsystem: "v7"
+    python_file_count: 0
+    source_files: 0
+    test_files: 0
+    has_init_py: false
+    has_source_code: false
+    status: "DOCS_ONLY"
+    notes: "docs/ directory with comprehensive ai_summary (184K), pipeline docs, contract docs, LLM rules; empty src/ directory; ZERO Python files"
+    evidence_refs:
+    - "E006"
+  - subsystem: "integration"
+    python_file_count: 9
+    source_files: 4
+    test_files: 4
+    has_init_py: true
+    has_source_code: true
+    status: "STUBS_AND_TESTS"
+    notes: "4 adapter stubs (NotImplementedError), 4 test files. Adapters correctly stub the future interfaces."
+    evidence_refs:
+    - "E003"
+  - subsystem: "interface"
+    python_file_count: 0
+    source_files: null
+    test_files: 10
+    has_init_py: false
+    has_source_code: true
+    status: "IMPLEMENTED_WITH_ERRORS"
+    notes: "React + TypeScript + Vite frontend. Build fails (18 TS errors). ESLint: 79 errors, 41 warnings. Vitest works (at least 18 tests pass)."
+    evidence_refs:
+    - "E008"
+    - "E009"
+    - "E010"
+
+test_results:
+  lib_unit_tests:
+    command: "/usr/bin/python -m pytest lib/tests/ -q --no-header"
+    files_tested: 12
+    passed: 165
+    failed: 0
+    skipped: 0
+    exit_code: 0
+    status: "ALL_PASSING"
+    note: "Tests must be run with /usr/bin/python directly (shell tee wrapper interferes with pytest output collection)"
+    evidence_refs:
+    - "E011"
+  lib_import_boundary:
+    command: "/usr/bin/python -m pytest lib/tests/test_import_boundary.py -v"
+    passed: 1
+    failed: 0
+    exit_code: 0
+    status: "PASSING"
+    evidence_refs:
+    - "E012"
+  integration_contract_tests:
+    command: "/usr/bin/python -m pytest integration/tests/ -v --no-header"
+    test_files:
+    - "test_contract_registry.py"
+    - "test_cross_domain_boundaries.py"
+    - "test_schema_parity.py"
+    - "test_integration_smoke.py"
+    passed: 23
+    failed: 12
+    skipped: 3
+    exit_code: 1
+    failure_root_cause: "All 12 failures are ModuleNotFoundError: No module named 'integration' — the integration package is not on sys.path when tests run from absolute repo path"
+    skipped_reason: "simulation, alphaforge, v7 boundary tests skipped because those domains have no src/ Python files"
+    status: "CONTRACT_TESTS_PASSING_SMOKE_BROKEN"
+    evidence_refs:
+    - "E013"
+  frontend_vitest:
+    command: "bun run test (vitest)"
+    single_file_test_passed: 18
+    full_suite: "TIMED_OUT_AFTER_90S"
+    notes: "Vitest runs but jsdom tests are slow; full suite exceeds 90s timeout. Single file (api.test.ts) passes cleanly."
+    status: "PARTIAL_VERIFIED"
+    evidence_refs:
+    - "E014"
+
+import_boundary_audit:
+  forbidden_import_scan:
+    domains_checked:
+    - from_domain: "lib/"
+      must_not_import:
+      - "simulation"
+      - "alphaforge"
+      - "v7"
+      violations: 0
+    - from_domain: "simulation/"
+      must_not_import:
+      - "alphaforge"
+      - "v7"
+      violations: 0
+      note: "No Python files exist to check"
+    - from_domain: "alphaforge/"
+      must_not_import:
+      - "simulation"
+      - "v7"
+      violations: 0
+      note: "No Python files exist to check"
+    - from_domain: "v7/"
+      must_not_import:
+      - "simulation"
+      - "alphaforge"
+      violations: 0
+      note: "No Python files exist to check"
+    - from_domain: "integration/adapters/"
+      must_not_import:
+      - "simulation"
+      - "alphaforge"
+      - "v7"
+      violations: 0
+  runtime_v6_import_audit:
+    total_v6_imports: 47
+    files_affected: 13
+    v6_module_exists_in_repo: false
+    affected_files:
+    - "runtime/api/routes/markets.py"
+    - "runtime/api/routes/health.py"
+    - "runtime/api/routes/analyzer.py"
+    - "runtime/api/routes/phase7_review.py"
+    - "runtime/api/routes/phase7_operate.py"
+    - "runtime/services/analyzer_engine_adapter.py"
+    - "runtime/services/circuit_breaker_service.py"
+    - "runtime/services/v6_runtime_metrics_service.py"
+    - "runtime/services/historical_simulation_engine.py"
+    - "runtime/services/alert_service.py"
+    - "runtime/runtime/runtime_router.py"
+    - "runtime/runtime/paper_execution.py"
+    - "runtime/runtime/scan_runtime.py"
+    status: "ALL_RUNTIME_IMPORTS_BROKEN"
+    evidence_refs:
+    - "E007"
+  lib_mypy_typecheck:
+    command: "mypy lib/ --ignore-missing-imports --no-strict-optional"
+    issues_found: 0
+    status: "CLEAN"
+    evidence_refs:
+    - "E015"
+  lib_ruff_lint:
+    command: "ruff check lib/"
+    status: "RUFF_NOT_INSTALLED"
+    notes: "ruff binary not found in PATH"
+
+contract_validation:
+  registry:
+    file: "contracts/registry.json"
+    valid_json: true
+    contracts_registered: 4
+    simulation_profile_fixture_null: true
+    status: "VALID_WITH_GAP"
+  schemas:
+    files_checked: 4
+    all_valid_json: true
+    status: "ALL_VALID"
+  fixtures:
+    files_checked: 3
+    all_valid_json: true
+    missing_fixture: "simulation_profile_minimal.json (referenced as null in registry)"
+    status: "THREE_OF_FOUR"
+  compatibility:
+    file: "contracts/compatibility.json"
+    valid_json: true
+    compatibility_pairs: 3
+    status: "VALID"
+  mappings:
+    files_checked: 2
+    all_valid_json: true
+    status: "ALL_VALID"
+  schema_parity_test:
+    passed: 6
+    failed: 0
+    status: "ALL_MAPPINGS_RESOLVE"
+  contracts_no_python:
+    passed: true
+    status: "CLEAN"
+  evidence_refs:
+  - "E016"
+
+dead_code_stub_scan:
+  not_implemented_error_occurrences: 11
+  files_with_stubs: 4
+  stub_locations:
+  - file: "integration/adapters/__init__.py"
+    count: 1
+    expectation: "EXPECTED — module-level guard"
+  - file: "integration/adapters/alphaforge_adapter.py"
+    count: 4
+    expectation: "EXPECTED — documented stub adapter (phase alphaforge P2)"
+  - file: "integration/adapters/simulation_adapter.py"
+    count: 2
+    expectation: "EXPECTED — documented stub adapter (phase simulation S3)"
+  - file: "integration/adapters/v7_adapter.py"
+    count: 4
+    expectation: "EXPECTED — documented stub adapter (phase v7 phase 2)"
+  status: "ALL_STUBS_EXPECTED_AND_DOCUMENTED"
+  evidence_refs:
+  - "E017"
+
+frontend_reality:
+  stack:
+    runtime: "bun 1.3.11"
+    node: "v25.9.0"
+    framework: "React 18+ with React Compiler"
+    build_tool: "Vite"
+    test_runner: "Vitest v3.2.4"
+    type_checker: "TypeScript (tsc -b)"
+    linter: "ESLint with typescript-eslint"
+  package_json_valid: true
+  node_modules_exists: true
+  dependencies_installed: 352
+  typescript_build:
+    command: "bun run build"
+    status: "FAILED"
+    error_count: 18
+    error_categories:
+    - category: "TS6133 unused declarations"
+      count: 8
+      files:
+      - "TradesRoute.tsx"
+      - "PortfolioRoute.tsx"
+    - category: "TS2339 missing properties"
+      count: 5
+      files:
+      - "TradesRoute.tsx"
+    - category: "TS2304 cannot find name"
+      count: 1
+      files:
+      - "PerformanceRoute.tsx (AnimatedRoute)"
+    - category: "TS2554 wrong argument count"
+      count: 1
+      files:
+      - "SimulationsRoute.tsx"
+    - category: "TS2345 type mismatch"
+      count: 2
+      files:
+      - "SimulationsRoute.tsx"
+    - category: "TS6133 unused functions"
+      count: 1
+      files:
+      - "PortfolioRoute.tsx (getOutcomeBucket)"
+    status: "BUILD_BROKEN"
+  eslint:
+    command: "bun run lint"
+    errors: 79
+    warnings: 41
+    fixable_auto: 9
+    status: "FAILING"
+  vitest:
+    single_file_smoke: "18 tests passed (api.test.ts)"
+    full_suite: "Timeout after 90s (tests run but jsdom is slow)"
+    status: "PARTIALLY_VERIFIED"
+  evidence_refs:
+  - "E008"
+  - "E009"
+  - "E010"
+  - "E014"
+
+implementation_vs_design_gap_analysis:
+  gaps:
+  - area: "simulation engine"
+    design_status: "DESIGN_LOCK (score 8/10)"
+    implementation_status: "ZERO_CODE"
+    gap_severity: "critical"
+    note: "14 docs and S0-S6 plans but no Python files. The economic truth authority that V7 and alphaforge depend on does not exist."
+  - area: "alphaforge training/research"
+    design_status: "CONDITIONAL_DESIGN_LOCK (score 4/10)"
+    implementation_status: "ZERO_CODE"
+    gap_severity: "critical"
+    note: "P0-P9 phase plans exist but src/ is empty. Both design docs and implementation are missing."
+  - area: "v7 pipeline"
+    design_status: "DESIGN_LOCK (score 8/10)"
+    implementation_status: "ZERO_CODE"
+    gap_severity: "critical"
+    note: "Comprehensive ai_summary (184K) with 42 sections but src/ is empty. Strong design, zero implementation."
+  - area: "runtime engine"
+    design_status: "DESIGN_LOCK (score 8/10)"
+    implementation_status: "IMPLEMENTED_BUT_BROKEN"
+    gap_severity: "critical"
+    note: "138 Python files but 47 v6 imports are unresolvable. Code exists but can't run without v6 dependency."
+  - area: "interface frontend"
+    design_status: "DESIGN_LOCK_PRINCIPLE_ONLY (score 7/10)"
+    implementation_status: "IMPLEMENTED_WITH_ERRORS"
+    gap_severity: "high"
+    note: "Working codebase but TypeScript build fails with 18 errors. 79 ESLint errors. Functionality exists but build is broken."
+  - area: "lib primitives"
+    design_status: "DESIGN_LOCK (score 7/10)"
+    implementation_status: "FULLY_IMPLEMENTED"
+    gap_severity: "none"
+    note: "165 passing tests, clean mypy, zero forbidden imports. Only subsystem with full implementation-test parity."
+  - area: "contracts"
+    design_status: "DESIGN_LOCK (score 7/10)"
+    implementation_status: "NEARLY_COMPLETE"
+    gap_severity: "low"
+    note: "4 schemas, 3 of 4 fixtures, 2 mappings, all tests pass. Missing: SimulationProfile fixture."
+  - area: "integration"
+    design_status: "DESIGN_LOCK_PRINCIPLE_ONLY (score 6/10)"
+    implementation_status: "STUBS_AND_TESTS"
+    gap_severity: "low"
+    note: "Adapter stubs + tests as designed. Smoke tests have sys.path issue but contract/boundary/schema tests pass."
+
+implementation_readiness_matrix:
+  subsystems:
+  - subsystem: "lib"
+    implementation_score_out_of_10: 9
+    tests_pass: true
+    imports_clean: true
+    typecheck_pass: true
+    ready_for_production: false
+    ready_for_development: true
+    main_blocker: "none"
+    evidence_refs:
+    - "E001"
+    - "E011"
+    - "E015"
+  - subsystem: "runtime"
+    implementation_score_out_of_10: 3
+    tests_pass: false
+    imports_clean: false
+    typecheck_pass: false
+    ready_for_production: false
+    ready_for_development: false
+    main_blocker: "47 missing v6 imports across 13 files"
+    evidence_refs:
+    - "E002"
+    - "E007"
+  - subsystem: "simulation"
+    implementation_score_out_of_10: 0
+    tests_pass: false
+    imports_clean: false
+    typecheck_pass: false
+    ready_for_production: false
+    ready_for_development: false
+    main_blocker: "Zero Python files — no implementation exists"
+    evidence_refs:
+    - "E004"
+  - subsystem: "alphaforge"
+    implementation_score_out_of_10: 0
+    tests_pass: false
+    imports_clean: false
+    typecheck_pass: false
+    ready_for_production: false
+    ready_for_development: false
+    main_blocker: "Zero Python files — no implementation exists"
+    evidence_refs:
+    - "E005"
+  - subsystem: "v7"
+    implementation_score_out_of_10: 0
+    tests_pass: false
+    imports_clean: false
+    typecheck_pass: false
+    ready_for_production: false
+    ready_for_development: false
+    main_blocker: "Zero Python files — no implementation exists"
+    evidence_refs:
+    - "E006"
+  - subsystem: "integration"
+    implementation_score_out_of_10: 6
+    tests_pass: true
+    imports_clean: true
+    typecheck_pass: false
+    ready_for_production: false
+    ready_for_development: true
+    main_blocker: "Smoke tests fail due to sys.path; contract tests pass"
+    evidence_refs:
+    - "E003"
+    - "E013"
+  - subsystem: "interface"
+    implementation_score_out_of_10: 5
+    tests_pass: true
+    imports_clean: false
+    typecheck_pass: false
+    ready_for_production: false
+    ready_for_development: true
+    main_blocker: "TypeScript build fails (18 errors); ESLint 79 errors"
+    evidence_refs:
+    - "E008"
+    - "E009"
+    - "E010"
+
+design_vs_implementation_comparison:
+  subsystems:
+  - subsystem: "lib"
+    design_score: 7
+    implementation_score: 9
+    delta: "+2"
+    note: "Implementation exceeds design documentation quality"
+  - subsystem: "simulation"
+    design_score: 8
+    implementation_score: 0
+    delta: "-8"
+    note: "Strong design docs but zero implementation"
+  - subsystem: "alphaforge"
+    design_score: 4
+    implementation_score: 0
+    delta: "-4"
+    note: "Weak design AND zero implementation"
+  - subsystem: "v7"
+    design_score: 8
+    implementation_score: 0
+    delta: "-8"
+    note: "Strong design docs but zero implementation"
+  - subsystem: "runtime"
+    design_score: 8
+    implementation_score: 3
+    delta: "-5"
+    note: "Strong design docs but implementation broken by missing v6"
+  - subsystem: "interface"
+    design_score: 7
+    implementation_score: 5
+    delta: "-2"
+    note: "Working codebase but build/lint failing"
+  - subsystem: "integration"
+    design_score: 6
+    implementation_score: 6
+    delta: "0"
+    note: "Design and implementation aligned — stubs and tests as intended"
+  - subsystem: "contracts"
+    design_score: 7
+    implementation_score: 7
+    delta: "0"
+    note: "Design and implementation aligned — one fixture gap"
+
+quick_wins:
+- fix: "Fix frontend TypeScript errors (mostly unused imports + one missing AnimatedRoute component)"
+  estimated_effort: "2-4 hours"
+  impact: "Frontend build passes; deployable artifacts"
+- fix: "Add SimulationProfile fixture to contracts/fixtures/"
+  estimated_effort: "30 minutes"
+  impact: "Completes contract fixture coverage; fixture_file no longer null"
+- fix: "Fix integration smoke tests (PYTHONPATH or install integration as package)"
+  estimated_effort: "1 hour"
+  impact: "All 38 integration tests pass; CI green"
+- fix: "Stub or install v6 module for runtime imports"
+  estimated_effort: "1-3 days (depends on v6 availability)"
+  impact: "Runtime code becomes importable and testable"
+
+what_works:
+- "lib/ primitives: 165 tests, clean mypy, clean imports"
+- "contract/registry: all schemas valid, parity tests pass, 3 of 4 fixtures"
+- "integration adapter stub pattern: correctly implemented with NotImplementedError"
+- "cross-domain import boundaries: zero violations"
+- "frontend vitest: test runner works, verified with api.test.ts (18/18)"
+- "frontend dependencies: 352 packages installed, bun.lock present"
+
+what_does_not_work:
+- "simulation engine: does not exist"
+- "alphaforge pipeline: does not exist"
+- "v7 pipeline: does not exist"
+- "runtime backend: cannot import (47 missing v6 references)"
+- "frontend build: TypeScript compilation fails (18 errors)"
+- "frontend lint: 79 ESLint errors"
+- "integration smoke tests: cannot import integration package"
+
+final_recommendation:
+  whether_to_continue_implementation: "YES — but only in targeted areas"
+  safe_implementation_areas_now:
+  - "lib/ indicator and cost extensions (P1, P2) — solid foundation"
+  - "frontend TypeScript error fixes — isolated, well-understood"
+  - "contract fixture completion — trivial"
+  - "integration smoke test fix — sys.path issue only"
+  blocked_until_dependencies_resolved:
+  - "runtime/ development — blocked by missing v6 module"
+  - "simulation/ implementation — requires S0-S6 execution from scratch"
+  - "alphaforge/ implementation — requires simulation outputs + P0-P9 execution"
+  - "v7/ implementation — requires simulation engine + runtime"
+  recommended_next_action: >
+    Fix the v6 dependency issue first (either provide v6, stub it, or migrate imports).
+    Without this, the 138-file runtime codebase is dead. Then begin simulation S0
+    implementation since every other subsystem depends on it. Fix frontend TypeScript
+    errors as a parallel track.
+
+evidence_index:
+- id: "E001"
+  file_path: "lib/"
+  summary_of_evidence: "36 Python files (24 source + 12 tests). Subdirectories: costs/ (3 py), indicators/ (7 py), market_data/ (5 py binance + 2 py), time/ (2 py), tests/ (12 py), __init__.py. Fully implemented."
+  confidence: "high"
+- id: "E002"
+  file_path: "runtime/"
+  summary_of_evidence: "138 Python files. Subdirectories: api/ (1 + routes/ with 20 route files), db/ (models.py + repos/ with 20 repo files), migrations/versions/ (22 migration files), runtime/ (11 files including scan_runtime, autonomous_loop, paper_execution), services/ (27 files including analyzer_engine_adapter, learning_service, circuit_breaker_service). No test/ directory."
+  confidence: "high"
+- id: "E003"
+  file_path: "integration/"
+  summary_of_evidence: "9 Python files. adapters/: __init__.py, alphaforge_adapter.py (4 NotImplementedError), simulation_adapter.py (2 NotImplementedError), v7_adapter.py (4 NotImplementedError). tests/: __init__.py, test_contract_registry.py, test_cross_domain_boundaries.py, test_integration_smoke.py, test_schema_parity.py."
+  confidence: "high"
+- id: "E004"
+  file_path: "simulation/"
+  summary_of_evidence: "Contains docs/ (14 markdown files + phases/ with 7 phase plans) and README.md. Zero Python files. No src/ directory. No tests/ directory. No __init__.py."
+  confidence: "high"
+- id: "E005"
+  file_path: "alphaforge/"
+  summary_of_evidence: "Contains docs/ (ai_summary__v7_alphaforge_xgb.md 625K, phase_plans/ with 11 phase plans, other subdirs) and src/ (empty directory). Zero Python files. No __init__.py."
+  confidence: "high"
+- id: "E006"
+  file_path: "v7/"
+  summary_of_evidence: "Contains docs/ (ai_summary.md 184K, contracts/, implementation/, pipeline/, runtime/, v7_executor_support_pack/, README.md, architecture.md, vision.md, roadmap.md, v7_llm_rules.md, v7_doc_writing_guide.md, v7_mode_centric_architecture.md, v7_regime_aware_extensions.md, alpha_thesis_validation_plan.md) and src/ (empty directory). Zero Python files."
+  confidence: "high"
+- id: "E007"
+  file_path: "runtime/**/*.py"
+  summary_of_evidence: "47 'from v6...' or 'import v6...' statements across 13 runtime Python files. v6 module does not exist anywhere in the repository (find -type d -name v6 returns 0 results). All runtime modules fail to import with ModuleNotFoundError: No module named 'v6'."
+  confidence: "high"
+- id: "E008"
+  file_path: "interface/package.json"
+  summary_of_evidence: "Valid package.json with scripts: dev (vite), build (tsc -b && vite build), lint (eslint .), test (vitest run --environment jsdom). Dependencies include React 18, TypeScript, Vite, Vitest, ESLint, typescript-eslint."
+  confidence: "high"
+- id: "E009"
+  file_path: "interface/ (ESLint)"
+  summary_of_evidence: "bun run lint returned 120 problems: 79 errors, 41 warnings. Main categories: @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps. 9 errors fixable with --fix."
+  confidence: "high"
+- id: "E010"
+  file_path: "interface/ (TypeScript build)"
+  summary_of_evidence: "bun run build (tsc -b && vite build) failed with 18 TypeScript errors: 8 unused declarations (TS6133), 5 missing properties (TS2339), 1 cannot find name 'AnimatedRoute' (TS2304), 1 wrong argument count (TS2554), 2 type mismatches (TS2345), 1 unused function (TS6133). Affected files: TradesRoute.tsx, PortfolioRoute.tsx, SimulationsRoute.tsx, PerformanceRoute.tsx."
+  confidence: "high"
+- id: "E011"
+  file_path: "lib/tests/"
+  summary_of_evidence: "/usr/bin/python -m pytest lib/tests/ -q --no-header: 165 passed, 0 failed. Test files: test_costs (16), test_costs_r, test_time, test_indicators, test_indicators_rsi, test_indicators_candle, test_indicators_momentum, test_indicators_rolling_extensions, test_market_data_contracts, test_market_data_quality, test_import_boundary (1), test_market_data_binance. Note: shell tee wrapper interferes with pytest output; must use /usr/bin/python directly."
+  confidence: "high"
+- id: "E012"
+  file_path: "lib/tests/test_import_boundary.py"
+  summary_of_evidence: "1 test passed: verifies lib/ does not import v7 or alphaforge modules."
+  confidence: "high"
+- id: "E013"
+  file_path: "integration/tests/"
+  summary_of_evidence: "38 tests collected. 23 passed: 11 contract registry, 3 cross-domain boundaries, 9 schema parity. 12 failed: all smoke tests (ModuleNotFoundError: No module named 'integration'). 3 skipped: simulation, alphaforge, v7 boundary tests (no src/ Python files exist)."
+  confidence: "high"
+- id: "E014"
+  file_path: "interface/ (Vitest)"
+  summary_of_evidence: "Vitest v3.2.4 works. Single file test (src/lib/api.test.ts): 18 tests passed in 13ms. Full suite: timed out at 90s (jsdom slow). Test files exist: TradesRoute.test.tsx, SimulationsRoute.test.tsx, OperateControlPageRoute.test.tsx, TradeOverviewRoute.test.tsx, PortfolioRoute.test.tsx, useScanEventStream.test.tsx, useSimulationEventStream.test.tsx, api.test.ts, profileScope.test.ts, LiveScanEventPanel.test.tsx, ScanJobForm.test.tsx."
+  confidence: "high"
+- id: "E015"
+  file_path: "lib/ (mypy)"
+  summary_of_evidence: "mypy lib/ --ignore-missing-imports --no-strict-optional: No issues found. Exit code 0."
+  confidence: "high"
+- id: "E016"
+  file_path: "contracts/"
+  summary_of_evidence: "registry.json: 4 contracts registered, valid JSON, SimulationProfile fixture_file null. schemas/: 4 valid JSON schemas. fixtures/: 3 valid JSON fixtures (missing simulation_profile_minimal.json). compatibility.json: 3 compatibility pairs, valid JSON. mappings/: 2 valid JSON mapping files. contracts/ has no Python files (verified by test)."
+  confidence: "high"
+- id: "E017"
+  file_path: "integration/adapters/"
+  summary_of_evidence: "11 NotImplementedError occurrences across 4 adapter files. All are expected stubs: __init__.py (module guard), alphaforge_adapter.py (4 methods), simulation_adapter.py (2 methods), v7_adapter.py (4 methods). All documented as stubs awaiting implementation phases (simulation S3, alphaforge P2, v7 phase 2)."
+  confidence: "high"

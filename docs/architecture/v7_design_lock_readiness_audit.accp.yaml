@@ -1,0 +1,878 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report:
+  id: "V7-P0_6-DESIGN-LOCK-READINESS-AUDIT-RESULT"
+  type: "DLR"
+  family: "design_lock_readiness_report"
+  title: "V7 Engine Design Lock Readiness Audit"
+  generated_at: "2026-06-17T00:00:00Z"
+  generator: "architect-reviewer"
+  target_repo: "/home/erfolg/src/v7-engine"
+metadata:
+  audit_mode: "docs_only_read_only"
+  result_file: "docs/architecture/v7_design_lock_readiness_audit.accp.yaml"
+  implementation_audit: false
+  tests_executed: false
+  source_code_inspected: false
+  files_modified:
+    allowed:
+    - "docs/architecture/v7_design_lock_readiness_audit.accp.yaml"
+    forbidden_modified: []
+scope_confirmation:
+  audit_kind: "DESIGN_LOCK_ONLY"
+  explicitly_not_evaluated:
+  - "pytest discovery"
+  - "test pass/fail"
+  - "ModuleNotFoundError"
+  - "source file count"
+  - "implementation completeness"
+  - "runtime execution"
+  - "CI execution"
+  - "production readiness"
+executive_verdict:
+  overall_design_lock_score_out_of_10: 6
+  one_sentence_verdict: >
+    Root documentation has a critical layout inconsistency (README omits runtime/interface),
+    AlphaForge lacks a dedicated ai_summary.md, and phase exit criteria are inconsistently
+    documented — but simulation, V7, runtime, and interface each have strong, AI-ready authority docs,
+    contracts/ is well-structured as a passive authority, and the truth hierarchy is clearly defined.
+  design_lock_decision: "CONDITIONAL_DESIGN_LOCK"
+  coding_decision_from_design_perspective: >
+    Implementation prompting is safe for simulation, V7 pipeline, runtime, and interface areas
+    where authority docs are strong. AlphaForge implementation should wait until a dedicated
+    ai_summary.md is created. All cross-domain work between runtime/interface and the rest of
+    the repo requires the README layout inconsistency to be resolved first to prevent AI agents
+    from being confused about which subsystems exist at root level.
+  top_5_design_blockers:
+  - rank: 1
+    blocker: "README.md omits runtime/ and interface/ as top-level root domains; ai_summary.md includes them"
+    severity: "critical"
+    evidence_refs:
+    - "E001"
+    - "E002"
+    impact: "AI agent reading README will miss runtime/ and interface/ domains entirely; bifurcated understanding of repo layout"
+    required_doc_fix: "Update README.md tree to include runtime/ and interface/ directories consistent with ai_summary.md"
+  - rank: 2
+    blocker: "AlphaForge has no dedicated ai_summary.md; root ai_summary explicitly states (no ai_summary)"
+    severity: "critical"
+    evidence_refs:
+    - "E003"
+    - "E012"
+    impact: "AI agent working on alphaforge has no canonical entry point; must parse 625K combined doc that mixes implementation with design"
+    required_doc_fix: "Create alphaforge/docs/ai_summary.md as a thin design authority hub pointing to phase plans, schemas, and the combined implementation doc"
+  - rank: 3
+    blocker: "Phase exit criteria are not consistently documented across all phase plans"
+    severity: "high"
+    evidence_refs:
+    - "E014"
+    - "E015"
+    - "E016"
+    impact: "AI agent implementing a phase has no clear definition of done; phases can drift without gates"
+    required_doc_fix: "Add exit_criteria section to every phase plan document; create cross-phase exit criteria table in docs/architecture/phase_exit_criteria.md"
+  - rank: 4
+    blocker: "Readme phase table (P0-P9) vs simulation phases (S0-S6) vs v7 phases (0-9) have no unified cross-reference"
+    severity: "high"
+    evidence_refs:
+    - "E002"
+    - "E018"
+    - "E019"
+    impact: "AI agent cannot determine which phase plan is authoritative for a given subsystem; parallel phase numbering creates ambiguity"
+    required_doc_fix: "Add a unified phase cross-reference table in docs/architecture/ or root ai_summary.md mapping README P-phases to simulation S-phases and v7 phase numbers"
+  - rank: 5
+    blocker: "AI agent forbidden rules are scattered across governance.md, v7_llm_rules.md, and simulation ai_summary; no single canonical forbidden-rules reference"
+    severity: "medium"
+    evidence_refs:
+    - "E005"
+    - "E020"
+    - "E010"
+    impact: "AI agent may miss critical cross-domain constraints because they are not consolidated"
+    required_doc_fix: "Add a consolidated AI agent forbidden rules section to root ai_summary.md or create docs/architecture/ai_forbidden_rules.md"
+root_documentation_reality:
+  readme_status: "PARTIAL — omits runtime/ and interface/ as root domains; omits scripts/ and test.sh"
+  ai_meta_hub_status: "STRONG — complete subsystem map, truth hierarchy, reading order, decision tree, cross-domain rules"
+  root_layout_consistency: "CONFLICT — README and ai_summary disagree on which domains exist at repo root"
+  documented_vs_undocumented_domains:
+  - domain: "lib/"
+    documented_in_readme: true
+    documented_in_ai_summary: true
+    design_risk: "low"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  - domain: "simulation/"
+    documented_in_readme: true
+    documented_in_ai_summary: true
+    design_risk: "low"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  - domain: "alphaforge/"
+    documented_in_readme: true
+    documented_in_ai_summary: true
+    design_risk: "medium — no ai_summary.md in alphaforge/docs/"
+    evidence_refs:
+    - "E001"
+    - "E002"
+    - "E003"
+  - domain: "v7/"
+    documented_in_readme: true
+    documented_in_ai_summary: true
+    design_risk: "low"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  - domain: "contracts/"
+    documented_in_readme: true
+    documented_in_ai_summary: true
+    design_risk: "low"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  - domain: "integration/"
+    documented_in_readme: true
+    documented_in_ai_summary: false
+    design_risk: "medium — ai_summary does not mention integration/ in repo layout"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  - domain: "data/"
+    documented_in_readme: true
+    documented_in_ai_summary: true
+    design_risk: "low"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  - domain: "runtime/"
+    documented_in_readme: false
+    documented_in_ai_summary: true
+    design_risk: "critical — README users will not know runtime/ exists"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  - domain: "interface/"
+    documented_in_readme: false
+    documented_in_ai_summary: true
+    design_risk: "critical — README users will not know interface/ exists"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  - domain: "scripts/"
+    documented_in_readme: false
+    documented_in_ai_summary: true
+    design_risk: "low — minor utility; omission acceptable"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  - domain: "docs/architecture/"
+    documented_in_readme: true
+    documented_in_ai_summary: true
+    design_risk: "low"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  required_root_doc_fixes:
+  - fix: "Add runtime/ and interface/ entries to README.md tree diagram"
+    target_doc: "README.md"
+    reason: "README is the first thing a human or AI reads; it must reflect the actual repo layout"
+  - fix: "Add integration/ to root ai_summary.md repo layout tree"
+    target_doc: "ai_summary.md"
+    reason: "integration/ exists on disk and in README but is missing from ai_summary layout"
+  - fix: "Add scripts/ and test.sh to README.md or remove from ai_summary.md for consistency"
+    target_doc: "README.md or ai_summary.md"
+    reason: "Consistency between the two root docs"
+  - fix: "Add AlphaForge ai_summary entry to root ai_summary.md subsystem table with a real doc path"
+    target_doc: "ai_summary.md"
+    reason: "Current entry says (no ai_summary) — this should point to alphaforge/docs/ai_summary.md once created"
+authority_map:
+  subsystems:
+  - subsystem: "lib"
+    primary_authority_doc: "lib/docs/README.md"
+    exists: true
+    ownership_summary: "Shared primitives: market_data, indicators, costs, time. Must NOT import v7/alphaforge/simulation."
+    status: "clear"
+    design_lock_status: "DESIGN_LOCK"
+    evidence_refs:
+    - "E006"
+  - subsystem: "simulation"
+    primary_authority_doc: "simulation/docs/ai_summary.md"
+    exists: true
+    ownership_summary: "Single economic truth authority. Owns SimulationInput/Output contracts, action family semantics, profiles, costs, exits, horizons, path metrics, Monte Carlo."
+    status: "clear"
+    design_lock_status: "DESIGN_LOCK"
+    evidence_refs:
+    - "E007"
+    - "E008"
+  - subsystem: "alphaforge"
+    primary_authority_doc: "alphaforge/docs/ai_summary__v7_alphaforge_xgb.md"
+    exists: true
+    ownership_summary: "Training/research authority. Owns labels, datasets, feature engineering, model training, calibration, evaluation. No dedicated ai_summary.md — only combined implementation doc."
+    status: "partial"
+    design_lock_status: "CONDITIONAL_DESIGN_LOCK"
+    evidence_refs:
+    - "E003"
+    - "E012"
+  - subsystem: "v7"
+    primary_authority_doc: "v7/docs/ai_summary.md"
+    exists: true
+    ownership_summary: "Runtime/semantic/policy authority. Owns AnalysisRequest/Result, DecisionEvent, TradeOutcome, policy, portfolio, risk. 42-section ai_summary covering all pipeline stages."
+    status: "clear"
+    design_lock_status: "DESIGN_LOCK"
+    evidence_refs:
+    - "E009"
+    - "E010"
+  - subsystem: "runtime"
+    primary_authority_doc: "runtime/docs/ai_summary.md"
+    exists: true
+    ownership_summary: "Operational Python backend. Owns scan loop, analyzer, learning layer, self-learning, PostgreSQL schema, FastAPI routes, runbook."
+    status: "clear"
+    design_lock_status: "DESIGN_LOCK"
+    evidence_refs:
+    - "E004"
+  - subsystem: "interface"
+    primary_authority_doc: "interface/docs/ai_summary.md"
+    exists: true
+    ownership_summary: "React + TypeScript + Vite operator UI. Owns workspace structure, page ownership, component architecture, data freshness cadence, migration plan."
+    status: "clear"
+    design_lock_status: "DESIGN_LOCK"
+    evidence_refs:
+    - "E005"
+  - subsystem: "contracts"
+    primary_authority_doc: "contracts/README.md"
+    exists: true
+    ownership_summary: "Passive root contract authority. Owns registry.json, compatibility.json, JSON schemas, field mappings, fixtures. No Python code."
+    status: "clear"
+    design_lock_status: "DESIGN_LOCK"
+    evidence_refs:
+    - "E011"
+  - subsystem: "integration"
+    primary_authority_doc: "integration/README.md"
+    exists: true
+    ownership_summary: "Active skeleton: adapter stubs + cross-domain tests. Must NOT import simulation/alphaforge/v7 internals."
+    status: "clear"
+    design_lock_status: "DESIGN_LOCK"
+    evidence_refs:
+    - "E013"
+  missing_authority_docs:
+  - subsystem: "alphaforge"
+    expected_doc: "alphaforge/docs/ai_summary.md"
+    impact: "AI agents working on alphaforge have no canonical design entry point; only a 625K implementation-oriented combined doc"
+    required_fix: "Create alphaforge/docs/ai_summary.md as a thin design hub linking to phase plans, schemas, and the combined ai_summary__v7_alphaforge_xgb.md"
+truth_hierarchy:
+  status: "clear"
+  hierarchy:
+  - priority: 1
+    truth_authority: "Simulation truth (simulation output semantics)"
+    documented_in: "ai_summary.md §Truth Hierarchy"
+    evidence_refs:
+    - "E002"
+  - priority: 2
+    truth_authority: "Realized market outcome truth (actual exchange fills)"
+    documented_in: "ai_summary.md §Truth Hierarchy"
+    evidence_refs:
+    - "E002"
+  - priority: 3
+    truth_authority: "Contract truth (schema validation rules)"
+    documented_in: "ai_summary.md §Truth Hierarchy, contracts/registry.json"
+    evidence_refs:
+    - "E002"
+    - "E011"
+  - priority: 4
+    truth_authority: "Runtime interpretation truth (operational lifecycle)"
+    documented_in: "ai_summary.md §Truth Hierarchy"
+    evidence_refs:
+    - "E002"
+  - priority: 5
+    truth_authority: "Model explanation (ML model outputs)"
+    documented_in: "ai_summary.md §Truth Hierarchy"
+    evidence_refs:
+    - "E002"
+  conflict_resolution_gaps:
+  - gap: "No documented process for when runtime interpretation truth conflicts with simulation truth in production"
+    impact: "Operational ambiguity if runtime analyzer decisions contradict simulation-labeled outcomes"
+    required_fix: "Add runtime-vs-simulation conflict resolution process to docs/architecture/governance.md or root ai_summary.md"
+contract_first_design:
+  status: "clear"
+  contract_authority_status: "STRONG — registry.json enumerates 4 contracts with owner domains, schema paths, producer/consumer domains"
+  workflow_status: "CLEAR — feature_workflow.md defines 4-step contract-first workflow (Define → Validate → Implement → Test)"
+  schema_mapping_fixture_design_status: "STRONG — 4 schemas, 2 cross-domain mappings, 3 fixtures; SimulationProfile fixture is null in registry"
+  gaps:
+  - gap: "SimulationProfile has fixture_file: null in registry.json"
+    impact: "Fixture parity test cannot validate SimulationProfile shape against a reference"
+    required_fix: "Create contracts/fixtures/simulation_profile_minimal.json"
+  - gap: "Integration/ not listed in ai_summary.md repo layout tree"
+    impact: "AI agent following ai_summary alone will not discover integration/ adapters and tests"
+    required_fix: "Add integration/ to ai_summary.md repo layout"
+  evidence_refs:
+  - "E011"
+  - "E013"
+  - "E021"
+subsystem_design_readiness:
+  lib:
+    score_out_of_10: 7
+    design_lock_status: "DESIGN_LOCK"
+    rationale: "Clear README.md defining contents, non-contents, import rules. Phase plans P0_5-P2 documented with JSON+MD formats. Market data schema documented. No dedicated ai_summary but README is sufficient for the scope."
+    doc_gaps:
+    - "No ai_summary.md (minor — README.md is adequate for lib's scope)"
+    evidence_refs:
+    - "E006"
+  simulation:
+    score_out_of_10: 8
+    design_lock_status: "DESIGN_LOCK"
+    rationale: "Comprehensive ai_summary.md (16.6K) synthesizing 14 docs. 13 authority docs covering vision, architecture, contracts, profiles, costs, exits, no-trade quality, lineage, hosting, Monte Carlo, validation, migration. S0-S6 phase plans complete. Contract surfaces fully specified. Forbidden patterns documented. Clear ownership boundaries."
+    doc_gaps:
+    - "SimulationProfile fixture is null in contracts/registry.json"
+    evidence_refs:
+    - "E007"
+    - "E008"
+    - "E017"
+  alphaforge:
+    score_out_of_10: 4
+    design_lock_status: "CONDITIONAL_DESIGN_LOCK"
+    rationale: "Has combined ai_summary__v7_alphaforge_xgb.md (625.8K) which is implementation-oriented rather than a design authority hub. Root ai_summary explicitly states '(no ai_summary)' for AlphaForge. No dedicated design entry point. Phase plans P0-P9 exist and are detailed. Contract schema exists (alphaforge_label.schema.json). Missing the thin design authority layer that other subsystems have."
+    doc_gaps:
+    - "No dedicated alphaforge/docs/ai_summary.md"
+    - "No design-focused entry point — current doc is 625K of implementation detail"
+    - "Root ai_summary marks AlphaForge as (no ai_summary)"
+    evidence_refs:
+    - "E003"
+    - "E012"
+  v7:
+    score_out_of_10: 8
+    design_lock_status: "DESIGN_LOCK"
+    rationale: "Massive ai_summary.md (184.7K) with 42+ sections covering system identity, architecture, contracts, pipeline stages, implementation phases, invariants, config surface, exceptions. Contract docs for all 4 lifecycle contracts. Pipeline docs for all 11 stages. Implementation phase plans 0-9. LLM rules and doc writing guide. README with clear reading order."
+    doc_gaps:
+    - "ai_summary.md is very large (184.7K) — may challenge LLM context windows"
+    evidence_refs:
+    - "E009"
+    - "E010"
+  runtime:
+    score_out_of_10: 8
+    design_lock_status: "DESIGN_LOCK"
+    rationale: "Comprehensive ai_summary.md (33.9K) synthesizing 13 docs. Clear architecture, component map, scan flow (9-step cycle documented), analyzer decision order (12-step pipeline), learning layer with profile shape, self-learning scope, operational schema (10 key tables with column descriptions), API surface (all route groups with page binding), runbook references. Diagnostic fix plan and change analysis included."
+    doc_gaps:
+    - "V4 legacy path references still present in cross-doc links (documented as known issue)"
+    evidence_refs:
+    - "E004"
+  interface:
+    score_out_of_10: 7
+    design_lock_status: "DESIGN_LOCK_PRINCIPLE_ONLY"
+    rationale: "Clear ai_summary.md (17.2K) documenting current state, target information architecture (4 product areas with route maps), canonical page responsibilities (Trade Overview, Scans, Review Engine Performance/Behavior, Operate Control, Operate Config, System Preferences), proposed component architecture (app/features/entities/shared layers), data freshness model per area, migration plan (5 phases), definition of done. Still a migration in progress — current state differs from target."
+    doc_gaps:
+    - "Migration plan is still aspirational — current state vs target gap is documented but not yet resolved"
+    - "Interface consumes runtime API rule is stated but not enforced by documented contract tests"
+    evidence_refs:
+    - "E005"
+  contracts:
+    score_out_of_10: 7
+    design_lock_status: "DESIGN_LOCK"
+    rationale: "Well-structured passive authority. registry.json enumerates 4 contracts with complete metadata. compatibility.json defines 3 version-pair compatibility rules with breaking-change rules and required validations. 4 JSON schemas in schemas/. 2 cross-domain field mappings in mappings/. 3 minimal fixtures in fixtures/. README.md documents purpose, reading order, and contribution workflow."
+    doc_gaps:
+    - "SimulationProfile fixture is null in registry"
+    - "Missing contracts/docs/ directory — contract-first workflow is in feature_workflow.md but no contracts-local docs"
+    evidence_refs:
+    - "E011"
+  integration:
+    score_out_of_10: 6
+    design_lock_status: "DESIGN_LOCK_PRINCIPLE_ONLY"
+    rationale: "Clear README.md documenting adapter stubs and integration tests. 4 test files covering contract registry, schema parity, cross-domain boundaries, smoke tests. Adapter stubs documented with real implementation phase targets. However, integration/ is missing from root ai_summary.md repo layout — AI agents following ai_summary alone will not discover it."
+    doc_gaps:
+    - "Missing from root ai_summary.md repo layout tree"
+    - "No integration-local ai_summary or detailed test specification doc"
+    evidence_refs:
+    - "E013"
+phase_plan_design_readiness:
+  overall_status: "PARTIAL — multiple phase numbering schemes exist; exit criteria inconsistently documented"
+  phases:
+  - phase: "P0"
+    title: "Repo Alignment & Alpha Foundations"
+    owner: "alphaforge"
+    dependencies_documented: true
+    inputs_documented: true
+    outputs_documented: true
+    exit_criteria_documented: false
+    design_ready: true
+    evidence_refs:
+    - "E014"
+  - phase: "P0.5"
+    title: "Shared Lib Foundation"
+    owner: "lib"
+    dependencies_documented: true
+    inputs_documented: true
+    outputs_documented: true
+    exit_criteria_documented: false
+    design_ready: true
+    evidence_refs:
+    - "E015"
+  - phase: "P1"
+    title: "Contracts & Alpha Data Contract"
+    owner: "alphaforge"
+    dependencies_documented: true
+    inputs_documented: true
+    outputs_documented: true
+    exit_criteria_documented: false
+    design_ready: true
+    evidence_refs:
+    - "E014"
+  - phase: "S0"
+    title: "Simulation Authority Extraction and Contracts"
+    owner: "simulation"
+    dependencies_documented: true
+    inputs_documented: true
+    outputs_documented: true
+    exit_criteria_documented: false
+    design_ready: true
+    evidence_refs:
+    - "E017"
+  - phase: "S1"
+    title: "Core Comparative Engine Standardization"
+    owner: "simulation"
+    dependencies_documented: true
+    inputs_documented: true
+    outputs_documented: true
+    exit_criteria_documented: false
+    design_ready: true
+    evidence_refs:
+    - "E017"
+  - phase: "V7-0"
+    title: "Repo Alignment and Foundations"
+    owner: "v7"
+    dependencies_documented: true
+    inputs_documented: true
+    outputs_documented: true
+    exit_criteria_documented: false
+    design_ready: true
+    evidence_refs:
+    - "E018"
+  missing_cross_phase_decisions:
+  - decision: "Unified phase numbering across README (P0-P9), simulation (S0-S6), and v7 (0-9)"
+    affected_phases:
+    - "P0-P9"
+    - "S0-S6"
+    - "V7-0 through V7-9"
+    required_fix: "Create cross-reference table mapping all phase numbering schemes"
+  - decision: "Standardized exit criteria format for all phase plans"
+    affected_phases:
+    - "All phases across all subsystems"
+    required_fix: "Define required exit_criteria section in phase plan template and backfill existing plans"
+  - decision: "Cross-phase dependency graph between simulation S-phases and alphaforge P-phases"
+    affected_phases:
+    - "S0-S6"
+    - "P1-P6"
+    required_fix: "Add cross-subsystem dependency arrows to phase documentation or root architecture doc"
+ai_agent_design_readiness:
+  reading_order_status: "ADEQUATE — root ai_summary has clear 3-step reading order and decision tree table"
+  ai_summary_coverage:
+  - subsystem: "root"
+    doc_path: "ai_summary.md"
+    exists: true
+    quality: "strong"
+    evidence_refs:
+    - "E002"
+  - subsystem: "simulation"
+    doc_path: "simulation/docs/ai_summary.md"
+    exists: true
+    quality: "strong"
+    evidence_refs:
+    - "E007"
+  - subsystem: "v7"
+    doc_path: "v7/docs/ai_summary.md"
+    exists: true
+    quality: "strong"
+    evidence_refs:
+    - "E009"
+  - subsystem: "runtime"
+    doc_path: "runtime/docs/ai_summary.md"
+    exists: true
+    quality: "strong"
+    evidence_refs:
+    - "E004"
+  - subsystem: "interface"
+    doc_path: "interface/docs/ai_summary.md"
+    exists: true
+    quality: "strong"
+    evidence_refs:
+    - "E005"
+  - subsystem: "alphaforge"
+    doc_path: "alphaforge/docs/ai_summary.md"
+    exists: false
+    quality: "missing"
+    evidence_refs:
+    - "E003"
+  - subsystem: "lib"
+    doc_path: "lib/docs/ai_summary.md"
+    exists: false
+    quality: "weak — README.md exists but no ai_summary"
+    evidence_refs:
+    - "E006"
+  - subsystem: "contracts"
+    doc_path: "contracts/docs/ai_summary.md"
+    exists: false
+    quality: "partial — README.md exists but no ai_summary"
+    evidence_refs:
+    - "E011"
+  - subsystem: "integration"
+    doc_path: "integration/docs/ai_summary.md"
+    exists: false
+    quality: "partial — README.md exists but no ai_summary"
+    evidence_refs:
+    - "E013"
+  hallucination_risks_from_docs:
+  - risk: "AI agent reads README.md (missing runtime/, interface/) and ai_summary.md (includes both) — produces code placed in wrong directory or duplicates existing runtime functionality"
+    severity: "critical"
+    mitigation_doc_fix: "Synchronize README.md and ai_summary.md layout"
+  - risk: "AI agent working on alphaforge has no ai_summary.md — may misinterpret 625K combined doc and write code in wrong subsystem"
+    severity: "critical"
+    mitigation_doc_fix: "Create alphaforge/docs/ai_summary.md"
+  - risk: "AI agent confuses V7 pipeline semantics (in v7/docs/) with runtime engine implementation (in runtime/) — overlap between 'V7 hosts simulation' and 'runtime orchestrates execution'"
+    severity: "high"
+    mitigation_doc_fix: "Add explicit V7-pipeline vs runtime-engine boundary statement to root ai_summary.md"
+  - risk: "AI agent follows legacy V4 path references in runtime/ and interface/ docs and writes code to wrong locations"
+    severity: "medium"
+    mitigation_doc_fix: "Normalize all legacy V4 path references in runtime/docs/ and interface/docs/"
+  - risk: "AI agent sees three different phase numbering schemes (P0-P9, S0-S6, 0-9) and cannot determine implementation order"
+    severity: "medium"
+    mitigation_doc_fix: "Create unified phase cross-reference table"
+  - risk: "AI agent writes UI code that reconstructs engine state instead of consuming runtime API — rule exists in ai_summary.md but may be missed if agent skips cross-domain rules section"
+    severity: "medium"
+    mitigation_doc_fix: "Repeat the 'Interface consumes runtime API only' rule in interface/docs/ai_summary.md I.1 section"
+design_lock_matrix:
+  subsystems:
+  - subsystem: "lib"
+    score_out_of_10: 7
+    design_lock_status: "DESIGN_LOCK"
+    lockable_now: true
+    main_design_blocker: "none"
+    required_doc_fix: "none"
+    evidence_refs:
+    - "E006"
+  - subsystem: "simulation"
+    score_out_of_10: 8
+    design_lock_status: "DESIGN_LOCK"
+    lockable_now: true
+    main_design_blocker: "SimulationProfile fixture missing in contracts/"
+    required_doc_fix: "Create contracts/fixtures/simulation_profile_minimal.json"
+    evidence_refs:
+    - "E007"
+    - "E008"
+    - "E017"
+  - subsystem: "alphaforge"
+    score_out_of_10: 4
+    design_lock_status: "CONDITIONAL_DESIGN_LOCK"
+    lockable_now: false
+    main_design_blocker: "No dedicated ai_summary.md"
+    required_doc_fix: "Create alphaforge/docs/ai_summary.md"
+    evidence_refs:
+    - "E003"
+    - "E012"
+  - subsystem: "v7"
+    score_out_of_10: 8
+    design_lock_status: "DESIGN_LOCK"
+    lockable_now: true
+    main_design_blocker: "ai_summary.md is very large (184.7K) — may challenge context-limited agents"
+    required_doc_fix: "Consider splitting into sections or adding a thin summary at the top for context-limited reads"
+    evidence_refs:
+    - "E009"
+    - "E010"
+  - subsystem: "runtime"
+    score_out_of_10: 8
+    design_lock_status: "DESIGN_LOCK"
+    lockable_now: true
+    main_design_blocker: "V4 legacy path references in cross-doc links"
+    required_doc_fix: "Normalize V4 legacy paths"
+    evidence_refs:
+    - "E004"
+  - subsystem: "interface"
+    score_out_of_10: 7
+    design_lock_status: "DESIGN_LOCK_PRINCIPLE_ONLY"
+    lockable_now: true
+    main_design_blocker: "Target architecture differs from current state; migration plan not yet executed"
+    required_doc_fix: "Document which parts of the target architecture are locked vs still evolving"
+    evidence_refs:
+    - "E005"
+  - subsystem: "contracts"
+    score_out_of_10: 7
+    design_lock_status: "DESIGN_LOCK"
+    lockable_now: true
+    main_design_blocker: "SimulationProfile fixture null"
+    required_doc_fix: "Add SimulationProfile fixture"
+    evidence_refs:
+    - "E011"
+  - subsystem: "integration"
+    score_out_of_10: 6
+    design_lock_status: "DESIGN_LOCK_PRINCIPLE_ONLY"
+    lockable_now: true
+    main_design_blocker: "Not listed in root ai_summary.md layout"
+    required_doc_fix: "Add integration/ to root ai_summary.md"
+    evidence_refs:
+    - "E013"
+safe_next_implementation_map:
+  safe_to_prompt_after_design_lock:
+  - area: "Simulation S0-S2 implementation (engine core, profiles, costs, exits)"
+    reason: "Strong design authority docs, complete contract schemas, clear phase plans"
+    required_design_gate:
+    - "Create SimulationProfile fixture"
+  - area: "Runtime analyzer/API/schema changes"
+    reason: "Comprehensive ai_summary with full API surface, schema tables, analyzer pipeline"
+    required_design_gate:
+    - "Normalize V4 legacy path references"
+  - area: "Interface rework Phase 1-2 (rename settings, reduce shell weight)"
+    reason: "Clear migration plan with phased approach and definition of done"
+    required_design_gate:
+    - "Document which interface design decisions are locked vs evolving"
+  - area: "Lib indicator/cost extensions (P1, P2)"
+    reason: "Clear README and phase plans for P1 indicators, P2 costs"
+    required_design_gate:
+    - "none"
+  needs_doc_fix_before_prompting:
+  - area: "AlphaForge implementation (any phase)"
+    missing_decision: "No dedicated ai_summary.md design entry point"
+    required_doc_fix: "Create alphaforge/docs/ai_summary.md"
+  - area: "Cross-domain features involving runtime/interface with simulation/v7"
+    missing_decision: "README.md omits runtime/ and interface/ as root domains"
+    required_doc_fix: "Update README.md to include runtime/ and interface/"
+  - area: "Cross-phase implementation spanning simulation + alphaforge"
+    missing_decision: "No unified phase cross-reference between P-phases and S-phases"
+    required_doc_fix: "Create cross-phase reference table"
+  do_not_prompt_until_later:
+  - area: "Full AlphaForge model training pipeline (P5+)"
+    reason: "Depends on simulation outputs and alphaforge ai_summary — both have gaps"
+    unlock_condition: "alphaforge/docs/ai_summary.md created + SimulationProfile fixture added"
+  - area: "Cross-domain integration between runtime/ and simulation/"
+    reason: "README inconsistency could cause AI agent to place integration code incorrectly"
+    unlock_condition: "README.md updated with runtime/ and interface/"
+  - area: "Production deployment (P9)"
+    reason: "Runtime and interface still carry V4 legacy references; not locked for deployment semantics"
+    unlock_condition: "V4 paths normalized; interface migration plan executed through Phase 4"
+p0_6_design_lock_plan:
+  goal: "Resolve root documentation inconsistencies and fill missing authority doc gaps to achieve design lock score ≥ 8.5"
+  scope:
+  - "Synchronize README.md and ai_summary.md root layouts"
+  - "Create alphaforge/docs/ai_summary.md"
+  - "Create cross-phase reference table"
+  - "Add SimulationProfile fixture"
+  - "Add integration/ to ai_summary.md layout"
+  - "Document phase exit criteria format"
+  - "Consolidate AI agent forbidden rules"
+  doc_tasks:
+  - id: "P06-D1"
+    target_file: "README.md"
+    task: "Add runtime/ and interface/ to the root tree diagram; add a V4→V7 migration note"
+    acceptance_criteria:
+    - "README.md tree shows runtime/ and interface/ as top-level domains"
+    - "README.md root domain list matches ai_summary.md subsystem authority map"
+  - id: "P06-D2"
+    target_file: "ai_summary.md"
+    task: "Add integration/ to repo layout tree; update AlphaForge entry to reference real ai_summary.md path once created"
+    acceptance_criteria:
+    - "ai_summary.md layout tree includes integration/"
+    - "AlphaForge subsystem entry no longer says '(no ai_summary)'"
+  - id: "P06-D3"
+    target_file: "alphaforge/docs/ai_summary.md"
+    task: "Create alphaforge/docs/ai_summary.md as a thin design authority hub: subsystem identity, ownership boundaries, reading order, phase plan index, contract references"
+    acceptance_criteria:
+    - "File exists at alphaforge/docs/ai_summary.md"
+    - "References phase_plans/, schemas/, ai_summary__v7_alphaforge_xgb.md"
+    - "States ownership boundaries and forbidden imports"
+    - "Root ai_summary.md updated to point to this file"
+  - id: "P06-D4"
+    target_file: "docs/architecture/phase_exit_criteria.md"
+    task: "Create phase exit criteria document defining required sections (inputs, outputs, owner, dependencies, tests, exit criteria, deliverables) and backfill for P0-P9, S0-S6"
+    acceptance_criteria:
+    - "Document defines standard exit criteria format"
+    - "Cross-reference table maps README P-phases to simulation S-phases to v7 phase numbers"
+  - id: "P06-D5"
+    target_file: "contracts/fixtures/simulation_profile_minimal.json"
+    task: "Create minimal SimulationProfile fixture matching contracts/schemas/simulation_profile.schema.json"
+    acceptance_criteria:
+    - "Fixture validates against simulation_profile.schema.json"
+    - "registry.json fixture_file updated to point to this fixture"
+  - id: "P06-D6"
+    target_file: "ai_summary.md (root)"
+    task: "Add consolidated AI agent forbidden rules section"
+    acceptance_criteria:
+    - "Section lists all cross-domain forbidden behaviors from governance.md, v7_llm_rules.md, simulation ai_summary"
+    - "Each forbidden rule references its source authority doc"
+  definition_of_done:
+  - "README and ai_summary show same root layout"
+  - "Every subsystem has authority doc or explicit fallback"
+  - "Runtime/V7/Simulation/AlphaForge/Interface boundaries are stated in one canonical section"
+  - "Phase exit criteria are documented"
+  - "AI agent forbidden rules are explicit"
+  - "AlphaForge has dedicated ai_summary.md"
+  - "Design lock score reaches 8.5 or higher"
+  promotion_gate:
+    required_checks:
+    - "README and ai_summary show same root layout"
+    - "Every subsystem has authority doc or explicit fallback"
+    - "Runtime/V7/Simulation/AlphaForge/Interface boundaries are stated in one canonical section"
+    - "Phase exit criteria are documented"
+    - "AI agent forbidden rules are explicit"
+top_design_fixes_to_reach_8_5:
+  ranked_fixes:
+  - rank: 1
+    fix: "Synchronize README.md and ai_summary.md root layouts (add runtime/, interface/ to README; add integration/ to ai_summary layout)"
+    expected_score_gain: 2.0
+    target_docs:
+    - "README.md"
+    - "ai_summary.md"
+    risk_reduction: "Eliminates the highest-severity AI agent hallucination risk (wrong directory placement)"
+    evidence_refs:
+    - "E001"
+    - "E002"
+  - rank: 2
+    fix: "Create alphaforge/docs/ai_summary.md as thin design authority hub"
+    expected_score_gain: 1.5
+    target_docs:
+    - "alphaforge/docs/ai_summary.md"
+    risk_reduction: "Gives AI agents a canonical entry point for alphaforge; prevents misreading of 625K combined doc"
+    evidence_refs:
+    - "E003"
+    - "E012"
+  - rank: 3
+    fix: "Create unified phase cross-reference table and standardized exit criteria format"
+    expected_score_gain: 1.0
+    target_docs:
+    - "docs/architecture/phase_exit_criteria.md"
+    risk_reduction: "AI agents can determine correct implementation order and know when phases are complete"
+    evidence_refs:
+    - "E002"
+    - "E014"
+    - "E017"
+    - "E018"
+  - rank: 4
+    fix: "Add SimulationProfile fixture to contracts/fixtures/"
+    expected_score_gain: 0.5
+    target_docs:
+    - "contracts/fixtures/simulation_profile_minimal.json"
+    - "contracts/registry.json"
+    risk_reduction: "Completes contract fixture coverage; enables full parity testing"
+    evidence_refs:
+    - "E011"
+  - rank: 5
+    fix: "Consolidate AI agent forbidden rules into one section in root ai_summary.md"
+    expected_score_gain: 0.5
+    target_docs:
+    - "ai_summary.md"
+    risk_reduction: "Reduces chance of AI agent missing critical cross-domain constraints"
+    evidence_refs:
+    - "E002"
+    - "E005"
+    - "E010"
+    - "E020"
+final_recommendation:
+  whether_to_design_lock: "CONDITIONAL — lock simulation, v7, runtime, lib, and contracts now; delay alphaforge lock until ai_summary.md is created"
+  whether_to_start_implementation_prompting: "YES for simulation S0-S2, runtime, lib P1-P2, and interface Phase 1-2. NO for alphaforge and cross-domain integration until P0.6 doc fixes are applied."
+  recommended_next_prompt: "Implement P0.6 design lock fixes (D1-D6 above), then re-audit for design lock score ≥ 8.5"
+  final_verdict: >
+    The V7 Engine monorepo has strong design documentation for its core subsystems (simulation, V7, runtime, interface)
+    and a well-structured contract-first workflow. The truth hierarchy is clearly defined. However, two critical
+    documentation issues prevent full design lock: (1) README.md and ai_summary.md disagree on which domains exist
+    at the repo root, and (2) AlphaForge has no dedicated ai_summary.md design entry point. These are fixable
+    with targeted documentation work — no architectural redesign is needed. Once the 6 P0.6 doc tasks are completed,
+    the design lock score should reach 8.5+, enabling safe implementation prompting across all subsystems.
+evidence_index:
+- id: "E001"
+  file_path: "README.md"
+  section_or_heading_if_available: "Structure (tree diagram)"
+  summary_of_evidence: "README.md tree lists lib/, simulation/, alphaforge/, v7/, contracts/, integration/, data/, docs/architecture/, .gitignore. Does NOT include runtime/, interface/, scripts/, or test.sh."
+  confidence: "high"
+- id: "E002"
+  file_path: "ai_summary.md"
+  section_or_heading_if_available: "Repo Layout, Subsystem Authority Map, Truth Hierarchy, Cross-Domain Authority & Governance"
+  summary_of_evidence: "Root ai_summary lists contracts/, docs/, v7/, runtime/, interface/, simulation/, alphaforge/, data/, lib/, scripts/, test.sh. Subsystem authority map has entries for V7, Runtime, Interface, Simulation, Contracts, AlphaForge. Truth hierarchy has 5 levels. Phase table P0-P9 in separate section."
+  confidence: "high"
+- id: "E003"
+  file_path: "ai_summary.md"
+  section_or_heading_if_available: "Subsystem Authority Map (AlphaForge row)"
+  summary_of_evidence: "Root ai_summary subsystem table row for AlphaForge says '(no ai_summary)' in the ai_summary.md column. The file alphaforge/docs/ai_summary.md does not exist. A combined file alphaforge/docs/ai_summary__v7_alphaforge_xgb.md (625.8K) exists instead."
+  confidence: "high"
+- id: "E004"
+  file_path: "runtime/docs/ai_summary.md"
+  section_or_heading_if_available: "All sections R.1 through R.10"
+  summary_of_evidence: "Comprehensive 33.9K synthesis of 13 runtime docs. Covers architecture (R.1), runtime flow with 9-step scan cycle (R.2), 12-step analyzer decision order (R.3), learning layer profile shape (R.4), self-learning scope (R.5), 10 operational schema tables (R.6), API route groups with page binding (R.7), runbook (R.8), change analysis (R.9), diagnostic fix plan (R.10). V4 legacy path references noted as known issue."
+  confidence: "high"
+- id: "E005"
+  file_path: "interface/docs/ai_summary.md"
+  section_or_heading_if_available: "All sections I.1 through I.11"
+  summary_of_evidence: "17.2K synthesis covering stack (I.1), current info architecture with shell/page problems (I.2), target 4-area architecture with route maps (I.3), canonical page responsibilities (I.4), proposed component layer model (I.5), domain consolidation plans (I.6), 5-phase migration plan (I.7), immediate fixes (I.8), definition of done (I.9), current-state weaknesses (I.10). States interface consumes runtime API and must not reconstruct engine state."
+  confidence: "high"
+- id: "E006"
+  file_path: "lib/docs/README.md"
+  section_or_heading_if_available: "Purpose, Contents, What Does NOT Go Here, Import Rules"
+  summary_of_evidence: "Defines lib as shared primitives: market_data, indicators, costs, time. Explicitly states what does NOT go here (regime, R-multiple, IO, serialization, cache, adapters). Import rules: lib must not import v7/alphaforge/simulation. Phase plans for P0_5, P1, P2 exist in lib/docs/phase_plans/."
+  confidence: "high"
+- id: "E007"
+  file_path: "simulation/docs/ai_summary.md"
+  section_or_heading_if_available: "All sections: META through 13. SEARCH TERMS"
+  summary_of_evidence: "16.6K synthesis of 14 simulation docs. System identity with 10 design rules. Contract surfaces: SimulationInput, SimulationOutput, ActionOutcome, NoTradeOutcome, ExitResolution, PathMetrics, SimulationProfile. Mode profiles table. Cost model formulas. Exit families. No-trade quality classifications. Lineage with 11 version surfaces. Adapter rules (5 types). Monte Carlo diagnostics. 14 validation gates. S0-S6 phase summary. 10 forbidden patterns with detection methods."
+  confidence: "high"
+- id: "E008"
+  file_path: "simulation/README.md"
+  section_or_heading_if_available: "What /simulation Is, What /simulation Owns, What /simulation Does NOT Own, Key Design Rules"
+  summary_of_evidence: "Clear ownership boundaries: simulation owns economic truth, contracts, engine, profiles, costs, exits, path metrics, Monte Carlo, golden tests. Does NOT own runtime orchestration, policy/risk interpretation, TradeOutcome normalization, training pipeline, dataset assembly, feature generation, model training. 4 key design rules stated. Cross-domain contract governance table with contract/ path references."
+  confidence: "high"
+- id: "E009"
+  file_path: "v7/docs/ai_summary.md"
+  section_or_heading_if_available: "META, sections 1-2, Migrated Subsystems"
+  summary_of_evidence: "184.7K synthesis of ~45 V7 markdown files plus runtime + interface authorities. 42+ sections. System identity with 21 subsections covering vision, success metrics, what V7 is/is-not, 6 architectural layers, strategic difference from V6. Architecture with 11 top-level layers. Migrated subsystems section acknowledges runtime/ and interface/ promotion into V7 authority tree."
+  confidence: "high"
+- id: "E010"
+  file_path: "v7/docs/v7_llm_rules.md"
+  section_or_heading_if_available: "LLM Working Rules, Forbidden patterns"
+  summary_of_evidence: "10 LLM working rules including read authority first, inspect before editing, preserve valid work, do not invent semantics, one concern one primary edit path, config is only control surface, hidden fallbacks are forbidden, every non-trivial change must be tested. File size limits for docs, Python, tests. Python writing rules. Test strategy. Documentation writing rules."
+  confidence: "high"
+- id: "E011"
+  file_path: "contracts/registry.json"
+  section_or_heading_if_available: "contracts array"
+  summary_of_evidence: "4 contracts registered: SimulationProfile (fixture_file: null), SimulationOutput (fixture: simulation_output_minimal.json), AlphaForgeLabel (fixture: alphaforge_label_minimal.json), TradeOutcome (fixture: trade_outcome_minimal.json). Each has owner_domain, version, schema_file, source_authority, producers, consumers."
+  confidence: "high"
+- id: "E012"
+  file_path: "alphaforge/docs/ai_summary__v7_alphaforge_xgb.md"
+  section_or_heading_if_available: "META, sections 1-3"
+  summary_of_evidence: "625.8K combined AI implementation reference. Generated 2026-05-23. Package version v1.2_shared_lib_authority. Defines AlphaForge XGB as mode-specific, 20-symbol global alpha generation layer. Contains governance rules: AlphaForge owns training/research, must NOT import simulation/v7 internals, consumes SimulationOutput via adapters. NOT a dedicated ai_summary.md — is an implementation-oriented combined reference."
+  confidence: "high"
+- id: "E013"
+  file_path: "integration/README.md"
+  section_or_heading_if_available: "Purpose, Adapter Stubs, Tests"
+  summary_of_evidence: "Defines integration as active skeleton with adapter stubs (SimulationAdapter, AlphaForgeAdapter, V7Adapter) and 4 integration test files. Adapter stubs raise NotImplementedError until real implementation phases. Test files cover contract registry, schema parity, cross-domain boundaries, smoke tests."
+  confidence: "high"
+- id: "E014"
+  file_path: "alphaforge/docs/phase_plans/"
+  section_or_heading_if_available: "P0-P9 phase plan files"
+  summary_of_evidence: "11 phase plan files (P0 through P9 + P0_5) exist. P0-P9 each 50-55K markdown. P0_5 shared lib foundation at 51K. Phase plans are detailed and include inputs, outputs, workstreams. Exit criteria section not consistently present."
+  confidence: "high"
+- id: "E015"
+  file_path: "lib/docs/phase_plans/"
+  section_or_heading_if_available: "P0_5, P1, P2 phase plans"
+  summary_of_evidence: "lib phase plans exist: P0_5 shared lib foundation (19.2K JSON + 3.3K MD), P1 indicators (40.1K JSON + 21K MD), P2 costs R terms (25.2K JSON + 15K MD). Phase plans are structured with JSON+MD dual format."
+  confidence: "high"
+- id: "E016"
+  file_path: "README.md"
+  section_or_heading_if_available: "Phases table"
+  summary_of_evidence: "README phase table lists P0-P9 with titles and statuses: P0 Done, P0.5 Done, P1-P9 Planned. References alphaforge/docs/phase_index.md for dependency chain. No cross-reference to simulation S0-S6 phases or v7 0-9 phases."
+  confidence: "high"
+- id: "E017"
+  file_path: "simulation/docs/phases/"
+  section_or_heading_if_available: "S0-S6 phase plan files"
+  summary_of_evidence: "7 simulation phase plans (S0-S6) exist, each 32-39K. S0: authority extraction and contracts. S1: core comparative engine. S2: profiles/costs/exits/horizons. S3: adapters and hosting. S4: path metrics/no-trade quality/Monte Carlo. S5: golden tests/replay parity/drift guards. S6: V7/AlphaForge integration and rollout."
+  confidence: "high"
+- id: "E018"
+  file_path: "v7/docs/implementation/"
+  section_or_heading_if_available: "phase_0 through phase_9 files"
+  summary_of_evidence: "10 v7 implementation phase plans (0-9) exist in v7/docs/implementation/. Each 4-7K. Cover repo alignment (0), contracts/validation (1), simulation truth layer (2), labels/outcome semantics (3), features/dataset (4), model baseline (5), calibration/policy (6), portfolio/risk/runtime integration (7), evaluation/monitoring (8), deployment safety/release (9)."
+  confidence: "high"
+- id: "E019"
+  file_path: "v7/docs/README.md"
+  section_or_heading_if_available: "What Is Locked vs Delegated"
+  summary_of_evidence: "V7 README defines locked design decisions: atomic request/result/event/outcome boundaries, runtime-hosted simulation engine, no-trade as first-class action, confidence + expected-R dual surface, batch/session lineage. Delegated: contract generation rules, runtime integration behavior, pipeline semantics. Config surface is unified."
+  confidence: "high"
+- id: "E020"
+  file_path: "docs/architecture/governance.md"
+  section_or_heading_if_available: "Domain Ownership Table, Forbidden Import Relationships, Conflict Resolution Order"
+  summary_of_evidence: "Defines domain ownership for all 7 domains. Conflict resolution order (5 levels). Forbidden import relationships table (5 pairs). Allowed imports. Version bump policy table. Contract-first workflow requirement for cross-domain features."
+  confidence: "high"
+- id: "E021"
+  file_path: "docs/architecture/feature_workflow.md"
+  section_or_heading_if_available: "Contract-First Workflow, Simulation → AlphaForge → V7 Relationship"
+  summary_of_evidence: "4-step contract-first workflow defined. ASCII diagram showing data flow from data/ through lib/ to simulation/ to alphaforge/ and v7/. Contract layer and integration layer shown. Key rules: simulation is single economic truth authority, AlphaForge consumes via side-effect-free adapters, V7 hosts but does not duplicate simulation semantics."
+  confidence: "high"
