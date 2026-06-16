@@ -38,3 +38,73 @@ def rolling_apply(
         if len(window_values) >= min_periods:
             result[i] = func(window_values)
     return result
+
+
+def rolling_max(values: Sequence[float], period: int = 20) -> list[float]:
+    """Rolling maximum.
+
+    Args:
+        values: Input sequence.
+        period: Window size (default 20).
+
+    Returns:
+        List of rolling max values (same length).
+        First `period - 1` values are NaN. period=1 returns values unchanged.
+    """
+    n = len(values)
+    if n == 0:
+        return []
+    if period == 1:
+        return list(values)
+
+    result: list[float] = [float("nan")] * n
+    for i in range(period - 1, n):
+        result[i] = max(values[i - period + 1 : i + 1])
+    return result
+
+
+def rolling_min(values: Sequence[float], period: int = 20) -> list[float]:
+    """Rolling minimum.
+
+    Args:
+        values: Input sequence.
+        period: Window size (default 20).
+
+    Returns:
+        List of rolling min values (same length).
+        First `period - 1` values are NaN. period=1 returns values unchanged.
+    """
+    n = len(values)
+    if n == 0:
+        return []
+    if period == 1:
+        return list(values)
+
+    result: list[float] = [float("nan")] * n
+    for i in range(period - 1, n):
+        result[i] = min(values[i - period + 1 : i + 1])
+    return result
+
+
+def rolling_mean(values: Sequence[float], period: int = 20) -> list[float]:
+    """Rolling mean.
+
+    Args:
+        values: Input sequence.
+        period: Window size (default 20).
+
+    Returns:
+        List of rolling mean values (same length).
+        First `period - 1` values are NaN. period=1 returns values unchanged.
+    """
+    n = len(values)
+    if n == 0:
+        return []
+    if period == 1:
+        return list(values)
+
+    result: list[float] = [float("nan")] * n
+    for i in range(period - 1, n):
+        window = values[i - period + 1 : i + 1]
+        result[i] = sum(window) / period
+    return result
