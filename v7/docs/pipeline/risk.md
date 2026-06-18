@@ -82,6 +82,50 @@ If both portfolio and risk block, preserve both signals when available. Treat ri
 
 ---
 
+## Mode-Specific Risk Parameters
+
+Each mode has distinct risk tolerances derived from its timeframe, holding period, cost sensitivity, and no-trade tendency. Values marked **LOCK_CANDIDATE** are conservative defaults requiring owner review before implementation.
+
+### Risk Parameter Table
+
+| Parameter | SWING | SCALP | AGGRESSIVE_SCALP | Owner Review |
+|-----------|-------|-------|------------------|--------------|
+| Max mode exposure (% of account) | 25% **[LOCK_CANDIDATE]** | 15% **[LOCK_CANDIDATE]** | 5% **[LOCK_CANDIDATE]** | Required |
+| Max per-symbol exposure (% of account) | 10% **[LOCK_CANDIDATE]** | 5% **[LOCK_CANDIDATE]** | 2% **[LOCK_CANDIDATE]** | Required |
+| Max cluster exposure (% of account) | 15% (from portfolio.md) | 15% (from portfolio.md) | 15% (from portfolio.md) | Locked |
+| Max daily loss (% of account) | 5% **[LOCK_CANDIDATE]** | 3% **[LOCK_CANDIDATE]** | 2% **[LOCK_CANDIDATE]** | Required |
+| Max drawdown (cumulative) | 25% **[LOCK_CANDIDATE]** | 15% **[LOCK_CANDIDATE]** | 10% **[LOCK_CANDIDATE]** | Required |
+| Cooldown after loss | 4 bars (16h at 4h) **[LOCK_CANDIDATE]** | 6 bars (6h at 1h) **[LOCK_CANDIDATE]** | 12 bars (3h at 15m) **[LOCK_CANDIDATE]** | Required |
+| Stale result TTL | 1 bar (4h) **[LOCK_CANDIDATE]** | 2 bars (2h) **[LOCK_CANDIDATE]** | 4 bars (1h) **[LOCK_CANDIDATE]** | Required |
+| Duplicate position rule | Block same symbol + same direction | Block same symbol + same direction | Block same symbol + same direction | Locked |
+| Kill switch sensitivity | MODERATE — trigger on drawdown breach or 3 consecutive losses | HIGH — trigger on drawdown breach, 2 consecutive losses, or cost divergence | VERY HIGH — trigger on drawdown breach, any single unexpected loss > 2× expected, cost divergence, or stale result cascade | Required for VERY HIGH |
+
+### Design Policy
+
+1. **SWING may tolerate wider stop/horizon but must have strict drawdown and cluster exposure controls.** Larger position size, longer holding period — the damage from a single bad trade is proportionally larger.
+2. **SCALP must have stricter stale-result and cost sensitivity controls than SWING.** Higher trade frequency means more opportunities for stale signals and cost accumulation to erode edge.
+3. **AGGRESSIVE_SCALP must have the strictest stale-result, slippage, no-trade, cooldown, and kill-switch controls.** Highest frequency, smallest edge per trade, most sensitive to execution quality degradation.
+4. **Do not use Kelly sizing in Phase 1** unless explicitly locked by a separate authority decision. Phase 1 uses fixed sizing.
+5. **Model confidence cannot override risk gates.** A high-confidence signal with unacceptable drawdown risk must be blocked.
+6. **Promoted SWING status does not imply SCALP or AGGRESSIVE_SCALP readiness.** Each mode earns its own risk eligibility independently.
+
+### Mode-Specific Risk Rationale
+
+| Mode | Primary Risk Concern | Risk Mitigation |
+|------|---------------------|-----------------|
+| SWING | Single large adverse move over multi-day hold; gap risk over weekends | Strict per-symbol and cluster limits; cooldown after loss prevents revenge trading on higher timeframe |
+| SCALP | Cost erosion over many small trades; stale signals at 1h decay | Stricter stale-result TTL; cost-adjusted expectancy gate in policy; cooldown after consecutive losses |
+| AGGRESSIVE_SCALP | Slippage/cost can erase entire edge; micro-structure noise produces false signals | Most restrictive stale-result TTL; strictest kill switch; highest cooldown frequency; smallest position sizes |
+
+### Forbidden
+
+- Do not use Kelly sizing in Phase 1 unless already explicitly locked.
+- Do not allow model confidence to override risk gates.
+- Do not allow promoted SWING status to imply SCALP or AGGRESSIVE_SCALP readiness.
+- Do not relax AGGRESSIVE_SCALP risk controls because SWING is profitable.
+
+---
+
 ## Cooldown Rule
 
 Cooldown is configurable by:

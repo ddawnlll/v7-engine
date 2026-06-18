@@ -22,6 +22,14 @@ v7-engine/
 │   └── docs/         ← master documentation, phase plans, contracts
 ├── v7/               ← V7 semantic/runtime/policy authority
 │   └── docs/         ← V7 specifications, contracts, architecture
+├── runtime/          ← Python backend (imported from v4, migrated to v7)
+│   ├── api/          ← FastAPI route groups
+│   ├── db/           ← operational schema
+│   ├── services/     ← scan loop, analyzer, learning layer
+│   └── docs/         ← runtime ai_summary, runbook, architecture
+├── interface/        ← React + TypeScript + Vite operator UI (imported from v4, migrated to v7)
+│   ├── src/          ← React components and pages
+│   └── docs/         ← interface ai_summary, architecture, migration plan
 ├── contracts/        ← passive root contract authority
 │   ├── registry.json       ← master contract list
 │   ├── compatibility.json  ← version compatibility rules
@@ -40,6 +48,8 @@ v7-engine/
 ├── docs/architecture/← root governance and workflow docs
 │   ├── governance.md       ← conflict resolution, domain ownership
 │   └── feature_workflow.md ← contract-first feature workflow
+├── scripts/          ← operational/utility scripts
+├── reports/          ← generated reports (e.g. evaluation outputs)
 └── .gitignore        ← properly scoped per-directory gitignore
 ```
 
@@ -48,6 +58,7 @@ v7-engine/
 | Rule | Enforcement |
 |---|---|
 | **`lib/` does NOT import `v7/`, `alphaforge/`, or `simulation/`** | Hard-stop test in `lib/tests/test_import_boundary.py` |
+| **`runtime/` and `interface/` promoted from v4 → v7** | Runtime is the Python backend; Interface is the React/TypeScript UI. Both retain their internal docs structure. |
 | **`/simulation` owns economic truth contracts and semantics** | docs + import-boundary tests |
 | **V7 runtime hosts simulation but does not duplicate semantics** | Contract integration |
 | **AlphaForge consumes simulation outputs only (side-effect-free adapters)** | Adapter parity tests |

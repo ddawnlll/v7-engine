@@ -1,0 +1,337 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_6A-REMAINING-DESIGN-LOCK-RESULT"
+  status: "PASS"
+  summary: >
+    All 6 required design lock gaps closed. Profitability thesis created, alpha-to-mode
+    mapping added, promotion gate sequence (G0-G10) documented per mode, funding cost model
+    marked as DEFERRED with LOCK_CANDIDATE formula, mode-specific risk parameters added,
+    per-mode runtime promotion lifecycle documented. No source code modified, no tests run,
+    no builds executed. All LOCK_CANDIDATE values are conservative defaults requiring owner
+    review before implementation. V7 is now a stronger upstream policy/acceptance authority
+    for AlphaForge, Simulation, and Runtime.
+  target_repo: "/home/erfolg/src/v7-engine"
+
+scope_confirmation:
+  docs_only: true
+  source_code_changed: false
+  tests_executed: false
+  build_executed: false
+  runtime_executed: false
+  root_architecture_docs_created: false
+  no_mode_timeframe_changes: true
+  no_action_space_changes: true
+  no_new_modes_added: true
+  alphaforge_discovery_authority_preserved: true
+  simulation_truth_authority_preserved: true
+  v7_policy_authority_preserved: true
+
+files_changed:
+  - path: "v7/docs/profitability_thesis.md"
+    change_type: "created"
+    purpose: >
+      Single cohesive profitability thesis synthesizing mode-centric edge, regime awareness,
+      cost honesty, calibration discipline, no-trade quality, and correlation control.
+      Defines canonical profitability chain, mandatory rejection rules, mode-specific edge
+      thesis table, alpha hypothesis mapping, and failure modes.
+
+  - path: "v7/docs/v7_mode_centric_architecture.md"
+    change_type: "patched"
+    purpose: >
+      Added section 6.9 "Alpha Thesis to Mode Mapping" connecting ALTCOIN_DELAY,
+      VOLATILITY_COMPRESSION, and FUNDING_DIVERGENCE hypotheses to compatible modes
+      with required features, simulation outputs, cost assumptions, validation gates,
+      and rejection conditions.
+
+  - path: "v7/docs/pipeline/evaluation.md"
+    change_type: "patched"
+    purpose: >
+      Added "Mode-Specific Promotion Gate Sequence" section with G0-G10 gate definitions,
+      mode-specific promotion thresholds table (LOCK_CANDIDATE defaults), mandatory
+      rejection rules, and alpha thesis validation gate subsection.
+
+  - path: "simulation/docs/cost_model.md"
+    change_type: "patched"
+    purpose: >
+      Added "Funding Cost Model for Perpetuals" section. Funding marked as DEFERRED for
+      spot/non-perp first phase. LOCK_CANDIDATE formula and parameters defined. Blocking
+      rule: perpetual swap trading blocked at G3 until funding model moves from DEFERRED
+      to LOCKED.
+
+  - path: "v7/docs/pipeline/risk.md"
+    change_type: "patched"
+    purpose: >
+      Added "Mode-Specific Risk Parameters" section with per-mode exposure limits, max
+      drawdown, cooldown, stale-result TTL, kill-switch sensitivity. LOCK_CANDIDATE
+      conservative defaults. Forbidden rules enumerated.
+
+  - path: "v7/docs/runtime/runtime_integration.md"
+    change_type: "patched"
+    purpose: >
+      Added "Per-Mode Promotion Lifecycle" section with 8 readiness states
+      (DESIGN_LOCKED through LIVE_ELIGIBLE plus DISABLED), mixed-mode runtime operation
+      rules, state transition rules, and staggered promotion example.
+
+  - path: "v7/docs/README.md"
+    change_type: "patched"
+    purpose: "Added profitability_thesis.md to summary docs navigation."
+
+  - path: "v7/docs/roadmap.md"
+    change_type: "patched"
+    purpose: "Added profitability_thesis.md reference to current state documentation inventory."
+
+decisions_locked:
+  - id: "DEC-017"
+    decision: >
+      V7 profitability thesis is explicitly documented as a single cohesive synthesis.
+      Canonical chain: AlphaForge discovers → Simulation measures → V7 accepts/rejects →
+      Runtime operates → Interface observes.
+    files:
+      - "v7/docs/profitability_thesis.md"
+
+  - id: "DEC-018"
+    decision: >
+      Alpha hypotheses (ALTCOIN_DELAY, VOLATILITY_COMPRESSION, FUNDING_DIVERGENCE) are
+      mapped to compatible modes with explicit validation gates, rejection conditions,
+      and required simulation outputs.
+    files:
+      - "v7/docs/v7_mode_centric_architecture.md"
+      - "v7/docs/profitability_thesis.md"
+
+  - id: "DEC-019"
+    decision: >
+      Promotion gate sequence is G0_DOC_READY → G1_RESEARCH_BACKTEST → G2_WALK_FORWARD_OOS
+      → G3_COST_STRESS → G4_REGIME_BREAKDOWN → G5_SYMBOL_STABILITY → G6_CALIBRATION_RELIABILITY
+      → G7_SHADOW → G8_PAPER → G9_TINY_LIVE → G10_LIVE. Each mode must pass all gates
+      independently. No gate may be skipped.
+    files:
+      - "v7/docs/pipeline/evaluation.md"
+
+  - id: "DEC-020"
+    decision: >
+      Funding cost model for perpetuals is DEFERRED for spot/non-perp first phase.
+      LOCK_CANDIDATE formula defined. Perpetual swap trading blocked at G3 until
+      funding model is LOCKED. Spot trading unaffected.
+    files:
+      - "simulation/docs/cost_model.md"
+
+  - id: "DEC-021"
+    decision: >
+      Mode-specific risk parameters: SWING tolerates wider stops but requires strict
+      drawdown/cluster controls. SCALP requires stricter stale-result and cost sensitivity.
+      AGGRESSIVE_SCALP requires strictest stale-result, slippage, no-trade, cooldown,
+      and kill-switch controls.
+    files:
+      - "v7/docs/pipeline/risk.md"
+
+  - id: "DEC-022"
+    decision: >
+      Each mode has independent readiness state (DESIGN_LOCKED through LIVE_ELIGIBLE).
+      Runtime routes only to mode artifacts whose readiness state allows the requested
+      environment. Disabled modes return safe non-actionable result, not fallback to
+      another mode. SWING can be promoted while other modes remain disabled or research-only.
+    files:
+      - "v7/docs/runtime/runtime_integration.md"
+
+  - id: "DEC-023"
+    decision: >
+      Mandatory rejection rule: any alpha that cannot survive cost, slippage, funding
+      (where applicable), no-trade comparison, regime breakdown, symbol stability,
+      calibration quality, and walk-forward OOS validation must be rejected regardless
+      of apparent model accuracy.
+    files:
+      - "v7/docs/profitability_thesis.md"
+      - "v7/docs/pipeline/evaluation.md"
+
+lock_candidates:
+  - id: "LC-001"
+    decision_area: "Mode-specific promotion thresholds (exact numeric values)"
+    candidate_default: >
+      SWING: min 200 trades, ≥ 0.15R expectancy, ≤ 25% max drawdown, 4wk shadow, 4wk paper,
+      0.5% account risk per trade.
+      SCALP: min 500 trades, ≥ 0.05R expectancy, ≤ 15% max drawdown, 3wk shadow, 4wk paper,
+      0.25% account risk per trade.
+      AGGRESSIVE_SCALP: min 300 trades, ≥ 0.03R expectancy, ≤ 10% max drawdown, 2wk shadow,
+      3wk paper, 0.1% account risk per trade.
+    reason_owner_review_required: >
+      No existing documented numeric thresholds. Values are conservative educated defaults
+      based on mode timeframe/horizon/cost-sensitivity differences. Must be reviewed against
+      real backtest results before becoming operational gates.
+    files:
+      - "v7/docs/pipeline/evaluation.md"
+
+  - id: "LC-002"
+    decision_area: "Funding cost model LOCK_CANDIDATE formula"
+    candidate_default: >
+      funding_cost_r = sum(holding_overlap_rule × funding_rate × position_direction_sign ×
+      position_size) / entry_risk_price. Funding interval: 8h. Conservative default: apply
+      funding at each interval boundary regardless of position duration.
+    reason_owner_review_required: >
+      Formula is structurally sound but must be validated against exchange-specific funding
+      mechanics (Binance vs Bybit vs OKX). Holding overlap pro-rata rule needs testing against
+      real funding schedules. Rate source must be verified as available historically.
+    files:
+      - "simulation/docs/cost_model.md"
+
+  - id: "LC-003"
+    decision_area: "Mode-specific risk parameters (exact numeric values)"
+    candidate_default: >
+      SWING: 25% max mode exposure, 10% max symbol, 5% daily loss, 4-bar cooldown, 1-bar stale TTL.
+      SCALP: 15% max mode exposure, 5% max symbol, 3% daily loss, 6-bar cooldown, 2-bar stale TTL.
+      AGGRESSIVE_SCALP: 5% max mode exposure, 2% max symbol, 2% daily loss, 12-bar cooldown,
+      4-bar stale TTL.
+    reason_owner_review_required: >
+      Conservative defaults aligned with mode risk profiles. Must be reviewed against account
+      size, symbol universe, and operational constraints. Kill-switch sensitivity thresholds
+      need calibration against actual backtest drawdown patterns.
+    files:
+      - "v7/docs/pipeline/risk.md"
+
+  - id: "LC-004"
+    decision_area: "Per-mode minimum training sample"
+    candidate_default: >
+      Minimum 200 labeled events per fold for SWING, 500 for SCALP, 300 for AGGRESSIVE_SCALP.
+      Not yet patched into pipeline/dataset.md — marked for P0.6B or owner review.
+    reason_owner_review_required: >
+      Not patched in this batch. Sample size requirements depend on feature dimensionality
+      and model complexity. XGBoost can work with smaller samples but reliability degrades.
+      Owner should determine based on first backtest results.
+    files:
+      - "v7/docs/pipeline/dataset.md"
+
+owner_review_required:
+  - area: "All LOCK_CANDIDATE promotion thresholds in pipeline/evaluation.md"
+    reason: "Conservative defaults may be too strict or too loose for real market conditions."
+    suggested_decision: "Run first backtest, observe actual distributions, then lock thresholds."
+
+  - area: "All LOCK_CANDIDATE risk parameters in pipeline/risk.md"
+    reason: "Exposure limits, cooldown durations, and stale-result TTLs must be calibrated to account size and symbol universe."
+    suggested_decision: "Start with fixed 2% per trade sizing; tune risk limits after paper trading phase."
+
+  - area: "Funding cost model DEFERRED → LOCKED transition"
+    reason: "Must verify funding rate data availability historically before implementing."
+    suggested_decision: "Verify Binance historical funding rate API. If available, implement LOCK_CANDIDATE formula. If not, keep DEFERRED and block perp promotion."
+
+  - area: "Minimum training sample per mode in pipeline/dataset.md"
+    reason: "Not patched in this batch. See LC-004."
+    suggested_decision: "Determine after first dataset assembly. Add to P0.6B scope."
+
+remaining_gaps:
+  - gap: "No explicit PnL decomposition model — how much edge comes from trend vs regime vs cost-honesty vs no-trade quality vs calibration"
+    severity: "medium"
+    recommended_next_patch: "Add edge attribution framework to pipeline/evaluation.md (P0.6B or later)."
+
+  - gap: "Regime detection hyperparameter tuning protocol not documented"
+    severity: "medium"
+    recommended_next_patch: "Add tuning methodology to v7_regime_aware_extensions.md (was in research YAML as MDEC-005, not patched in this batch)."
+
+  - gap: "Minimum training sample per mode not documented in pipeline/dataset.md"
+    severity: "medium"
+    recommended_next_patch: "See LC-004. Add to P0.6B scope."
+
+  - gap: "Symbol-specific min_edge_multiplier not integrated into simulation profiles"
+    severity: "low"
+    recommended_next_patch: "Add config-driven symbol_scaling parameter to simulation/docs/profiles.md (MDEC-003)."
+
+  - gap: "Per-mode exact promotion threshold numeric values are LOCK_CANDIDATE, not LOCKED"
+    severity: "high"
+    recommended_next_patch: "Owner review required before implementation can trust promotion gates."
+
+  - gap: "Mode-specific risk numeric values are LOCK_CANDIDATE, not LOCKED"
+    severity: "high"
+    recommended_next_patch: "Owner review required before risk controls are operational."
+
+safe_next_step:
+  recommended: "P0.6B — AlphaForge Discovery Authority Lock"
+  rationale: >
+    After V7 defines profitability acceptance (this patch), the next natural step is locking
+    AlphaForge as discovery authority: anomaly research scope, feature/dataset/model outputs,
+    validation reports, and handoff contracts. V7 now has the acceptance criteria to evaluate
+    whatever AlphaForge discovers.
+
+blocked_next_steps:
+  - step: "Implement V7 mode-specific pipelines"
+    blocked_by: "Owner review of LOCK_CANDIDATE promotion and risk thresholds (LC-001, LC-003)."
+
+  - step: "Promote perpetual swap trading to live"
+    blocked_by: "Funding cost model still DEFERRED (LC-002). Must be LOCKED first."
+
+  - step: "Promote FUNDING_DIVERGENCE alpha for perpetuals"
+    blocked_by: "Funding cost model DEFERRED. Alpha may be researched but cannot be promoted."
+
+evidence_summary:
+  - file_path: "v7/docs/profitability_thesis.md"
+    evidence: "Created. Contains canonical profitability chain, system-level thesis, mode-specific edge thesis table, alpha hypothesis mapping table, mandatory rejection rules, failure modes, and references to all supporting authority docs."
+    confidence: "high"
+
+  - file_path: "v7/docs/v7_mode_centric_architecture.md"
+    evidence: "Patched with section 6.9 'Alpha Thesis to Mode Mapping'. Maps all 3 alpha hypotheses to compatible modes with required features, simulation outputs, cost assumptions, validation gates, and rejection conditions."
+    confidence: "high"
+
+  - file_path: "v7/docs/pipeline/evaluation.md"
+    evidence: "Patched with 'Mode-Specific Promotion Gate Sequence' section. Defines G0-G10 gates, mode-specific thresholds table (LOCK_CANDIDATE defaults), rejection rules, and alpha thesis validation gate."
+    confidence: "high"
+
+  - file_path: "simulation/docs/cost_model.md"
+    evidence: "Patched with 'Funding Cost Model for Perpetuals' section. Status: DEFERRED. LOCK_CANDIDATE formula defined. Per-mode funding impact estimates. Blocking rule documented."
+    confidence: "high"
+
+  - file_path: "v7/docs/pipeline/risk.md"
+    evidence: "Patched with 'Mode-Specific Risk Parameters' section. Per-mode parameter table with LOCK_CANDIDATE defaults. Design policy, rationale, and forbidden rules documented."
+    confidence: "high"
+
+  - file_path: "v7/docs/runtime/runtime_integration.md"
+    evidence: "Patched with 'Per-Mode Promotion Lifecycle' section. 8 readiness states, mixed-mode runtime operation rules, state transition rules, staggered promotion example."
+    confidence: "high"
+
+  - file_path: "v7/docs/README.md"
+    evidence: "Patched — profitability_thesis.md added to summary docs navigation."
+    confidence: "high"
+
+  - file_path: "v7/docs/roadmap.md"
+    evidence: "Patched — profitability_thesis.md added to current state documentation inventory."
+    confidence: "high"
+
+dependency_chain:
+  - "lib provides primitives"
+  - "simulation provides economic truth (cost model, profiles, exits, no-trade quality)"
+  - "alphaforge discovers and validates alpha candidates"
+  - "v7 accepts/rejects alpha through policy, promotion, risk, and portfolio gates"
+  - "runtime operates lifecycle and execution eligibility per mode readiness state"
+  - "interface observes runtime API state only"
+
+design_lock_score_estimate:
+  before: 65  # Modes, actions, model, policy locked; profitability thesis missing; promotion gates partial; alpha mapping missing; funding missing; risk mode-agnostic; runtime lifecycle missing
+  after: 85   # All 6 gaps closed; profitability thesis created; alpha-mapped; G0-G10 defined; funding resolved (DEFERRED with formula); risk mode-specific; runtime lifecycle documented
+  remaining_to_100: >
+    15 points: owner review of LOCK_CANDIDATE values (5), per-mode exact thresholds locked
+    from real data (5), funding model implemented and tested (3), minimum training sample
+    documented (2).
+
+evidence_index:
+  - "EVIDENCE-001 through EVIDENCE-026 from v7/docs/research_report_mode_timeframe_profitability.yaml — all evidence citations preserved and referenced."
+  - "DEC-001 through DEC-016 remain LOCKED and unchanged."
+  - "DEC-017 through DEC-023 newly LOCKED by this patch."
+  - "PDEC-003 (promotion gate ordering) resolved — now explicit G0-G10 sequence."
+  - "PDEC-004 (mode-specific risk) resolved — now per-mode risk parameter table."
+  - "PDEC-005 (alpha thesis mapping) resolved — now section 6.9 in v7_mode_centric_architecture.md."
+  - "MDEC-001 (funding model) resolved — DEFERRED with LOCK_CANDIDATE formula."
+  - "MDEC-002 (profitability thesis) resolved — profitability_thesis.md created."
+  - "MDEC-007 (mixed-mode runtime) resolved — per-mode promotion lifecycle documented."
+
+post_p0_6a_recommendation:
+  status: "PASS — proceed to P0.6B"
+  next_batch:
+    id: "P0.6B"
+    title: "AlphaForge Discovery Authority Lock"
+    purpose: >
+      After V7 defines profitability acceptance, lock AlphaForge as discovery authority:
+      anomaly research scope, feature/dataset/model outputs, validation reports, and handoff
+      contracts. V7 now has the acceptance criteria (G0-G10, rejection rules) to evaluate
+      whatever AlphaForge discovers.
+  owner_review_before_p0_6b:
+    - "Review all LOCK_CANDIDATE promotion thresholds (LC-001)"
+    - "Review all LOCK_CANDIDATE risk parameters (LC-003)"
+    - "Decide funding model timeline: implement LOCK_CANDIDATE formula or keep DEFERRED"
+    - "Review minimum training sample guidelines (LC-004)"

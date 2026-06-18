@@ -34,6 +34,7 @@ Documentation authority is largely complete for:
 - core direction
 - **mode-centric architecture** (see `v7_mode_centric_architecture.md`)
 - **regime-aware extensions** (see `v7_regime_aware_extensions.md`)
+- **profitability thesis** (see `profitability_thesis.md` — P0.6A design lock)
 - contract family
 - runtime integration
 - runtime fallback/deployment policy

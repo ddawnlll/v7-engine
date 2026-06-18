@@ -1,0 +1,121 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_7A-SIMULATION-MVP-RESULT"
+  status: "PASS"
+  summary: >
+    /simulation economic truth authority artık documentation-only değil.
+    Minimal viable simulation MVP oluşturuldu: contracts (models.py),
+    engine (engine.py, exits.py, costs.py), SimulationProfile fixture,
+    SWING golden tests (3), import boundary enforcement.
+    Tüm test'ler geçiyor: 222 passed, 0 failed, 3 skipped.
+    Hiçbir forbidden import yok. V7/AlphaForge/runtime/interface
+    implementasyonu yazılmadı.
+
+scope_confirmation:
+  v7_engine_implementation: false
+  alphaforge_implementation: false
+  runtime_rewrite: false
+  interface_changes: false
+  large_simulation_engine: false
+  market_data_download: false
+  live_trading: false
+  external_api_calls: false
+  contract_first_design_preserved: true
+  simulation_truth_authority_preserved: true
+  scope_kept_minimal: true
+
+files_changed:
+  created:
+    - "contracts/fixtures/simulation_profile_minimal.json"
+    - "simulation/__init__.py"
+    - "simulation/contracts/__init__.py"
+    - "simulation/contracts/models.py"
+    - "simulation/engine/__init__.py"
+    - "simulation/engine/costs.py"
+    - "simulation/engine/exits.py"
+    - "simulation/engine/engine.py"
+    - "simulation/tests/__init__.py"
+    - "simulation/tests/golden/__init__.py"
+    - "simulation/tests/golden/test_swing_golden.py"
+    - "simulation/tests/test_import_boundary.py"
+    - "reports/p0_7a_simulation_mvp_authority.accp.yaml"
+  modified:
+    - "contracts/registry.json"
+
+simulation_mvp_components:
+  - id: "C1"
+    name: "SimulationProfile fixture"
+    status: "DONE"
+    evidence: "contracts/fixtures/simulation_profile_minimal.json — SWING profile, valid JSON, schema-compatible"
+  - id: "C2"
+    name: "Minimal simulation contract models"
+    status: "DONE"
+    evidence: "simulation/contracts/models.py — Candle, SimulationProfile, SimulationInput, SimulationOutput, ActionOutcome, NoTradeOutcome, ExitResult aliases, PathMetrics, SimulationLineage"
+  - id: "C3"
+    name: "Cost model"
+    status: "DONE"
+    evidence: "simulation/engine/costs.py — fee_cost_r, slippage_cost_r, total_cost_r, compute_entry_risk; uses lib.costs primitives; funding DEFERRED"
+  - id: "C4"
+    name: "Exit resolver"
+    status: "DONE"
+    evidence: "simulation/engine/exits.py — simulate_path (LONG/SHORT), stop-before-target conservative rule, compute_utility"
+  - id: "C5"
+    name: "Simulation engine skeleton"
+    status: "DONE"
+    evidence: "simulation/engine/engine.py — simulate(input) → SimulationOutput, comparative LONG/SHORT/NO_TRADE, best action selection, ambiguity handling"
+  - id: "C6"
+    name: "Golden tests"
+    status: "DONE"
+    evidence: "simulation/tests/golden/test_swing_golden.py — 3 tests: TARGET_HIT, STOP_HIT, TIME_EXIT"
+  - id: "C7"
+    name: "Import boundary test"
+    status: "DONE"
+    evidence: "simulation/tests/test_import_boundary.py — 2 tests: forbidden import scan + module importability"
+
+tests_run:
+  commands:
+    - "PYTHONPATH=. python -m pytest simulation/tests/ -q"
+    - "PYTHONPATH=. python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q"
+    - "make check-contracts"
+    - "make check-boundaries"
+
+tests_passed: 222
+tests_failed: 0
+tests_skipped: 3
+simulation_tests_passed: 5
+simulation_tests_failed: 0
+golden_tests: 3
+import_boundary_tests: 2
+
+contract_registry_changes:
+  simulation_profile_fixture_added: true
+  registry_fixture_file_updated: true
+  previous_fixture_file: null
+  new_fixture_file: "contracts/fixtures/simulation_profile_minimal.json"
+
+import_boundary_result:
+  simulation_imports_v7: false
+  simulation_imports_alphaforge: false
+  simulation_imports_runtime: false
+  simulation_imports_interface: false
+  test_enforces_boundary: true
+  all_modules_importable: true
+
+remaining_gaps:
+  - "Funding cost model still DEFERRED — explicit unsupported marker in costs.py docstring"
+  - "Only SWING golden tests — SCALP and AGGRESSIVE_SCALP profiles not tested"
+  - "No Monte Carlo driver (out of MVP scope)"
+  - "No SCALP/AGGRESSIVE_SCALP profile fixtures"
+  - "No simulation/docs/ai_summary.md update (optional, not required)"
+
+safe_next_step: "P0.7B — CI/CD enforcement (add .github/workflows/ci.yml)"
+blocked_next_steps: []
+
+evidence:
+  all_tests_pass: "PYTHONPATH=. pytest lib/tests/ integration/tests/ simulation/tests/: 222 passed, 0 failed, 3 skipped"
+  contract_checks_pass: "make check-contracts: 20 passed (11 registry + 9 schema parity)"
+  boundary_checks_pass: "make check-boundaries: 4 passed, 3 skipped"
+  no_forbidden_imports: "simulation/tests/test_import_boundary.py: PASSED"
+  golden_tests_pass: "3 SWING golden tests: TARGET_HIT, STOP_HIT, TIME_EXIT — all PASSED"
+  fixture_added: "SimulationProfile fixture_file no longer null in registry.json"

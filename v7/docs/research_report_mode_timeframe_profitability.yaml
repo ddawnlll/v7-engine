@@ -1,0 +1,1239 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report:
+  id: "V7-DOCS-MODE-PROFITABILITY-RESEARCH-RESULT"
+  type: "V7_DOCS_RESEARCH"
+  title: "V7 Docs Mode/Timeframe/Profitability Research Result"
+  target_repo: "/home/erfolg/src/v7-engine"
+  generated_at: "2026-06-18T12:00:00Z"
+
+scope_confirmation:
+  v7_docs_only_first: true
+  implementation_audit: false
+  tests_executed: false
+  source_code_inspected: false
+  root_docs_created: false
+  external_research_used: "false — V7 docs exhausted"
+
+v7_docs_inventory:
+  - file_path: "v7/docs/README.md"
+    relevance: "critical"
+    reason: "Entry document; contains first-phase operating assumptions including mode definitions, timeframe defaults, and model family decision"
+    sections_used:
+      - "First-Phase Operating Assumptions"
+      - "What Is Locked vs Delegated"
+      - "Config Surface Note"
+
+  - file_path: "v7/docs/vision.md"
+    relevance: "critical"
+    reason: "Defines primary goal, success metrics, promotion rule, no-trade as first-class action, cost-honest labels, calibration-structural principle"
+    sections_used:
+      - "Primary Goal"
+      - "Success Definition"
+      - "Core Architectural Position"
+      - "No-Trade Is a First-Class Action"
+      - "Promotion Rule"
+      - "Cost-Honest Labels"
+
+  - file_path: "v7/docs/architecture.md"
+    relevance: "critical"
+    reason: "Defines mode-centric architecture, 3 independent pipelines, timeframe stacks, architectural rules, truth hierarchy"
+    sections_used:
+      - "Architectural Summary"
+      - "Core Architectural Rules"
+      - "Top-Level Layers"
+      - "Truth Hierarchy"
+
+  - file_path: "v7/docs/v7_mode_centric_architecture.md"
+    relevance: "critical"
+    reason: "Master design doc for mode-centric architecture; contains complete mode-specific simulation config, label design, success thresholds, regime detection, execution reality extensions"
+    sections_used:
+      - "Mode-Specific Simulation Configuration"
+      - "Mode-Specific Label Design"
+      - "Regime-Aware System"
+      - "Execution Reality Extensions"
+      - "Phase Implementation Timeline"
+
+  - file_path: "v7/docs/v7_regime_aware_extensions.md"
+    relevance: "critical"
+    reason: "Defines regime detection, regime-aware policy modifiers, regime-aware evaluation, promotion gate extensions, regime-aware labels"
+    sections_used:
+      - "Regime Detection Layer"
+      - "Policy Extension for Regime"
+      - "Evaluation Extension for Regime"
+      - "Enhanced Labels with Regime Context"
+
+  - file_path: "v7/docs/pipeline/labels.md"
+    relevance: "critical"
+    reason: "Mode-specific label semantics, success thresholds, action family, ambiguity rules, utility function per mode"
+    sections_used:
+      - "Mode-Specific Success Thresholds"
+      - "First-Phase Action Family"
+      - "Classification Label Semantics"
+      - "Utility Function for Best Action"
+
+  - file_path: "v7/docs/pipeline/model.md"
+    relevance: "critical"
+    reason: "XGBoost-first hybrid model per mode, output surface, artifact shape, rules"
+    sections_used:
+      - "Core Decision"
+      - "Output Surface (Per Mode)"
+      - "First-Phase Scope"
+      - "Rules"
+
+  - file_path: "v7/docs/pipeline/policy.md"
+    relevance: "critical"
+    reason: "Decision gates, regime-aware policy modifiers, policy score, timing extension, no-trade rules"
+    sections_used:
+      - "Decision Gates"
+      - "Regime-Aware Policy Modifiers"
+      - "Policy Score (Regime-Adjusted)"
+      - "Tie-Break Rule"
+
+  - file_path: "v7/docs/pipeline/evaluation.md"
+    relevance: "critical"
+    reason: "Mode-aware evaluation, walk-forward family, promotion gate, regime-aware metrics, ablation requirements"
+    sections_used:
+      - "Promotion Gate (Per Mode)"
+      - "Walk-Forward Family"
+      - "Regime-aware metrics"
+      - "Ablation Requirement"
+
+  - file_path: "v7/docs/pipeline/risk.md"
+    relevance: "high"
+    reason: "Risk controls, kill switch, cooldown, exposure limits, duplicate protection"
+    sections_used:
+      - "Recommended First-Phase Controls"
+      - "Cooldown Rule"
+      - "Duplicate Protection"
+
+  - file_path: "v7/docs/pipeline/portfolio.md"
+    relevance: "high"
+    reason: "Correlation-aware portfolio control, pre-computed groups, cluster suppression"
+    sections_used:
+      - "Correlation-Aware Exposure Control"
+      - "Ranking Rule"
+      - "Cluster Definition"
+
+  - file_path: "v7/docs/pipeline/features.md"
+    relevance: "high"
+    reason: "Shared features across modes, canonical-state-only, normalization"
+    sections_used:
+      - "Core Decision"
+      - "First-Phase Scope"
+      - "Recommended Feature Groups"
+
+  - file_path: "v7/docs/pipeline/dataset.md"
+    relevance: "high"
+    reason: "Mode-specific datasets, walk-forward split, symbol balancing, partial target policy"
+    sections_used:
+      - "Core Decision"
+      - "First-Phase Scope"
+      - "Recommended Split Strategy"
+
+  - file_path: "v7/docs/pipeline/training.md"
+    relevance: "high"
+    reason: "Hybrid supervised training per mode, training diagram, validation, objective families"
+    sections_used:
+      - "Core Decision"
+      - "Training Diagram (Per Mode)"
+      - "Objective Families"
+
+  - file_path: "v7/docs/pipeline/calibration.md"
+    relevance: "high"
+    reason: "Per-mode calibration, classification calibration, regression reliability, recalibration policy"
+    sections_used:
+      - "First-Phase Scope"
+      - "Classification Calibration"
+      - "Regression Reliability"
+
+  - file_path: "v7/docs/pipeline/monitoring.md"
+    relevance: "medium"
+    reason: "Mode-aware monitoring, calibration drift, regression drift, timing extension decision rule"
+    sections_used:
+      - "Core Decision"
+      - "Calibration Drift"
+      - "Regression Drift"
+
+  - file_path: "v7/docs/runtime/runtime_integration.md"
+    relevance: "high"
+    reason: "Mode routing, actionability vs execution eligibility, integration flow"
+    sections_used:
+      - "Integration Flow (Mode-Routed)"
+      - "Actionability vs Execution Eligibility"
+      - "Recommended Execution Eligibility Stack"
+
+  - file_path: "v7/docs/contracts/README.md"
+    relevance: "medium"
+    reason: "Contract family strategy, atomic rule, ownership model"
+    sections_used:
+      - "The Contract Family"
+      - "Atomic Rule"
+      - "Ownership Model"
+
+  - file_path: "v7/docs/roadmap.md"
+    relevance: "high"
+    reason: "Implementation phases, delivery order, SWING-first recommendation"
+    sections_used:
+      - "Recommended Delivery Order"
+      - "Phase 0 — Repo alignment"
+      - "Phase 5 — Model and calibration"
+
+  - file_path: "simulation/docs/profiles.md"
+    relevance: "critical"
+    reason: "Complete mode-specific simulation profiles with all parameters: timeframes, holding, stops, targets, ambiguity, penalties"
+    sections_used:
+      - "SWING Profile"
+      - "SCALP Profile"
+      - "AGGRESSIVE_SCALP Profile"
+      - "Success Thresholds (for Downstream Labels)"
+
+  - file_path: "simulation/docs/cost_model.md"
+    relevance: "critical"
+    reason: "Fee model, slippage model, net R formula, versioning, single cost model for all consumers"
+    sections_used:
+      - "Core Formula"
+      - "Fee Model"
+      - "Slippage Model"
+      - "Why One Cost Model Across All Consumers"
+
+  - file_path: "simulation/docs/exits_and_horizons.md"
+    relevance: "critical"
+    reason: "Exit families, stop/target/time-exit logic, unresolved/invalidated, mode-specific exit configuration"
+    sections_used:
+      - "Exit Families"
+      - "Mode-Specific Exit Configuration"
+      - "Stop/Target Precedence"
+
+  - file_path: "simulation/docs/no_trade_quality.md"
+    relevance: "critical"
+    reason: "No-trade quality classifications, saved loss, missed opportunity, configurable thresholds per mode"
+    sections_used:
+      - "No-Trade Quality Classifications"
+      - "Configurable Thresholds (AlphaForge)"
+
+  - file_path: "simulation/docs/ai_summary.md"
+    relevance: "critical"
+    reason: "Synthesis of all simulation authority: mode profiles, cost model, exit families, no-trade quality, versioning"
+    sections_used:
+      - "MODE PROFILES"
+      - "COST MODEL"
+      - "EXIT FAMILIES"
+      - "NO-TRADE QUALITY"
+      - "VALIDATION GATES"
+
+  - file_path: "v7/docs/alpha_thesis_validation_plan.md"
+    relevance: "low"
+    reason: "Contains alpha research hypotheses (Altcoin Delay, Volatility Compression, Funding Divergence) — separate from V7 mode definitions"
+    sections_used:
+      - "Overview"
+      - "Critical Gating Rules"
+
+reading_order:
+  - order: 1
+    file_path: "v7/docs/README.md"
+    reason: "Entry document with first-phase operating assumptions"
+
+  - order: 2
+    file_path: "v7/docs/vision.md"
+    reason: "Defines what V7 is trying to become and success criteria"
+
+  - order: 3
+    file_path: "v7/docs/architecture.md"
+    reason: "Mode-centric architecture, pipeline structure, timeframe stacks"
+
+  - order: 4
+    file_path: "v7/docs/v7_mode_centric_architecture.md"
+    reason: "Complete mode-centric specification with configs, labels, regime, execution extensions"
+
+  - order: 5
+    file_path: "v7/docs/v7_regime_aware_extensions.md"
+    reason: "Regime detection, policy modifiers, evaluation extensions"
+
+  - order: 6
+    file_path: "simulation/docs/profiles.md"
+    reason: "Simulation profiles — canonical mode parameter definitions"
+
+  - order: 7
+    file_path: "simulation/docs/cost_model.md"
+    reason: "Cost model — fee, slippage, net R formula"
+
+  - order: 8
+    file_path: "simulation/docs/exits_and_horizons.md"
+    reason: "Exit families and mode-specific exit configuration"
+
+  - order: 9
+    file_path: "simulation/docs/no_trade_quality.md"
+    reason: "No-trade as first-class action"
+
+  - order: 10
+    file_path: "v7/docs/pipeline/labels.md"
+    reason: "Mode-specific label semantics"
+
+  - order: 11
+    file_path: "v7/docs/pipeline/model.md"
+    reason: "XGBoost-first model per mode"
+
+  - order: 12
+    file_path: "v7/docs/pipeline/policy.md"
+    reason: "Decision gates, regime-aware policy"
+
+  - order: 13
+    file_path: "v7/docs/pipeline/evaluation.md"
+    reason: "Promotion gate, regime-aware evaluation"
+
+  - order: 14
+    file_path: "v7/docs/pipeline/risk.md"
+    reason: "Risk controls"
+
+  - order: 15
+    file_path: "v7/docs/pipeline/portfolio.md"
+    reason: "Correlation-aware portfolio"
+
+  - order: 16
+    file_path: "v7/docs/roadmap.md"
+    reason: "Implementation sequencing"
+
+  - order: 17
+    file_path: "v7/docs/alpha_thesis_validation_plan.md"
+    reason: "Alpha thesis definitions — separate from V7 mode architecture"
+
+mode_inventory:
+  - mode_id: "SWING"
+    mode_name: "SWING"
+    exists_in_docs: true
+    definition: "Mode-centric trading mode for 4h primary timeframe with wide stop/target multipliers (2.0-3.0 ATR), up to 30 bars holding, LOW no-trade tendency. Optimized for trend-following on higher timeframes. Classification-first hybrid profitability model with XGBoost."
+    evidence_refs:
+      - "EVIDENCE-002"
+      - "EVIDENCE-004"
+      - "EVIDENCE-013"
+    status: "LOCKED"
+
+  - mode_id: "SCALP"
+    mode_name: "SCALP"
+    exists_in_docs: true
+    definition: "Mode-centric trading mode for 1h primary timeframe with medium stop/target multipliers (1.5-2.0 ATR), up to 12 bars holding, MEDIUM no-trade tendency. Optimized for shorter-term mean-reversion and micro-trends. Tighter MAE and cost penalties than SWING."
+    evidence_refs:
+      - "EVIDENCE-002"
+      - "EVIDENCE-004"
+      - "EVIDENCE-013"
+    status: "LOCKED"
+
+  - mode_id: "AGGRESSIVE_SCALP"
+    mode_name: "AGGRESSIVE_SCALP"
+    exists_in_docs: true
+    definition: "Mode-centric trading mode for 15m primary timeframe with tight stop/target multipliers (1.0-1.5 ATR), up to 5 bars holding, HIGH no-trade tendency. Default NO_TRADE with strong signals required. Very high MAE and cost penalty sensitivity. Order book analysis relevant only for this mode."
+    evidence_refs:
+      - "EVIDENCE-002"
+      - "EVIDENCE-004"
+      - "EVIDENCE-013"
+    status: "LOCKED"
+
+  - mode_id: "TREND_UP/TREND_DOWN/RANGE/TRANSITION"
+    mode_name: "Regime descriptors (applied across all modes)"
+    exists_in_docs: true
+    definition: "Four primary regime categories: TREND_UP, TREND_DOWN, RANGE, TRANSITION. These are regime descriptors applied within each mode's independent pipeline, not separate trading modes. Each mode detects regime at its own primary timeframe."
+    evidence_refs:
+      - "EVIDENCE-005"
+    status: "LOCKED"
+
+  - mode_id: "scalp (30m variant)"
+    mode_name: "SCALP (30m primary variant)"
+    exists_in_docs: true
+    definition: "SCALP mode default is 1h primary. 30m is supported as a config/profile choice (not a separate validated mode). The docs explicitly note this is not an architecture contradiction."
+    evidence_refs:
+      - "EVIDENCE-013"
+    status: "PARTIAL — 30m variant mentioned but not independently validated"
+
+timeframe_matrix:
+  - mode_id: "SWING"
+    execution_timeframe: "4h"
+    primary_timeframe: "4h"
+    context_timeframes:
+      - "1d"
+      - "1h"
+    regime_timeframes:
+      - "primary: 4h"
+      - "context: 1d"
+      - "indicators: [adx, atr_percentile, ema_slope, structure_count]"
+    evidence_refs:
+      - "EVIDENCE-002"
+      - "EVIDENCE-004"
+      - "EVIDENCE-013"
+    status: "LOCKED"
+
+  - mode_id: "SCALP"
+    execution_timeframe: "1h"
+    primary_timeframe: "1h"
+    context_timeframes:
+      - "4h"
+      - "15m"
+    regime_timeframes:
+      - "primary: 1h"
+      - "context: 4h"
+      - "indicators: [atr_expansion, ema_separation, buying_pressure]"
+    evidence_refs:
+      - "EVIDENCE-002"
+      - "EVIDENCE-004"
+      - "EVIDENCE-013"
+    status: "LOCKED"
+
+  - mode_id: "AGGRESSIVE_SCALP"
+    execution_timeframe: "15m"
+    primary_timeframe: "15m"
+    context_timeframes:
+      - "1h"
+      - "5m"
+    regime_timeframes:
+      - "primary: 15m"
+      - "context: 1h"
+      - "indicators: [body_ratio, micro_momentum, spread_proxy, atr_percentile]"
+    evidence_refs:
+      - "EVIDENCE-002"
+      - "EVIDENCE-004"
+      - "EVIDENCE-013"
+    status: "LOCKED"
+
+  - mode_id: "ALL_MODES"
+    execution_timeframe: "mode-specific per profile"
+    primary_timeframe: "mode-specific"
+    context_timeframes: "mode-specific"
+    regime_timeframes: "mode-specific"
+    evidence_refs:
+      - "EVIDENCE-005"
+      - "EVIDENCE-013"
+    status: "LOCKED — multi-timeframe architecture explicitly defined"
+
+action_space_matrix:
+  - mode_id: "SWING"
+    allowed_actions:
+      - "LONG_NOW"
+      - "SHORT_NOW"
+      - "NO_TRADE"
+    restrictions:
+      "NO_TRADE tendency LOW; default is directional when clear"
+      - "blocked directions under TREND_UP (SHORT blocked) and TREND_DOWN (LONG blocked) via regime policy"
+    evidence_refs:
+      - "EVIDENCE-004"
+      - "EVIDENCE-008"
+      - "EVIDENCE-016"
+
+  - mode_id: "SCALP"
+    allowed_actions:
+      - "LONG_NOW"
+      - "SHORT_NOW"
+      - "NO_TRADE"
+    restrictions:
+      "NO_TRADE tendency MEDIUM; NO_TRADE when ambiguous"
+      - "cost-adjusted expectancy REQUIRED (min 0.10R)"
+      - "blocked directions under trend regimes via policy"
+    evidence_refs:
+      - "EVIDENCE-004"
+      - "EVIDENCE-006"
+      - "EVIDENCE-008"
+
+  - mode_id: "AGGRESSIVE_SCALP"
+    allowed_actions:
+      - "LONG_NOW"
+      - "SHORT_NOW"
+      - "NO_TRADE"
+    restrictions:
+      - "NO_TRADE tendency HIGH (default)"
+      - "instant_adverse_threshold: -0.05R"
+      - "max_time_to_mfe: 3 bars"
+      - "order book UNFAVORABLE blocks directional"
+      - "blocked directions under trend regimes via policy"
+    evidence_refs:
+      - "EVIDENCE-004"
+      - "EVIDENCE-006"
+      - "EVIDENCE-008"
+
+  - mode_id: "ALL_MODES"
+    allowed_actions:
+      - "LONG_NOW"
+      - "SHORT_NOW"
+      - "NO_TRADE"
+    restrictions:
+      - "No-trade is a first-class action with own quality classification"
+      - "Ambiguity resolved to NO_TRADE when actions too close"
+      - "TRANSITION regime strongly prefers NO_TRADE"
+    evidence_refs:
+      - "EVIDENCE-003"
+      - "EVIDENCE-008"
+      - "EVIDENCE-016"
+
+horizon_matrix:
+  - mode_id: "SWING"
+    label_horizon: "30 bars × 4h = up to 120 hours (5 days)"
+    exit_horizon: "Stop: 2.0-2.5 ATR | Target: 2.0-3.0 ATR"
+    max_holding_period: "30 bars (120 hours)"
+    evidence_refs:
+      - "EVIDENCE-013"
+      - "EVIDENCE-015"
+
+  - mode_id: "SCALP"
+    label_horizon: "12 bars × 1h = up to 12 hours"
+    exit_horizon: "Stop: 1.5-2.0 ATR | Target: 1.5-2.0 ATR"
+    max_holding_period: "12 bars (12 hours)"
+    evidence_refs:
+      - "EVIDENCE-013"
+      - "EVIDENCE-015"
+
+  - mode_id: "AGGRESSIVE_SCALP"
+    label_horizon: "5 bars × 15m = up to 75 minutes"
+    exit_horizon: "Stop: 1.0-1.5 ATR | Target: 1.0-1.5 ATR"
+    max_holding_period: "5 bars (75 minutes)"
+    evidence_refs:
+      - "EVIDENCE-013"
+      - "EVIDENCE-015"
+
+profitability_thesis:
+  summary: >
+    V7's profitability is not stated as a single explicit thesis. It is distributed across the
+    architecture as a series of interconnected design decisions: mode-centric pipelines with
+    mode-specific timeframes, cost-honest labeling via unified simulation, XGBoost-first hybrid
+    models per mode, regime-aware policy modification, correlation-aware portfolio control,
+    and calibrated decision surfaces. The implicit thesis is that economic-quality-first design
+    with regime awareness, realistic cost modeling, and no-trade discipline will produce
+    positive expectancy R across modes. The alpha_thesis_validation_plan.md defines three
+    specific alpha hypotheses (Altcoin Delay, Volatility Compression, Funding Divergence)
+    but these are NOT integrated into the V7 mode architecture — they are separate research
+    tracks that must pass independent validation before integration.
+
+  edge_sources:
+    - source: "Mode-specific timeframes capture different market structures (SWING: trend, SCALP: mean-reversion, AGGRESSIVE_SCALP: micro-structure)"
+      mode_scope:
+        - "ALL_MODES"
+      evidence_refs:
+        - "EVIDENCE-004"
+        - "EVIDENCE-013"
+
+    - source: "Cost-honest labels with fee/slippage ensure training reflects realistic economics"
+      mode_scope:
+        - "ALL_MODES"
+      evidence_refs:
+        - "EVIDENCE-003"
+        - "EVIDENCE-014"
+
+    - source: "Regime-aware policy modifiers block counter-trend trades in TREND_UP/TREND_DOWN and default to NO_TRADE in TRANSITION"
+      mode_scope:
+        - "ALL_MODES"
+      evidence_refs:
+        - "EVIDENCE-005"
+        - "EVIDENCE-008"
+
+    - source: "NO_TRADE as first-class action with quality measurement (saved_loss, missed_opportunity)"
+      mode_scope:
+        - "ALL_MODES"
+      evidence_refs:
+        - "EVIDENCE-003"
+        - "EVIDENCE-016"
+
+    - source: "Hybrid model outputs (classification + regression) enable dual gates: action probability AND economic quality"
+      mode_scope:
+        - "ALL_MODES"
+      evidence_refs:
+        - "EVIDENCE-004"
+        - "EVIDENCE-007"
+
+    - source: "Correlation-aware portfolio prevents overexposure to single cluster (e.g., BTC + 30 correlated alts)"
+      mode_scope:
+        - "ALL_MODES"
+      evidence_refs:
+        - "EVIDENCE-011"
+
+  assumptions:
+    - assumption: "XGBoost-first will provide sufficient predictive quality for all 3 modes"
+      locked: true
+      evidence_refs:
+        - "EVIDENCE-007"
+    - assumption: "Walk-forward OOS performance predicts live performance"
+      locked: true
+      evidence_refs:
+        - "EVIDENCE-009"
+    - assumption: "Rule-based regime detection is sufficient (Phase 1); ML-based detection deferred to Phase 3"
+      locked: true
+      evidence_refs:
+        - "EVIDENCE-005"
+    - assumption: "Taker fees for both entry and exit is conservative default"
+      locked: true
+      evidence_refs:
+        - "EVIDENCE-014"
+    - assumption: "Same-candle stop-before-target is conservative and safe"
+      locked: true
+      evidence_refs:
+        - "EVIDENCE-015"
+    - assumption: "Features shared across modes are sufficient (no mode-specific features needed)"
+      locked: true
+      evidence_refs:
+        - "EVIDENCE-022"
+
+  gaps:
+    - gap: "No single cohesive 'profitability thesis' document exists. The thesis must be inferred from 15+ docs."
+      severity: "critical"
+      recommended_patch: "Create v7/docs/profitability_thesis.md that explicitly states the combined edge thesis, mode-specific alpha sources, and evidence requirements."
+    - gap: "Alpha thesis validation (Altcoin Delay, Volatility Compression, Funding Divergence) is defined in a standalone plan but NOT linked to V7 mode definitions or model training pipeline"
+      severity: "high"
+      recommended_patch: "Add cross-reference section in v7_mode_centric_architecture.md showing which alpha hypotheses map to which modes."
+    - gap: "No explicit PnL decomposition model: how much edge comes from trend vs regime vs cost-honesty vs no-trade quality vs calibration"
+      severity: "high"
+      recommended_patch: "Add edge attribution framework to pipeline/evaluation.md."
+    - gap: "No minimum performance threshold for first release (e.g., SWING must achieve X expectancy before SCALP development begins)"
+      severity: "medium"
+      recommended_patch: "Add release gating criteria to roadmap.md or v7_mode_centric_architecture.md."
+
+model_candidate_matrix:
+  - mode_id: "SWING"
+    candidate_models:
+      - "XGBoost-first hybrid supervised model"
+      - "Classification: XGBClassifier for P(LONG_NOW/SHORT_NOW/NO_TRADE)"
+      - "Regression: XGBRegressor for E[R|LONG/SHORT], expected drawdown, cost-adjusted expectancy"
+    model_outputs:
+      - "p_long_now, p_short_now, p_no_trade"
+      - "expected_r_long, expected_r_short"
+      - "expected_drawdown_long, expected_drawdown_short"
+      - "expected_cost_adjusted_r_long, expected_cost_adjusted_r_short"
+      - "model_scope, feature_schema_version, label_version"
+    evidence_refs:
+      - "EVIDENCE-007"
+    status: "LOCKED — XGBoost-first decision is explicit"
+
+  - mode_id: "SCALP"
+    candidate_models:
+      - "XGBoost-first hybrid supervised model"
+      - "Classification: XGBClassifier"
+      - "Regression: XGBRegressor"
+    model_outputs:
+      - "Same as SWING output surface"
+      - "Plus: optional mode-specific fields for time_to_mfe"
+    evidence_refs:
+      - "EVIDENCE-007"
+    status: "LOCKED — shares model family with SWING, independent artifact"
+
+  - mode_id: "AGGRESSIVE_SCALP"
+    candidate_models:
+      - "XGBoost-first hybrid supervised model"
+      - "Classification: XGBClassifier"
+      - "Regression: XGBRegressor"
+    model_outputs:
+      - "Same as SWING output surface"
+      - "Plus: time_to_mfe_bars (classification/regression for speed of edge)"
+      - "Plus: instant_adverse_label for immediate drawdown detection"
+    evidence_refs:
+      - "EVIDENCE-007"
+    status: "LOCKED — shares model family, independent artifact, additional micro-structure outputs"
+
+model_vs_policy_authority:
+  model_owns:
+    - "Action probabilities: P(LONG_NOW), P(SHORT_NOW), P(NO_TRADE)"
+    - "Expected R estimates per action"
+    - "Expected adverse pressure / drawdown"
+    - "Cost-adjusted expectancy"
+    - "Classification margins"
+    - "Regression surface quality (path quality, regret)"
+    - "Calibrated confidence (via calibration stage)"
+  policy_owns:
+    - "Decision gates: probability/confidence, no-trade comparison, expected-R, cost-adjusted expectancy, adverse-pressure/drawdown, decision-margin"
+    - "Regime consistency gate (block counter-trend in trend regimes, default NO_TRADE in transition)"
+    - "Regime policy modifiers (confidence_mult, expected_r_mult, allow_long, allow_short, require_no_trade)"
+    - "Policy score computation (combines classification + regression + regime)"
+    - "Timing extension: entry_readiness, entry_valid_for_bars"
+    - "Tie-break rules (NO_TRADE when ambiguous)"
+    - "Final recommended_action"
+  runtime_owns:
+    - "Request assembly (with requested_trade_mode / model_scope)"
+    - "Mode routing → load scope-compatible artifact bundle"
+    - "Result validation"
+    - "Event creation (DecisionEvent)"
+    - "Execution eligibility (actionability vs operational gates)"
+    - "Outcome lifecycle (TradeOutcome)"
+    - "Simulation hosting (paper/replay/training adapters)"
+    - "Risk hard gates (kill switch, exposure, cooldown, duplicate protection)"
+    - "Portfolio interpretation (correlation-aware suppression)"
+  interface_owns:
+    - "Not defined in V7 docs scope — interface is operator UI"
+  conflicts:
+    - "Regime TRANSITION stop multiplier 99.0 referenced in v7_mode_centric_architecture.md as simulation parameter, but simulation/docs/profiles.md clarifies this is a policy-layer override, not a simulation semantic"
+  evidence_refs:
+    - "EVIDENCE-002"
+    - "EVIDENCE-007"
+    - "EVIDENCE-008"
+    - "EVIDENCE-013"
+    - "EVIDENCE-018"
+
+policy_authority:
+  summary: >
+    Policy is the explicit layer between model output and runtime execution. It combines
+    calibrated action probabilities, expected R, adverse pressure, cost-adjusted expectancy,
+    no-trade quality, and regime context into a single normalized decision. Policy is
+    mode-specific: each mode has its own thresholds, regime modifiers, and timing extensions.
+    Policy does NOT own execution eligibility — that belongs to runtime operational gates.
+
+  policy_gates:
+    - gate: "probability/confidence gate"
+      applies_to:
+        - "SWING"
+        - "SCALP"
+        - "AGGRESSIVE_SCALP"
+    - gate: "no-trade comparison gate"
+      applies_to:
+        - "ALL_MODES"
+    - gate: "decision margin gate"
+      applies_to:
+        - "ALL_MODES"
+    - gate: "expected-R gate"
+      applies_to:
+        - "ALL_MODES"
+    - gate: "cost-adjusted expectancy gate"
+      applies_to:
+        - "SCALP (REQUIRED)"
+        - "SWING"
+        - "AGGRESSIVE_SCALP"
+    - gate: "adverse-pressure/drawdown gate"
+      applies_to:
+        - "ALL_MODES"
+    - gate: "regime consistency gate"
+      applies_to:
+        - "ALL_MODES"
+    - gate: "degradation/fallback gate"
+      applies_to:
+        - "ALL_MODES"
+    - gate: "timing extension (advisory-first)"
+      applies_to:
+        - "ALL_MODES"
+
+  evidence_refs:
+    - "EVIDENCE-005"
+    - "EVIDENCE-008"
+
+risk_gate_matrix:
+  - mode_id: "ALL_MODES"
+    risk_gates:
+      - "global kill switch"
+      - "cooldown after loss / major event"
+      - "max gross exposure"
+      - "max per-symbol exposure"
+      - "max cluster exposure (correlation-aware)"
+      - "duplicate-position protection"
+      - "stale-result rejection"
+      - "degraded-result safe action rules"
+      - "minimum account/context integrity requirements"
+    max_drawdown_policy: "Not explicitly defined as configurable per-mode drawdown limit in risk doc"
+    position_sizing_policy: "Fixed first-phase; Kelly Criterion deferred to Phase 2 (after 3 months live data)"
+    evidence_refs:
+      - "EVIDENCE-004"
+      - "EVIDENCE-010"
+
+cost_threshold_matrix:
+  - mode_id: "SWING"
+    fee_model: "taker_fee_bps: 4.0 (0.04%) conservative default; maker_fee_bps: 2.0 (0.02%)"
+    slippage_model: "slippage_bps: 1.0 (0.01%) base; volatility-adjusted when enabled"
+    funding_model: "unknown — not defined for SWING in cost model docs"
+    min_expected_r_or_threshold: "min_net_r_for_success: 0.75R | min_action_edge_r: 0.35R | ambiguity_margin_r: 0.20R"
+    evidence_refs:
+      - "EVIDENCE-013"
+      - "EVIDENCE-014"
+
+  - mode_id: "SCALP"
+    fee_model: "taker_fee_bps: 4.0 (0.04%); maker_fee_bps: 2.0 (0.02%)"
+    slippage_model: "slippage_bps: 1.0 (0.01%) base; volatility-adjusted"
+    funding_model: "unknown — not defined for SCALP"
+    min_expected_r_or_threshold: "min_net_r_for_success: 0.20R | min_action_edge_r: 0.15R | ambiguity_margin_r: 0.10R | min_cost_adjusted_expectancy: 0.10R"
+    evidence_refs:
+      - "EVIDENCE-013"
+      - "EVIDENCE-014"
+
+  - mode_id: "AGGRESSIVE_SCALP"
+    fee_model: "taker_fee_bps: 4.0 (0.04%); maker_fee_bps: 2.0 (0.02%)"
+    slippage_model: "slippage_bps: 1.0 (0.01%) base; volatility-adjusted"
+    funding_model: "unknown — not defined for AGGRESSIVE_SCALP"
+    min_expected_r_or_threshold: "min_net_r_for_success: 0.10R | min_action_edge_r: 0.08R | ambiguity_margin_r: 0.05R | instant_adverse_threshold: -0.05R"
+    evidence_refs:
+      - "EVIDENCE-013"
+      - "EVIDENCE-014"
+
+validation_matrix:
+  - mode_id: "SWING"
+    validation_methods:
+      - "walk-forward evaluation (6 folds, 12-month train, 2-month validation)"
+      - "regime-aware evaluation (per-regime breakdown)"
+      - "ablation: primary only, primary+context, primary+context+refinement"
+      - "classifier-only vs hybrid policy"
+      - "probability gate only vs probability+expected-R gate"
+    walk_forward_required: true
+    regime_holdout_required: true
+    symbol_holdout_required: "not explicitly documented"
+    evidence_refs:
+      - "EVIDENCE-009"
+      - "EVIDENCE-023"
+
+  - mode_id: "SCALP"
+    validation_methods:
+      - "Same walk-forward framework as SWING"
+      - "Regime-aware evaluation"
+      - "Ablation per mode"
+    walk_forward_required: true
+    regime_holdout_required: true
+    symbol_holdout_required: "not explicitly documented"
+    evidence_refs:
+      - "EVIDENCE-009"
+
+  - mode_id: "AGGRESSIVE_SCALP"
+    validation_methods:
+      - "Same walk-forward framework"
+      - "Regime-aware evaluation"
+      - "Additional: order book availability tests if applicable"
+    walk_forward_required: true
+    regime_holdout_required: true
+    symbol_holdout_required: "not explicitly documented"
+    evidence_refs:
+      - "EVIDENCE-009"
+
+promotion_gate_matrix:
+  - mode_id: "ALL_MODES"
+    gates:
+      - "backtest (walk-forward)"
+      - "evaluation (global quality, classification, regression, economic, no-trade quality, calibration metrics)"
+      - "regime-aware evaluation (per-regime breakdown)"
+      - "paper forward simulation"
+      - "live (after paper eligibility confirmed)"
+    required_order_documented: false
+    evidence_refs:
+      - "EVIDENCE-009"
+      - "EVIDENCE-017"
+
+locked_decisions:
+  - id: "DEC-001"
+    decision: "Three trading modes: SWING (4h), SCALP (1h), AGGRESSIVE_SCALP (15m) — each with independent pipeline"
+    rationale: "Same timestamp produces different label truths for different modes. Independent sim configs, labels, models, policy, regime."
+    evidence_refs:
+      - "EVIDENCE-002"
+      - "EVIDENCE-004"
+
+  - id: "DEC-002"
+    decision: "LONG_NOW / SHORT_NOW / NO_TRADE as the only first-phase actions"
+    rationale: "Do not expand first-phase action family. Timing fields are advisory-only, not primary learned targets."
+    evidence_refs:
+      - "EVIDENCE-006"
+      - "EVIDENCE-008"
+
+  - id: "DEC-003"
+    decision: "NO_TRADE is first-class action with quality classification (CORRECT/SAVED_LOSS/MISSED_OPPORTUNITY/AMBIGUOUS)"
+    rationale: "Correct skip is economically valuable. Must compete with directional actions in labels, evaluation, and policy."
+    evidence_refs:
+      - "EVIDENCE-003"
+      - "EVIDENCE-016"
+
+  - id: "DEC-004"
+    decision: "XGBoost-first hybrid supervised model per mode (classification heads + regression heads)"
+    rationale: "XGBoost for speed, portability, tabular strength, transparent iteration. Each mode trains independent artifact."
+    evidence_refs:
+      - "EVIDENCE-007"
+
+  - id: "DEC-005"
+    decision: "Features are shared across modes; labels are mode-specific"
+    rationale: "Canonical state → features. Features identical for all modes. Labels mode-specific."
+    evidence_refs:
+      - "EVIDENCE-022"
+      - "EVIDENCE-002"
+
+  - id: "DEC-006"
+    decision: "One simulation truth layer (mode-configured), owned by /simulation, hosted by V7 runtime"
+    rationale: "Same simulation logic defines labels, replay, evaluation, paper/live outcome interpretation. Mode-specific profiles."
+    evidence_refs:
+      - "EVIDENCE-002"
+      - "EVIDENCE-012"
+      - "EVIDENCE-017"
+
+  - id: "DEC-007"
+    decision: "Rule-based regime detection (ADX + ATR percentile + EMA slope); ML-based deferred to Phase 3"
+    rationale: "Interpretable, debuggable, stable first phase."
+    evidence_refs:
+      - "EVIDENCE-005"
+
+  - id: "DEC-008"
+    decision: "Regime is policy-layer, not simulation-layer (stop multiplier 99.0 is policy override)"
+    rationale: "Simulation must expose raw comparative outcomes. Policy applies regime constraints. This is explicit architecture rule."
+    evidence_refs:
+      - "EVIDENCE-008"
+      - "EVIDENCE-013"
+
+  - id: "DEC-009"
+    decision: "One cost model for all consumers (labels, evaluation, paper, live outcome normalization)"
+    rationale: "Different cost models would make system economically untrustworthy."
+    evidence_refs:
+      - "EVIDENCE-014"
+
+  - id: "DEC-010"
+    decision: "Walk-forward evaluation: 6 folds, 12-month min train, 2-month validation, optional 1-month holdout tail"
+    rationale: "Temporal correctness. No IID random split for primary evaluation."
+    evidence_refs:
+      - "EVIDENCE-023"
+      - "EVIDENCE-009"
+
+  - id: "DEC-011"
+    decision: "Promotion requires OOS economic evidence: positive expectancy R, acceptable drawdown, no-trade quality, calibration quality, symbol/regime stability"
+    rationale: "Architecture sophistication is never a promotion criterion by itself."
+    evidence_refs:
+      - "EVIDENCE-003"
+      - "EVIDENCE-009"
+
+  - id: "DEC-012"
+    decision: "Runtime is not the model. Runtime owns orchestration/persistence/safety/execution eligibility. Model produces decision evidence."
+    rationale: "Preserves runtime boundary. Model confidence cannot override operational safety."
+    evidence_refs:
+      - "EVIDENCE-002"
+      - "EVIDENCE-018"
+
+  - id: "DEC-013"
+    decision: "Regime-aware policy modifiers: TREND_UP blocks SHORT, TREND_DOWN blocks LONG, RANGE raises thresholds, TRANSITION strongly prefers NO_TRADE"
+    rationale: "Don't fight the trend. Default to NO_TRADE when regime is uncertain."
+    evidence_refs:
+      - "EVIDENCE-005"
+      - "EVIDENCE-008"
+
+  - id: "DEC-014"
+    decision: "Correlation-aware portfolio: pre-computed groups (btc_cluster, eth_cluster, layer1, defi), 15% max cluster exposure"
+    rationale: "Prevents effective overexposure from correlated positions."
+    evidence_refs:
+      - "EVIDENCE-011"
+
+  - id: "DEC-015"
+    decision: "Stop-before-target in same candle (conservative, versioned)"
+    rationale: "Prevents over-optimistic backtest results. Versioned for potential future change."
+    evidence_refs:
+      - "EVIDENCE-015"
+
+  - id: "DEC-016"
+    decision: "SWING-first implementation order: build and deploy SWING first, then SCALP, then AGGRESSIVE_SCALP"
+    rationale: "Building all 3 simultaneously multiplies risk, multiplies cost, does NOT multiply returns."
+    evidence_refs:
+      - "EVIDENCE-004"
+      - "EVIDENCE-026"
+
+partial_decisions:
+  - id: "PDEC-001"
+    decision_area: "Position sizing (Kelly Criterion)"
+    current_doc_state: "Kelly Criterion defined as Phase 2 with three sub-phases (track_only → eighth_kelly → quarter_kelly). Phase 1 uses fixed sizing."
+    missing_piece: "No explicit Phase 1 fixed sizing parameters documented (e.g., % per trade)"
+    evidence_refs:
+      - "EVIDENCE-004"
+
+  - id: "PDEC-002"
+    decision_area: "30m SCALP variant"
+    current_doc_state: "SCALP primary interval is 1h. 30m mentioned as config-supported variant but labeled 'not an architecture contradiction.'"
+    missing_piece: "30m variant not independently validated or profiled. No separate simulation profile for 30m SCALP."
+    evidence_refs:
+      - "EVIDENCE-013"
+
+  - id: "PDEC-003"
+    decision_area: "Promotion gate ordering"
+    current_doc_state: "Promotion criteria are defined (expectancy R, no-trade quality, calibration quality, stability). But backtest→walk-forward→shadow→paper→tiny-live→live pipeline is not explicitly gated per mode."
+    missing_piece: "Explicit gate sequence with mode-specific promotion thresholds from research→paper→tiny-live→live"
+    evidence_refs:
+      - "EVIDENCE-009"
+      - "EVIDENCE-026"
+
+  - id: "PDEC-004"
+    decision_area: "Mode-specific risk gates"
+    current_doc_state: "Risk doc defines shared controls (kill switch, cooldown, exposure, duplicate protection). No mode-specific risk parameters documented."
+    missing_piece: "SWING may tolerate higher drawdown than AGGRESSIVE_SCALP. No mode-specific max_drawdown or position_sizing documented."
+    evidence_refs:
+      - "EVIDENCE-010"
+
+  - id: "PDEC-005"
+    decision_area: "Alpha thesis ↔ Mode mapping"
+    current_doc_state: "Alpha_thesis_validation_plan.md defines 3 hypotheses. They are NOT linked to V7 mode definitions."
+    missing_piece: "Which alpha thesis maps to which mode? Altcoin Delay → SWING? Volatility Compression → SCALP? No mapping documented."
+    evidence_refs:
+      - "EVIDENCE-025"
+
+missing_decisions:
+  - id: "MDEC-001"
+    decision_area: "Funding cost model for derivatives (perpetual swap funding)"
+    why_it_matters: "If V7 trades perpetual swaps, funding costs can significantly impact profitability — especially for SCALP and AGGRESSIVE_SCALP. SWING at 4h may hold through multiple funding cycles (every 8h)."
+    recommended_v7_doc_patch: "Add funding_model parameter to simulation/docs/cost_model.md or document as deferred."
+
+  - id: "MDEC-002"
+    decision_area: "Unified profitability thesis document"
+    why_it_matters: "No single doc explains how all components (mode separation, regime awareness, cost honesty, calibration, no-trade quality, correlation control) combine into a coherent edge thesis. Newcomers and agents must reconstruct from 15+ files."
+    recommended_v7_doc_patch: "Create v7/docs/profitability_thesis.md synthesizing edge sources and assumptions."
+
+  - id: "MDEC-003"
+    decision_area: "Symbol-specific minimum edge multipliers"
+    why_it_matters: "v7_mode_centric_architecture.md defines symbol profiles with min_edge_multiplier (BTC: 1.0, XXX: 3.0), but this is NOT integrated into simulation profiles or label thresholds."
+    recommended_v7_doc_patch: "Add symbol edge multipliers to simulation/docs/profiles.md as config-driven symbol_scaling parameter."
+
+  - id: "MDEC-004"
+    decision_area: "No explicit dataset size or minimum trades per mode"
+    why_it_matters: "Walk-forward defines time windows but not minimum sample size. SCALP and AGGRESSIVE_SCALP will have many more rows than SWING. No documented minimum training sample per mode."
+    recommended_v7_doc_patch: "Add minimum training sample guidelines to pipeline/dataset.md."
+
+  - id: "MDEC-005"
+    decision_area: "Regime detection hyperparameter tuning policy"
+    why_it_matters: "Regime thresholds (ADX_STRONG=25, ATR_LOW=0.25, ATR_HIGH=0.75) are documented as 'hyperparameters to tune' but no tuning methodology or mode-specific calibration plan is defined."
+    recommended_v7_doc_patch: "Add regime detection tuning protocol to v7_regime_aware_extensions.md or pipeline/evaluation.md."
+
+  - id: "MDEC-006"
+    decision_area: "Backtest→paper→live promotion thresholds by mode"
+    why_it_matters: "Each mode may need different minimum evidence before promotion. SWING may require 12 months OOS; AGGRESSIVE_SCALP may need 3 months. Not documented."
+    recommended_v7_doc_patch: "Add mode-specific promotion windows to pipeline/evaluation.md promotion gate section."
+
+  - id: "MDEC-007"
+    decision_area: "What happens when one mode is promoted but others are not"
+    why_it_matters: "Roadmap says SWING-first. If SWING reaches paper eligibility while SCALP is still in research, what does runtime do? Not documented."
+    recommended_v7_doc_patch: "Add per-mode independent promotion lifecycle rules to runtime/runtime_integration.md or pipeline/evaluation.md."
+
+recommended_v7_doc_patches:
+  - rank: 1
+    target_file: "v7/docs/profitability_thesis.md (new file)"
+    patch_goal: "Create a single cohesive profitability thesis document synthesizing mode-centric edge, regime awareness, cost honesty, calibration, and no-trade discipline into one coherent thesis"
+    reason: "Critical gap: profitability thesis is currently distributed across 15+ files with no single authoritative synthesis"
+    expected_design_lock_gain: 15
+
+  - rank: 2
+    target_file: "v7/docs/pipeline/evaluation.md"
+    patch_goal: "Add mode-specific promotion gate sequence with explicit backtest→walk-forward→shadow→paper→tiny-live→live thresholds per mode"
+    reason: "Partial decision: promotion criteria exist but gate order and mode-specific thresholds are not documented"
+    expected_design_lock_gain: 10
+
+  - rank: 3
+    target_file: "v7/docs/v7_mode_centric_architecture.md"
+    patch_goal: "Add cross-reference section mapping alpha_thesis_validation_plan.md hypotheses to specific modes"
+    reason: "Missing: alpha theses are defined but not linked to mode architecture"
+    expected_design_lock_gain: 8
+
+  - rank: 4
+    target_file: "simulation/docs/cost_model.md"
+    patch_goal: "Add funding cost model section (derivatives/perpetual swap funding) or explicitly mark as deferred"
+    reason: "Missing: funding costs could significantly impact SCALP and AGGRESSIVE_SCALP profitability"
+    expected_design_lock_gain: 7
+
+  - rank: 5
+    target_file: "v7/docs/pipeline/evaluation.md"
+    patch_goal: "Add regime detection hyperparameter tuning protocol and mode-specific calibration requirements"
+    reason: "Partial: detection thresholds documented but tuning methodology missing"
+    expected_design_lock_gain: 6
+
+  - rank: 6
+    target_file: "v7/docs/pipeline/risk.md"
+    patch_goal: "Add mode-specific risk parameters (max_drawdown, position_sizing, cooldown by mode)"
+    reason: "Missing: risk doc defines shared controls only, no mode-specific risk differentiation"
+    expected_design_lock_gain: 6
+
+  - rank: 7
+    target_file: "simulation/docs/profiles.md"
+    patch_goal: "Integrate symbol-specific min_edge_multiplier into simulation profile as optional config-driven parameter"
+    reason: "Missing: symbol edge multipliers defined in v7_mode_centric_architecture.md but not linked to simulation profiles"
+    expected_design_lock_gain: 5
+
+  - rank: 8
+    target_file: "v7/docs/pipeline/dataset.md"
+    patch_goal: "Add minimum training sample guidelines per mode (trade count, symbol count, window overlap rules)"
+    reason: "Missing: no documented minimum sample size for reliable training per mode"
+    expected_design_lock_gain: 4
+
+  - rank: 9
+    target_file: "v7/docs/runtime/runtime_integration.md"
+    patch_goal: "Document per-mode independent promotion lifecycle: runtime behavior when modes at different readiness levels"
+    reason: "Missing: SWING-first implies staggered promotion but no documented rules for mixed-mode runtime operation"
+    expected_design_lock_gain: 4
+
+implementation_prompt_safety:
+  safe_to_prompt_now:
+    - area: "Mode-specific simulation profile implementation (simulation_configs swing/scalp/aggressive_scalp)"
+      reason: "All parameters documented with explicit YAML config structure in profiles.md and v7_mode_centric_architecture.md"
+
+    - area: "Mode-specific label generation (label thresholds, utility functions, ambiguity rules)"
+      reason: "Complete threshold tables and utility function code in labels.md and v7_mode_centric_architecture.md"
+
+    - area: "XGBoost hybrid model scaffold per mode (classification + regression heads)"
+      reason: "Model output surface, implementation shape, artifact structure all documented in model.md"
+
+    - area: "Regime detection (rule-based ADX/ATR/EMA detector)"
+      reason: "Complete algorithm with code, thresholds, and per-mode detection configs in v7_regime_aware_extensions.md"
+
+    - area: "Policy gates and regime-aware modifiers"
+      reason: "Complete policy code, regime modifier tables, and decision flow in policy.md and v7_regime_aware_extensions.md"
+
+    - area: "Correlation-aware portfolio controls"
+      reason: "Pre-computed correlation groups, cluster suppression logic, exposure calculation all documented in portfolio.md"
+
+    - area: "Cost model (fee + slippage + net R)"
+      reason: "Complete formula, default parameters, versioning rules in cost_model.md"
+
+    - area: "No-trade quality computation (saved_loss, missed_opportunity, classification)"
+      reason: "Complete algorithm and per-mode thresholds in no_trade_quality.md"
+
+    - area: "Walk-forward dataset assembly (6 folds, 12-month train, 2-month validation)"
+      reason: "Complete split strategy in dataset.md and evaluation.md"
+
+    - area: "SWING-first implementation (build and deploy SWING before other modes)"
+      reason: "Explicitly recommended in v7_mode_centric_architecture.md and roadmap.md"
+
+  unsafe_until_v7_doc_patch:
+    - area: "Funding cost model for perpetual swap trading"
+      missing_decision: "MDEC-001 — No funding model documented"
+
+    - area: "Profitability thesis synthesis"
+      missing_decision: "MDEC-002 — Edge sources distributed, no single thesis document"
+
+    - area: "Staggered mode promotion lifecycle in runtime"
+      missing_decision: "MDEC-007 — No rules for runtime when modes at different readiness"
+
+evidence_index:
+  - id: "EVIDENCE-001"
+    file_path: "v7/docs/README.md"
+    section_or_heading: "First-Phase Operating Assumptions"
+    quoted_or_paraphrased_evidence: "Mode scopes: SWING (4h primary, 1d context, 1h refinement), SCALP (1h primary, 4h context, 15m refinement), AGGRESSIVE_SCALP (15m primary, 1h context, 5m refinement). XGBoost-first. Global within scope calibration."
+    confidence: "high"
+
+  - id: "EVIDENCE-002"
+    file_path: "v7/docs/architecture.md"
+    section_or_heading: "Architectural Summary"
+    quoted_or_paraphrased_evidence: "Mode-centric architecture with 3 independent pipelines: SWING [4h+1d], SCALP [1h+4h], AGGRESSIVE_SCALP [15m+1h]. Each has own simulation config, labels, model, policy, regime. Features shared. Truth hierarchy: simulation > realized > contract > runtime > model."
+    confidence: "high"
+
+  - id: "EVIDENCE-003"
+    file_path: "v7/docs/vision.md"
+    section_or_heading: "Primary Goal / No-Trade Is First-Class / Promotion Rule"
+    quoted_or_paraphrased_evidence: "Primary goal: fewer, higher-quality trades with stronger OOS economic performance. NO_TRADE is first-class action. Promotion requires OOS positive expectancy R, acceptable drawdown, no-trade quality, calibration quality, symbol/regime stability."
+    confidence: "high"
+
+  - id: "EVIDENCE-004"
+    file_path: "v7/docs/v7_mode_centric_architecture.md"
+    section_or_heading: "Mode-Specific Simulation Configuration / Mode-Specific Label Design / Phase Implementation Timeline"
+    quoted_or_paraphrased_evidence: "Complete config tables for all 3 modes: primary intervals, holding bars, stop/target multipliers, ambiguity margins, min action edges, penalty weights. Success thresholds per mode. SWING-first recommendation."
+    confidence: "high"
+
+  - id: "EVIDENCE-005"
+    file_path: "v7/docs/v7_regime_aware_extensions.md"
+    section_or_heading: "Regime Detection Layer / Policy Extension for Regime / Evaluation Extension for Regime"
+    quoted_or_paraphrased_evidence: "Four regimes (TREND_UP, TREND_DOWN, RANGE, TRANSITION). Rule-based detector using ADX+ATR+EMA. Per-mode detection configs. Regime policy modifiers: confidence_mult (0.9-1.3), expected_r_mult (0.9-1.5), allow_long/short flags, require_no_trade. Evaluation must test per-regime and regime transition performance."
+    confidence: "high"
+
+  - id: "EVIDENCE-006"
+    file_path: "v7/docs/pipeline/labels.md"
+    section_or_heading: "Mode-Specific Success Thresholds / First-Phase Action Family"
+    quoted_or_paraphrased_evidence: "SUCCESS_THRESHOLDS per mode: SWING (min_net_r=0.75, max_mae=-0.60), SCALP (min_net_r=0.20, max_mae=-0.25, min_cost_adjusted_expectancy=0.10), AGGRESSIVE_SCALP (min_net_r=0.10, max_mae=-0.10, max_time_to_mfe_bars=3). Action family: LONG_NOW/SHORT_NOW/NO_TRADE only."
+    confidence: "high"
+
+  - id: "EVIDENCE-007"
+    file_path: "v7/docs/pipeline/model.md"
+    section_or_heading: "Core Decision / Output Surface (Per Mode)"
+    quoted_or_paraphrased_evidence: "XGBoost-first hybrid supervised model per mode scope. Classification outputs: p_long_now, p_short_now, p_no_trade, classification_margin. Regression outputs: expected_r_long/short, expected_drawdown, expected_cost_adjusted_r. Metadata: model_scope, version lineage."
+    confidence: "high"
+
+  - id: "EVIDENCE-008"
+    file_path: "v7/docs/pipeline/policy.md"
+    section_or_heading: "Decision Gates / Regime-Aware Policy Modifiers / Policy Score"
+    quoted_or_paraphrased_evidence: "8 decision gates: probability, no-trade comparison, decision margin, expected-R, cost-adjusted expectancy, adverse-pressure/drawdown, regime consistency, degradation/fallback. Regime modifiers: TREND_UP (confidence_mult:0.9, allow_short:false), TREND_DOWN (allow_long:false), RANGE (confidence_mult:1.1, expected_r_mult:1.2), TRANSITION (confidence_mult:1.3, expected_r_mult:1.5, require_no_trade:true)."
+    confidence: "high"
+
+  - id: "EVIDENCE-009"
+    file_path: "v7/docs/pipeline/evaluation.md"
+    section_or_heading: "Walk-Forward Family / Promotion Gate (Per Mode) / Regime-Aware Metrics"
+    quoted_or_paraphrased_evidence: "6 folds, 12-month min train, 2-month validation, optional 1-month holdout. Promotion gates: realized-R quality, no-trade quality, calibration quality, regression reliability, symbol/regime stability, no critical safety regression. Per-mode ablation required. Regime breakdown metrics required."
+    confidence: "high"
+
+  - id: "EVIDENCE-010"
+    file_path: "v7/docs/pipeline/risk.md"
+    section_or_heading: "Recommended First-Phase Controls / Cooldown Rule"
+    quoted_or_paraphrased_evidence: "Controls: kill switch, cooldown, max gross exposure, max per-symbol exposure, max cluster exposure, duplicate protection, stale-result rejection, degraded-result safe action. No mode-specific risk differentiation documented."
+    confidence: "high"
+
+  - id: "EVIDENCE-011"
+    file_path: "v7/docs/pipeline/portfolio.md"
+    section_or_heading: "Correlation-Aware Exposure Control / Cluster Definition"
+    quoted_or_paraphrased_evidence: "Pre-computed correlation groups: btc_cluster, eth_cluster, layer1, defi. Max cluster exposure 15%. Directional exposure limits. Cluster suppression before risk gate."
+    confidence: "high"
+
+  - id: "EVIDENCE-012"
+    file_path: "v7/docs/pipeline/simulation.md"
+    section_or_heading: "entire document"
+    quoted_or_paraphrased_evidence: "Migrated to /simulation authority. Simulation truth semantics owned by /simulation. V7 hosts/executes through stable contracts."
+    confidence: "high"
+
+  - id: "EVIDENCE-013"
+    file_path: "simulation/docs/profiles.md"
+    section_or_heading: "SWING/SCALP/AGGRESSIVE_SCALP Profiles / Success Thresholds"
+    quoted_or_paraphrased_evidence: "Complete mode profiles: primary intervals, context intervals, holding bars, stop/target multipliers (ranges), ambiguity margins, min action edges, penalty weights, no_trade_default. SWING no_trade_default:false, SCALP no_trade_default:true, AGGRESSIVE_SCALP no_trade_default:true. Notes 30m SCALP variant as config choice."
+    confidence: "high"
+
+  - id: "EVIDENCE-014"
+    file_path: "simulation/docs/cost_model.md"
+    section_or_heading: "Core Formula / Fee Model / Slippage Model / Why One Cost Model"
+    quoted_or_paraphrased_evidence: "realized_r_net = realized_r_gross - fee_cost_r - slippage_cost_r. maker_fee_bps: 2.0, taker_fee_bps: 4.0. Conservative default: taker fees both sides. slippage_bps: 1.0, volatility-adjusted. Same cost model for labels, evaluation, paper, live. One authority."
+    confidence: "high"
+
+  - id: "EVIDENCE-015"
+    file_path: "simulation/docs/exits_and_horizons.md"
+    section_or_heading: "Exit Families / Mode-Specific Exit Configuration / Stop/Target Precedence"
+    quoted_or_paraphrased_evidence: "Exit reasons: STOP_HIT, TARGET_HIT, TIME_EXIT, HORIZON_END, UNRESOLVED, INVALIDATED. Stop-before-target in same candle (conservative, versioned). Per-mode config: SWING (30 bars, stop 2.0-2.5, target 2.0-3.0), SCALP (12 bars, stop 1.5-2.0, target 1.5-2.0), AGGRESSIVE_SCALP (5 bars, stop 1.0-1.5, target 1.0-1.5)."
+    confidence: "high"
+
+  - id: "EVIDENCE-016"
+    file_path: "simulation/docs/no_trade_quality.md"
+    section_or_heading: "No-Trade Quality Classifications / Configurable Thresholds"
+    quoted_or_paraphrased_evidence: "Classifications: CORRECT_NO_TRADE, SAVED_LOSS, MISSED_OPPORTUNITY, AMBIGUOUS_NO_TRADE. saved_loss_r = max(0, -min(long_R_net, short_R_net)). missed_opportunity_r counted only if best_directional > min_action_edge. Per-mode thresholds: saved-loss (0.20/0.10/0.05R), missed-opportunity (0.35/0.15/0.08R), no-trade correctness (0.20/0.10/0.05R) — SWING/SCALP/AGGRESSIVE_SCALP."
+    confidence: "high"
+
+  - id: "EVIDENCE-017"
+    file_path: "simulation/docs/ai_summary.md"
+    section_or_heading: "MODE PROFILES / COST MODEL / EXIT FAMILIES / NO-TRADE QUALITY / VALIDATION GATES"
+    quoted_or_paraphrased_evidence: "Synthesis of all simulation authority. Table of mode profiles. Cost model formula. 6 exit families. 4 no-trade classifications. 13 validation gate types. Forbidden patterns. Adapter rules."
+    confidence: "high"
+
+  - id: "EVIDENCE-018"
+    file_path: "v7/docs/runtime/runtime_integration.md"
+    section_or_heading: "Integration Flow (Mode-Routed) / Actionability vs Execution Eligibility"
+    quoted_or_paraphrased_evidence: "Runtime flow: Request → Mode Router → SWING/SCALP/AGGRESSIVE_SCALP artifact → Engine → Result → Event → Execution Eligibility. Actionability (engine decision) vs execution eligibility (operational gates). Runtime owns: request assembly, mode routing, result validation, event creation, execution eligibility, outcome lifecycle."
+    confidence: "high"
+
+  - id: "EVIDENCE-019"
+    file_path: "v7/docs/contracts/README.md"
+    section_or_heading: "The Contract Family / Atomic Rule"
+    quoted_or_paraphrased_evidence: "Layer A: AnalysisRequest, AnalysisResult, DecisionEvent, TradeOutcome. One symbol, one primary interval, one state, one request → one result → one event → one outcome. request/result engine-facing, event/outcome system-facing."
+    confidence: "high"
+
+  - id: "EVIDENCE-020"
+    file_path: "v7/docs/pipeline/training.md"
+    section_or_heading: "Training Diagram (Per Mode) / Objective Families"
+    quoted_or_paraphrased_evidence: "Training flow per mode: state → features → simulation → labels → dataset → XGBoost hybrid training → calibration → policy → candidate. Classification objectives: multi-class or separate binary. Regression objectives: squared/absolute error. Early stopping default."
+    confidence: "high"
+
+  - id: "EVIDENCE-021"
+    file_path: "v7/docs/pipeline/calibration.md"
+    section_or_heading: "First-Phase Scope / Classification Calibration / Regression Reliability"
+    quoted_or_paraphrased_evidence: "Per-mode calibration. No per-symbol or per-regime calibration families in first phase. Calibration applies to: p_long_now, p_short_now, p_no_trade, decision confidence. Regression reliability measured via predicted-vs-realized buckets, sign correctness, error distribution."
+    confidence: "high"
+
+  - id: "EVIDENCE-022"
+    file_path: "v7/docs/pipeline/features.md"
+    section_or_heading: "Core Decision / First-Phase Scope / Recommended Feature Groups"
+    quoted_or_paraphrased_evidence: "Features from canonical state only. Shared across all modes. Same feature row feeds classification and regression heads. Feature groups: primary decision features, HTF context, refinement/timing context, global context. Normalization fit on training split only."
+    confidence: "high"
+
+  - id: "EVIDENCE-023"
+    file_path: "v7/docs/pipeline/dataset.md"
+    section_or_heading: "Core Decision / First-Phase Scope / Recommended Split Strategy"
+    quoted_or_paraphrased_evidence: "Mode-specific datasets (no cross-mode mixing). Rows contain mode identifier, shared features, mode-specific labels. Walk-forward: 6 folds, 12-month train, 2-month validation, optional 1-month holdout. Symbol balancing via inverse-frequency weights."
+    confidence: "high"
+
+  - id: "EVIDENCE-024"
+    file_path: "v7/docs/pipeline/monitoring.md"
+    section_or_heading: "Core Decision / Calibration Drift / Regression Drift"
+    quoted_or_paraphrased_evidence: "Monitor per mode: action probability drift, expected-R drift, regression reliability drift, calibration drift, no-trade/action mix drift, mode distribution. Calibration drift: reliability error, confidence bucket realized quality. Regression drift: predicted vs realized R buckets."
+    confidence: "high"
+
+  - id: "EVIDENCE-025"
+    file_path: "v7/docs/alpha_thesis_validation_plan.md"
+    section_or_heading: "Overview / Critical Gating Rules"
+    quoted_or_paraphrased_evidence: "Three hypotheses: Altcoin Delay (BTC→altcoin rotation), Volatility Compression (ATR compression→breakout), Funding+Spot Divergence (high funding + flat spot). 12-fold walk-forward, R-multiple > 1.5 target. NOT integrated with V7 mode definitions."
+    confidence: "high"
+
+  - id: "EVIDENCE-026"
+    file_path: "v7/docs/roadmap.md"
+    section_or_heading: "Recommended Delivery Order / Phase 5 — Model and calibration"
+    quoted_or_paraphrased_evidence: "Delivery order: contracts → simulation → labels/features → dataset → model/calibration → policy/portfolio/risk → runtime → evaluation → deployment safety. SWING may be implemented first, with SCALP and AGGRESSIVE_SCALP added later."
+    confidence: "high"

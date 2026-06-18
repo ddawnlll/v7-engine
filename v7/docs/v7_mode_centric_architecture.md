@@ -1069,6 +1069,38 @@ def aggressive_scalp_decision(model_output, orderbook_analyzer, orderbook_data):
 
 ---
 
+## 6.9 Alpha Thesis to Mode Mapping
+
+### Purpose
+
+This section connects alpha hypotheses defined in `alpha_thesis_validation_plan.md` to the V7 mode architecture. Each alpha hypothesis is a research candidate, not a locked profitable truth.
+
+### Mapping Table
+
+| Alpha ID | Description | Likely Modes | Not Recommended Modes | Required Features | Required Simulation Outputs | Required Cost Assumptions | Validation Gate | Rejection Conditions | Owner |
+|----------|-------------|-------------|----------------------|-------------------|----------------------------|--------------------------|-----------------|---------------------|-------|
+| ALTCOIN_DELAY | BTC or major coin movement followed by delayed altcoin reaction | SWING, SCALP | AGGRESSIVE_SCALP | BTC/altcoin return correlation, cross-sectional momentum, volume ratio | long_R_net, short_R_net, best_action_label, no_trade_quality, regret_r | Fee + slippage; funding deferred for perps | Walk-forward 12-fold, R-multiple > 1.5 median, beats all 3 baselines (random, B&H, naive momentum) | Only works in 1 regime; loses to random baseline; R < 1.0; survivorship bias not addressed | AlphaForge |
+| VOLATILITY_COMPRESSION | Low volatility compression followed by breakout or expansion | SCALP, AGGRESSIVE_SCALP | SWING | ATR percentile, volatility ratio, breakout detection, volume expansion | long_R_net, short_R_net, time_to_mfe_bars, exit_efficiency | Fee + slippage; funding not applicable (spot-only) | Breakout success rate > 40%; beats random direction after compression | False breakout dominates; direction randomness untestable without independent signal | AlphaForge |
+| FUNDING_DIVERGENCE | Funding/spot/perp divergence suggesting directional pressure or crowded positioning | SWING, SCALP | AGGRESSIVE_SCALP | Funding rate, spot/futures return divergence, open interest delta | long_R_net, short_R_net, funding_cost_r, cost_adjusted_expectancy | **Funding cost model REQUIRED** — cannot promote for perpetuals without it; data availability must be verified first | Directional accuracy > 45%; data availability verified; works on multiple symbols, not just BTC | Data unavailable; directional accuracy < 45%; only works on BTC; funding cost model not documented | AlphaForge |
+
+### Mandatory Mapping Principles
+
+1. **Alpha hypotheses are research candidates, not locked profitable truths.** No alpha is assumed profitable before validation.
+2. **Each alpha must be validated per mode independently.** ALTCOIN_DELAY validated for SWING does not imply it works for SCALP.
+3. **AlphaForge may propose edge, but V7 promotion gate decides acceptance.** Discovery and acceptance are separate authorities.
+4. **Funding Divergence cannot be promoted for perpetuals until the funding cost model is documented** (see `simulation/docs/cost_model.md`).
+5. **AGGRESSIVE_SCALP requires stronger cost/slippage/no-trade discipline than SWING** — an alpha that looks promising at 4h may be net-negative at 15m after costs.
+6. **Composite signals must be validated independently before combination** (see `alpha_thesis_validation_plan.md` composite rules).
+
+### Integration Points
+
+- Alpha validation results feed into `pipeline/evaluation.md` promotion gates.
+- Validated alphas become mode-specific feature inputs during dataset construction (`pipeline/dataset.md`).
+- Rejected alphas are archived with rejection reason; they do not block mode promotion but are not usable as evidence.
+- Alpha thesis validation is **not** the same as mode promotion. A mode can be promoted with different alpha evidence than what was originally hypothesized.
+
+---
+
 ## 7. Phase Implementation Timeline
 
 ### Phase 1: Core Mode-Centric (Immediate)

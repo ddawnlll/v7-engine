@@ -100,6 +100,69 @@ Old datasets remain traceable to the `cost_model_version` that produced their la
 
 `lib/costs/` provides basic cost primitives (fee percentage formulas, simple slippage calculation). `/simulation` wraps and versions these primitives into the authoritative cost model. `lib/` stays primitive; `/simulation` owns the composite semantics and versioning.
 
+## Funding Cost Model for Perpetuals
+
+**Status: DEFERRED_FOR_SPOT_OR_NON_PERP_FIRST_PHASE**
+
+### Decision
+
+Funding cost for perpetual swap positions is **not yet implemented** in the first-phase cost model. The first-phase scope targets spot trading where funding is not applicable.
+
+For derivatives/perpetuals to be promoted to live eligibility, a funding cost model must be implemented. The section below defines the **LOCK_CANDIDATE** formula and parameters that must be reviewed before implementation.
+
+### Why Funding Matters
+
+- Funding is part of economic truth, not model output.
+- Funding must be applied by Simulation cost truth before AlphaForge labels and V7 promotion can trust derivatives results.
+- Funding impact is especially relevant for SWING because holding can span multiple funding intervals (funding typically settles every 8h; SWING can hold up to 120h / 15 funding intervals).
+- SCALP at 1h (max 12h holding) may cross 1 funding interval.
+- AGGRESSIVE_SCALP at 15m (max 75min holding) is unlikely to cross a funding interval.
+
+### LOCK_CANDIDATE Formula
+
+```
+funding_cost_r = sum_over_holding_period(
+    position_direction_sign * funding_rate_at_interval_i * position_size_in_quote
+) / entry_risk_price
+
+realized_r_net = realized_r_gross - fee_cost_r - slippage_cost_r - funding_cost_r
+```
+
+### LOCK_CANDIDATE Parameters
+
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| `funding_rate_source` | Exchange funding rate endpoint | Binance: `GET /fapi/v1/fundingRate` |
+| `funding_interval` | 8 hours | Standard for most perpetual exchanges |
+| `position_direction_sign` | +1 for LONG, -1 for SHORT | LONG pays funding when rate > 0; SHORT receives |
+| `holding_overlap_rule` | Pro-rata by bars overlapping funding interval | If position holds through 3 of 8 hours in a funding period, apply 3/8 of that period's rate |
+| `conservative_default` | Apply funding at each interval boundary regardless of position duration | Maximally conservative: assume every funding interval crossed |
+| `versioning` | `funding_model_version` bump on any change | Major bump if formula changes; minor bump if rate source changes |
+
+### Per-Mode Funding Impact Estimates (LOCK_CANDIDATE)
+
+| Mode | Max Holding | Max Funding Intervals Crossed | Estimated Max Funding Cost Impact | Risk |
+|------|------------|-------------------------------|-----------------------------------|------|
+| SWING | 30 bars × 4h = 120h | 15 intervals | Potentially significant — 15 × funding_rate × position_size | **Highest** — must be modeled before perp promotion |
+| SCALP | 12 bars × 1h = 12h | 1-2 intervals | Low-to-moderate — 1-2 × funding_rate × position_size | Moderate — worth modeling for completeness |
+| AGGRESSIVE_SCALP | 5 bars × 15m = 75min | 0 intervals | Negligible — position unlikely to cross funding boundary | Low — may be treated as zero for this mode |
+
+### Blocking Rule
+
+**Until funding cost model is implemented (status moves from DEFERRED to LOCKED):**
+- Perpetual swap trading is blocked for all modes at G3 (COST_STRESS) promotion gate.
+- Alpha hypotheses involving funding (e.g., FUNDING_DIVERGENCE) may be researched but cannot be promoted for perpetuals.
+- Spot trading is unaffected.
+
+### Versioning
+
+When funding is implemented:
+- `cost_model_version` receives a **major** bump (new cost component added).
+- Old datasets without funding cost remain traceable but are marked as pre-funding.
+- Labels generated before funding implementation must be regenerated for perp symbols.
+
+---
+
 ## Example: Net R Computation
 
 ```

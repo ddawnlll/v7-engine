@@ -70,6 +70,54 @@ This preserves the V7 boundary discipline already established by the request/res
 
 ---
 
+## Per-Mode Promotion Lifecycle
+
+Each mode has an independent readiness state. Modes progress through states sequentially. No state may be skipped.
+
+### Lifecycle States
+
+| State | Allowed Environment | Can Load Artifact | Can Emit Actionable Decision | Can Execute Order | Required Previous Gate | Safe Failure Behavior |
+|-------|-------------------|-------------------|------------------------------|-------------------|----------------------|-----------------------|
+| DESIGN_LOCKED | None (docs-only) | No | No | No | None (initial state) | N/A — no artifact exists |
+| RESEARCH | Research/backtest only | Yes (research artifact) | No — research output only | No | G0 (DOC_READY) | Return NO_TRADE with `fallback_used=research_only` |
+| BACKTEST_ELIGIBLE | Backtest evaluation | Yes (candidate artifact) | No — evaluation output only | No | G1, G2 | Return NO_TRADE with `degraded_reason=backtest_only` |
+| SHADOW_ELIGIBLE | Shadow (live data, no orders) | Yes (shadow artifact) | Yes — shadow event emitted | No | G3, G4, G5, G6, G7 | Return actionable decision but block execution; log shadow event |
+| PAPER_ELIGIBLE | Paper trading (simulated execution) | Yes (paper artifact) | Yes — paper event emitted | No (simulated only) | G8 | Return actionable decision; execution goes to paper simulation, not live broker |
+| TINY_LIVE_ELIGIBLE | Live with strict limits | Yes (tiny-live artifact) | Yes | Yes (with kill switches active) | G9 | Return actionable decision; execution limited by tiny-live risk parameters |
+| LIVE_ELIGIBLE | Production live | Yes (live artifact) | Yes | Yes | G10 | Return actionable decision; normal execution path |
+| DISABLED | None | No | No | No | Any state → DISABLED on kill-switch or manual disable | Return NO_TRADE with `fallback_used=mode_disabled` |
+
+### Mixed-Mode Runtime Operation
+
+Runtime must handle modes at different readiness levels simultaneously:
+
+1. **SWING can be promoted while SCALP and AGGRESSIVE_SCALP remain disabled or research-only.** SWING-first implementation order means SWING reaches LIVE_ELIGIBLE earlier.
+2. **Runtime must route only to mode artifacts whose readiness state allows the requested environment.** A PAPER_ELIGIBLE SCALP artifact must not emit actionable decisions to the live broker.
+3. **Disabled modes return safe non-actionable result, not fallback to another mode.** If AGGRESSIVE_SCALP is DISABLED, a request with `requested_trade_mode=AGGRESSIVE_SCALP` returns NO_TRADE with degradation reason — it does not silently route to SWING.
+4. **Research/paper/live states must be explicit in runtime metadata.** Every DecisionEvent and TradeOutcome must carry the mode's readiness state and artifact lineage.
+5. **Runtime owns execution eligibility, not profitability acceptance.** Runtime enforces the state-based execution gates; V7 evaluation owns the promotion decision.
+
+### State Transition Rules
+
+- State transitions are **one-way** (forward only) except DISABLED which can be entered from any state.
+- Rollback from LIVE_ELIGIBLE to DISABLED is immediate on kill-switch activation.
+- Promotion from one state to the next requires the corresponding gate evidence (see `pipeline/evaluation.md` Mode-Specific Promotion Gate Sequence).
+- A mode may remain in a state indefinitely while evidence is gathered.
+- Two modes may be in different states simultaneously (e.g., SWING at PAPER_ELIGIBLE, SCALP at RESEARCH).
+
+### Example: Staggered Promotion
+
+```
+Time ──────────────────────────────────────────>
+SWING:            DESIGN_LOCKED → RESEARCH → BACKTEST → SHADOW → PAPER → TINY_LIVE → LIVE
+SCALP:            DESIGN_LOCKED → RESEARCH → BACKTEST → (waiting) ...
+AGGRESSIVE_SCALP: DESIGN_LOCKED → (not yet started)
+```
+
+Runtime must handle all three modes concurrently at their respective readiness states.
+
+---
+
 ## Integration Flow (Mode-Routed)
 
 The normalized V7 runtime flow should be:

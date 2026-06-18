@@ -8,7 +8,7 @@
       "owner_domain": "simulation",
       "version": "1.0.0",
       "schema_file": "contracts/schemas/simulation_profile.schema.json",
-      "fixture_file": null,
+      "fixture_file": "contracts/fixtures/simulation_profile_minimal.json",
       "description": "Mode-specific simulation configuration (SWING, SCALP, AGGRESSIVE_SCALP)",
       "source_authority": [
         "simulation/docs/contracts.md",

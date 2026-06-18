@@ -174,6 +174,66 @@ Threshold values live in config.
 
 ---
 
+## Mode-Specific Promotion Gate Sequence
+
+Each mode must pass these gates sequentially. No gate may be skipped. Promotion is **per mode** — SWING promotion does not imply SCALP or AGGRESSIVE_SCALP readiness.
+
+### Gate Definitions
+
+| Gate | Name | Meaning | Required Evidence | Exit Criteria |
+|------|------|---------|-------------------|---------------|
+| G0 | DOC_READY | Mode has complete docs, contracts, labels, model outputs, and risk rules | All authority docs for the mode are written and internally consistent | Design lock review passed |
+| G1 | RESEARCH_BACKTEST | Initial research backtest with cost-honest labels and no-trade quality | Walk-forward OOS backtest with unified cost model; all metric families computed | Positive expectancy R; no-trade quality meets per-mode threshold |
+| G2 | WALK_FORWARD_OOS | Walk-forward out-of-sample evidence across multiple folds | 6 folds minimum; 12-month train, 2-month validation per fold; per-fold consistency metrics | Median fold expectancy meets mode threshold; no fold catastrophically negative |
+| G3 | COST_STRESS | Fee, slippage, spread, and funding stress where applicable | Cost model applied at taker rates (conservative); slippage volatility-adjusted; funding stress if perps | Edge survives cost stress; cost-adjusted expectancy meets mode minimum (SCALP REQUIRED: ≥ 0.10R) |
+| G4 | REGIME_BREAKDOWN | Performance evaluated per TREND_UP, TREND_DOWN, RANGE, TRANSITION | Per-regime metrics: realized R, no-trade quality, action distribution, decision margin | No single regime hides catastrophic loss; TRANSITION regime does not dominate negative outcomes |
+| G5 | SYMBOL_STABILITY | No single symbol or cluster explains majority of edge | Per-symbol breakdown: contribution to total expectancy; cluster contribution analysis | No single symbol > 40% of total edge; no single cluster > 60% of total edge |
+| G6 | CALIBRATION_RELIABILITY | Probability and expected-R surfaces calibrated enough for policy gates | Reliability error per confidence bucket; predicted-vs-realized R bucket alignment | Reliability error within acceptable bounds; regression sign correctness above threshold |
+| G7 | SHADOW | Live-market observation without order placement | Real-time market data; shadow events generated; shadow-vs-backtest comparison report | Shadow outcomes statistically consistent with backtest expectations; no material divergence |
+| G8 | PAPER | Paper trading with runtime lifecycle and outcome reconciliation | Paper forward simulation via runtime-hosted simulation engine; full trade lifecycle tracked | Paper outcomes consistent with shadow and backtest; execution eligibility gates function correctly |
+| G9 | TINY_LIVE | Small real-capital live validation with strict kill switches | Real orders placed with minimum size; kill switches active; daily loss limits enforced | Live outcomes consistent with paper/shadow; no kill-switch violations; no unexpected cost divergence |
+| G10 | LIVE | Production-eligible mode after independent promotion | All prior gates passed; deployment safety gates active; rollback plan documented | Mode is production-eligible; independent of other modes' readiness |
+
+### Mode-Specific Promotion Thresholds
+
+Where exact values are documented in existing authority docs, those values are cited. Values marked **LOCK_CANDIDATE** are conservative defaults requiring owner review before implementation.
+
+| Threshold | SWING | SCALP | AGGRESSIVE_SCALP |
+|-----------|-------|-------|------------------|
+| Minimum OOS window | 12 months (6 folds × 2mo) | 12 months (6 folds × 2mo) | 6 months (6 folds × 1mo) **[LOCK_CANDIDATE]** |
+| Minimum trades/events | ≥ 200 **[LOCK_CANDIDATE]** | ≥ 500 **[LOCK_CANDIDATE]** | ≥ 300 **[LOCK_CANDIDATE]** |
+| Minimum expectancy R | ≥ 0.15R **[LOCK_CANDIDATE]** | ≥ 0.05R **[LOCK_CANDIDATE]** | ≥ 0.03R **[LOCK_CANDIDATE]** |
+| Max drawdown limit | ≤ 25% **[LOCK_CANDIDATE]** | ≤ 15% **[LOCK_CANDIDATE]** | ≤ 10% **[LOCK_CANDIDATE]** |
+| Min no-trade quality | CORRECT_NO_TRADE ≥ 60%; SAVED_LOSS ≥ 0.20R per event | CORRECT_NO_TRADE ≥ 55%; SAVED_LOSS ≥ 0.10R per event | CORRECT_NO_TRADE ≥ 50%; SAVED_LOSS ≥ 0.05R per event |
+| Calibration requirement | Reliability error within ±10% per bucket **[LOCK_CANDIDATE]** | Reliability error within ±10% per bucket **[LOCK_CANDIDATE]** | Reliability error within ±15% per bucket **[LOCK_CANDIDATE]** |
+| Cost stress requirement | Edge survives taker × 1.5 multiplier stress **[LOCK_CANDIDATE]** | Edge survives taker × 2.0 multiplier stress; cost-adjusted expectancy ≥ 0.10R | Edge survives taker × 2.5 multiplier stress **[LOCK_CANDIDATE]** |
+| Shadow duration | ≥ 4 weeks **[LOCK_CANDIDATE]** | ≥ 3 weeks **[LOCK_CANDIDATE]** | ≥ 2 weeks **[LOCK_CANDIDATE]** |
+| Paper duration | ≥ 4 weeks **[LOCK_CANDIDATE]** | ≥ 4 weeks **[LOCK_CANDIDATE]** | ≥ 3 weeks **[LOCK_CANDIDATE]** |
+| Tiny live limit | Max 0.5% account risk per trade; max 5% daily loss; max 10% cumulative **[LOCK_CANDIDATE]** | Max 0.25% account risk per trade; max 3% daily loss; max 7% cumulative **[LOCK_CANDIDATE]** | Max 0.1% account risk per trade; max 2% daily loss; max 5% cumulative **[LOCK_CANDIDATE]** |
+| Owner review required | Yes — all LOCK_CANDIDATE values | Yes — all LOCK_CANDIDATE values | Yes — all LOCK_CANDIDATE values |
+
+### Rejection Rules
+
+1. **Reject if profitability only appears before costs** — cost-honest labels must show edge survives G3.
+2. **Reject if edge disappears under slippage stress** — apply taker-fee multiplier stress at G3.
+3. **Reject if one symbol or cluster dominates results** — G5 symbol stability gate.
+4. **Reject if regime breakdown shows unacceptable hidden fragility** — any single regime with catastrophic loss triggers G4 rejection.
+5. **Reject if NO_TRADE quality is poor** — CORRECT_NO_TRADE rate below mode threshold or excessive MISSED_OPPORTUNITY.
+6. **Reject if calibration is not trustworthy enough for policy thresholds** — G6 reliability error above acceptable bounds.
+7. **Reject if paper/shadow diverges materially from backtest expectations** — G7/G8 statistical consistency check.
+8. **Reject if tiny-live outcomes diverge from paper/shadow** — G9 consistency check.
+
+### Alpha Thesis Validation Gate
+
+Each alpha thesis must be validated independently before being attached to a promoted mode.
+
+- **Alpha thesis validation is not the same as mode promotion.** An alpha passing validation is necessary but not sufficient for mode promotion.
+- **Mode promotion requires alpha evidence plus policy/risk/cost/portfolio acceptance.** The full G0-G10 gate sequence applies.
+- Rejected alpha theses are archived with rejection reason and do not block mode promotion — but they cannot be used as promotion evidence.
+- Alpha validation follows its own walk-forward protocol (see `alpha_thesis_validation_plan.md`) with independent baselines.
+
+---
+
 ## Replay vs Live Evidence Rule
 
 Replay-only evidence may justify:

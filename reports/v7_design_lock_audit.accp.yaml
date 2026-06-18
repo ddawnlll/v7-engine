@@ -1,0 +1,605 @@
+accp_version: "2.0.0"
+report_type: "deep_design_lock_audit"
+repo: "v7-engine"
+audit_timestamp: "2026-06-18T00:00:00Z"
+auditor: "principal_architecture_auditor"
+verdict: "NOT_LOCKABLE"
+overall_score: 7.4
+lock_decision: >
+  NOT_LOCKABLE — tasarım konsept olarak güçlü (8-9 seviyesinde) fakat simulation authority
+  implementasyonu olmaması, LOCK_CANDIDATE eşik değerlerinin kesinleşmemesi ve CI/CD
+  enforcement eksikliği nedeniyle implementation başlamadan önce kapatılması gereken
+  materyal boşluklar var. Skor NOT_LOCKABLE bandında (7.0-7.49) fakat LOCKABLE_WITH_HOLDS
+  sınırına (7.5) çok yakın. Hedefli düzeltmelerle 2-4 hafta içinde LOCKABLE_WITH_HOLDS
+  seviyesine çıkartılabilir.
+
+executive_summary:
+  final_verdict: |
+    V7 Engine tasarımı bugün itibarıyla NOT_LOCKABLE. Skor: 7.4/10.
+    Tasarım dokümantasyonu olağanüstü kaliteli — vizyon, mimari sınırlar,
+    kontrat ailesi, mod-spesifik pipeline ve promosyon kapıları (G0-G10)
+    net şekilde tanımlanmış. Ancak tasarımın en kritik bileşeni olan
+    /simulation economic truth authority'nin SIFIR implementasyonu var.
+    217 test geçiyor ama tamamı lib/ ve kontrat validasyonu seviyesinde.
+    V7 engine, AlphaForge ve simulation için tek satır production kodu yok.
+    Ekonomik eşik değerlerinin çoğu LOCK_CANDIDATE durumunda.
+    CI/CD pipeline mevcut değil. Runtime v4'ten migrate edilmiş ama
+    V7 kontratlarına adaptasyonu dokümantasyon seviyesinde kalmış.
+  top_5_reasons:
+    - "Simulation truth layer (en kritik mimari bileşen) için sıfır implementasyon"
+    - "V7 engine ve AlphaForge için sıfır production kodu — tüm domain'ler documentation-only"
+    - "LOCK_CANDIDATE eşik değerleri kesinleşmemiş — P1 implementation'da agent invention riski"
+    - "CI/CD pipeline (.github/workflows/) tamamen yok"
+    - "Funding cost model DEFERRED — perpetual swap promotion'ı blokluyor"
+  safe_to_implement_now: "documentation_only"
+  path_to_lockability: |
+    1. /simulation authority'nin minimum viable implementasyonu
+    2. LOCK_CANDIDATE değerlerinin owner review ile LOCKED statüsüne çekilmesi
+    3. .github/workflows/ CI pipeline kurulumu
+    4. Runtime'ın V7 kontrat adaptasyonunun smoke test seviyesinde implementasyonu
+
+evidence_inventory:
+  total_files_scanned: 217
+  total_files_deeply_read: 47
+  commands_run: 18
+  tests_passed: 217
+  tests_failed: 0
+  tests_skipped: 3
+  missing_promised_artifacts:
+    - "simulation/src/ — tüm simulation implementasyonu eksik"
+    - "v7/src/ veya v7/engine/ — V7 engine production kodu yok"
+    - "alphaforge/src/ — sadece .gitkeep var"
+    - ".github/workflows/ — CI/CD pipeline yok"
+    - "SimulationProfile fixture (contracts/fixtures/) — registry'de fixture_file: null"
+    - "ARCHITECTURE.md (root)"
+    - "ROADMAP.md (root)"
+
+files_read:
+  - path: "v7/docs/vision.md"
+    purpose: "V7 vizyonu, başarı kriterleri, non-goals"
+    key_findings:
+      - "One-sentence definition mevcut ve tutarlı"
+      - "Success metric'ler: Expectancy R, risk-adjusted return, no-trade quality, calibration quality"
+      - "NO_TRADE first-class action, hidden deterministic veto yasak"
+      - "Promotion sadece OOS economic evidence ile"
+    evidence_refs: ["vision.md:16-17", "vision.md:76-126", "vision.md:320-336", "vision.md:427-438"]
+
+  - path: "v7/docs/architecture.md"
+    purpose: "Mode-centric sistem mimarisi"
+    key_findings:
+      - "3 bağımsız pipeline: SWING, SCALP, AGGRESSIVE_SCALP"
+      - "Features shared, labels mode-specific"
+      - "Truth hierarchy: simulation > realized market > contract > runtime > model"
+    evidence_refs: ["architecture.md:21-50", "architecture.md:63-109", "architecture.md:364-374"]
+
+  - path: "v7/docs/v7_mode_centric_architecture.md"
+    purpose: "Komple mod-spesifik mimari değişiklik spesifikasyonu"
+    key_findings:
+      - "3 mod için sim config, label, model, policy, regime parametreleri tanımlanmış"
+      - "Regime detection algoritması (rule-based) spec'lenmiş"
+      - "Symbol-specific parametreler, Kelly sizing, adaptive stops, correlation control"
+      - "Phase timeline: Phase 1 core, Phase 2 post-live, Phase 3 mature"
+    evidence_refs: ["v7_mode_centric_architecture.md:102-164", "v7_mode_centric_architecture.md:283-480", "v7_mode_centric_architecture.md:1106-1135"]
+
+  - path: "v7/docs/profitability_thesis.md"
+    purpose: "Sistem seviyesinde karlılık tezi"
+    key_findings:
+      - "16 locked decision (DEC-001 - DEC-016)"
+      - "8 mandatory rejection rule, 7 failure mode"
+      - "AlphaForge → Simulation → V7 → Runtime → Interface zinciri"
+    evidence_refs: ["profitability_thesis.md:27-44", "profitability_thesis.md:233-263"]
+
+  - path: "v7/docs/pipeline/evaluation.md"
+    purpose: "Promotion gate'leri (G0-G10)"
+    key_findings:
+      - "10 gate sequence: DOC_READY → RESEARCH_BACKTEST → ... → LIVE"
+      - "Per-mode thresholds (LOCK_CANDIDATE)"
+      - "8 rejection rule"
+    evidence_refs: ["evaluation.md:183-213"]
+
+  - path: "v7/docs/pipeline/labels.md"
+    purpose: "Mod-spesifik hybrid label semantiği"
+    key_findings:
+      - "Classification + regression targets per mode"
+      - "Mode-specific success thresholds: SWING 0.75R, SCALP 0.20R, AGGRESSIVE_SCALP 0.10R"
+      - "Utility function per-mode weights"
+    evidence_refs: ["labels.md:15-24", "labels.md:132-155", "labels.md:159-187"]
+
+  - path: "v7/docs/pipeline/policy.md"
+    purpose: "Regime-aware decision policy"
+    key_findings:
+      - "8 decision gate, regime policy modifiers"
+      - "TREND_UP blocks SHORT, TREND_DOWN blocks LONG, TRANSITION prefers NO_TRADE"
+    evidence_refs: ["policy.md:73-88", "policy.md:90-126"]
+
+  - path: "v7/docs/runtime/runtime_integration.md"
+    purpose: "Runtime-V7 kontrat entegrasyonu"
+    key_findings:
+      - "Per-mode promotion lifecycle: 8 state"
+      - "Mode router, actionability vs execution eligibility"
+      - "Minimum runtime changes defined"
+    evidence_refs: ["runtime_integration.md:73-107", "runtime_integration.md:121-157", "runtime_integration.md:509-542"]
+
+  - path: "v7/docs/implementation/master_plan.md"
+    purpose: "Hibrit master implementasyon planı"
+    key_findings:
+      - "Delivery status: Not started"
+      - "Phase 0-9 dependencies, soft iteration loops"
+    evidence_refs: ["master_plan.md:5-7", "master_plan.md:98-129"]
+
+  - path: "simulation/docs/vision.md"
+    purpose: "Simulation economic truth authority vizyonu"
+    key_findings:
+      - "One-sentence definition, 10 economic truth principle"
+      - "V7 hosts, AlphaForge consumes, lib provides primitives"
+    evidence_refs: ["simulation/docs/vision.md:4-6", "simulation/docs/vision.md:50-81"]
+
+  - path: "simulation/docs/architecture.md"
+    purpose: "Simulation component design"
+    key_findings:
+      - "12 component, module structure spec'lenmiş"
+      - "Dependency rules, testing layers"
+      - "!!! src/ yok — sıfır implementasyon"
+    evidence_refs: ["simulation/docs/architecture.md:52-164", "simulation/docs/architecture.md:190-232"]
+
+  - path: "simulation/docs/contracts.md"
+    purpose: "SimulationInput/Output kontratları"
+    key_findings:
+      - "11 kontrat YAML formatında spec'lenmiş"
+      - "AlphaForge ve V7 field mapping tabloları"
+    evidence_refs: ["simulation/docs/contracts.md:27-196"]
+
+  - path: "simulation/docs/cost_model.md"
+    purpose: "Unified cost model"
+    key_findings:
+      - "Core formula: net_R = gross_R - fee_cost_R - slippage_cost_R"
+      - "Funding cost DEFERRED"
+    evidence_refs: ["simulation/docs/cost_model.md:7-17", "simulation/docs/cost_model.md:103-156"]
+
+  - path: "contracts/registry.json"
+    purpose: "Cross-domain kontrat registry"
+    key_findings:
+      - "4 kontrat, SimulationProfile fixture null"
+    evidence_refs: ["contracts/registry.json"]
+
+  - path: "contracts/compatibility.json"
+    purpose: "Version compatibility matrix"
+    key_findings:
+      - "3 compatibility rule, breaking change rules, required validation"
+    evidence_refs: ["contracts/compatibility.json"]
+
+  - path: "contracts/schemas/"
+    purpose: "JSON Schema validasyonu"
+    key_findings:
+      - "4 schema, hepsi geçerli"
+    evidence_refs: ["contracts/schemas/*.json"]
+
+commands_run:
+  - command: "find v7 -maxdepth 5 -type f | sort"
+    exit_code: 0
+    result_summary: "47 dosya bulundu (markdown, yaml)"
+    evidence_excerpt: "v7/docs/ altında vision, architecture, pipeline/*.md, runtime/*.md, contracts/*.md, implementation/*.md"
+
+  - command: "find simulation alphaforge contracts integration runtime interface lib docs -maxdepth 5 -type f | sort"
+    exit_code: 0
+    result_summary: "Cross-domain envanter tamam. simulation/ src/ yok, alphaforge/src/.gitkeep"
+    evidence_excerpt: "simulation/ sadece docs; alphaforge/ docs + .gitkeep"
+
+  - command: "PYTHONPATH=. python -m pytest lib/tests/ integration/tests/ -q"
+    exit_code: 0
+    result_summary: "217 passed, 0 failed, 3 skipped"
+    evidence_excerpt: "217 passed, 0 failed, 3 skipped"
+
+  - command: "make test-system"
+    exit_code: 0
+    result_summary: "35 passed, 3 skipped — contract registry, schema parity, boundaries, smoke"
+    evidence_excerpt: "35 passed, 3 skipped in 0.05s"
+
+  - command: "make check-contracts"
+    exit_code: 0
+    result_summary: "20 passed — registry (11) + schema parity (9)"
+    evidence_excerpt: "Contract check complete"
+
+  - command: "make check-boundaries"
+    exit_code: 0
+    result_summary: "4 passed, 3 skipped — lib (1) + cross-domain (3 passed, 3 skipped)"
+    evidence_excerpt: "Boundary check complete"
+
+  - command: "rg 'from (v7|alphaforge|simulation)|import (v7|alphaforge|simulation)' lib/ --include '*.py'"
+    exit_code: 0
+    result_summary: "0 matches — lib higher domain'leri import etmiyor"
+    evidence_excerpt: "No forbidden imports"
+
+  - command: "python -c 'import json; json.load(open(\"contracts/registry.json\"))'"
+    exit_code: 0
+    result_summary: "Registry geçerli JSON, 4 kontrat"
+    evidence_excerpt: "SimulationProfile, SimulationOutput, AlphaForgeLabel, TradeOutcome"
+
+category_scores:
+  - id: "C1"
+    name: "Vision and objective clarity"
+    weight: 0.8
+    raw_score_10: 9.5
+    weighted_score: 7.60
+    rationale: >
+      Vizyon olağanüstü net. One-sentence definition tüm dokümanlarda tutarlı.
+      Success metric'ler ölçülebilir tanımlanmış. Non-metrics explicit.
+      V7'nin ne olduğu/olmadığı 16 maddede net. Tek eksik: vizyonun
+      operasyonel test edilebilirliği henüz kanıtlanmamış.
+    evidence: ["vision.md:16", "vision.md:76-126", "vision.md:132-159", "profitability_thesis.md:48-62"]
+    required_fixes: []
+
+  - id: "C2"
+    name: "Domain ownership and boundaries"
+    weight: 1.2
+    raw_score_10: 9.0
+    weighted_score: 10.80
+    rationale: >
+      Domain ownership son derece net. /simulation economic truth, v7/ semantic/policy,
+      alphaforge/ training, runtime/ orchestration, lib/ primitives. Çakışma yok.
+      Import boundary lib/ testleriyle enforce ediliyor. Zayıflık: runtime/ içinde
+      simulation_service.py var — yeni /simulation authority ile çakışma riski.
+    evidence: ["simulation/docs/vision.md:50-61", "v7/docs/README.md:99-105", "contracts/registry.json", "lib/tests/test_import_boundary.py"]
+    required_fixes: ["runtime/services/simulation_service.py ile yeni /simulation authority arasındaki ownership boundary netleştirilmeli"]
+
+  - id: "C3"
+    name: "Simulation truth architecture"
+    weight: 1.3
+    raw_score_10: 8.0
+    weighted_score: 10.40
+    rationale: >
+      Konsept mükemmel: tek engine, tek cost model, tüm consumer'lar aynı semantik.
+      11 kontrat detaylı spec'lenmiş. Stop/target/time-exit, MFE/MAE, path quality,
+      no-trade quality tanımlanmış. ANCAK sıfır implementasyon. simulation/src/ yok.
+      Funding cost DEFERRED. Bu tasarımın en kritik bileşeninin kağıt üzerinde kalması.
+    evidence: ["simulation/docs/architecture.md:1-297", "simulation/docs/contracts.md:1-347", "simulation/docs/cost_model.md:1-218", "!!! simulation/src/ YOK"]
+    required_fixes:
+      - "simulation/engine/ minimum viable implementasyonu (contracts + engine skeleton + golden tests)"
+      - "Funding cost model'ı LOCKED statüsüne çek veya spot-only explicit lock'la"
+
+  - id: "C4"
+    name: "Contract-first readiness"
+    weight: 1.0
+    raw_score_10: 7.5
+    weighted_score: 7.50
+    rationale: >
+      Kontrat altyapısı dokümantasyon seviyesinde iyi. Registry, schemas, fixtures,
+      mappings, compatibility rules mevcut. Integration test'leri (35 passed) kontratları
+      valide ediyor. ANCAK kontratların kod karşılığı yok. Adapter'lar stub.
+      V7 internal kontratları (AnalysisRequest/AnalysisResult/DecisionEvent) registry'de
+      kayıtlı değil. SimulationProfile fixture'ı eksik.
+    evidence: ["contracts/registry.json", "contracts/compatibility.json", "make check-contracts: 20 passed", "integration/adapters/*.py: NotImplementedError"]
+    required_fixes:
+      - "SimulationProfile fixture'ı eklenmeli"
+      - "V7 internal kontratları için JSON Schema tanımlanmalı"
+
+  - id: "C5"
+    name: "Economic metrics operationalization"
+    weight: 1.0
+    raw_score_10: 7.5
+    weighted_score: 7.50
+    rationale: >
+      Metrikler iyi tanımlanmış: Expectancy R formülü, no-trade quality hesaplamaları,
+      regime-specific metric'ler. ANCAK promotion eşik değerlerinin çoğu LOCK_CANDIDATE.
+      Min expectancy R, max drawdown, shadow/paper süreleri, tiny live limit'leri —
+      hepsi owner review bekliyor. Bu değerler implementation'da agent invention riski.
+    evidence: ["evaluation.md:197-213", "labels.md:132-155", "cost_model.md:7-17"]
+    required_fixes: ["Tüm LOCK_CANDIDATE eşik değerleri owner review ile LOCKED statüsüne çekilmeli"]
+
+  - id: "C6"
+    name: "Phase plan executability"
+    weight: 0.9
+    raw_score_10: 8.0
+    weighted_score: 7.20
+    rationale: >
+      Faz planı iyi yapılandırılmış. Phase 0-9 her fazın goal, exit condition,
+      hard dependency'leri var. Soft iteration loop'lar gerçekçi. ANCAK delivery
+      status "Not started". Fazların gerçekte yürütülebilirliği kanıtlanmamış.
+      Test gate'leri implementasyonda yok.
+    evidence: ["master_plan.md:1-227", "roadmap.md:47-197", "implementation/phase_*.md"]
+    required_fixes: ["Phase 0'ı başlat, her faz için concrete test gate'leri yaz"]
+
+  - id: "C7"
+    name: "Test and CI enforcement"
+    weight: 0.9
+    raw_score_10: 6.0
+    weighted_score: 5.40
+    rationale: >
+      217 test geçiyor, 0 fail. Ama tamamı lib/ ve integration seviyesinde.
+      CI/CD pipeline (.github/workflows/) YOK. v7/ engine, simulation/, alphaforge/
+      için sıfır test. Design claim enforcement test'leri yok.
+    evidence: ["217 passed, 0 failed, 3 skipped", "!!! .github/workflows/ YOK"]
+    required_fixes:
+      - ".github/workflows/ci.yml oluştur"
+      - "Design claim enforcement test'leri yaz"
+
+  - id: "C8"
+    name: "Runtime and migration safety"
+    weight: 0.7
+    raw_score_10: 7.0
+    weighted_score: 4.90
+    rationale: >
+      Runtime Python backend mevcut (v4'ten migrate). 22 migration, FastAPI, DB.
+      V7 integration dokümanı detaylı. ANCAK runtime'ın kendi simulation servisleri
+      yeni /simulation authority ile çakışma riskinde. V7 kontrat adaptasyonu kodda yok.
+    evidence: ["runtime/ — ~100+ Python dosyası", "runtime_integration.md:1-599", "runtime/services/simulation_service.py"]
+    required_fixes: ["Runtime simulation servisleri için migration/deprecation planı", "V7 kontrat smoke test'i"]
+
+  - id: "C9"
+    name: "AI-agent implementation clarity"
+    weight: 0.7
+    raw_score_10: 9.0
+    weighted_score: 6.30
+    rationale: >
+      V7 dokümantasyonu AI agent'lar için optimize edilmiş. llm_rules.md,
+      ai_summary.md (lossless sentez), executor_support_pack/, her pipeline
+      dokümanı inputs/outputs/config/test yapısında. LLM agent P1'i implemente
+      etmek için yeterli yönlendirmeye sahip. TEK EKSİK: simulation implementasyonu
+      olmadan label pipeline'ı implemente edilemez.
+    evidence: ["v7_llm_rules.md", "ai_summary.md", "executor_support_pack/", "pipeline/*.md yapısı"]
+    required_fixes: ["Simulation stub/interface olmadan label pipeline implementasyonu mümkün değil"]
+
+  - id: "C10"
+    name: "Lock discipline and change control"
+    weight: 0.5
+    raw_score_10: 7.0
+    weighted_score: 3.50
+    rationale: >
+      16 locked decision (DEC-001 - DEC-016) mevcut. Open decisions documented.
+      Locked vs Delegated bölümü var. ANCAK formal change control process yok.
+      Decision log yok. Lock boundary enforcement mekanizması yok.
+    evidence: ["profitability_thesis.md:233-263", "v7/docs/README.md:164-181", "docs/architecture/governance.md"]
+    required_fixes: ["Formal change control process", "Decision log", "Lock boundary CI enforcement"]
+
+blockers:
+  - id: "B01"
+    severity: "P0"
+    title: "Simulation authority sıfır implementasyon"
+    description: >
+      /simulation economic truth authority — tasarımın en kritik bileşeni —
+      tamamen documentation-only. simulation/ dizininde src/ yok.
+      Module structure spec'lenmiş ama contracts/, engine/, resolvers/,
+      adapters/ dizinleri oluşturulmamış. Simulation olmadan label üretilemez,
+      evaluation yapılamaz, cost-honest truth sağlanamaz.
+    evidence: ["! find simulation -name '*.py' — 0 sonuç", "simulation/docs/architecture.md:190-232"]
+    why_it_blocks_lock: "Simulation truth yoksa V7'nin tüm economic truth iddiası kağıt üzerinde kalır."
+    fix_required: "simulation/engine/ minimum viable: contracts, comparative engine skeleton, SWING golden tests"
+    acceptance_criteria:
+      - "simulation/contracts/ Python modülleri yazılmış"
+      - "simulation/engine/engine.py çalıştırılabiliyor"
+      - "En az 3 golden test (known input → expected output)"
+      - "Import boundary test: simulation v7/ veya alphaforge/ import etmiyor"
+
+  - id: "B02"
+    severity: "P1"
+    title: "LOCK_CANDIDATE eşik değerleri kesinleşmemiş"
+    description: >
+      Promotion gate eşiklerinin çoğu LOCK_CANDIDATE. Min expectancy R, max drawdown,
+      shadow/paper süreleri, tiny live limit'leri, calibration reliability bounds —
+      hepsi owner review bekliyor. Implementation sırasında agent invention riski.
+    evidence: ["evaluation.md:201-213 LOCK_CANDIDATE thresholds", "profitability_thesis.md:256-263"]
+    why_it_blocks_lock: "Promotion gate'leri belirsizken implementation yapılamaz."
+    fix_required: "SWING için tüm eşikler LOCKED, SCALP/AGGRESSIVE_SCALP için G0-G5 LOCKED"
+    acceptance_criteria:
+      - "SWING modu için tüm G0-G10 eşikleri LOCKED"
+      - "Her eşik için kısa gerekçe (1 cümle)"
+
+  - id: "B03"
+    severity: "P1"
+    title: "CI/CD pipeline yok"
+    description: >
+      .github/workflows/ dizini yok. Test'ler manuel çalışıyor. Design claim
+      enforcement otomatik değil. Drift sessizce gerçekleşebilir.
+    evidence: ["! find .github -type f — 0 sonuç"]
+    why_it_blocks_lock: "CI olmadan design lock korunamaz."
+    fix_required: "Minimum CI: lint, test (lib+integration), check-contracts, check-boundaries her PR'da"
+    acceptance_criteria:
+      - ".github/workflows/ci.yml mevcut ve çalışıyor"
+      - "README'de CI badge"
+
+  - id: "B04"
+    severity: "P2"
+    title: "Runtime simulation servisleri ile /simulation authority çakışması"
+    description: >
+      runtime/services/simulation_service.py ve historical_simulation_engine.py
+      v4/v6 döneminden. Yeni /simulation authority doc-only. İki simulation
+      implementation'ı aynı anda var olamaz.
+    evidence: ["runtime/services/simulation_service.py", "runtime/services/historical_simulation_engine.py"]
+    why_it_blocks_lock: "İki simulation implementation'ı economic truth'u çatallandırır."
+    fix_required: "Runtime simulation servisleri için explicit migration/deprecation planı"
+    acceptance_criteria:
+      - "runtime vs simulation ownership boundary dokümante edilmiş"
+      - "Migration path ve deprecation timeline belirtilmiş"
+
+holds:
+  - id: "H01"
+    title: "Funding cost model deferral"
+    condition: "Funding cost DEFERRED — perpetual swap trading G3'te bloklu"
+    allowed_scope: "Spot trading için tüm gate'ler geçerli"
+    blocked_scope: "Perpetual swap live trading"
+    release_condition: "Funding cost model LOCKED statüsüne geçtiğinde"
+
+  - id: "H02"
+    title: "Alpha thesis validation tamamlanmamış"
+    condition: "3 alpha hipotezi research candidate statüsünde"
+    allowed_scope: "Mode promotion alpha olmadan da yapılabilir"
+    blocked_scope: "Alpha-based promotion claim'leri"
+    release_condition: "En az 1 alpha G1-G5 gate'lerinden geçtiğinde"
+
+risks:
+  - id: "R01"
+    title: "Design drift during implementation"
+    severity: "P1"
+    mitigation: "CI enforcement: contract validation, import boundary, schema parity her commit'te"
+
+  - id: "R02"
+    title: "Legacy runtime simulation services silently diverge"
+    severity: "P1"
+    mitigation: "Runtime simulation servislerini /simulation adapters ile sarmala, eskileri deprecate et"
+
+  - id: "R03"
+    title: "Over-documentation vs under-implementation gap"
+    severity: "P2"
+    mitigation: "Her phase completion'da doc-to-code coverage metric'i ekle"
+
+  - id: "R04"
+    title: "60-symbol hedef vs ilk implementasyon gerçekliği"
+    severity: "P2"
+    mitigation: "İlk implementation'da 3-5 sembolle başla, mimari multi-symbol-aware kalsın"
+
+contradictions:
+  - id: "CONTR-01"
+    title: "runtime/ kendi simulation engine'ine sahip, /simulation authority doc-only"
+    files: ["runtime/services/simulation_service.py", "runtime/services/historical_simulation_engine.py", "simulation/docs/architecture.md"]
+    resolution: "runtime simulation servisleri deprecate edilmeli, /simulation adapters kullanılmalı"
+
+  - id: "CONTR-02"
+    title: "v7/docs/ simulation ownership migration'ı doc'da tamamlanmış ama kodda karşılığı yok"
+    files: ["v7/docs/README.md:102", "v7/docs/pipeline/simulation.md:29"]
+    resolution: "Kod implementasyonu ile doc migration'ı senkronize et"
+
+missing_artifacts:
+  - "simulation/src/ (tüm Python modülleri)"
+  - "v7/engine/ veya v7/src/ (V7 engine Python kodu)"
+  - "alphaforge/src/ (.gitkeep hariç)"
+  - ".github/workflows/ (CI/CD pipeline)"
+  - "SimulationProfile fixture (contracts/fixtures/)"
+  - "ARCHITECTURE.md (root)"
+  - "ROADMAP.md (root)"
+
+contract_findings:
+  registry:
+    total_contracts: 4
+    contracts_with_schema: 4
+    contracts_with_fixture: 3
+    contracts_without_fixture: ["SimulationProfile"]
+    registry_valid_json: true
+  schemas:
+    total_schemas: 4
+    valid_schemas: 4
+    invalid_schemas: 0
+    schema_parity_tests_passed: 9
+  mappings:
+    total_mappings: 2
+    mapping_files: ["simulation_to_alphaforge.json", "simulation_to_v7.json"]
+  compatibility:
+    total_rules: 3
+  tests:
+    contract_registry_passed: 11
+    schema_parity_passed: 9
+    total_contract_tests_passed: 20
+
+boundary_findings:
+  lib_boundary:
+    imports_higher_domains: false
+    test_enforced: true
+  simulation_boundary:
+    imports_v7_or_alphaforge: "N/A (no source)"
+  cross_domain_tests:
+    passed: 3
+    skipped: 3
+
+phase_findings:
+  total_phases: 10
+  phases_with_goal_and_exit_condition: 10
+  phases_with_test_gates: 0
+  phases_started: 0
+  phases_completed: 0
+
+test_findings:
+  total_passed: 217
+  total_failed: 0
+  total_skipped: 3
+  lib_tests_passed: 182
+  integration_tests_passed: 35
+  v7_engine_tests: 0
+  simulation_tests: 0
+  alphaforge_tests: 0
+  ci_automated: false
+  test_coverage_summary:
+    lib: "PASS (182 tests)"
+    contracts: "PASS (20 tests)"
+    integration_boundaries: "PASS (3 tests, 3 skipped)"
+    v7_engine: "NO TESTS (no source)"
+    simulation: "NO TESTS (no source)"
+    alphaforge: "NO TESTS (no source)"
+    runtime: "NO TESTS"
+
+recommendations:
+  - id: "REC-01"
+    priority: "P0"
+    action: "/simulation authority minimum viable implementasyonu"
+    target_files: ["simulation/contracts/", "simulation/engine/engine.py", "simulation/tests/golden/"]
+    expected_score_gain: 2.5
+    acceptance_criteria:
+      - "SimulationInput → SimulationOutput pipeline çalışıyor"
+      - "SWING modu için en az 3 golden test"
+      - "Import boundary test: simulation v7/ veya alphaforge/ import etmiyor"
+
+  - id: "REC-02"
+    priority: "P0"
+    action: "LOCK_CANDIDATE eşiklerini owner review ile LOCKED yap"
+    target_files: ["v7/docs/pipeline/evaluation.md", "v7/docs/profitability_thesis.md"]
+    expected_score_gain: 1.5
+    acceptance_criteria:
+      - "SWING için tüm G0-G10 eşikleri LOCKED"
+      - "Her eşik için owner sign-off'u"
+
+  - id: "REC-03"
+    priority: "P0"
+    action: "CI/CD pipeline kur"
+    target_files: [".github/workflows/ci.yml"]
+    expected_score_gain: 1.0
+    acceptance_criteria:
+      - "PR başına lint, test, check-contracts, check-boundaries otomatik"
+      - "README'de CI badge"
+
+  - id: "REC-04"
+    priority: "P1"
+    action: "Runtime simulation migration planı yaz"
+    target_files: ["runtime/docs/simulation_migration_plan.md"]
+    expected_score_gain: 0.5
+    acceptance_criteria:
+      - "Hangi servislerin deprecate edileceği ve timeline belirtilmiş"
+
+  - id: "REC-05"
+    priority: "P1"
+    action: "SimulationProfile fixture'ı ekle + V7 internal kontrat schemaları"
+    target_files: ["contracts/fixtures/simulation_profile_minimal.json", "contracts/schemas/analysis_request.schema.json", "contracts/schemas/analysis_result.schema.json", "contracts/schemas/decision_event.schema.json"]
+    expected_score_gain: 0.5
+    acceptance_criteria:
+      - "Fixture schema ile valide oluyor"
+      - "V7 internal schema'lar doc ile tutarlı"
+
+  - id: "REC-06"
+    priority: "P2"
+    action: "Formal change control + decision log oluştur"
+    target_files: ["docs/architecture/change_control.md"]
+    expected_score_gain: 0.3
+    acceptance_criteria:
+      - "Değişiklik onay matrisi, decision log formatı tanımlı"
+
+must_fix_before_lock:
+  - "REC-01: /simulation minimum viable implementasyonu"
+  - "REC-02: LOCK_CANDIDATE eşikleri owner review"
+  - "REC-03: CI/CD pipeline"
+
+should_fix_after_lock:
+  - "REC-04: Runtime simulation migration planı"
+  - "REC-05: Eksik fixture ve V7 internal kontrat schemaları"
+  - "REC-06: Formal change control"
+
+safe_to_implement_now: "documentation_only"
+
+next_accp_prompt: |
+  accp_version: "2.0.0"
+  prompt_type: "deep_design_lock_audit_recheck"
+  title: "V7 Engine Design Lockability Re-Audit"
+  mode: "read_only_audit"
+  language: "tr"
+  priority: "P0"
+  preconditions:
+    - "REC-01 (/simulation MVP implementation) tamamlanmış olmalı"
+    - "REC-02 (LOCK_CANDIDATE thresholds LOCKED) tamamlanmış olmalı"
+    - "REC-03 (CI/CD pipeline) tamamlanmış olmalı"
+  expected_verdict_after_fixes: "LOCKABLE_WITH_HOLDS (min 8.0/10)"

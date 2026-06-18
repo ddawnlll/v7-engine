@@ -52,6 +52,7 @@ It is not a second architecture spec.
 
 ### 6. Summary docs
 - `ai_summary.md`
+- `profitability_thesis.md`
 - `roadmap.md`
 
 ---
