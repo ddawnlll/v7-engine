@@ -91,7 +91,7 @@ Each mode has an independent readiness state. Modes progress through states sequ
 
 Runtime must handle modes at different readiness levels simultaneously:
 
-1. **SWING can be promoted while SCALP and AGGRESSIVE_SCALP remain disabled or research-only.** SWING-first implementation order means SWING reaches LIVE_ELIGIBLE earlier.
+1. **SWING can be promoted while SCALP and AGGRESSIVE_SCALP remain disabled or research-only.** SWING is the secondary baseline/control mode — it validates the architecture first and may reach LIVE_ELIGIBLE earlier because its thresholds are LOCKED_INITIAL_BASELINE.
 2. **Runtime must route only to mode artifacts whose readiness state allows the requested environment.** A PAPER_ELIGIBLE SCALP artifact must not emit actionable decisions to the live broker.
 3. **Disabled modes return safe non-actionable result, not fallback to another mode.** If AGGRESSIVE_SCALP is DISABLED, a request with `requested_trade_mode=AGGRESSIVE_SCALP` returns NO_TRADE with degradation reason — it does not silently route to SWING.
 4. **Research/paper/live states must be explicit in runtime metadata.** Every DecisionEvent and TradeOutcome must carry the mode's readiness state and artifact lineage.

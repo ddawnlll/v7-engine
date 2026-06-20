@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0.0",
+  "alphaforge_report_id": "afrr-example-001",
+  "run_id": "run-example-all-modes-001",
+  "created_at": "2026-06-20T00:00:00Z",
+  "mode_reports": [
+    {
+      "mode": "SCALP",
+      "report_id": "mrr-scalp-example-001",
+      "verdict": "CONTINUE_RESEARCH",
+      "summary": "SCALP primary research — dummy example. No empirical evidence yet. CONTINUE_RESEARCH."
+    },
+    {
+      "mode": "AGGRESSIVE_SCALP",
+      "report_id": "mrr-aggressive-scalp-example-001",
+      "verdict": "CONTINUE_RESEARCH",
+      "summary": "AGGRESSIVE_SCALP primary research — dummy example. No empirical evidence yet. CONTINUE_RESEARCH."
+    },
+    {
+      "mode": "SWING",
+      "report_id": "mrr-swing-example-001",
+      "verdict": "BASELINE_WEAK",
+      "summary": "SWING secondary baseline — dummy example. No empirical evidence yet. BASELINE_WEAK."
+    }
+  ],
+  "promoted_candidates": [],
+  "rejected_candidates": [
+    {
+      "alpha_candidate_id": "ac-example-001",
+      "mode": "SCALP",
+      "rejection_reason": "Dummy candidate — no real data. Rejected by default in minimal fixture."
+    }
+  ],
+  "global_limitations": [
+    "This is a minimal fixture for schema validation only",
+    "No real market data was used",
+    "No real models were trained",
+    "No real validation was performed",
+    "All three modes have zero empirical evidence",
+    "Funding model is DEFERRED for all modes"
+  ],
+  "v7_handoff_packages": [],
+  "cross_mode_insights": [
+    "Dummy example — no cross-mode insights available",
+    "SCALP and AGGRESSIVE_SCALP share cost-sensitivity concerns",
+    "SWING provides architectural baseline for validation pipeline"
+  ],
+  "next_research_priorities": [
+    "Obtain real market data for all modes",
+    "Run simulations for SCALP and AGGRESSIVE_SCALP",
+    "Validate SWING baseline with real data",
+    "Establish empirical evidence before any V7 handoff"
+  ]
+}

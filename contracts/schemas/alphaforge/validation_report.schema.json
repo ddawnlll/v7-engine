@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/alphaforge/validation_report.schema.json",
+  "title": "ValidationReport",
+  "description": "Walk-forward validation report for an alpha candidate. Documents split policy, OOS results, symbol stability, regime breakdown, cost stress, NO_TRADE comparison, and overfit risk. Owned by AlphaForge.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "validation_report_id",
+    "mode",
+    "split_policy",
+    "walk_forward_folds",
+    "oos_summary",
+    "symbol_stability",
+    "regime_breakdown",
+    "cost_stress",
+    "no_trade_comparison",
+    "overfit_risk_flags",
+    "verdict"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "validation_report_id": {
+      "type": "string",
+      "description": "Unique validation report identifier."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"]
+    },
+    "alpha_candidate_id": {
+      "type": "string"
+    },
+    "model_artifact_id": {
+      "type": "string"
+    },
+    "split_policy": {
+      "type": "object",
+      "required": ["train_pct", "validation_pct", "oos_pct", "purge_window_bars", "embargo_policy"],
+      "properties": {
+        "train_pct": { "type": "number" },
+        "validation_pct": { "type": "number" },
+        "oos_pct": { "type": "number" },
+        "purge_window_bars": { "type": "integer" },
+        "embargo_policy": { "type": "string" },
+        "chronological_split": { "type": "boolean", "description": "Must be true. No shuffling across time." }
+      }
+    },
+    "walk_forward_folds": {
+      "type": "object",
+      "required": ["fold_count", "fold_type", "folds"],
+      "properties": {
+        "fold_count": { "type": "integer" },
+        "fold_type": { "type": "string", "enum": ["anchored", "rolling"] },
+        "folds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "fold_number": { "type": "integer" },
+              "train_start": { "type": "string", "format": "date-time" },
+              "train_end": { "type": "string", "format": "date-time" },
+              "test_start": { "type": "string", "format": "date-time" },
+              "test_end": { "type": "string", "format": "date-time" },
+              "train_sharpe": { "type": "number" },
+              "test_sharpe": { "type": "number" },
+              "test_expectancy_r": { "type": "number" },
+              "test_win_rate": { "type": "number" },
+              "test_trade_count": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "oos_summary": {
+      "type": "object",
+      "properties": {
+        "oos_sharpe": { "type": "number" },
+        "oos_expectancy_r": { "type": "number" },
+        "oos_win_rate": { "type": "number" },
+        "oos_max_drawdown_r": { "type": "number" },
+        "oos_profit_factor": { "type": "number" },
+        "oos_trade_count": { "type": "integer" },
+        "oos_positive_expectancy": { "type": "boolean" },
+        "fold_stability_score": { "type": "number", "description": "0-1 stability across folds." }
+      }
+    },
+    "symbol_stability": {
+      "type": "object",
+      "properties": {
+        "symbols_tested": { "type": "array", "items": { "type": "string" } },
+        "symbol_count": { "type": "integer" },
+        "single_symbol_limitation": { "type": "boolean" },
+        "cross_symbol_metric_variance": { "type": "string", "description": "Qualitative assessment." }
+      }
+    },
+    "regime_breakdown": {
+      "type": "object",
+      "properties": {
+        "regimes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "regime": { "type": "string" },
+              "sample_pct": { "type": "number" },
+              "oos_expectancy_r": { "type": "number" },
+              "oos_sharpe": { "type": "number" },
+              "edge_present": { "type": "boolean" }
+            }
+          }
+        },
+        "edge_only_in_rare_regime": { "type": "boolean" },
+        "rare_regime_untradeable": { "type": "boolean" }
+      }
+    },
+    "cost_stress": {
+      "type": "object",
+      "properties": {
+        "baseline_fee_pct": { "type": "number" },
+        "baseline_slippage_pct": { "type": "number" },
+        "fee_stress_edge_survives": { "type": "boolean" },
+        "slippage_stress_edge_survives": { "type": "boolean" },
+        "combined_stress_edge_survives": { "type": "boolean" },
+        "break_even_cost_total_pct": { "type": "number" },
+        "cost_edge_destroyed": { "type": "boolean" }
+      }
+    },
+    "no_trade_comparison": {
+      "type": "object",
+      "properties": {
+        "long_better_than_no_trade": { "type": "boolean" },
+        "short_better_than_no_trade": { "type": "boolean" },
+        "active_beats_no_trade": { "type": "boolean" },
+        "summary": { "type": "string" }
+      }
+    },
+    "overfit_risk_flags": {
+      "type": "object",
+      "properties": {
+        "train_oos_gap": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "fold_instability": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "feature_to_sample_ratio": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "top_feature_dominance": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "calibration_degradation": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "purge_violation_detected": { "type": "boolean" },
+        "overfit_risk_overall": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["PASS", "PASS_WITH_LIMITATIONS", "FAIL_OVERFIT", "FAIL_COST", "FAIL_REGIME", "FAIL_OOS", "INCONCLUSIVE"],
+      "description": "Validation verdict."
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

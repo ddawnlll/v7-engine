@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/alphaforge/feature_set_spec.schema.json",
+  "title": "FeatureSetSpec",
+  "description": "Specification of a feature set for a specific mode and timeframe stack. Owned by AlphaForge.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "feature_set_id",
+    "mode",
+    "timeframe_stack",
+    "feature_groups",
+    "features",
+    "leakage_policy",
+    "source_dataset_refs",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version for compatibility tracking."
+    },
+    "feature_set_id": {
+      "type": "string",
+      "description": "Unique identifier for this feature set."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"],
+      "description": "Trading mode this feature set targets."
+    },
+    "timeframe_stack": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Timeframes used in this feature set (e.g., ['5m', '15m', '1h'])."
+    },
+    "feature_groups": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Feature group identifiers (e.g., 'returns', 'volatility', 'momentum')."
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["feature_id", "name", "group", "timeframe", "description"],
+        "properties": {
+          "feature_id": { "type": "string", "description": "Unique feature identifier." },
+          "name": { "type": "string", "description": "Human-readable name." },
+          "group": { "type": "string", "description": "Feature group assignment." },
+          "timeframe": { "type": "string", "description": "Primary timeframe." },
+          "lookback_bars": { "type": "integer", "description": "Bars in lookback window." },
+          "description": { "type": "string", "description": "What this feature measures." },
+          "unit": { "type": "string", "description": "Unit of measurement." },
+          "missing_policy": { "type": "string", "description": "How missing values are handled." },
+          "normalization": { "type": "string", "description": "Normalization method." }
+        }
+      },
+      "description": "Individual feature specifications."
+    },
+    "leakage_policy": {
+      "type": "object",
+      "required": ["purge_window_bars", "embargo_policy", "point_in_time_verification"],
+      "properties": {
+        "purge_window_bars": { "type": "integer", "description": "Bars between train and test." },
+        "embargo_policy": { "type": "string", "description": "Minimum gap between training and test observations." },
+        "point_in_time_verification": { "type": "string", "description": "How features were confirmed time-consistent." },
+        "audit_trail": { "type": "string", "description": "Who reviewed and when." }
+      },
+      "description": "Leakage prevention rules."
+    },
+    "source_dataset_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "References to normalized data sources."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 creation timestamp."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 last update timestamp."
+    },
+    "checksum": {
+      "type": "string",
+      "description": "Content hash for data integrity."
+    },
+    "feature_count": {
+      "type": "integer",
+      "description": "Total number of features."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes."
+    }
+  }
+}

@@ -1,0 +1,182 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_8B-ALPHAFORGE-DISCOVERY-AUTHORITY-LOCK"
+  status: "PASS"
+  summary: >
+    AlphaForge discovery authority is now LOCKED. 13 authority docs created,
+    10 report-level JSON schemas defined, 5 minimal fixtures created,
+    2 mapping docs written, and contract registry updated. No source code
+    was modified. All required test suites pass. Authority boundary is
+    explicit: AlphaForge discovers alpha; V7 decides; Simulation measures truth.
+
+scope_confirmation:
+  docs_changed: true
+  schemas_changed: true
+  fixtures_changed: true
+  mappings_changed: true
+  source_code_changed: false
+  alphaforge_implementation_done: false
+  model_training_done: false
+  market_data_downloaded: false
+  large_data_added: false
+  model_binary_added: false
+  registry_updated: true
+  compatibility_updated: true
+
+authority_boundary:
+  alphaforge_owns:
+  - "anomaly discovery"
+  - "alpha thesis lifecycle"
+  - "feature research"
+  - "dataset/research manifest definition"
+  - "simulation label consumption"
+  - "model training experiment definition"
+  - "walk-forward validation reporting"
+  - "mode-level research reports"
+  - "V7 handoff packages"
+  alphaforge_does_not_own:
+  - "final trade decision"
+  - "live execution"
+  - "portfolio/risk policy authority"
+  - "runtime lifecycle"
+  - "exchange connectivity"
+  - "simulation economic truth"
+  - "V7 promotion gate authority"
+
+mode_priority:
+  SCALP:
+    business_priority: "PRIMARY"
+    research_priority: "PRIMARY"
+    threshold_status: "HOLD"
+    report_type: "primary_research_report"
+  AGGRESSIVE_SCALP:
+    business_priority: "PRIMARY"
+    research_priority: "PRIMARY"
+    threshold_status: "HOLD"
+    report_type: "primary_research_report"
+  SWING:
+    business_priority: "SECONDARY_BASELINE"
+    research_priority: "SECONDARY_BASELINE"
+    threshold_status: "LOCKED_INITIAL_BASELINE"
+    report_type: "secondary_baseline_report"
+
+docs_created_or_updated:
+  alphaforge_authority_docs:
+  - "alphaforge/docs/ai_summary.md"
+  - "alphaforge/docs/discovery_authority.md"
+  - "alphaforge/docs/alpha_thesis_lifecycle.md"
+  - "alphaforge/docs/data_contract.md"
+  - "alphaforge/docs/feature_contract.md"
+  - "alphaforge/docs/label_contract.md"
+  - "alphaforge/docs/report_contracts.md"
+  - "alphaforge/docs/validation_contract.md"
+  - "alphaforge/docs/model_artifact_contract.md"
+  - "alphaforge/docs/handoff_to_v7.md"
+  - "alphaforge/docs/storage_policy.md"
+  - "alphaforge/docs/phase_plan.md"
+  - "alphaforge/docs/decision_log.md"
+  cross_doc_links_updated:
+  - "README.md"
+  - "v7/docs/roadmap.md"
+  - "v7/docs/pipeline/evaluation.md"
+
+schemas_created:
+- "contracts/schemas/alphaforge/alpha_thesis.schema.json"
+- "contracts/schemas/alphaforge/alpha_candidate.schema.json"
+- "contracts/schemas/alphaforge/feature_set_spec.schema.json"
+- "contracts/schemas/alphaforge/label_dataset_spec.schema.json"
+- "contracts/schemas/alphaforge/mode_research_report.schema.json"
+- "contracts/schemas/alphaforge/alphaforge_research_report.schema.json"
+- "contracts/schemas/alphaforge/validation_report.schema.json"
+- "contracts/schemas/alphaforge/model_artifact.schema.json"
+- "contracts/schemas/alphaforge/calibration_candidate.schema.json"
+- "contracts/schemas/alphaforge/v7_handoff_package.schema.json"
+
+fixtures_created:
+- "contracts/fixtures/alphaforge/scalp_mode_research_report_minimal.json"
+- "contracts/fixtures/alphaforge/aggressive_scalp_mode_research_report_minimal.json"
+- "contracts/fixtures/alphaforge/swing_mode_research_report_minimal.json"
+- "contracts/fixtures/alphaforge/alphaforge_research_report_minimal.json"
+- "contracts/fixtures/alphaforge/v7_handoff_package_minimal.json"
+
+mappings_created:
+- "contracts/mappings/simulation_to_alphaforge.md"
+- "contracts/mappings/alphaforge_to_v7.md"
+
+registry_updates:
+  registry_json:
+    new_entries: 10
+    total_entries_now: 14
+  compatibility_json:
+    new_rules: 5
+    total_rules_now: 8
+
+cross_doc_links:
+  ai_summary_links_to_all_alphaforge_docs: true
+  ai_summary_links_to_schemas: true
+  ai_summary_links_to_fixtures: true
+  ai_summary_links_to_mappings: true
+  v7_roadmap_references_alphaforge: true
+  evaluation_md_references_alphaforge: true
+  readme_references_alphaforge: true
+  mode_centric_architecture_references_alphaforge: true
+
+decisions_locked:
+- id: "DEC-AF-001"
+  decision: "AlphaForge is anomaly discovery/research authority, not trade decision authority."
+- id: "DEC-AF-002"
+  decision: "SCALP and AGGRESSIVE_SCALP are primary AlphaForge research modes."
+- id: "DEC-AF-003"
+  decision: "SWING is secondary baseline/control mode."
+- id: "DEC-AF-004"
+  decision: "AlphaForge outputs evidence reports and handoff packages, not trade commands."
+- id: "DEC-AF-005"
+  decision: "SimulationOutput is the economic truth source for AlphaForge labels."
+- id: "DEC-AF-006"
+  decision: "V7 remains final acceptance/policy authority."
+- id: "DEC-AF-007"
+  decision: "All three modes require report contracts."
+- id: "DEC-AF-008"
+  decision: "Large datasets and model binaries are not stored in repo."
+- id: "DEC-AF-009"
+  decision: "NO_TRADE comparison is mandatory for all alpha reports."
+- id: "DEC-AF-010"
+  decision: "Funding DEFERRED blocks perpetual/live promotion claims."
+
+holds_preserved:
+- "SCALP thresholds HOLD (no empirical evidence)"
+- "AGGRESSIVE_SCALP thresholds HOLD (no empirical evidence)"
+- "SWING LOCKED_INITIAL_BASELINE preserved"
+- "Funding DEFERRED hold preserved"
+- "No source code created"
+
+blocked_scopes:
+- "AlphaForge implementation not started"
+- "No real model training"
+- "No real market data downloaded"
+- "SCALP/AGGRESSIVE_SCALP promotion not claimed"
+- "Perpetual/live trading not claimed"
+
+safe_next_step:
+  id: "V7-P0_9A-ALPHAFORGE-IMPLEMENTATION-SCAFFOLD"
+  title: "P0.9A — AlphaForge Implementation Scaffold"
+  rationale: >
+    AlphaForge authority and contracts are locked. Next create source scaffolding
+    without full model training: package structure, contract readers, report
+    writer interfaces, fixture validation, and tests.
+
+evidence:
+- "13 AlphaForge authority docs created with full cross-linking"
+- "10 JSON schemas under contracts/schemas/alphaforge/"
+- "5 minimal fixtures under contracts/fixtures/alphaforge/"
+- "2 mapping docs under contracts/mappings/"
+- "contracts/registry.json: 4→14 entries"
+- "contracts/compatibility.json: 3→8 rules"
+- "All contract registry tests pass (20 passed)"
+- "All import boundary tests pass (6 passed, 3 skipped)"
+- "All simulation tests pass (5 passed)"
+- "No source code changes in lib/, simulation/, v7/, runtime/, interface/"
+- "No large data or model binaries added"
+- "SCALP/AGGRESSIVE_SCALP HOLD preserved"
+- "Funding DEFERRED preserved"

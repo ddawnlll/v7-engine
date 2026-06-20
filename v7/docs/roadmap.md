@@ -45,9 +45,52 @@ Documentation authority is largely complete for:
 - **P0.7B — CI Enforcement:** ✅ PASS (CI_FIRST_GREEN_RUN_HOLD). `.github/workflows/ci.yml` enforces contract checks, boundary checks, and full test suite on push/PR. First GitHub green run pending verification.
 - **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation. SCALP and AGGRESSIVE_SCALP thresholds are **HOLD** pending empirical evidence.
 
-**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. SWING-first implementation can proceed with locked baseline thresholds. Remaining holds are explicitly scoped (funding DEFERRED, SCALP/AGGRESSIVE_SCALP HOLD, CI first green run hold).
+**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode (LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding DEFERRED, SCALP/AGGRESSIVE_SCALP HOLD, CI first green run hold).
 
-That means the next work should be implementation-led, not more concept invention. **SWING-first.**
+That means the next work should be implementation-led, not more concept invention. **Implementation starts with SWING as the secondary baseline/control mode — the safest, most lockable starting point. Primary business/research priority is SCALP and AGGRESSIVE_SCALP (see Mode Priority Alignment below).**
+
+---
+
+## Mode Priority Alignment
+
+### Primary vs Secondary Mode Classification
+
+The mode implementation order (SWING first) must not be confused with business/research priority.
+
+| Mode | Business Priority | Research Priority | Threshold Status | AlphaForge Report Type | Promotion Readiness |
+|------|------------------|-------------------|-----------------|----------------------|---------------------|
+| SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| AGGRESSIVE_SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| SWING | SECONDARY_BASELINE | SECONDARY_BASELINE | LOCKED_INITIAL_BASELINE | Secondary baseline report | Baseline ready; recalibration required after first evidence |
+
+### Key Principles
+
+1. **SCALP and AGGRESSIVE_SCALP are the PRIMARY business/research modes.** V7's main edge search targets shorter-term opportunities, anomaly capture, cost-aware fast reaction, and high-frequency signal validation. These modes carry the highest commercial upside.
+
+2. **SWING is the SECONDARY_BASELINE / CONTROL mode.** SWING was locked first because it is safer, lower-noise, and easier to baseline — not because it is the primary product. It serves as a control anchor: if SWING fails, something is fundamentally wrong. If SWING works, it validates the architecture but does not validate SCALP or AGGRESSIVE_SCALP.
+
+3. **HOLD on SCALP/AGGRESSIVE_SCALP means "empirical research required" — not "low priority."** Fee, slippage, latency, data quality, overfit, and funding risks make these modes harder to lock without evidence. Their HOLD status reflects research difficulty, not business importance.
+
+4. **Promotion-readiness and research-priority are independent dimensions.** SWING is more promotion-ready (LOCKED_INITIAL_BASELINE). SCALP and AGGRESSIVE_SCALP have higher business/research priority but require empirical evidence before threshold lock.
+
+5. **AlphaForge must support all three modes.** AlphaForge produces primary research reports for SCALP and AGGRESSIVE_SCALP, and a secondary baseline/control report for SWING. No mode is optional.
+
+### AlphaForge Authority Lock (P0.8B+C)
+
+**P0.8B — AlphaForge Discovery Authority Lock:** AlphaForge authority boundaries, docs, contracts, and report-level schemas are now LOCKED. See [../../alphaforge/docs/ai_summary.md](../../alphaforge/docs/ai_summary.md) for the thin hub.
+
+**Key outcomes:**
+- AlphaForge authority boundary is explicit: discovers alpha, does NOT decide trades
+- 10 contract schemas, 5 minimal fixtures, 2 mapping docs created
+- `contracts/registry.json` updated with AlphaForge contract entries
+- `contracts/compatibility.json` updated with AlphaForge compatibility rules
+- All three modes have ModeResearchReport contracts (SCALP/AGGRESSIVE_SCALP: primary_research_report, SWING: secondary_baseline_report)
+
+**Verdict:** LOCKABLE_WITH_HOLDS. Ready for P0.9A implementation scaffold.
+
+### Implementation Sequence
+
+SWING is implemented first as the **control baseline** — it validates the entire architecture (contracts, simulation truth, labels, features, model training, calibration, policy, portfolio, risk, runtime integration) with the lowest risk. Once the architecture is proven via SWING, SCALP and AGGRESSIVE_SCALP research accelerates on a validated foundation.
 
 ---
 
@@ -123,7 +166,7 @@ Exit condition:
 ### Phase 5 — Model and calibration
 Goal:
 - train first XGBoost model-suite baseline or staged scope baseline under one shared training framework without model-side simulation
-- `SWING` may be implemented first, with `SCALP` and `AGGRESSIVE_SCALP` added as separate artifacts under the same framework
+- `SWING` is the secondary baseline/control mode — implemented first to validate the architecture with lowest risk. `SCALP` and `AGGRESSIVE_SCALP` are PRIMARY business/research modes added as separate artifacts under the same framework after SWING validates the architecture.
 - produce calibration artifacts per scope
 - validate confidence surface per scope
 - validate no-trade behavior per scope

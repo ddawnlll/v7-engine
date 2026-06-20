@@ -1,0 +1,868 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_8D-ALPHAFORGE-PROFITABILITY-EFFICIENCY-SQUEEZE-AUDIT-RESULT"
+  status: "PASS_WITH_HOLDS"
+  summary: >
+    Read-only adversarial audit of AlphaForge as a quant research system.
+    Authority boundaries, label-truth grounding, NO_TRADE comparator, cost model,
+    and rejection rules are genuinely strong (the hardest parts are right).
+    However two CRITICAL contract/docs contradictions and several HIGH
+    contract-enforceability / validation-alignment gaps must be patched before
+    P0.9A bakes them into scaffold code and fixture validators. Verdict:
+    READY_FOR_P0_9A_AFTER_TARGETED_PATCH (P0.8E). No fake alpha produced;
+    no source/docs/contracts modified; only this report written.
+scope_confirmation:
+  audit_only: true
+  source_code_changed: false
+  docs_patched: false
+  contracts_patched: false
+  schemas_patched: false
+  implementation_done: false
+  model_training_done: false
+  market_data_downloaded: false
+  only_report_written: true
+overall_verdict:
+  verdict: "READY_FOR_P0_9A_AFTER_TARGETED_PATCH"
+  confidence: "high"
+  rationale: >
+    No fatal authority confusion, no V7-bypass risk, no mode-priority
+    contradiction — the discovery/V7/simulation separation is clean and LOCKED,
+    and SimulationOutput label truth is real and field-verified. But two
+    CRITICAL docs/contract contradictions block P0.9A: (1) the AlphaForge->V7
+    handoff gate mapping (handoff_to_v7.md, alphaforge_to_v7.md,
+    v7_handoff_package.schema.json, fixture) uses a G0-G10 numbering that does
+    NOT match V7's authoritative evaluation.md gates; (2) AlphaForge
+    data_contract/feature_contract/fixtures define SCALP=1m/5m and
+    AGGRESSIVE_SCALP=1m/3m/5m primary timeframes while the locked simulation
+    profiles and V7 profitability thesis define SCALP=1h and
+    AGGRESSIVE_SCALP=15m — so AlphaForge is designing features for timeframe
+    stacks the simulation layer does not produce labels for. Additionally the
+    two most important report schemas (mode_research_report, v7_handoff_package)
+    are too loose to enforce profitability-critical payload, no
+    jsonschema.validate exists anywhere, the 10 new schemas have zero
+    parity/fixture-conformance coverage, AlphaForgeLabel schema is thinner than
+    label_contract claims, validation_contract is misaligned with V7 gates
+    (folds, regime taxonomy, symbol thresholds, spread stress), and
+    multiple-hypothesis-testing / data-snooping control is absent. These are
+    high-ROI, patchable contract/docs gaps -> P0.8E targeted patch before P0.9A.
+scorecard:
+  authority_clarity_score: 9.0
+  profitability_thesis_score: 7.0
+  alpha_surface_score: 6.5
+  data_architecture_score: 6.5
+  feature_roi_score: 6.5
+  label_truth_score: 7.0
+  cost_risk_score: 6.5
+  no_trade_score: 7.5
+  validation_score: 6.5
+  contract_enforceability_score: 6.0
+  ai_navigability_score: 7.0
+  implementation_order_score: 7.0
+  profitability_squeeze_score: 6.5
+  failure_mode_resilience_score: 6.5
+  overall_alphaforge_profitability_readiness_score: 7.0
+executive_summary:
+  strongest_parts:
+    - "Authority separation is LOCKED and unambiguous: AlphaForge discovers, V7 decides, Simulation measures truth (discovery_authority.md:57-71; decision_log DEC-AF-001/004/006; handoff_to_v7.md:86-98). No trade commands, no live orders, no cost bypass."
+    - "Label truth is REAL: SimulationOutput (models.py + simulation_output.schema.json) carries realized_r_gross/net, fee_cost_r, slippage_cost_r, total_cost_r, path_metrics.mfe_r/mae_r, no_trade_quality (4-way), best_action, is_ambiguous, resolution_status. simulation_to_alphaforge.md mapping is accurate against the implementation."
+    - "R-normalized cost functions are implemented and wired (costs.py:32-90; engine.py:40-46, realized_r_net = gross - total_cost_r). Cost-aware labels are not a plan, they run."
+    - "NO_TRADE is a first-class comparator with saved_loss/missed_opportunity scores and mandatory rejection when NO_TRADE beats directional (label_contract.md:82-91; alpha_thesis_lifecycle.md:77-91)."
+    - "12 explicit falsifiable rejection rules + alpha_thesis requires rejection_criteria (alpha_thesis_lifecycle.md:77-91; alpha_thesis.schema.json required rejection_criteria)."
+    - "Fixtures are HONEST dummies: zero metrics, NO_TRADE dominates, verdict CONTINUE_RESEARCH/BASELINE_WEAK, REVIEW_REQUIRED — no fake profitability (scalp fixture:64-91; research_report fixture:34-41; handoff fixture:23,36)."
+    - "lib primitives are causal (trailing windows only, no lookahead) — leakage risk is at the consumption layer, not in lib."
+  weakest_parts:
+    - "CRITICAL: AlphaForge->V7 handoff gate mapping uses wrong G0-G10 numbering vs V7 evaluation.md (G5=Cost Resilience vs V7 G3=COST_STRESS; G8=Calibration vs V7 G6; G9=No-Trade vs V7 G9=TINY_LIVE). Encoded into v7_handoff_package.schema.json and fixture."
+    - "CRITICAL: AlphaForge primary timeframes (SCALP 1m/5m, AGGRESSIVE_SCALP 1m/3m/5m) contradict locked simulation profiles + V7 thesis (SCALP 1h, AGGRESSIVE_SCALP 15m). Features would be built for timeframes with no labels."
+    - "Report schemas too loose: mode_research_report enforces 16 top-level sections but NONE of the cost_stress/no_trade/regime/metrics payload (empty objects pass). v7_handoff v7_gate_mapping allows empty {}."
+    - "Zero contract enforcement by tests: no jsonschema.validate anywhere; 10 new AlphaForge schemas have no parity/fixture-conformance coverage; a bad fixture passes as long as it parses as JSON."
+    - "SCALP and AGGRESSIVE_SCALP (the PRIMARY profitability modes) have NO simulation tests — only SWING is golden-tested. Cost/label behavior for the modes most likely to be killed by costs is unverified."
+    - "AlphaForgeLabel schema is thinner than label_contract: no gross R, no cost components, no no_trade_quality field — yet label_contract and simulation_to_alphaforge.md claim them."
+    - "validation_contract misaligned with V7 gates: 5/3 folds vs V7 6; HIGH_VOL_* regime taxonomy vs V7 TREND_UP/DOWN/RANGE/TRANSITION; qualitative symbol stability vs V7 40%/60%; fee+slippage stress vs V7 fee+slippage+spread+funding."
+    - "No multiple-hypothesis-testing / data-snooping control (no Bonferroni/FDR/deflated Sharpe) in validation_contract or V7 training.md."
+    - "No cross-sectional / survivorship / UTC-grid data layer; lib market_data is single-symbol. Blocks AS-001 (lead-lag) and AS-004 (relative strength)."
+  highest_profit_opportunities:
+    - "Align feature/label timeframes to simulation profiles so SCALP/AGGRESSIVE_SCALP research actually has labels — highest ROI precondition for any primary-mode edge test."
+    - "Add cross-sectional dataset layer + universe membership (legacy xgb doc names 20 high-liquidity symbols) to unlock AS-001 BTC/ETH lead-lag and AS-004 relative-strength surfaces."
+    - "Tighten report schemas to enforce cost_stress / no_trade / regime / OOS payload so an economically empty report cannot pass — directly prevents false-positive promotion."
+    - "Add SCALP/AGGRESSIVE_SCALP simulation tests + spread stress to get the first real cost-adjusted edge signal for the primary modes."
+    - "Add MHT/data-snooping correction to validation to kill the biggest false-positive source in a multi-thesis discovery system."
+  biggest_false_positive_risks:
+    - "Loose mode_research_report schema: a report with empty cost_stress/no_trade_comparison/regime_breakdown passes validation and could be mistaken for evidence."
+    - "Wrong gate mapping: a handoff package mapping evidence to non-existent V7 gates (G5=Cost, G9=No-Trade) could be accepted by a naive V7 consumer that trusts the labels."
+    - "Timeframe misalignment: 1m/5m features evaluated against 1h labels would produce spurious edge from timestamp misalignment/lookahead."
+    - "No MHT correction: testing many theses/features inflates apparent edge; without FDR/deflated Sharpe the 'best' candidate is likely overfit."
+    - "Survivorship bias: single-symbol BTCUSDT-only fixtures + no delisting/universe handling biases any future backtest upward."
+    - "SCALP/AGGR_SCALP cost model untested: an untested cost model for the highest-frequency modes could hide the exact slippage effect that kills them."
+  top_decision:
+    - "Do NOT start P0.9A yet. Run P0.8E targeted docs/contract patch first: fix gate mapping, fix timeframe stacks, tighten report schemas, complete AlphaForgeLabel + simulation_to_alphaforge.json, align validation_contract to V7 gates, add MHT control. Then P0.9A scaffold + fixture validators will enforce the correct, profitable contracts."
+mode_profitability_matrix:
+  SCALP:
+    priority: "PRIMARY"
+    potential_edge_sources:
+      - "Mean-reversion and micro-trends on 1h primary (per V7 thesis); cost-adjusted expectancy gate REQUIRED (G3 SCALP >= 0.10R)."
+      - "Volatility compression then expansion (AS-002) on 1h/15m refinement."
+      - "Volume anomaly / sudden participation (AS-003)."
+    kill_risks:
+      - "Slippage on entry/exit dominates edge on small R targets (thesis:119)."
+      - "Stale signals decay fast; high trade frequency multiplies fee impact."
+      - "AlphaForge currently targets 1m/5m — no 1m/5m simulation labels exist (SCALP profile is 1h)."
+    missing_requirements:
+      - "Timeframe alignment to simulation SCALP profile (1h primary, 15m refinement)."
+      - "SCALP simulation tests (none exist)."
+      - "Spread stress in cost_stress (V7 G3 requires it)."
+      - "6-fold walk-forward + TREND regime taxonomy alignment with V7 G2/G4."
+    readiness_score_10: 5.5
+  AGGRESSIVE_SCALP:
+    priority: "PRIMARY"
+    potential_edge_sources:
+      - "Micro-structure inefficiencies on 15m primary (per V7 thesis); strong signal required to overcome HIGH no-trade default."
+      - "Breakout failure / liquidity trap (AS-010) — but requires order-book/spread data."
+      - "Mean reversion after impulse / overextension (AS-005)."
+    kill_risks:
+      - "Cost/slippage can make mode net-negative even with good signals (thesis:120)."
+      - "Order book required for Phase 3; no spread/depth data exists in lib."
+      - "Latency: fast reversals may not be executable at reported prices."
+      - "AlphaForge currently targets 1m/3m/5m — no such simulation labels exist (AGGRESSIVE_SCALP profile is 15m)."
+    missing_requirements:
+      - "Timeframe alignment to simulation AGGRESSIVE_SCALP profile (15m primary, 5m refinement)."
+      - "Order-book / spread / depth data ingestion (BinanceClient exposes only klines + funding)."
+      - "AGGRESSIVE_SCALP simulation tests (none exist)."
+      - "Latency feasibility analysis; liquidity/spread caveat currently unmeasurable."
+    readiness_score_10: 5.0
+  SWING:
+    priority: "SECONDARY_BASELINE"
+    potential_edge_sources:
+      - "Trend-following over multi-day horizons on 4h primary; regime alignment amplifies edge."
+      - "Relative strength / cross-sectional momentum (AS-004) — needs cross-sectional layer."
+      - "Regime-conditioned continuation (AS-007)."
+    kill_risks:
+      - "Overnight/weekend gap; funding accumulation over 30-bar holds (thesis:118)."
+      - "Funding DEFERRED blocks perpetual/live SWING scope."
+    missing_requirements:
+      - "First walk-forward to recalibrate LOCKED_INITIAL_BASELINE thresholds (DEC-020)."
+      - "Cross-sectional data layer for AS-004."
+      - "Timeframe alignment: AlphaForge says SWING 1h/4h primary; simulation says 4h primary (1h is context/refinement)."
+    readiness_score_10: 7.0
+alpha_surface_matrix:
+  - id: "AS-001"
+    name: "BTC/ETH lead-lag into altcoins"
+    modes: ["SCALP", "AGGRESSIVE_SCALP"]
+    expected_roi: "very_high"
+    implementation_complexity: "high"
+    data_requirements: ["multi-symbol aligned OHLCV", "cross-sectional UTC grid", "point-in-time universe"]
+    feature_requirements: ["lead_lag_score", "correlation_N", "cross_symbol returns"]
+    simulation_requirements: ["cross-symbol label alignment", "same decision_timestamp across symbols"]
+    current_contract_support: "weak"
+    recommendation: "hold"
+  - id: "AS-002"
+    name: "Volatility compression then expansion"
+    modes: ["SCALP", "SWING"]
+    expected_roi: "high"
+    implementation_complexity: "medium"
+    data_requirements: ["OHLCV", "ATR"]
+    feature_requirements: ["compression_score", "bb_width", "atr_expansion_N", "breakout detection"]
+    simulation_requirements: ["time_to_mfe_bars", "exit_efficiency"]
+    current_contract_support: "partial"
+    recommendation: "build_first"
+  - id: "AS-003"
+    name: "Volume anomaly / sudden participation"
+    modes: ["SCALP", "AGGRESSIVE_SCALP"]
+    expected_roi: "high"
+    implementation_complexity: "medium"
+    data_requirements: ["OHLCV with volume"]
+    feature_requirements: ["volume_ratio_N", "obv_N", "vwap_deviation", "liquidity proxy"]
+    simulation_requirements: ["cost stress at high frequency"]
+    current_contract_support: "partial"
+    recommendation: "build_first"
+  - id: "AS-004"
+    name: "Relative strength / cross-sectional momentum"
+    modes: ["SCALP", "SWING"]
+    expected_roi: "very_high"
+    implementation_complexity: "high"
+    data_requirements: ["universe membership", "survivorship-free multi-symbol panel", "point-in-time ranking"]
+    feature_requirements: ["cross_sectional_rank", "relative_strength", "market_beta"]
+    simulation_requirements: ["per-symbol labels", "cluster exposure control"]
+    current_contract_support: "missing"
+    recommendation: "hold"
+  - id: "AS-005"
+    name: "Mean reversion after impulse / overextension"
+    modes: ["AGGRESSIVE_SCALP", "SCALP"]
+    expected_roi: "high"
+    implementation_complexity: "medium"
+    data_requirements: ["OHLCV"]
+    feature_requirements: ["impulse_score", "reversal_pressure", "range_position", "rsi_N"]
+    simulation_requirements: ["stop logic", "NO_TRADE comparator for fast reversals"]
+    current_contract_support: "weak"
+    recommendation: "build_later"
+  - id: "AS-006"
+    name: "Funding divergence / perp dislocation"
+    modes: ["SCALP", "AGGRESSIVE_SCALP"]
+    expected_roi: "high"
+    implementation_complexity: "high"
+    data_requirements: ["funding rate", "spot/futures divergence", "open interest"]
+    feature_requirements: ["funding_proxy", "funding_cost_r"]
+    simulation_requirements: ["funding cost model (DEFERRED)"]
+    current_contract_support: "missing"
+    recommendation: "reject"
+  - id: "AS-007"
+    name: "Regime-conditioned continuation"
+    modes: ["SCALP", "SWING"]
+    expected_roi: "high"
+    implementation_complexity: "medium"
+    data_requirements: ["OHLCV"]
+    feature_requirements: ["trend_strength_N (ADX)", "volatility_regime", "volume_regime"]
+    simulation_requirements: ["regime breakdown aligned to V7 TREND_UP/DOWN/RANGE/TRANSITION"]
+    current_contract_support: "partial"
+    recommendation: "build_first"
+  - id: "AS-008"
+    name: "Cost-aware no-trade edge"
+    modes: ["SCALP", "AGGRESSIVE_SCALP", "SWING"]
+    expected_roi: "very_high"
+    implementation_complexity: "low"
+    data_requirements: ["cost-honest labels (exist)"]
+    feature_requirements: ["cost_proxy"]
+    simulation_requirements: ["NO_TRADE comparator (exists)", "cost stress"]
+    current_contract_support: "strong"
+    recommendation: "build_first"
+  - id: "AS-009"
+    name: "Multi-timeframe alignment / conflict"
+    modes: ["SCALP", "AGGRESSIVE_SCALP", "SWING"]
+    expected_roi: "high"
+    implementation_complexity: "medium"
+    data_requirements: ["primary + context + refinement candles"]
+    feature_requirements: ["tf_alignment", "HTF regime", "refinement readiness"]
+    simulation_requirements: ["interval-view ablation (evaluation.md:148-156)"]
+    current_contract_support: "partial"
+    recommendation: "build_first"
+  - id: "AS-010"
+    name: "Breakout failure / liquidity trap"
+    modes: ["AGGRESSIVE_SCALP"]
+    expected_roi: "high"
+    implementation_complexity: "high"
+    data_requirements: ["order-book depth", "spread", "trade tape"]
+    feature_requirements: ["spread_estimate", "liquidity_score", "depth_signal"]
+    simulation_requirements: ["realistic fill/latency model"]
+    current_contract_support: "missing"
+    recommendation: "hold"
+data_gap_matrix:
+  - layer: "raw_market_data"
+    score_10: 7.0
+    gaps: ["single-symbol fetch only (market_data_service.py:41)", "no order-book/depth/spread endpoint (client.py exposes only klines+funding)"]
+  - layer: "normalized_market_data"
+    score_10: 6.0
+    gaps: ["no UTC grid reindex/forward-fill (quality.py:18-34 detects gaps but does not repair)", "no multi-symbol cross-sectional alignment"]
+  - layer: "feature_dataset"
+    score_10: 6.5
+    gaps: ["FeatureSetSpec schema solid (leakage_policy required) but fixtures encode wrong timeframes", "no cross-sectional/universe field"]
+  - layer: "label_dataset"
+    score_10: 6.5
+    gaps: ["LabelDatasetSpec has funding_status + no_trade_comparison (good)", "AlphaForgeLabel row schema drops gross/cost/no_trade_quality vs label_contract", "simulation_to_alphaforge.json mapping is a partial subset of the .md"]
+  - layer: "research_run_manifest"
+    score_10: 7.5
+    gaps: ["defined in data_contract with git_commit/config_hash/command/limitations", "no schema file registered (defined inline only)"]
+  - layer: "artifact_manifest"
+    score_10: 7.5
+    gaps: ["ModelArtifact schema solid (checksum, artifact_uri, lineage)", "lineage_verified flag exists but fixture sets it false"]
+must_have_data_flags:
+  - "MISSING_BARS (exists)"
+  - "PRICE_SPIKE (exists)"
+  - "VOLUME_SPIKE (exists)"
+  - "STALE_DATA (exists)"
+  - "OUT_OF_HOURS (exists)"
+  - "SURVIVORSHIP_UNIVERSE (MISSING — point-in-time universe membership)"
+  - "DELISTING (MISSING — listing/delisting dates)"
+  - "LOOKAHEAD_CHECK (MISSING — point-in-time verification flag per row)"
+pre_p0_9a_contract_fixes:
+  - "Patch data_contract.md + feature_contract.md + 3 mode fixtures: SCALP primary 1h (15m refinement), AGGRESSIVE_SCALP primary 15m (5m refinement), SWING primary 4h (1h/1d context) — align to simulation/docs/profiles.md."
+  - "Patch v7_handoff_package.schema.json v7_gate_mapping keys + handoff_to_v7.md + alphaforge_to_v7.md + v7_handoff_package_minimal.json to V7 evaluation.md G0-G10 (G3=COST_STRESS, G6=CALIBRATION_RELIABILITY, G9=TINY_LIVE, G10=LIVE; No-Trade is a metric family not a gate)."
+  - "Tighten mode_research_report.schema.json: add nested required to cost_stress (break_even_cost_total_pct, combined_stress_edge_survives), no_trade_comparison (active_beats_no_trade), regime_breakdown (edge_only_in_rare_regime), metrics (oos_expectancy_r, oos_trade_count)."
+  - "Tighten v7_handoff_package.schema.json: require v7_gate_mapping sub-fields non-empty; tighten validation_report.schema.json oos_summary/cost_stress/no_trade_comparison nested required."
+  - "AlphaForgeResearchReport.schema.json: enforce all 3 modes present (minItems + mode enum constraint) and mode->verdict-type coupling (oneOf)."
+  - "AlphaForgeLabel.schema.json: add long_R_gross, short_R_gross, fee_cost_r, slippage_cost_r, total_cost_r, no_trade_quality (or explicitly document net-only + SimulationOutput cross-ref)."
+  - "simulation_to_alphaforge.json: complete mapping to match the .md (add no_trade_quality, gross, cost components, exit_reason, is_ambiguous, resolution_status)."
+pre_research_run_data_requirements:
+  - "Cross-sectional multi-symbol dataset layer with UTC grid alignment + point-in-time universe membership."
+  - "Survivorship/delisting handling + universe definition (legacy xgb doc names 20 high-liquidity symbols; canonical data_contract has none)."
+  - "Order-book/spread/depth ingestion for AGGRESSIVE_SCALP liquidity surfaces (or explicit HOLD of AS-010)."
+feature_roi_ranking:
+  - rank: 1
+    feature_group: "cost_proxy (spread/liquidity/slippage/depth)"
+    modes: ["SCALP", "AGGRESSIVE_SCALP"]
+    profit_impact: "very_high"
+    implementation_cost: "high"
+    reason: "Costs kill the primary modes; real spread/depth data is missing (BinanceClient has no depth endpoint). Highest leverage for AGGRESSIVE_SCALP."
+  - rank: 2
+    feature_group: "cross_sectional_rank + relative_strength"
+    modes: ["SCALP", "SWING"]
+    profit_impact: "very_high"
+    implementation_cost: "high"
+    reason: "Unlocks AS-001/AS-004; entirely missing from feature_contract and lib; needs cross-sectional data layer."
+  - rank: 3
+    feature_group: "compression_score + impulse_score + reversal_pressure"
+    modes: ["SCALP", "AGGRESSIVE_SCALP", "SWING"]
+    profit_impact: "high"
+    implementation_cost: "medium"
+    reason: "Unlocks AS-002/AS-005; bb_width/atr_expansion partial but no composite scores."
+  - rank: 4
+    feature_group: "regime (ADX/trend_strength + V7 TREND taxonomy)"
+    modes: ["SCALP", "SWING"]
+    profit_impact: "high"
+    implementation_cost: "medium"
+    reason: "AS-007; must align to V7 G4 TREND_UP/DOWN/RANGE/TRANSITION, not HIGH_VOL_*."
+  - rank: 5
+    feature_group: "volume (volume_ratio, OBV, vwap_deviation)"
+    modes: ["SCALP", "AGGRESSIVE_SCALP"]
+    profit_impact: "high"
+    implementation_cost: "low"
+    reason: "AS-003; defined in feature_contract but entirely missing from lib."
+  - rank: 6
+    feature_group: "lead_lag + cross_symbol correlation"
+    modes: ["SCALP", "AGGRESSIVE_SCALP"]
+    profit_impact: "high"
+    implementation_cost: "high"
+    reason: "AS-001; needs cross-sectional data layer first."
+  - rank: 7
+    feature_group: "breakout (Bollinger, range_breakout)"
+    modes: ["SCALP", "AGGRESSIVE_SCALP"]
+    profit_impact: "medium"
+    implementation_cost: "low"
+    reason: "rolling_max/min primitives exist; bb_position/range_breakout composites missing."
+  - rank: 8
+    feature_group: "momentum (MACD; RSI/ROC exist)"
+    modes: ["SCALP", "SWING"]
+    profit_impact: "medium"
+    implementation_cost: "low"
+    reason: "RSI/ROC/momentum implemented; MACD missing."
+  - rank: 9
+    feature_group: "ATR extensions (atr_pct, atr_expansion)"
+    modes: ["SCALP", "SWING"]
+    profit_impact: "medium"
+    implementation_cost: "low"
+    reason: "compute_atr exists; pct/expansion helpers missing."
+  - rank: 10
+    feature_group: "funding_proxy / market_beta"
+    modes: ["SWING", "SCALP"]
+    profit_impact: "medium"
+    implementation_cost: "high"
+    reason: "AS-006 blocked by funding DEFERRED; defer until funding model implemented."
+must_have_features_p0_9:
+  - "cost_proxy (at minimum estimate-based; real spread/depth for AGGRESSIVE_SCALP)"
+  - "regime aligned to V7 TREND taxonomy"
+  - "volume group (volume_ratio, vwap_deviation)"
+  - "compression_score + impulse_score (AS-002/AS-005)"
+  - "breakout composites (bb_position, range_breakout_N)"
+defer_features:
+  - "cross_sectional_rank / relative_strength (defer until cross-sectional data layer exists)"
+  - "lead_lag_score / cross_symbol correlation (defer until multi-symbol alignment exists)"
+  - "funding_proxy (defer until funding model implemented)"
+  - "market_beta (defer)"
+  - "depth_signal (defer until order-book ingestion exists)"
+leakage_risk_features:
+  - "Any feature computed at a finer timeframe than the label decision_timestamp (the current 1m/5m SCALP plan is a leakage/misalignment risk vs 1h labels)."
+  - "Cross-sectional normalization that includes the test sample (feature_contract.md:148 forbids; not enforced in code)."
+  - "Target encoding without purging (feature_contract.md:147)."
+  - "Using is_closed klines before bar close (klines_service.py:128) at the consumption layer."
+lib_missing_primitives:
+  - "MACD (feature_contract:64-66)"
+  - "Bollinger bands bb_position/bb_width (feature_contract:84-85)"
+  - "range_breakout_N (feature_contract:87)"
+  - "volume_ratio_N, volume_trend_N, vwap_deviation, obv_N (feature_contract:73-76)"
+  - "ADX/trend_strength_N, volatility_regime, volume_regime, market_hour (feature_contract:103-106; regime intentionally excluded from lib per lib/docs/README.md)"
+  - "cross_symbol correlation_N, lead_lag_score, tf_alignment (feature_contract:94-96)"
+  - "spread_estimate, liquidity_score, depth_signal (feature_contract:113-116; no order-book data)"
+  - "cross_sectional_rank, relative_strength, compression_score, impulse_score, reversal_pressure, range_position, market_beta (not in feature_contract or lib)"
+label_truth_audit:
+  score_10: 7.0
+  simulation_label_gap_matrix:
+    - "SimulationOutput fields verified present: realized_r_gross/net, fee_cost_r, slippage_cost_r, total_cost_r, path_metrics.mfe_r/mae_r/path_quality_score/bucket, no_trade_quality (4-way), best_action, action_gap_r, regret_r, is_ambiguous, resolution_status (models.py + simulation_output.schema.json)."
+    - "AlphaForgeLabel schema required only: symbol, timestamp, mode, simulation_family_version, label_interpretation_version, long_R_net, short_R_net, best_action_label, label_validity — DROPS gross R, cost components, no_trade_quality that label_contract.md:52-61 claims."
+    - "no_trade_quality mapped in simulation_to_alphaforge.md:57 but field ABSENT from AlphaForgeLabel schema and from simulation_to_alphaforge.json."
+    - "same_candle_ambiguity computed in ExitResult (exits.py:22) but NOT propagated to ActionOutcome (engine.py:62-75) nor to simulation_output.schema.json — AlphaForge cannot filter same-candle-ambiguous labels."
+    - "NO_TRADE AMBIGUOUS branch diverges: engine triggers AMBIGUOUS when 0<best_r<=min_action_edge_r (engine.py:96-104) but no_trade_quality.md:84-101 spec uses ambiguity_margin_r."
+    - "HORIZON_END and INVALIDATED exit reasons defined in schema/engine enum but never produced by the engine."
+    - "simulation_to_alphaforge.json is a 12-field subset of the comprehensive .md mapping (missing no_trade_quality, gross, cost, exit_reason, is_ambiguous, resolution_status, was_correct_skip)."
+  must_fix_before_scalp_research:
+    - "Align SCALP timeframes to 1h simulation profile."
+    - "Add SCALP simulation tests (cost/label/no_trade for the primary mode)."
+    - "Complete AlphaForgeLabel schema + simulation_to_alphaforge.json so cost decomposition and no_trade_quality are available."
+  must_fix_before_aggressive_scalp_research:
+    - "All SCALP fixes plus 15m timeframe alignment."
+    - "Order-book/spread data or explicit HOLD of liquidity-sensitive surfaces."
+    - "Latency feasibility analysis."
+  must_fix_before_swing_baseline:
+    - "4h timeframe alignment (drop 1h as 'primary')."
+    - "First walk-forward to recalibrate LOCKED_INITIAL_BASELINE thresholds."
+  can_defer:
+    - "same_candle_ambiguity surfacing (simulation-side; flag as known limitation until patched)."
+    - "HORIZON_END/INVALIDATED production (edge case)."
+cost_slippage_funding_audit:
+  score_10: 6.5
+  mode_cost_sensitivity_matrix:
+    SCALP: "HIGH — costs proportionally larger on smaller R targets; V7 G3 requires cost-adjusted expectancy >= 0.10R and taker x2.0 stress (evaluation.md:189,217)."
+    AGGRESSIVE_SCALP: "VERY HIGH — costs can erase entire edge; V7 G3 requires taker x2.5 stress; order book required (evaluation.md:217)."
+    SWING: "MEDIUM — wide stops dilute per-trade cost but funding accumulates over 30-bar holds (thesis:118)."
+  kill_zone_rules:
+    - "If realized_r_gross > 0 but realized_r_net < 0, costs consumed the edge -> reject (label_contract.md:107-109)."
+    - "If NO_TRADE beats both directional after costs -> reject (alpha_thesis_lifecycle.md:79)."
+    - "If edge disappears under moderate cost stress -> cannot reach V7_CANDIDATE (alpha_thesis_lifecycle.md:147-149)."
+    - "If break-even cost below realistic minimum -> reject (validation_contract.md:128-129)."
+  mandatory_rejection_rules:
+    - "Cost stress MUST include fee + slippage; V7 G3 ALSO requires spread + funding stress where applicable — AlphaForge cost_stress currently lacks spread and funding dimensions."
+    - "SCALP cost-adjusted expectancy >= 0.10R is a V7 G3 hard requirement not referenced in AlphaForge validation_contract."
+  p0_9a_required_interfaces:
+    - "cost_stress schema must carry fee/slippage/combined levels + break-even + edge_survives booleans (currently optional — tighten)."
+    - "Report writer must refuse to emit a verdict if cost_stress payload is empty."
+  defer_until_funding_model:
+    - "AS-006 funding divergence surface."
+    - "Perpetual/live label funding costs (funding_status stays DEFERRED)."
+    - "V7 G3 funding stress for perps."
+no_trade_audit:
+  score_10: 7.5
+  missing_no_trade_metrics:
+    - "no_trade_quality field absent from AlphaForgeLabel schema (only saved_loss_score/missed_opportunity_score present)."
+    - "over-suppression / under-suppression metrics (V7 evaluation.md:137-138) absent from AlphaForge NO_TRADE quality."
+    - "Per-mode no-trade thresholds (SWING 60%/0.20R, SCALP 55%/0.10R, AGGR 50%/0.05R per evaluation.md:215) not enforced in AlphaForge schemas."
+  required_schema_strengthening:
+    - "Add no_trade_quality to AlphaForgeLabel schema + simulation_to_alphaforge.json."
+    - "Make mode_research_report.no_trade_comparison.active_beats_no_trade required."
+    - "Add per-mode no-trade threshold fields to validation_report.no_trade_comparison."
+  expected_profitability_impact: "very_high — NO_TRADE is the null hypothesis; enforcing it post-cost is the single best false-positive killer for high-frequency modes that overtrade."
+validation_overfit_audit:
+  score_10: 6.5
+  overfit_risk_matrix:
+    - "Train/OOS gap, fold instability, feature/sample ratio, top feature dominance, calibration degradation, purge violation are flagged (validation_contract.md:134-146)."
+    - "MISSING: multiple-hypothesis-testing / data-snooping correction (no Bonferroni/FDR/deflated Sharpe) — the biggest overfit source in a multi-thesis discovery system."
+    - "MISSING: deflated Sharpe / haircut for the number of strategies tested."
+  minimum_validation_standard_by_mode:
+    SCALP: "V7 requires 6 folds (evaluation.md:188); AlphaForge validation_contract says 5 — must align to 6."
+    AGGRESSIVE_SCALP: "V7 requires 6 folds; AlphaForge says 5 — must align; plus liquidity/spread analysis + latency caveat."
+    SWING: "V7 requires 6 folds; AlphaForge says 3 — must align; recalibrate after first walk-forward."
+  must_fix_before_real_research:
+    - "Align walk-forward folds to V7 G2 (6 minimum, 12-month train, 2-month validation)."
+    - "Align regime taxonomy to V7 G4 (TREND_UP/TREND_DOWN/RANGE/TRANSITION) instead of HIGH_VOL_*."
+    - "Align symbol stability to V7 G5 quantitative thresholds (no symbol >40%, no cluster >60%)."
+    - "Add spread stress to cost_stress (V7 G3)."
+    - "Add MHT/data-snooping control (FDR or deflated Sharpe) to validation_contract + validation_report schema."
+  recommended_walk_forward_design: "6 rolling folds, 12-month train / 2-month validation, purge window per mode (SCALP 100 bars 5m-equiv, AGGR 200, SWING 20 bars 4h), embargo, OOS summary with fold_stability_score, per-fold regime + cost stress, deflated Sharpe across tested theses."
+contract_enforceability_audit:
+  score_10: 6.0
+  schema_looseness_findings:
+    - "mode_research_report.schema.json: 16 top-level keys required but cost_stress/no_trade_comparison/regime_breakdown/metrics/data_scope/validation_summary sub-objects have NO nested required — an empty-payload report passes validation."
+    - "v7_handoff_package.schema.json: v7_gate_mapping required as object but all G0-G10 sub-fields optional -> empty {} passes; AND gate keys (G5_cost_resilience, G8_calibration, G9_no_trade_baseline, G10_paper_shadow) do not match V7 evaluation.md gates."
+    - "validation_report.schema.json: oos_summary/cost_stress/no_trade_comparison/regime_breakdown sub-fields optional (split_policy/walk_forward_folds/calibration_metrics are properly required)."
+    - "alphaforge_research_report.schema.json: mode_reports items require only mode/report_id/verdict — no minItems=3, no all-3-modes constraint, no mode->verdict coupling."
+    - "mode_research_report verdict enum merges primary (REJECT/CONTINUE_RESEARCH/CANDIDATE_FOR_V7_GATES) and secondary (BASELINE_VALID/BASELINE_WEAK) verdicts — a SCALP report could carry BASELINE_VALID and pass."
+  fixture_quality_findings:
+    - "POSITIVE: all 5 AlphaForge fixtures are honest dummies (zero metrics, NO_TRADE dominates, REVIEW_REQUIRED, explicit 'do not interpret as real research')."
+    - "NEGATIVE: fixtures encode wrong timeframes (SCALP 1m/5m, AGGR 1m/3m/5m) and wrong gate mapping."
+    - "alphaforge_label_minimal.json has non-zero R values (1.82/-1.23) without a dummy disclaimer — minor risk of misread as evidence."
+  registry_test_gap:
+    - "NO dedicated AlphaForge fixture/schema validation tests exist (no alphaforge/tests/)."
+    - "NO jsonschema.validate anywhere in the suite — a bad fixture passes if it exists and parses as JSON."
+    - "test_schema_parity.py only covers the 4 original contracts (SimulationOutput, AlphaForgeLabel, TradeOutcome, SimulationProfile); the 10 new AlphaForge schemas have ZERO parity/fixture-conformance coverage."
+    - "test_contract_registry.py:40-46 only asserts the 4 original contracts by name, not the 10 new ones."
+  must_fix_before_p0_9a:
+    - "Tighten mode_research_report + v7_handoff_package + validation_report nested required (see pre_p0_9a_contract_fixes)."
+    - "Fix v7_handoff_package gate mapping keys."
+    - "Enforce 3 modes + verdict coupling in alphaforge_research_report."
+    - "Complete AlphaForgeLabel schema + simulation_to_alphaforge.json."
+  must_fix_before_research_runs:
+    - "Add dedicated fixture-validation tests using jsonschema.validate for all 10 new schemas + AlphaForgeLabel (P0.9A scope)."
+    - "Add registry test asserting all 14 contracts by name."
+ai_navigability_audit:
+  score_10: 7.0
+  orphan_or_confusing_docs:
+    - "alphaforge/docs/ai_summary__v7_alphaforge_xgb.md (625KB) — 'COMPLETE AI SUMMARY' legacy implementation reference (2026-05-23, v1.2) referencing src/v7/alpha/** and integration/adapters/alphaforge_adapter.py; the 'ai_summary' name could be mistaken for the thin hub."
+    - "alphaforge/docs/phase_plans_combined.md (578KB) — legacy v4.1.1 combined phase plans referencing src/v7/alpha/** stale paths."
+  legacy_doc_risks:
+    - "Both oversized combined docs predate the P0.8B authority lock and are not in the canonical 13; agents may read them as authoritative and inherit stale paths/structure."
+    - "phase_plan.md claims '13 authority docs' but 15 files exist (the 2 combined docs unaccounted)."
+  cross_link_gaps:
+    - "README does not surface the SCALP/AGGRESSIVE_SCALP PRIMARY vs SWING SECONDARY_BASELINE mode-priority matrix."
+    - "Makefile test-all (Makefile:64-71) omits simulation/tests/ while CI (ci.yml:36) and CLAUDE.md include it — drift."
+  must_fix_before_p0_9a:
+    - "Mark the 2 legacy combined docs SUPERSEDED or move out of alphaforge/docs/ to prevent agent confusion."
+    - "Reconcile phase_plan.md doc count (13 vs 15)."
+implementation_order_audit:
+  score_10: 7.0
+  recommended_p0_9a_scope:
+    - "Package structure under alphaforge/src/ (currently only .gitkeep)."
+    - "Contract readers for all 11 AlphaForge schemas (incl. AlphaForgeLabel) + SimulationOutput."
+    - "Fixture validators using jsonschema.validate for all fixtures (AFTER P0.8E tightens schemas + fixes gate mapping/timeframes)."
+    - "Report writer interfaces that REFUSE to emit a verdict when cost_stress/no_trade/regime payload is empty."
+    - "Mode report builders + tests. No real training, no data pipeline."
+  recommended_p0_9b_scope:
+    - "Market data loading + normalization with UTC grid reindex + gap repair."
+    - "Cross-sectional multi-symbol layer + point-in-time universe + survivorship handling."
+    - "Feature computation per FeatureSetSpec (aligned timeframes); label generation from SimulationOutput."
+    - "Order-book/spread ingestion for AGGRESSIVE_SCALP (or explicit HOLD)."
+  recommended_p0_9c_scope:
+    - "First SWING secondary baseline report (safest path) to validate the pipeline end-to-end."
+    - "Then SCALP/AGGRESSIVE_SCALP primary research reports with 6-fold walk-forward + V7-aligned regime + cost/spread stress + MHT correction."
+    - "AlphaForgeResearchReport aggregate enforcing 3 modes."
+  do_not_build_yet:
+    - "Real model training (until P0.9B pipeline + aligned labels exist)."
+    - "SCALP/AGGRESSIVE_SCALP promotion threshold logic (HOLD until empirical evidence)."
+    - "Funding-dependent surfaces (AS-006) until funding model implemented."
+    - "G7-G10 shadow/paper/tiny-live/live infrastructure."
+  highest_roi_next_10_tasks:
+    - { task: "P0.8E: fix gate mapping across 3 docs + schema + fixture", risk_reduction: "very_high" }
+    - { task: "P0.8E: fix timeframe stacks in data_contract/feature_contract/3 fixtures", risk_reduction: "very_high" }
+    - { task: "P0.8E: tighten mode_research_report + v7_handoff + validation_report nested required", risk_reduction: "very_high" }
+    - { task: "P0.8E: complete AlphaForgeLabel schema + simulation_to_alphaforge.json", risk_reduction: "high" }
+    - { task: "P0.8E: align validation_contract to V7 gates (folds/regime/symbol/spread)", risk_reduction: "high" }
+    - { task: "P0.8E: add MHT/data-snooping control to validation_contract + schema", risk_reduction: "high" }
+    - { task: "P0.8E: mark 2 legacy combined docs SUPERSEDED", risk_reduction: "medium" }
+    - { task: "P0.9A: fixture validators with jsonschema.validate + registry test for all 14 contracts", risk_reduction: "very_high" }
+    - { task: "Simulation: add SCALP + AGGRESSIVE_SCALP golden tests", risk_reduction: "high" }
+    - { task: "P0.9B: cross-sectional data layer + universe + survivorship", risk_reduction: "high" }
+profitability_squeeze_strategy:
+  score_10: 6.5
+  top_profit_levers:
+    - "Cost-aware labels + NO_TRADE comparator (already present) — the core edge-preservation mechanism."
+    - "Align timeframes so primary-mode features have labels — the precondition for any SCALP/AGGR_SCALP edge test."
+    - "Cross-sectional relative-strength + lead-lag surfaces (AS-001/AS-004) — highest expected edge density, currently blocked by missing data layer."
+    - "Cost/spread stress aligned to V7 G3 (SCALP >= 0.10R, taker x2.0/x2.5) — kills cost-fragile candidates early."
+  top_false_positive_killers:
+    - "Tighten report schemas so empty-payload reports cannot pass."
+    - "MHT/data-snooping correction (FDR/deflated Sharpe)."
+    - "6-fold walk-forward + V7 TREND regime taxonomy + 40%/60% symbol stability."
+    - "Survivorship-free universe + point-in-time features."
+    - "Dedicated fixture-validation tests with jsonschema.validate."
+  minimum_real_research_path:
+    - "P0.8E targeted patch -> P0.9A scaffold + fixture validators -> SWING baseline end-to-end (safest) -> SCALP primary research with 6-fold WF + cost/spread stress + MHT."
+  recommended_alpha_surface_sequence:
+    - "AS-008 cost-aware no-trade edge (build first — uses existing cost-honest labels)."
+    - "AS-002 volatility compression/expansion (build first — partial features exist)."
+    - "AS-007 regime-conditioned continuation (build first — align to V7 TREND taxonomy)."
+    - "AS-003 volume anomaly (build first — needs volume group)."
+    - "AS-009 multi-timeframe alignment (build first — interval-view ablation)."
+    - "AS-005 mean reversion after impulse (build later)."
+    - "AS-001 lead-lag + AS-004 relative strength (hold until cross-sectional layer)."
+    - "AS-010 breakout failure/liquidity trap (hold until order-book data)."
+    - "AS-006 funding divergence (reject until funding model)."
+  what_to_lock_next:
+    - "Lock the corrected gate mapping + timeframe stacks + tightened report schemas as LOCKED after P0.8E owner review."
+    - "Do NOT lock SCALP/AGGRESSIVE_SCALP numeric thresholds (stay HOLD)."
+adversarial_failure_modes:
+  - failure_mode: "Backtest-only alpha"
+    severity: "high"
+    probability: "medium"
+    detectability: "medium"
+    mitigation: "Walk-forward OOS + V7 G2/G7-G10 shadow/paper gates; backtest pass != live promotion (validation_contract.md:208)."
+    must_fix_before_p0_9a: false
+    must_fix_before_real_research: true
+  - failure_mode: "Overfit symbol-specific alpha"
+    severity: "high"
+    probability: "high"
+    detectability: "medium"
+    mitigation: "V7 G5 40%/60% symbol stability; AlphaForge symbol_stability currently qualitative — must add quantitative thresholds."
+    must_fix_before_p0_9a: false
+    must_fix_before_real_research: true
+  - failure_mode: "Costs ignored / gross-only edge"
+    severity: "critical"
+    probability: "medium"
+    detectability: "high"
+    mitigation: "Cost-aware net labels exist; BUT AlphaForgeLabel schema drops gross/cost — must restore so gross>0/net<0 is detectable from the label."
+    must_fix_before_p0_9a: true
+    must_fix_before_real_research: true
+  - failure_mode: "NO_TRADE ignored"
+    severity: "high"
+    probability: "low"
+    detectability: "high"
+    mitigation: "NO_TRADE first-class + mandatory comparison + rejection rule — strong; add no_trade_quality to label schema + per-mode thresholds."
+    must_fix_before_p0_9a: true
+    must_fix_before_real_research: true
+  - failure_mode: "Funding ignored"
+    severity: "high"
+    probability: "low"
+    detectability: "high"
+    mitigation: "Funding DEFERRED properly propagated (funding_status on LabelDatasetSpec, blocked_scopes on handoff). Hold, not a gap."
+    must_fix_before_p0_9a: false
+    must_fix_before_real_research: false
+  - failure_mode: "Latency ignored for AGGRESSIVE_SCALP"
+    severity: "high"
+    probability: "high"
+    detectability: "medium"
+    mitigation: "report_contracts requires latency caveat; but no latency data/analysis exists — flag as HOLD for AGGR_SCALP."
+    must_fix_before_p0_9a: false
+    must_fix_before_real_research: true
+  - failure_mode: "Liquidity/spread ignored"
+    severity: "critical"
+    probability: "high"
+    detectability: "medium"
+    mitigation: "No order-book/spread data; cost_proxy features are estimates only. Add real spread/depth or HOLD AGGR_SCALP liquidity surfaces."
+    must_fix_before_p0_9a: false
+    must_fix_before_real_research: true
+  - failure_mode: "Feature leakage / lookahead"
+    severity: "critical"
+    probability: "medium"
+    detectability: "medium"
+    mitigation: "lib primitives are causal; leakage_policy required in FeatureSetSpec; BUT 1m/5m features vs 1h labels is a misalignment/leakage risk — fix timeframes."
+    must_fix_before_p0_9a: true
+    must_fix_before_real_research: true
+  - failure_mode: "Survivorship bias"
+    severity: "high"
+    probability: "high"
+    detectability: "low"
+    mitigation: "No survivorship/delisting/universe handling in data_contract or lib — must add point-in-time universe."
+    must_fix_before_p0_9a: false
+    must_fix_before_real_research: true
+  - failure_mode: "Data snooping / multiple hypothesis testing"
+    severity: "high"
+    probability: "high"
+    detectability: "low"
+    mitigation: "No MHT/FDR/deflated Sharpe control — must add to validation_contract + schema."
+    must_fix_before_p0_9a: false
+    must_fix_before_real_research: true
+  - failure_mode: "Docs misunderstood by agent (legacy 625KB/578KB combined docs)"
+    severity: "medium"
+    probability: "medium"
+    detectability: "high"
+    mitigation: "Mark SUPERSEDED / move out of docs/."
+    must_fix_before_p0_9a: true
+    must_fix_before_real_research: false
+  - failure_mode: "Schemas too loose -> empty-payload report passes"
+    severity: "critical"
+    probability: "high"
+    detectability: "high"
+    mitigation: "Tighten nested required in mode_research_report/v7_handoff/validation_report; add jsonschema.validate fixture tests."
+    must_fix_before_p0_9a: true
+    must_fix_before_real_research: true
+  - failure_mode: "V7 authority bypassed / AlphaForge outputs trade commands"
+    severity: "critical"
+    probability: "low"
+    detectability: "high"
+    mitigation: "Authority LOCKED and repeatedly enforced; forbidden list explicit; handoff rejection rules + V7 final authority. Not a current risk."
+    must_fix_before_p0_9a: false
+    must_fix_before_real_research: false
+  - failure_mode: "Gate mapping drift -> bad handoff accepted"
+    severity: "critical"
+    probability: "high"
+    detectability: "high"
+    mitigation: "Fix gate mapping to V7 evaluation.md G0-G10 across schema + 2 docs + fixture."
+    must_fix_before_p0_9a: true
+    must_fix_before_real_research: true
+  - failure_mode: "Fake profitability fixture interpreted as real"
+    severity: "medium"
+    probability: "low"
+    detectability: "high"
+    mitigation: "Fixtures are honest dummies with explicit disclaimers; prior report 'valid against schemas' claim was unverified — add jsonschema.validate tests."
+    must_fix_before_p0_9a: false
+    must_fix_before_real_research: true
+  - failure_mode: "Mode priority drift back to SWING-first"
+    severity: "medium"
+    probability: "low"
+    detectability: "high"
+    mitigation: "Mode priority consistent across all V7 + AlphaForge docs; SWING-first is explicitly framed as implementation/control ordering only. Not a current risk."
+    must_fix_before_p0_9a: false
+    must_fix_before_real_research: false
+must_fix_before_p0_9a:
+  - item: "Fix AlphaForge->V7 handoff gate mapping to match V7 evaluation.md G0-G10 (G3=COST_STRESS, G6=CALIBRATION_RELIABILITY, G9=TINY_LIVE, G10=LIVE; No-Trade is a metric family, not a gate)."
+    severity: "critical"
+    reason: "v7_handoff_package.schema.json v7_gate_mapping keys + handoff_to_v7.md + alphaforge_to_v7.md + v7_handoff_package_minimal.json encode wrong gate labels; P0.9A handoff/fixture validators would enforce the wrong contract."
+    suggested_patch_prompt: "V7-P0_8E-ALPHAFORGE-PROFITABILITY-CONTRACT-PATCH: renumber v7_gate_mapping to G0_DOC_READY..G10_LIVE per v7/docs/pipeline/evaluation.md:184-196 across schema+fixture+2 mapping docs; remap AlphaForge evidence to the correct gates (cost_stress->G3, calibration->G6, no_trade->metric family under G1/G3, symbol stability->G5, regime->G4)."
+  - item: "Fix AlphaForge primary timeframe stacks to match locked simulation profiles (SCALP 1h, AGGRESSIVE_SCALP 15m, SWING 4h)."
+    severity: "critical"
+    reason: "data_contract.md:116-119 + feature_contract.md:161-176 + 3 mode fixtures say SCALP 1m/5m, AGGR 1m/3m/5m — simulation has no such labels; features would be unlabelable/misaligned."
+    suggested_patch_prompt: "V7-P0_8E: set SCALP primary 1h (15m refinement), AGGRESSIVE_SCALP primary 15m (5m refinement), SWING primary 4h (1h/1d context) in data_contract.md, feature_contract.md, and the 3 mode_research_report fixtures, citing simulation/docs/profiles.md:26,68,112 and v7/docs/profitability_thesis.md:118-120."
+  - item: "Tighten mode_research_report.schema.json nested required (cost_stress, no_trade_comparison, regime_breakdown, metrics payload)."
+    severity: "high"
+    reason: "Empty-payload reports currently pass validation -> false-positive promotion risk."
+    suggested_patch_prompt: "V7-P0_8E: add nested required arrays to mode_research_report cost_stress (combined_stress_edge_survives, break_even_cost_total_pct), no_trade_comparison (active_beats_no_trade), regime_breakdown (edge_only_in_rare_regime), metrics (oos_expectancy_r, oos_trade_count)."
+  - item: "Tighten v7_handoff_package.schema.json v7_gate_mapping (non-empty + correct keys) and validation_report.schema.json oos/cost/no_trade nested required."
+    severity: "high"
+    reason: "Empty gate mapping and empty OOS/cost/no_trade payload currently pass."
+    suggested_patch_prompt: "V7-P0_8E: require v7_gate_mapping sub-fields non-empty with corrected G0-G10 keys; add nested required to validation_report oos_summary (oos_expectancy_r, oos_positive_expectancy), cost_stress (cost_edge_destroyed, combined_stress_edge_survives), no_trade_comparison (active_beats_no_trade)."
+  - item: "Enforce all 3 modes + mode->verdict coupling in alphaforge_research_report.schema.json."
+    severity: "high"
+    reason: "DEC-AF-007 requires all 3 mode reports but schema allows 1; verdict enum lets a SCALP report carry BASELINE_VALID."
+    suggested_patch_prompt: "V7-P0_8E: add minItems:3 to mode_reports, constrain mode enum to the 3 modes, add oneOf/if-then coupling mode to allowed verdict set (primary vs secondary)."
+  - item: "Complete AlphaForgeLabel.schema.json + simulation_to_alphaforge.json to match label_contract.md (add gross R, cost components, no_trade_quality)."
+    severity: "high"
+    reason: "label_contract claims gross/cost/no_trade_quality label fields but the schema and JSON mapping omit them; cost-aware gross>0/net<0 detection and NO_TRADE quality classification are unavailable from the label."
+    suggested_patch_prompt: "V7-P0_8E: add long_R_gross, short_R_gross, fee_cost_r, slippage_cost_r, total_cost_r, no_trade_quality to AlphaForgeLabel schema (or document net-only + SimulationOutput cross-ref); add the missing mappings to simulation_to_alphaforge.json."
+  - item: "Mark legacy 625KB + 578KB combined docs SUPERSEDED / move out of alphaforge/docs/."
+    severity: "medium"
+    reason: "ai_summary__v7_alphaforge_xgb.md and phase_plans_combined.md are legacy pre-authority-lock docs with stale src/v7/alpha paths; the 'ai_summary' name on a 625KB file risks agent confusion with the thin hub."
+    suggested_patch_prompt: "V7-P0_8E: add SUPERSEDED banner pointing to the 13 canonical docs, or relocate to alphaforge/legacy/."
+must_fix_before_real_research:
+  - item: "Add SCALP + AGGRESSIVE_SCALP simulation golden tests."
+    severity: "high"
+    reason: "Only SWING is golden-tested; cost/label/no_trade behavior for the PRIMARY modes (most cost-sensitive) is unverified."
+  - item: "Align validation_contract to V7 gates: 6 folds, TREND_UP/DOWN/RANGE/TRANSITION regime taxonomy, 40%/60% symbol stability, spread stress, SCALP 0.10R cost-adjusted expectancy."
+    severity: "high"
+    reason: "A candidate passing AlphaForge's 5-fold/HIGH_VOL/qualitative-symbol validation could fail V7 G2/G4/G5/G3."
+  - item: "Add multiple-hypothesis-testing / data-snooping control (FDR or deflated Sharpe) to validation_contract + validation_report schema."
+    severity: "high"
+    reason: "Testing many theses/features inflates apparent edge; the biggest false-positive source in a discovery system."
+  - item: "Add cross-sectional multi-symbol data layer + point-in-time universe + survivorship/delisting handling."
+    severity: "high"
+    reason: "Blocks AS-001 (lead-lag) and AS-004 (relative strength) — the highest expected edge-density surfaces."
+  - item: "Add order-book/spread/depth data ingestion for AGGRESSIVE_SCALP liquidity surfaces, or explicitly HOLD AS-010."
+    severity: "medium"
+    reason: "AGGRESSIVE_SCALP profitability thesis requires order-book data (thesis:120); none exists."
+  - item: "Add dedicated fixture-validation tests using jsonschema.validate for all 11 AlphaForge schemas + AlphaForgeLabel; add registry test asserting all 14 contracts by name."
+    severity: "high"
+    reason: "Contracts are currently unenforced by tests; a bad fixture/report passes if it parses as JSON."
+  - item: "Add missing feature groups: cross_sectional_rank, relative_strength, compression_score, impulse_score, reversal_pressure."
+    severity: "medium"
+    reason: "Unlocks AS-002/AS-004/AS-005; currently absent from feature_contract and lib."
+  - item: "Surface same_candle_ambiguity to SimulationOutput ActionOutcome (simulation-side) and fix NO_TRADE AMBIGUOUS branch to match no_trade_quality.md."
+    severity: "medium"
+    reason: "Same-candle-ambiguous labels cannot be filtered by AlphaForge; NO_TRADE quality diverges from its spec."
+  - item: "Reconcile model_artifact_contract model family with V7 DEC-004 (XGBoost-first)."
+    severity: "low"
+    reason: "V7 locks XGBoost-first (profitability_thesis.md:250) but AlphaForge model_artifact_contract defers model family."
+can_defer:
+  - item: "Funding cost model (DEFERRED) — proper hold; blocks AS-006 and perp/live scope until implemented."
+  - item: "Monte Carlo + adapters (doc-only) — not needed for first research."
+  - item: "MACD / Bollinger / volume / OBV / VWAP / ADX lib primitives — build in P0.9B as needed."
+  - item: "market_beta / funding_proxy features — defer until funding model / cross-sectional layer."
+  - item: "G7-G10 shadow/paper/tiny-live/live infrastructure — far future."
+  - item: "Per-symbol / per-regime calibration — V7 defers to first-phase (global-within-scope)."
+  - item: "SCALP/AGGRESSIVE_SCALP numeric promotion thresholds — stay HOLD until empirical evidence."
+recommended_next_prompt:
+  id: "V7-P0_8E-ALPHAFORGE-PROFITABILITY-CONTRACT-PATCH"
+  title: "P0.8E — AlphaForge Profitability Contract / Docs Targeted Patch"
+  reason: >
+    Verdict is READY_FOR_P0_9A_AFTER_TARGETED_PATCH. Two CRITICAL contradictions
+    (gate mapping, timeframe stacks) and HIGH schema-looseness / label-schema /
+    validation-alignment / MHT gaps must be patched before P0.9A scaffold and
+    fixture validators bake in the wrong contracts. P0.8E is a docs+contract
+    patch only (no source implementation, no model training, no threshold
+    locking). After P0.8E owner review + green CI, proceed to P0.9A.
+  scope: >
+    Patch (read+edit, no source code): (1) renumber v7_gate_mapping to V7
+    evaluation.md G0-G10 across v7_handoff_package.schema.json,
+    v7_handoff_package_minimal.json, handoff_to_v7.md, alphaforge_to_v7.md;
+    (2) fix timeframe stacks in data_contract.md, feature_contract.md, 3 mode
+    fixtures to simulation profiles; (3) tighten mode_research_report,
+    v7_handoff_package, validation_report nested required; (4) enforce 3 modes
+    + verdict coupling in alphaforge_research_report; (5) complete
+    AlphaForgeLabel schema + simulation_to_alphaforge.json; (6) align
+    validation_contract to V7 gates + add MHT control; (7) mark 2 legacy
+    combined docs SUPERSEDED. Preserve all holds (funding DEFERRED,
+    SCALP/AGGR_SCALP HOLD, SWING LOCKED_INITIAL_BASELINE). Produce ACCP-YAML
+    report + update roadmap.md.
+commands_run:
+  - command: "git status --short"
+    exit_code: 0
+    result_summary: "Working tree shows pre-existing P0.8B/C edits (M README.md, ai_summary.md, contracts/registry.json, contracts/compatibility.json, v7/docs/*; ?? alphaforge/docs/*, contracts/schemas/alphaforge/, contracts/fixtures/alphaforge/, contracts/mappings/*, reports/p0_7e+p0_8a+p0_8b+p0_8c accp.yaml). No source/contract/doc files modified by this audit."
+  - command: "find alphaforge/docs -maxdepth 1 -type f | sort"
+    exit_code: 0
+    result_summary: "15 docs (13 canonical + ai_summary__v7_alphaforge_xgb.md 625KB + phase_plans_combined.md 578KB legacy)."
+  - command: "find contracts/schemas/alphaforge -maxdepth 1 -type f | sort"
+    exit_code: 0
+    result_summary: "10 schemas (alpha_candidate, alphaforge_research_report, alpha_thesis, calibration_candidate, feature_set_spec, label_dataset_spec, model_artifact, mode_research_report, v7_handoff_package, validation_report). AlphaForgeLabel is at contracts/schemas/alphaforge_label.schema.json (top-level, not under alphaforge/)."
+  - command: "find contracts/fixtures/alphaforge -maxdepth 1 -type f | sort"
+    exit_code: 0
+    result_summary: "5 fixtures (scalp/aggressive_scalp/swing mode research reports, alphaforge_research_report_minimal, v7_handoff_package_minimal)."
+  - command: "find contracts/mappings -maxdepth 1 -type f | sort"
+    exit_code: 0
+    result_summary: "4 files (alphaforge_to_v7.md, simulation_to_alphaforge.md, simulation_to_alphaforge.json, simulation_to_v7.json)."
+  - command: "PYTHONPATH=. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+    exit_code: 0
+    result_summary: "20 passed. Registry existence + JSON-parse + schema parity for the 4 original contracts. NOTE: the 10 new AlphaForge schemas have NO parity/fixture-conformance coverage; no jsonschema.validate."
+  - command: "PYTHONPATH=. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+    exit_code: 0
+    result_summary: "6 passed, 0 failed, 3 skipped. Domain boundaries intact; AlphaForge has no direct runtime/interface integration."
+  - command: "PYTHONPATH=. python3 -m pytest simulation/tests/ -q"
+    exit_code: 0
+    result_summary: "5 passed. Only SWING golden tests; SCALP/AGGRESSIVE_SCALP untested in simulation."
+  - command: "PYTHONPATH=. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+    exit_code: 0
+    result_summary: "205 passed, 0 failed, 3 skipped. Full local suite green (binance test ignored)."
+  - command: "ls contracts/schemas/ + alphaforge_label existence + alphaforge/docs/schemas/label_schema_v1.json + alphaforge/src + alphaforge/tests"
+    exit_code: 0
+    result_summary: "alphaforge_label.schema.json EXISTS (2.9K) + fixture EXISTS; registry source_authority alphaforge/docs/schemas/label_schema_v1.json EXISTS (879B) — duplication drift risk; alphaforge/src is .gitkeep only (no implementation); NO alphaforge/tests/ directory."
+evidence_index:
+  - id: "EV-001"
+    file_path: "contracts/mappings/alphaforge_to_v7.md:18-27"
+    finding: "AlphaForge maps cost_stress->G5 Cost Resilience, calibration->G8, no_trade->G9 No-Trade Baseline, paper/shadow->G10 — does not match V7 evaluation.md gates."
+    confidence: "high"
+  - id: "EV-002"
+    file_path: "v7/docs/pipeline/evaluation.md:184-196"
+    finding: "V7 authoritative gates: G0 DOC_READY, G3 COST_STRESS (SCALP >=0.10R), G4 REGIME_BREAKDOWN (TREND_UP/DOWN/RANGE/TRANSITION), G5 SYMBOL_STABILITY (40%/60%), G6 CALIBRATION_RELIABILITY, G7 SHADOW, G8 PAPER, G9 TINY_LIVE, G10 LIVE."
+    confidence: "high"
+  - id: "EV-003"
+    file_path: "contracts/schemas/alphaforge/v7_handoff_package.schema.json:54-70"
+    finding: "v7_gate_mapping keys G5_cost_resilience, G8_calibration, G9_no_trade_baseline, G10_paper_shadow encode the WRONG numbering into the schema; sub-fields optional -> empty {} passes."
+    confidence: "high"
+  - id: "EV-004"
+    file_path: "simulation/docs/profiles.md:26,68,112"
+    finding: "Simulation profiles: SWING primary 4h, SCALP primary 1h, AGGRESSIVE_SCALP primary 15m."
+    confidence: "high"
+  - id: "EV-005"
+    file_path: "alphaforge/docs/data_contract.md:116-119 + feature_contract.md:161-176 + contracts/fixtures/alphaforge/scalp_mode_research_report_minimal.json:13 + aggressive_scalp fixture:13"
+    finding: "AlphaForge says SCALP 1m/5m, AGGRESSIVE_SCALP 1m/3m/5m, SWING 1h/4h primary — contradicts simulation profiles + V7 thesis (EV-004, EV-006)."
+    confidence: "high"
+  - id: "EV-006"
+    file_path: "v7/docs/profitability_thesis.md:118-120,216"
+    finding: "V7 thesis: SWING 4h, SCALP 1h, AGGRESSIVE_SCALP 15m; gate sequence G0_DOC_READY..G10_LIVE."
+    confidence: "high"
+  - id: "EV-007"
+    file_path: "contracts/schemas/alphaforge/mode_research_report.schema.json:124-184"
+    finding: "cost_stress/no_trade_comparison/regime_breakdown/metrics/data_scope/validation_summary sub-objects have NO nested required — empty-payload report passes."
+    confidence: "high"
+  - id: "EV-008"
+    file_path: "contracts/schemas/alphaforge/alphaforge_research_report.schema.json:35-48 + mode_research_report.schema.json:186-190"
+    finding: "mode_reports items require only mode/report_id/verdict (no minItems=3, no all-modes constraint); verdict enum merges primary+secondary verdicts."
+    confidence: "high"
+  - id: "EV-009"
+    file_path: "contracts/schemas/alphaforge_label.schema.json:7-17 + alphaforge/docs/label_contract.md:52-61 + contracts/mappings/simulation_to_alphaforge.md:57 + simulation_to_alphaforge.json:8-81"
+    finding: "AlphaForgeLabel schema required only net R + best_action + validity; omits gross R, cost components, no_trade_quality that label_contract + .md mapping claim; .json mapping is a 12-field subset of the .md."
+    confidence: "high"
+  - id: "EV-010"
+    file_path: "integration/tests/test_contract_registry.py:40-65,85-96 + test_schema_parity.py:87-202"
+    finding: "No dedicated AlphaForge fixture/schema validation tests; no jsonschema.validate anywhere; schema parity only covers 4 original contracts; registry test only asserts 4 original by name."
+    confidence: "high"
+  - id: "EV-011"
+    file_path: "simulation/engine/costs.py:32-90 + engine.py:40-46"
+    finding: "R-normalized fee_cost_r/slippage_cost_r/total_cost_r implemented and wired; realized_r_net = gross - total_cost_r; NO funding term (funding DEFERRED)."
+    confidence: "high"
+  - id: "EV-012"
+    file_path: "simulation/contracts/models.py:136-200 + contracts/schemas/simulation_output.schema.json:97-192"
+    finding: "SimulationOutput/ActionOutcome/NoTradeOutcome/PathMetrics fields verified present (gross/net/cost/mfe/mae/no_trade_quality/best_action/is_ambiguous/resolution_status); same_candle_ambiguity NOT on ActionOutcome."
+    confidence: "high"
+  - id: "EV-013"
+    file_path: "simulation/engine/exits.py:22 + engine.py:62-75,96-104"
+    finding: "same_candle_ambiguity computed on ExitResult but not propagated to ActionOutcome; NO_TRADE AMBIGUOUS branch diverges from no_trade_quality.md spec."
+    confidence: "high"
+  - id: "EV-014"
+    file_path: "simulation/tests/golden/test_swing_golden.py"
+    finding: "Only SWING golden tests exist; SCALP/AGGRESSIVE_SCALP profiles never instantiated in simulation tests."
+    confidence: "high"
+  - id: "EV-015"
+    file_path: "alphaforge/docs/validation_contract.md:47-53,99-104,113-130,134-146"
+    finding: "AlphaForge validation: 5/3 folds vs V7 6; HIGH_VOL_* regime taxonomy vs V7 TREND; qualitative symbol stability vs V7 40%/60%; fee+slippage stress vs V7 +spread+funding; overfit flags lack MHT/data-snooping."
+    confidence: "high"
+  - id: "EV-016"
+    file_path: "lib/market_data/binance/market_data_service.py:41 + quality.py:18-34 + client.py:50,75"
+    finding: "lib market_data is single-symbol klines+funding only; no cross-sectional/UTC-grid/survivorship/delisting handling; no order-book/depth/spread endpoint."
+    confidence: "high"
+  - id: "EV-017"
+    file_path: "alphaforge/docs/discovery_authority.md:57-71,104-122 + decision_log.md DEC-AF-001/004/006 + handoff_to_v7.md:86-98"
+    finding: "Authority LOCKED and clean: AlphaForge discovers, V7 decides, Simulation measures; forbidden trade commands/live orders/cost bypass; V7 final authority. No authority confusion."
+    confidence: "high"
+  - id: "EV-018"
+    file_path: "contracts/fixtures/alphaforge/scalp_mode_research_report_minimal.json:64-91 + alphaforge_research_report_minimal.json:34-41 + v7_handoff_package_minimal.json:23,36"
+    finding: "Fixtures are honest dummies: NO_TRADE dominates, zero metrics, CONTINUE_RESEARCH/BASELINE_WEAK, REVIEW_REQUIRED, explicit 'do not interpret as real research'. No fake profitability."
+    confidence: "high"
+  - id: "EV-019"
+    file_path: "alphaforge/docs/ai_summary__v7_alphaforge_xgb.md (625KB, lines 1-45) + phase_plans_combined.md (578KB, lines 1-45)"
+    finding: "Two legacy pre-authority-lock combined docs with stale src/v7/alpha paths; 'ai_summary'-named 625KB file risks confusion with the thin hub; not in the canonical 13."
+    confidence: "high"
+  - id: "EV-020"
+    file_path: "reports/p0_8b_c_alphaforge_combined_completion.accp.yaml:233 + reports/p0_8c_alphaforge_reaudit.accp.yaml:121-130"
+    finding: "Prior report overstatement: '5 fixtures all valid against their schemas' is unverified (no jsonschema.validate); A9 implies new schemas have parity coverage which they do not."
+    confidence: "high"
+  - id: "EV-021"
+    file_path: "v7/docs/profitability_thesis.md:69-74,148-152,250 + alphaforge/docs/model_artifact_contract.md:142"
+    finding: "V7 names 3 alpha hypotheses (ALTCOIN_DELAY, VOLATILITY_COMPRESSION, FUNDING_DIVERGENCE) with required features; V7 DEC-004 locks XGBoost-first but AlphaForge model_artifact_contract defers model family."
+    confidence: "high"
+  - id: "EV-022"
+    file_path: ".github/workflows/ci.yml:29-36 + Makefile:64-71"
+    finding: "CI runs check-contracts + check-boundaries + pytest lib/integration/simulation; Makefile test-all omits simulation/tests/ (drift vs CI/CLAUDE.md)."
+    confidence: "high"

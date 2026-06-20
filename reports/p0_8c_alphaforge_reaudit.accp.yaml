@@ -1,0 +1,229 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report_type: "reaudit"
+result:
+  id: "V7-P0_8C-ALPHAFORGE-REAUDIT"
+  status: "PASS"
+  summary: >
+    AlphaForge discovery authority re-audit completes with LOCKABLE_WITH_HOLDS.
+    All 10 audit dimensions pass. Authority boundary is clear. All required docs,
+    schemas, fixtures, and mappings exist. AI navigability is verified. Contract
+    registry and all test suites pass. No P0 blockers remain. Ready for P0.9A
+    implementation scaffold.
+
+updated_verdict: "LOCKABLE_WITH_HOLDS"
+updated_score: 8.5
+
+audit_matrix:
+- id: "A1"
+  name: "Authority Boundary"
+  score_10: 10
+  status: "PASS"
+  findings:
+  - "AlphaForge owns discovery, not trade decision — explicit in discovery_authority.md"
+  - "V7 remains final authority — explicit in handoff_to_v7.md DEC-AF-006"
+  - "Simulation remains economic truth — explicit in label_contract.md, DEC-AF-005"
+  - "Runtime remains execution lifecycle — no AlphaForge/runtime coupling"
+  - "Domain boundaries from CLAUDE.md respected in all docs"
+
+- id: "A2"
+  name: "Mode Priority Alignment"
+  score_10: 10
+  status: "PASS"
+  findings:
+  - "SCALP PRIMARY — business and research priority preserved"
+  - "AGGRESSIVE_SCALP PRIMARY — business and research priority preserved"
+  - "SWING SECONDARY_BASELINE — control mode classification preserved"
+  - "HOLD semantics preserved for SCALP/AGGRESSIVE_SCALP"
+  - "LOCKED_INITIAL_BASELINE preserved for SWING"
+  - "Mode priority reflected in all 13 docs, schemas, and fixtures"
+
+- id: "A3"
+  name: "Data and Storage"
+  score_10: 9
+  status: "PASS"
+  findings:
+  - "5 data layers defined: raw, normalized, feature, label, manifest"
+  - "Large datasets explicitly excluded from repo per storage_policy.md"
+  - "Manifest/checksum/lineage requirements in all data-related docs"
+  - "Checksum fields required in schemas"
+  gap: "Actual data pipeline not yet implemented (expected at P0.9B)"
+
+- id: "A4"
+  name: "Feature and Label Contracts"
+  score_10: 9
+  status: "PASS"
+  findings:
+  - "FeatureSetSpec schema exists with 9 feature groups, leakage policy"
+  - "LabelDatasetSpec schema exists with cost-aware fields, funding status"
+  - "SimulationOutput mapping documented in simulation_to_alphaforge.md"
+  - "No future leakage policy enforced via FeatureSetSpec.leakage_policy"
+  - "Forbidden future-looking features explicit in feature_contract.md"
+  gap: "Actual feature/label computation code not yet implemented"
+
+- id: "A5"
+  name: "Report Contracts"
+  score_10: 9
+  status: "PASS"
+  findings:
+  - "ModeResearchReport schema exists with 13 required sections"
+  - "AlphaForgeResearchReport schema exists with aggregate structure"
+  - "SCALP fixture exists (primary_research_report, CONTINUE_RESEARCH)"
+  - "AGGRESSIVE_SCALP fixture exists (primary_research_report, CONTINUE_RESEARCH)"
+  - "SWING fixture exists (secondary_baseline_report, BASELINE_WEAK)"
+  - "All fixtures are marked as dummy examples — no fake empirical claims"
+  - "Verdict system documented: REJECT, CONTINUE_RESEARCH, CANDIDATE_FOR_V7_GATES, BASELINE_VALID, BASELINE_WEAK"
+  gap: "No real research reports exist yet (expected at P0.9C)"
+
+- id: "A6"
+  name: "Validation and Model Artifact"
+  score_10: 9
+  status: "PASS"
+  findings:
+  - "ValidationReport schema exists with split policy, walk-forward, OOS, cost stress, regimes"
+  - "ModelArtifact schema exists with artifact_uri (not binary-in-repo), checksum"
+  - "CalibrationCandidate schema exists with ECE, MCE, confidence bins"
+  - "No model binaries in repo — verified"
+  - "Overfit risk flags defined: train/OOS gap, fold instability, feature/sample ratio"
+  gap: "No real validation or models exist yet (expected at P0.9B+)"
+
+- id: "A7"
+  name: "V7 Handoff"
+  score_10: 9
+  status: "PASS"
+  findings:
+  - "V7HandoffPackage schema exists with full gate mapping (G0-G10)"
+  - "alphaforge_to_v7.md mapping doc exists with per-gate evidence mapping"
+  - "V7 gate mapping structured: each gate references specific evidence"
+  - "V7 final authority preserved — explicit in handoff_to_v7.md and mapping doc"
+  - "Rejection rules documented: 12 explicit rejection conditions"
+  - "Handoff fixture exists with REVIEW_REQUIRED status"
+  gap: "No real handoff packages exist yet (expected at P1.0)"
+
+- id: "A8"
+  name: "AI Navigability"
+  score_10: 9
+  status: "PASS"
+  findings:
+  - "ai_summary.md exists and functions as thin hub (1-2 minute read)"
+  - "All 13 AlphaForge docs linked from ai_summary.md"
+  - "All contract schemas, fixtures, mappings linked from ai_summary.md"
+  - "All new docs have Purpose, Authority, Consumes, Produces, Related docs sections"
+  - "Cross-domain links: alphaforge ← simulation, alphaforge ← contracts, alphaforge → v7"
+  - "Root/v7 docs updated with AlphaForge references (roadmap, evaluation, README)"
+  gap: "Some pre-existing AlphaForge docs (phase_plans, execution_contracts) remain in legacy structure alongside new docs"
+
+- id: "A9"
+  name: "Contract Registry and Tests"
+  score_10: 9
+  status: "PASS"
+  findings:
+  - "registry.json updated: 4→14 contract entries"
+  - "compatibility.json updated: 3→8 compatibility rules"
+  - "All 10 new schemas registered with owner_domain: alphaforge"
+  - "All fixtures referenced in registry where applicable"
+  - "Contract registry tests: 20 passed"
+  - "Schema parity tests: all passed"
+  - "Import boundary tests: 6 passed, 3 skipped"
+  - "Simulation tests: 5 passed (no regression)"
+  - "No existing tests broken"
+  gap: "Fixtures are validated by schema structure but not by dedicated fixture-validation tests"
+
+- id: "A10"
+  name: "Implementation Readiness"
+  score_10: 8
+  status: "PASS"
+  findings:
+  - "Implementation still not started — alphaforge/src/.gitkeep only"
+  - "Next implementation steps clear (P0.9A scaffold → P0.9B pipeline → P0.9C reports → P1.0 handoff)"
+  - "Blocked scopes explicit in all docs and fixtures"
+  - "Phase plan defines implementation sequence"
+  - "Decision log records all locked decisions"
+  gap: "No source scaffolding exists yet (expected at P0.9A)"
+
+closed_gaps:
+- "Missing AlphaForge authority boundary → EXPLICITLY LOCKED in discovery_authority.md"
+- "Missing report-level contracts → 10 SCHEMAS CREATED"
+- "Missing minimal fixtures → 5 FIXTURES CREATED"
+- "Missing simulation→alphaforge mapping doc → CREATED"
+- "Missing alphaforge→v7 mapping doc → CREATED"
+- "Missing ai_summary thin hub → CREATED"
+- "Missing data/feature/label/report/validation/model/handoff/storage docs → ALL CREATED"
+- "Missing registry entries → 10 ENTRIES ADDED"
+- "Missing compatibility rules → 5 RULES ADDED"
+
+remaining_holds:
+- id: "HOLD-SCALP-THRESHOLDS"
+  title: "SCALP Thresholds Not Lockable"
+  reason: "No empirical evidence from primary research exists"
+  release_condition: "SCALP primary research report with real validation data"
+  severity: "expected"
+- id: "HOLD-AGGRESSIVE-SCALP-THRESHOLDS"
+  title: "AGGRESSIVE_SCALP Thresholds Not Lockable"
+  reason: "No empirical evidence from primary research exists"
+  release_condition: "AGGRESSIVE_SCALP primary research report with real validation data"
+  severity: "expected"
+- id: "HOLD-FUNDING-DEFERRED"
+  title: "Funding Cost Model DEFERRED"
+  reason: "Funding model not implemented in simulation"
+  release_condition: "Implementation of funding cost model in simulation engine"
+  severity: "expected"
+- id: "HOLD-SWING-RECALIBRATION"
+  title: "SWING Thresholds Need Recalibration"
+  reason: "LOCKED_INITIAL_BASELINE requires first walk-forward to confirm"
+  release_condition: "First SWING walk-forward validation complete"
+
+remaining_blockers:
+- blocker: "none"
+  severity: "none"
+  detail: "No P0 blockers. All remaining holds are expected and scoped."
+
+commands_run:
+- command: "git diff --name-only"
+  exit_code: 0
+  result_summary: "Verified changed files scope — no source code in lib/simulation/v7/runtime/interface modified"
+- command: "find alphaforge/docs -maxdepth 2 -type f | sort"
+  exit_code: 0
+  result_summary: "AlphaForge docs inventory complete — 13 new authority docs confirmed"
+- command: "find contracts/schemas/alphaforge -maxdepth 1 -type f | sort"
+  exit_code: 0
+  result_summary: "10 AlphaForge schemas confirmed"
+- command: "find contracts/fixtures/alphaforge -maxdepth 1 -type f | sort"
+  exit_code: 0
+  result_summary: "5 AlphaForge fixtures confirmed"
+- command: "find contracts/mappings -maxdepth 1 -type f | sort"
+  exit_code: 0
+  result_summary: "4 mapping files (2 json + 2 md) confirmed"
+- command: "pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+  exit_code: 0
+  result_summary: "20 passed — registry and schema parity tests pass"
+- command: "pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+  exit_code: 0
+  result_summary: "6 passed, 3 skipped — import boundary tests pass"
+- command: "pytest simulation/tests/ -q"
+  exit_code: 0
+  result_summary: "5 passed — simulation tests pass (no regression)"
+
+evidence_index:
+- "13 AlphaForge authority docs exist and are cross-linked"
+- "10 JSON schemas exist under contracts/schemas/alphaforge/"
+- "5 minimal fixtures exist under contracts/fixtures/alphaforge/"
+- "2 mapping docs exist under contracts/mappings/"
+- "contracts/registry.json expanded from 4 to 14 entries"
+- "contracts/compatibility.json expanded from 3 to 8 rules"
+- "All 3 test suites pass (31 passed total)"
+- "No source code modified or created"
+- "No large data or model binaries added"
+- "All mode priority HOLDs preserved"
+- "Funding DEFERRED hold preserved"
+- "Cross-doc link graph connected and navigable"
+
+safe_next_step:
+  id: "V7-P0_9A-ALPHAFORGE-IMPLEMENTATION-SCAFFOLD"
+  title: "P0.9A — AlphaForge Implementation Scaffold"
+  rationale: >
+    Authority verdict is LOCKABLE_WITH_HOLDS. No P0 blockers.
+    All docs, schemas, fixtures, and mappings are in place.
+    Next: create source package structure, contract readers,
+    report writer interfaces, and fixture validation tests
+    without training real models yet.

@@ -5,11 +5,12 @@
 This is the **repo-root entry point** for any AI agent or LLM code agent loading into `/home/erfolg/src/v7-engine/`. It is NOT a dense synthesis. It is a **thin map** that tells you which subsystem's `ai_summary.md` to read for your task, and provides cross-domain rules that span all subsystems.
 
 **Reading order for an AI:**
-1. Read this file first to orient yourself.
-2. Then read the ai_summary.md for the subsystem(s) you are working on.
-3. Return here for cross-domain conflict resolution.
+1. Read `CLAUDE.md` for working instructions (design lock semantics, task completion protocol, forbidden actions, domain boundaries).
+2. Read this file to orient yourself.
+3. Then read the ai_summary.md for the subsystem(s) you are working on.
+4. Return here for cross-domain conflict resolution.
 
-**If you read only one doc, read this one.** If this doc conflicts with a subsystem authority doc, the subsystem authority doc wins.
+**If you read only one doc, read `CLAUDE.md`.** It encodes how to work safely in this repo. If this doc conflicts with a subsystem authority doc, the subsystem authority doc wins.
 
 ---
 

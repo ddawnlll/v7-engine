@@ -127,6 +127,18 @@ Regime modifiers (from `v7_regime_aware_extensions.md`):
 | SCALP | 0.20R | -0.25R | ≥ 0.10R | not required |
 | AGGRESSIVE_SCALP | 0.10R | -0.10R | not required | ≤ 3 bars |
 
+### Mode Priority Model
+
+| Mode | Business Priority | Research Priority | Threshold Status | AlphaForge Report | Promotion Readiness |
+|------|------------------|-------------------|-----------------|-------------------|---------------------|
+| SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| AGGRESSIVE_SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| SWING | SECONDARY_BASELINE | SECONDARY_BASELINE | LOCKED_INITIAL_BASELINE | Secondary baseline report | Baseline ready; recalibration required after first evidence |
+
+**SCALP and AGGRESSIVE_SCALP are PRIMARY business/research modes.** V7's main profitability thesis is driven by shorter-term edge discovery, anomaly capture, and cost-aware fast reaction. SWING serves as a control/baseline anchor — it validates the architecture with lower risk but is not the primary product target.
+
+**HOLD on SCALP/AGGRESSIVE_SCALP means empirical research required, not low priority.** Fee, slippage, latency, and overfit risks make these modes harder to lock without evidence. Their HOLD status reflects research difficulty, not business importance.
+
 ---
 
 ## Alpha Hypothesis Mapping
@@ -247,7 +259,13 @@ G0_DOC_READY → G1_RESEARCH_BACKTEST → G2_WALK_FORWARD_OOS → G3_COST_STRESS
 - Regime-aware policy modifiers — see `DEC-013`.
 - Correlation-aware portfolio — see `DEC-014`.
 - Stop-before-target in same candle — see `DEC-015`.
-- SWING-first implementation order — see `DEC-016`.
+- SWING is secondary baseline / control mode with LOCKED_INITIAL_BASELINE thresholds — see `DEC-016`. SCALP and AGGRESSIVE_SCALP are PRIMARY business/research modes.
+- **DEC-024:** SCALP is a PRIMARY business/research mode — V7's main edge search targets shorter-term opportunities, anomaly capture, and cost-aware fast reaction.
+- **DEC-025:** AGGRESSIVE_SCALP is a PRIMARY business/research mode — high risk but potentially high edge density; requires empirical evidence before promotion.
+- **DEC-026:** SWING is SECONDARY_BASELINE / CONTROL mode — locked first because it is safer and easier to baseline, not because it is the primary product.
+- **DEC-027:** HOLD on SCALP/AGGRESSIVE_SCALP means "empirical research required" — not "low priority."
+- **DEC-028:** AlphaForge must produce primary research reports for SCALP and AGGRESSIVE_SCALP, and a secondary baseline/control report for SWING.
+- **DEC-029:** Promotion-readiness and research-priority are independent dimensions. SWING is more promotion-ready; SCALP/AGGRESSIVE_SCALP have higher business/research priority.
 - SWING promotion thresholds are LOCKED_INITIAL_BASELINE (owner-reviewed, recalibratable baselines) — see `DEC-017`.
 - SCALP promotion thresholds remain HOLD until empirical evidence exists — see `DEC-018`.
 - AGGRESSIVE_SCALP promotion thresholds remain HOLD until empirical evidence exists — see `DEC-019`.

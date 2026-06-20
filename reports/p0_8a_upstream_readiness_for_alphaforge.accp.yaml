@@ -1,0 +1,364 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_8A-UPSTREAM-READINESS-RESULT"
+  status: "PASS_WITH_HOLDS"
+  summary: >
+    Upstream readiness audit complete across 6 dimensions. Lib foundation (8/10),
+    Simulation (8/10), V7 Acceptance (9/10), and CI (7/10) are ready with minor holds.
+    Contracts (6/10) missing report-level schemas but these are definable in the next
+    authority-lock prompt. AlphaForge (5/10) has comprehensive docs but no implementation
+    and needs authority lock. Overall verdict: READY_WITH_HOLDS_FOR_ALPHAFORGE_AUTHORITY_LOCK.
+    All 205 tests pass locally, no source code changes.
+
+scope_confirmation:
+  docs_patch_only: true
+  source_code_changed: false
+  domain_code_changed: false
+  alphaforge_implementation_done: false
+  simulation_changed: false
+  lib_changed: false
+  contracts_changed: false
+  ci_changed: false
+  tests_executed: true
+
+executive_summary: >
+  After correcting mode priority semantics (P0.7E), the upstream foundation is
+  ready for AlphaForge Discovery Authority Lock. Lib provides sufficient primitives
+  for all-mode research. Simulation produces cost-honest economic truth including
+  LONG/SHORT/NO_TRADE outcomes, MFE/MAE/path metrics, and no-trade quality.
+  Core contracts (SimulationProfile, SimulationOutput, AlphaForgeLabel, TradeOutcome)
+  exist with schemas, fixtures, mappings, and compatibility rules. V7 acceptance
+  framework is clear with G0-G10 gates and per-mode lock/priority semantics.
+  AlphaForge has comprehensive ai_summary docs but no implementation — authority
+  lock is the correct next step. 205 tests pass (0 fail, 3 skipped).
+
+readiness_verdict:
+  verdict: "READY_WITH_HOLDS_FOR_ALPHAFORGE_AUTHORITY_LOCK"
+  confidence: "high"
+  rationale: >
+    Mode priority corrected. AlphaForge docs authority can be locked next.
+    All-mode report contracts can be defined in the authority-lock prompt.
+    Holds are explicit and do not block authority lock.
+
+readiness_matrix:
+  - area: "lib"
+    status: "READY_WITH_HOLDS"
+    score_10: 8
+    blockers: []
+    holds:
+      - "Missing dedicated AlphaForge feature engineering primitives (cross-sectional momentum, BTC correlation, divergence detectors) — but these can be built during implementation"
+  - area: "simulation"
+    status: "READY_WITH_HOLDS"
+    score_10: 8
+    blockers: []
+    holds:
+      - "Funding DEFERRED blocks perp scope"
+      - "SCALP/AGGRESSIVE_SCALP cost-path sensitivity needs empirical validation before promotion-grade research"
+  - area: "contracts"
+    status: "READY_WITH_HOLDS"
+    score_10: 6
+    blockers: []
+    holds:
+      - "Missing AlphaForgeResearchReport, ModeResearchReport, ModelArtifact, ValidationReport, CalibrationCandidate contracts — definable in next authority-lock prompt"
+  - area: "v7_acceptance"
+    status: "READY"
+    score_10: 9
+    blockers: []
+    holds: []
+  - area: "alphaforge_current"
+    status: "READY_WITH_HOLDS"
+    score_10: 5
+    blockers: []
+    holds:
+      - "No implementation (expected — authority lock before implementation)"
+      - "ai_summary needs mode priority alignment to V7 P0.7E"
+      - "No dedicated ai_summary.md (thin hub) — 20K+ line monolithic doc"
+  - area: "ci"
+    status: "READY_WITH_HOLDS"
+    score_10: 7
+    blockers: []
+    holds:
+      - "CI_FIRST_GREEN_RUN_HOLD still active"
+      - "No AlphaForge CI targets yet (contracts + boundary checks for alphaforge domain)"
+
+lib_readiness:
+  readiness_status: "READY_WITH_HOLDS"
+  score_10: 8
+  file_count: 36
+  primitives_available:
+    - "ATR indicators (atr.py)"
+    - "Returns indicators (returns.py)"
+    - "Volatility indicators (volatility.py)"
+    - "RSI indicators (rsi.py)"
+    - "Candle geometry (candle.py)"
+    - "Momentum/ROC (momentum.py)"
+    - "Rolling/window extensions (rolling.py)"
+    - "Fee calculation (costs/fees.py)"
+    - "Slippage calculation (costs/slippage.py)"
+    - "R-normalized costs (costs/r_costs.py)"
+    - "Time interval utilities (time/intervals.py)"
+    - "Walk-forward fold utilities (time/folds.py)"
+    - "Market data contracts (market_data/contracts.py)"
+    - "Market data quality (market_data/quality.py)"
+    - "Binance klines service (market_data/binance/klines_service.py)"
+    - "Binance funding service (market_data/binance/funding_service.py)"
+  missing_primitives:
+    - "Cross-sectional momentum (BTC/altcoin return correlation) — needed for ALTCOIN_DELAY"
+    - "Divergence detectors (funding/spot divergence) — needed for FUNDING_DIVERGENCE"
+    - "Breakout detection (volatility compression breakout) — needed for VOLATILITY_COMPRESSION"
+  blocking_gaps: []
+  note: >
+    Missing primitives are alpha-specific, not foundation-blocking. They can be built
+    during AlphaForge implementation under the discovery authority. Lib foundation
+    provides all basic building blocks needed for research report design.
+  evidence_refs:
+    - "lib/ — 36 .py files across indicators, costs, market_data, time"
+    - "lib/tests/test_import_boundary.py — 4 passed"
+    - "lib/tests/ — 13 test files"
+    - "lib/docs/README.md — 2.5K, market_data.md — 1.5K"
+
+simulation_readiness:
+  readiness_status: "READY_WITH_HOLDS"
+  score_10: 8
+  safe_scope:
+    - "SWING baseline labels — fully supported"
+    - "SCALP research labels — supported with cost sensitivity note"
+    - "AGGRESSIVE_SCALP research labels — supported with cost sensitivity note"
+  alpha_label_readiness:
+    can_produce_label_truth:
+      - "LONG_NOW realized_r_gross, realized_r_net ✓"
+      - "SHORT_NOW realized_r_gross, realized_r_net ✓"
+      - "NO_TRADE quality (saved_loss, missed_opportunity, classification) ✓"
+      - "Best action selection (LONG_NOW / SHORT_NOW / NO_TRADE / AMBIGUOUS_STATE) ✓"
+      - "Action gap (for ambiguity detection) ✓"
+      - "Regret ✓"
+      - "Exit reason (STOP_HIT, TARGET_HIT, TIME_EXIT, HORIZON_END, UNRESOLVED, INVALIDATED) ✓"
+      - "MFE/MAE/path metrics (mfe_r, mae_r, time_to_mfe, path_quality) ✓"
+      - "Cost decomposition (fee_cost_r, slippage_cost_r, total_cost_r) ✓"
+      - "Lineage (simulation versions, profile version, cost model version) ✓"
+    missing_label_features:
+      - "Funding cost applied to realized_r_net — DEFERRED"
+      - "Order book analysis for AGGRESSIVE_SCALP — Phase 3, not needed now"
+  blocked_scopes:
+    - scope: "Perpetual swap trading"
+      blocked_by: "Funding cost model DEFERRED"
+      impact: "Blocks FUNDING_DIVERGENCE alpha promotion for perps; spot trading unaffected"
+  must_fix_before_alphaforge_implementation: []
+  evidence_refs:
+    - "simulation/engine/engine.py — simulate() produces full SimulationOutput"
+    - "simulation/engine/exits.py — 6 exit families"
+    - "simulation/engine/costs.py — total_cost_r function"
+    - "simulation/contracts/models.py — SimulationInput/Output/Profile/ActionOutcome/NoTradeOutcome"
+    - "simulation/tests/golden/test_swing_golden.py — 5 golden tests pass"
+    - "simulation/tests/test_import_boundary.py — pass"
+    - "simulation/docs/profiles.md — SWING/SCALP/AGGRESSIVE_SCALP profiles"
+    - "simulation/docs/cost_model.md — fee + slippage + funding DEFERRED"
+
+contract_readiness:
+  readiness_status: "READY_WITH_HOLDS"
+  score_10: 6
+  existing_contracts:
+    - "SimulationProfile (schema, fixture) ✓"
+    - "SimulationOutput (schema, fixture) ✓"
+    - "AlphaForgeLabel (schema, fixture) ✓"
+    - "TradeOutcome (schema, fixture) ✓"
+  existing_mappings:
+    - "SimulationOutput → AlphaForgeLabel (simulation_to_alphaforge.json) ✓"
+    - "SimulationOutput → TradeOutcome (simulation_to_v7.json) ✓"
+  existing_compatibility:
+    - "compatibility.json with version rules for 2 pairs ✓"
+  existing_adapters:
+    - "integration/adapters/alphaforge_adapter.py (stub) ✓"
+    - "integration/adapters/simulation_adapter.py (stub) ✓"
+    - "integration/adapters/v7_adapter.py (stub) ✓"
+  missing_contracts_before_authority_lock:
+    - "AlphaForgeResearchReport — needed for authority lock (defines AlphaForge output)"
+    - "ModeResearchReport — needed for authority lock (defines per-mode report structure)"
+    severity: "high"
+    note: "These are definable in the next authority-lock prompt. They don't block starting the lock."
+  missing_contracts_before_implementation:
+    - "ModelArtifact — needed before training implementation"
+    - "ValidationReport — needed before evaluation implementation"
+    - "CalibrationCandidate — needed before calibration implementation"
+    severity: "medium"
+    note: "Can be defined during AlphaForge implementation phases."
+  evidence_refs:
+    - "contracts/registry.json — 4 registered contracts"
+    - "contracts/schemas/ — 4 JSON schemas"
+    - "contracts/fixtures/ — 4 minimal fixtures"
+    - "contracts/mappings/ — 2 mapping files"
+    - "contracts/compatibility.json — 2 compatibility pairs"
+
+v7_acceptance_readiness:
+  readiness_status: "READY"
+  score_10: 9
+  safe_mode_scope: "All three modes — with differentiated priority and lock status"
+  primary_research_modes:
+    - "SCALP — PRIMARY; HOLD (empirical evidence required)"
+    - "AGGRESSIVE_SCALP — PRIMARY; HOLD (empirical evidence required)"
+  secondary_baseline_modes:
+    - "SWING — SECONDARY_BASELINE; LOCKED_INITIAL_BASELINE"
+  locked_acceptance_surfaces:
+    - "G0-G10 promotion gate sequence"
+    - "Mandatory rejection rules (8 rules)"
+    - "Alpha thesis → mode mapping"
+    - "Mode priority matrix"
+    - "Per-mode promotion lifecycle (8 readiness states)"
+    - "SWING LOCKED_INITIAL_BASELINE thresholds (10 values with rationale)"
+    - "Mode-specific risk parameters (LOCK_CANDIDATE defaults)"
+  holds:
+    - "SCALP promotion thresholds HOLD"
+    - "AGGRESSIVE_SCALP promotion thresholds HOLD"
+    - "Funding DEFERRED blocks perp scope"
+  evidence_refs:
+    - "v7/docs/profitability_thesis.md — Mode Priority Model + DEC-024-029"
+    - "v7/docs/pipeline/evaluation.md — G0-G10 + Mode Priority Note"
+    - "v7/docs/roadmap.md — Mode Priority Alignment section"
+    - "v7/docs/v7_mode_centric_architecture.md — Section 8: Mode Priority Matrix"
+    - "v7/docs/runtime/runtime_integration.md — Per-Mode Promotion Lifecycle"
+
+alphaforge_current_state:
+  current_state: "Comprehensive docs exist; zero implementation"
+  authority_status: "NOT_LOCKED — needs P0.8B authority lock"
+  main_gap: >
+    No dedicated ai_summary.md (thin hub). Current ai_summary__v7_alphaforge_xgb.md is
+    20K+ lines — too large for efficient LLM context. Needs a thin hub with navigation
+    to authority docs. No mode priority awareness — docs predate P0.7E and assume
+    SWING-first without primary/secondary differentiation.
+  recommended_next_prompt_scope: >
+    P0.8B+C: Lock AlphaForge as anomaly discovery/research authority. Define all-mode
+    report contracts (SCALP primary research report, AGGRESSIVE_SCALP primary research
+    report, SWING secondary baseline report). Define Simulation → AlphaForge → V7
+    handoff, validation report schema, alpha thesis lifecycle, evidence gates.
+    Create thin hub ai_summary.md.
+  evidence_refs:
+    - "alphaforge/docs/ai_summary__v7_alphaforge_xgb.md — v1.2, 20K+ lines"
+    - "alphaforge/docs/phase_plans/ — P0-P9 phase plans exist"
+    - "alphaforge/docs/execution_contracts/ — P0-P9 execution contracts exist"
+    - "alphaforge/docs/schemas/ — feature/label/prediction schemas exist"
+    - "alphaforge/src/.gitkeep — no implementation"
+
+ci_readiness:
+  readiness_status: "READY_WITH_HOLDS"
+  score_10: 7
+  workflow_exists: true
+  workflow_path: ".github/workflows/ci.yml"
+  workflow_triggers:
+    - "push"
+    - "pull_request"
+  workflow_jobs:
+    - "make check-contracts"
+    - "make check-boundaries"
+    - "lib + integration + simulation tests"
+  first_green_run_verified: false
+  ci_holds:
+    - "CI_FIRST_GREEN_RUN_HOLD — GitHub run not yet verified as green"
+  local_test_status:
+    total: 208
+    passed: 205
+    failed: 0
+    skipped: 3
+    skip_reason: "binance tests (17) CI-only; cross-domain boundary skips (3)"
+  ci_extensions_needed_for_alphaforge:
+    - "AlphaForge contract checks (make check-contracts already covers registry)"
+    - "AlphaForge boundary checks (make check-boundaries already covers cross-domain)"
+    - "AlphaForge tests (add alphaforge/tests/ target when tests exist)"
+    note: >
+      CI already covers the cross-domain contract and boundary surface that AlphaForge
+      will use. Adding alphaforge-specific test target is straightforward when
+      implementation begins.
+  evidence_refs:
+    - ".github/workflows/ci.yml — 37 lines, push + PR triggers"
+    - "Makefile — check-contracts, check-boundaries, test-all targets"
+    - "205 passed, 0 failed, 3 skipped (local)"
+    - "reports/p0_7b_ci_enforcement.accp.yaml — CI enforcement report"
+
+safe_alphaforge_scope:
+  - scope: "AlphaForge Discovery Authority Lock"
+    reason: "All upstream foundations ready. Holds are explicit and scoped."
+  - scope: "All-mode report contract design (SCALP primary, AGGRESSIVE_SCALP primary, SWING secondary)"
+    reason: "V7 acceptance framework clear; can define what AlphaForge must produce."
+  - scope: "Thin hub ai_summary.md creation"
+    reason: "Current monolithic doc needs navigation hub for LLM efficiency."
+  - scope: "Simulation → AlphaForge → V7 handoff definition"
+    reason: "Core contracts exist; mappings defined; handoff semantics need authority lock."
+  - scope: "Alpha thesis lifecycle and evidence gates"
+    reason: "V7 G0-G10 gates provide the acceptance side; AlphaForge needs discovery-side gates."
+
+blocked_alphaforge_scope:
+  - scope: "Perpetual swap alpha research for live trading"
+    blocked_by: "Funding cost model DEFERRED"
+  - scope: "SCALP/AGGRESSIVE_SCALP promotion to paper/tiny-live/live"
+    blocked_by: "Empirical evidence required (HOLD)"
+  - scope: "AlphaForge implementation (source code)"
+    blocked_by: "Authority lock must come first (next prompt)"
+
+must_fix_before_alphaforge_authority_lock:
+  - item: "None — authority lock is safe to proceed"
+    severity: "none"
+    reason: "All holds are explicit, scoped, and non-blocking for authority lock"
+
+must_fix_before_alphaforge_implementation:
+  - item: "Define AlphaForgeResearchReport and ModeResearchReport contracts"
+    severity: "high"
+    reason: "Needed to define what AlphaForge produces before implementation begins"
+  - item: "Create thin hub ai_summary.md for AlphaForge"
+    severity: "medium"
+    reason: "Current 20K+ line doc is LLM-inefficient; thin hub improves agent quality"
+  - item: "Align AlphaForge docs to P0.7E mode priority semantics"
+    severity: "high"
+    reason: "AlphaForge docs currently assume SWING-first without primary/secondary differentiation"
+  - item: "Add AlphaForge CI targets when tests exist"
+    severity: "low"
+    reason: "CI already covers cross-domain contract/boundary surface"
+
+recommended_next_prompt:
+  id: "V7-P0_8B_C-ALPHAFORGE-DISCOVERY-AUTHORITY-LOCK-AND-REAUDIT"
+  title: "P0.8B+C — AlphaForge Discovery Authority Lock + Re-Audit"
+  scope: >
+    Lock AlphaForge as anomaly discovery/research authority. Define all-mode
+    report contracts (SCALP primary research report, AGGRESSIVE_SCALP primary
+    research report, SWING secondary baseline report). Define Simulation →
+    AlphaForge → V7 handoff, validation report schema, alpha thesis lifecycle,
+    evidence gates. Create thin hub ai_summary.md. Align to P0.7E mode priority
+    semantics. Run re-audit after locking.
+
+commands_run:
+  - command: "git diff --name-only"
+    exit_code: 0
+    result_summary: "5 docs modified + 1 runtime. No forbidden paths."
+  - command: "grep -rn 'SWING-first' v7/docs/"
+    exit_code: 0
+    result_summary: "No remaining SWING-first in active docs (only in historical research YAML and ai_summary which are read-only in this prompt)"
+  - command: "PYTHONPATH=. python3 -m pytest simulation/tests/ -q"
+    exit_code: 0
+    result_summary: "5 passed, 0 failed"
+  - command: "PYTHONPATH=. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+    exit_code: 0
+    result_summary: "20 passed (11 registry + 9 schema parity)"
+  - command: "PYTHONPATH=. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+    exit_code: 0
+    result_summary: "6 passed, 0 failed, 3 skipped"
+  - command: "PYTHONPATH=. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+    exit_code: 0
+    result_summary: "205 passed, 0 failed, 3 skipped"
+
+evidence_index:
+  - "P0.7E report — mode priority alignment confirmed"
+  - "lib/ — 36 .py files, 13 test files, indicators + costs + time + market_data"
+  - "simulation/engine/engine.py — full SimulationOutput with LONG/SHORT/NO_TRADE"
+  - "simulation/tests/golden/ — 5 golden tests pass"
+  - "contracts/registry.json — 4 contracts registered"
+  - "contracts/mappings/ — 2 mapping files (Simulation→AlphaForge, Simulation→V7)"
+  - "contracts/compatibility.json — version compatibility rules"
+  - "contracts/fixtures/ — 4 minimal fixtures"
+  - "alphaforge/docs/ — comprehensive docs exist, 20K+ line ai_summary, no implementation"
+  - ".github/workflows/ci.yml — push/PR triggers, contract+boundary+tests"
+  - "205 passed, 0 failed, 3 skipped (full local suite)"
+  - "V7 P0.7E mode priority patch — 5 docs corrected, no source code changed"
+  - "V7 profitability_thesis.md — Mode Priority Model + DEC-024-029"
+  - "V7 roadmap.md — Mode Priority Alignment section"
+  - "V7 v7_mode_centric_architecture.md — Section 8 Mode Priority Matrix"
+  - "V7 evaluation.md — Lock Semantics + Mode Priority Note"
+  - "V7 runtime_integration.md — Line 94 updated"

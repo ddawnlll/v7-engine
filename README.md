@@ -19,9 +19,9 @@ v7-engine/
 │   └── docs/         ← lib specifications and phase plans
 ├── simulation/       ← economic simulation truth authority
 │   └── docs/         ← vision, architecture, contracts, profiles, phases
-├── alphaforge/       ← training/research authority
-│   ├── src/          ← AlphaForge source code
-│   └── docs/         ← master documentation, phase plans, contracts
+├── alphaforge/       ← anomaly discovery / alpha research authority
+│   ├── src/          ← AlphaForge source code (not yet implemented)
+│   └── docs/         ← authority docs, contracts, phase plans (ai_summary.md hub)
 ├── v7/               ← V7 semantic/runtime/policy authority
 │   └── docs/         ← V7 specifications, contracts, architecture
 ├── runtime/          ← Python backend (imported from v4, migrated to v7)
