@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/alphaforge/calibration_candidate.schema.json",
+  "title": "CalibrationCandidate",
+  "description": "Calibration assessment for a model's probability/confidence outputs. Documents calibration method, metrics, and bin-level reliability. Owned by AlphaForge.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "calibration_candidate_id",
+    "mode",
+    "model_artifact_id",
+    "calibration_method",
+    "calibration_metrics",
+    "confidence_bins",
+    "limitations",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "calibration_candidate_id": {
+      "type": "string",
+      "description": "Unique calibration candidate identifier."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"]
+    },
+    "model_artifact_id": {
+      "type": "string",
+      "description": "Associated ModelArtifact ID."
+    },
+    "calibration_method": {
+      "type": "string",
+      "enum": ["isotonic", "platt", "beta", "sigmoid", "none"],
+      "description": "Calibration method applied."
+    },
+    "calibration_metrics": {
+      "type": "object",
+      "required": ["expected_calibration_error", "maximum_calibration_error"],
+      "properties": {
+        "expected_calibration_error": { "type": "number", "description": "ECE score (lower is better)." },
+        "maximum_calibration_error": { "type": "number", "description": "MCE score." },
+        "brier_score": { "type": "number", "description": "Brier score (if probability outputs)." },
+        "sharpness": { "type": "number", "description": "How concentrated predictions are." }
+      }
+    },
+    "confidence_bins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["bin_lower", "bin_upper", "sample_count", "predicted_rate", "actual_rate"],
+        "properties": {
+          "bin_lower": { "type": "number" },
+          "bin_upper": { "type": "number" },
+          "sample_count": { "type": "integer" },
+          "predicted_rate": { "type": "number" },
+          "actual_rate": { "type": "number" },
+          "deviation": { "type": "number", "description": "predicted_rate - actual_rate" }
+        }
+      },
+      "description": "Per-bin calibration assessment (reliability diagram data)."
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Known calibration limitations."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["CALIBRATED", "UNCALIBRATED", "UNRELIABLE"],
+      "description": "Overall calibration status."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

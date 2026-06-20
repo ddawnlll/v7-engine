@@ -1,0 +1,245 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_7E_P0_8A-COMBINED-RESULT"
+  status: "PASS_WITH_HOLDS"
+  summary: >
+    P0.7E mode priority alignment ve P0.8A upstream readiness audit tamamlandı.
+    SCALP ve AGGRESSIVE_SCALP PRIMARY business/research modes olarak, SWING ise
+    SECONDARY_BASELINE/control mode olarak dokümante edildi. "SWING-first" dili
+    temizlendi — implementasyon sırası ile business priority ayrıştırıldı.
+    Upstream audit: lib (8/10), simulation (8/10), V7 acceptance (9/10), CI (7/10)
+    hazır. Contracts (6/10) report-level schemas eksik — next prompt'ta tanımlanabilir.
+    AlphaForge (5/10) docs var, implementation yok — authority lock doğru next step.
+    205 test pass, 0 fail, 3 skip. Verdict: READY_WITH_HOLDS_FOR_ALPHAFORGE_AUTHORITY_LOCK.
+
+p0_7e:
+  status: "PASS"
+  mode_priority_corrected: true
+  scalp_priority: "PRIMARY"
+  aggressive_scalp_priority: "PRIMARY"
+  swing_priority: "SECONDARY_BASELINE"
+  swing_threshold_status_preserved: "LOCKED_INITIAL_BASELINE"
+  scalp_hold_preserved: true
+  aggressive_scalp_hold_preserved: true
+
+p0_8a:
+  status: "PASS_WITH_HOLDS"
+  readiness_verdict: "READY_WITH_HOLDS_FOR_ALPHAFORGE_AUTHORITY_LOCK"
+  confidence: "high"
+
+scope_confirmation:
+  docs_patch_only: true
+  source_code_changed: false
+  domain_code_changed: false
+  alphaforge_implementation_done: false
+  simulation_changed: false
+  lib_changed: false
+  contracts_changed: false
+  ci_changed: false
+  tests_executed: true
+
+files_changed:
+  created:
+    - "reports/p0_7e_mode_priority_alignment.accp.yaml"
+    - "reports/p0_8a_upstream_readiness_for_alphaforge.accp.yaml"
+    - "reports/p0_7e_p0_8a_combined_completion.accp.yaml"
+  modified:
+    - "v7/docs/roadmap.md"
+    - "v7/docs/profitability_thesis.md"
+    - "v7/docs/v7_mode_centric_architecture.md"
+    - "v7/docs/pipeline/evaluation.md"
+    - "v7/docs/runtime/runtime_integration.md"
+
+updated_mode_priority:
+  SCALP:
+    business_priority: "PRIMARY"
+    research_priority: "PRIMARY"
+    threshold_status: "HOLD"
+    report_type: "primary_research_report"
+  AGGRESSIVE_SCALP:
+    business_priority: "PRIMARY"
+    research_priority: "PRIMARY"
+    threshold_status: "HOLD"
+    report_type: "primary_research_report"
+  SWING:
+    business_priority: "SECONDARY_BASELINE"
+    research_priority: "SECONDARY_BASELINE"
+    threshold_status: "LOCKED_INITIAL_BASELINE"
+    report_type: "secondary_baseline_report"
+
+readiness_matrix:
+  - area: "lib"
+    status: "READY_WITH_HOLDS"
+    score_10: 8
+    blockers: []
+    holds:
+      - "Missing alpha-specific feature primitives (cross-sectional momentum, divergence detectors, breakout detection) — buildable during implementation"
+  - area: "simulation"
+    status: "READY_WITH_HOLDS"
+    score_10: 8
+    blockers: []
+    holds:
+      - "Funding DEFERRED blocks perp scope"
+      - "SCALP/AGGRESSIVE_SCALP cost-path sensitivity needs empirical validation"
+  - area: "contracts"
+    status: "READY_WITH_HOLDS"
+    score_10: 6
+    blockers: []
+    holds:
+      - "Missing report-level contracts (AlphaForgeResearchReport, ModeResearchReport, ModelArtifact, ValidationReport, CalibrationCandidate) — definable in next prompt"
+  - area: "v7_acceptance"
+    status: "READY"
+    score_10: 9
+    blockers: []
+    holds: []
+  - area: "alphaforge_current"
+    status: "READY_WITH_HOLDS"
+    score_10: 5
+    blockers: []
+    holds:
+      - "No implementation (expected)"
+      - "ai_summary needs thin hub + mode priority alignment"
+  - area: "ci"
+    status: "READY_WITH_HOLDS"
+    score_10: 7
+    blockers: []
+    holds:
+      - "CI_FIRST_GREEN_RUN_HOLD still active"
+
+safe_alphaforge_scope:
+  - scope: "AlphaForge Discovery Authority Lock"
+    reason: "All upstream foundations ready. Holds explicit and scoped."
+  - scope: "All-mode report contract design (SCALP primary, AGGRESSIVE_SCALP primary, SWING secondary)"
+    reason: "V7 acceptance framework clear; can define what AlphaForge must produce."
+  - scope: "Thin hub ai_summary.md creation"
+    reason: "Current monolithic doc needs navigation hub for LLM efficiency."
+  - scope: "Simulation → AlphaForge → V7 handoff definition"
+    reason: "Core contracts exist; mappings defined; handoff semantics need authority lock."
+  - scope: "Alpha thesis lifecycle and evidence gates"
+    reason: "V7 G0-G10 gates provide acceptance side; AlphaForge needs discovery-side gates."
+
+blocked_alphaforge_scope:
+  - scope: "Perpetual swap alpha research for live trading"
+    blocked_by: "Funding cost model DEFERRED"
+  - scope: "SCALP/AGGRESSIVE_SCALP promotion to paper/tiny-live/live"
+    blocked_by: "Empirical evidence required (HOLD)"
+  - scope: "AlphaForge implementation (source code)"
+    blocked_by: "Authority lock must come first (next prompt)"
+
+must_fix_before_alphaforge_authority_lock:
+  - item: "None critical — authority lock safe to proceed"
+    severity: "none"
+    reason: "All holds are explicit, scoped, and non-blocking for authority lock"
+
+must_fix_before_alphaforge_implementation:
+  - item: "Define AlphaForgeResearchReport and ModeResearchReport contracts"
+    severity: "high"
+    reason: "Needed to define what AlphaForge produces before implementation begins"
+  - item: "Create thin hub ai_summary.md for AlphaForge"
+    severity: "medium"
+    reason: "Current 20K+ line doc is LLM-inefficient"
+  - item: "Align AlphaForge docs to P0.7E mode priority semantics"
+    severity: "high"
+    reason: "AlphaForge docs currently assume SWING-first without primary/secondary differentiation"
+  - item: "Add AlphaForge CI targets when tests exist"
+    severity: "low"
+    reason: "CI already covers cross-domain contract/boundary surface"
+
+remaining_holds:
+  - id: "HOLD-CI-GREEN-001"
+    title: "CI first green run verification pending"
+    reason: "GitHub'da ilk CI run'ı henüz doğrulanmadı"
+    release_condition: "GitHub CI run'ı green olarak tamamlandığında"
+  - id: "HOLD-FUNDING-002"
+    title: "Funding cost model DEFERRED"
+    reason: "Funding cost model LOCKED değil"
+    release_condition: "Funding cost model LOCKED statüsüne geçtiğinde"
+  - id: "HOLD-SCALP-002"
+    title: "SCALP promotion thresholds HOLD"
+    reason: "Empirical evidence required"
+    release_condition: "Empirical evidence + owner review"
+  - id: "HOLD-AGGRESSIVE_SCALP-002"
+    title: "AGGRESSIVE_SCALP promotion thresholds HOLD"
+    reason: "Empirical evidence required"
+    release_condition: "Empirical evidence + owner review"
+
+remaining_gaps:
+  - gap: "Runtime simulation servisleri ile /simulation authority çakışması (B04)"
+    severity: "medium"
+    next_action: "Runtime simulation servisleri için deprecation planı yaz"
+  - gap: "Funding cost model DEFERRED — perpetual swap blokajı"
+    severity: "medium"
+    next_action: "Funding cost model'ı lockla"
+  - gap: "CI first green run doğrulaması eksik"
+    severity: "low"
+    next_action: "Push to GitHub, verify CI green"
+  - gap: "SCALP/AGGRESSIVE_SCALP empirical evidence yok"
+    severity: "medium"
+    next_action: "Research phase: feature engineering, label design, model experimentation"
+  - gap: "AlphaForge report-level contracts eksik"
+    severity: "high"
+    next_action: "Define in P0.8B authority lock prompt"
+  - gap: "AlphaForge thin hub ai_summary.md eksik"
+    severity: "medium"
+    next_action: "Create in P0.8B authority lock prompt"
+  - gap: "AlphaForge docs mod priority alignment eksik"
+    severity: "high"
+    next_action: "Update in P0.8B authority lock prompt"
+
+commands_run:
+  - command: "git diff --name-only"
+    exit_code: 0
+    result_summary: "5 docs modified + 1 runtime. No forbidden paths."
+  - command: "grep -rn 'SWING-first' v7/docs/"
+    exit_code: 0
+    result_summary: "No remaining SWING-first in active docs (historical YAML and ai_summary are read-only in this prompt)"
+  - command: "PYTHONPATH=. python3 -m pytest simulation/tests/ -q"
+    exit_code: 0
+    result_summary: "5 passed, 0 failed"
+  - command: "PYTHONPATH=. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+    exit_code: 0
+    result_summary: "20 passed (11 registry + 9 schema parity)"
+  - command: "PYTHONPATH=. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+    exit_code: 0
+    result_summary: "6 passed, 0 failed, 3 skipped"
+  - command: "PYTHONPATH=. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+    exit_code: 0
+    result_summary: "205 passed, 0 failed, 3 skipped (17 binance CI-only + 3 boundary skips)"
+
+safe_next_step:
+  id: "V7-P0_8B_C-ALPHAFORGE-DISCOVERY-AUTHORITY-LOCK-AND-REAUDIT"
+  title: "P0.8B+C — AlphaForge Discovery Authority Lock + Re-Audit"
+  allowed_if: "P0.8A verdict READY_WITH_HOLDS_FOR_ALPHAFORGE_AUTHORITY_LOCK"
+  scope: >
+    Lock AlphaForge as anomaly discovery/research authority. Define all-mode
+    report contracts: SCALP primary research report, AGGRESSIVE_SCALP primary
+    research report, SWING secondary baseline report. Define Simulation →
+    AlphaForge → V7 handoff, validation report schema, alpha thesis lifecycle,
+    evidence gates. Create thin hub ai_summary.md. Align to P0.7E mode priority.
+    Run re-audit after locking.
+
+blocked_next_steps:
+  - step: "AlphaForge implementation (source code)"
+    blocked_by: "P0.8B authority lock must come first"
+  - step: "SCALP/AGGRESSIVE_SCALP promotion to paper/tiny-live/live"
+    blocked_by: "HOLD: empirical evidence + owner review required"
+  - step: "Perpetual swap live trading"
+    blocked_by: "HOLD: funding cost model DEFERRED"
+
+evidence:
+  - "P0.7E report confirms mode priority corrected across 5 docs"
+  - "P0.8A report confirms upstream readiness: lib 8/10, simulation 8/10, contracts 6/10, V7 acceptance 9/10, AlphaForge 5/10, CI 7/10"
+  - "roadmap.md: Mode Priority Alignment section added; SWING-first removed"
+  - "profitability_thesis.md: Mode Priority Model + DEC-024-029 + primary/secondary classification"
+  - "v7_mode_centric_architecture.md: Section 8 rewritten with Mode Priority Matrix"
+  - "evaluation.md: Lock Semantics updated; Mode Priority Note added"
+  - "runtime_integration.md: SWING-first → secondary baseline/control mode"
+  - "All verification commands pass: 205 passed, 0 failed, 3 skipped"
+  - "No forbidden source code paths modified"
+  - "SWING LOCKED_INITIAL_BASELINE preserved"
+  - "SCALP/AGGRESSIVE_SCALP HOLD preserved"
+  - "Funding DEFERRED hold preserved"
+  - "CI first green run hold preserved"
+  - "No fake precision: SCALP/AGGRESSIVE_SCALP not falsely locked"
+  - "G0-G10 gate sequence preserved"

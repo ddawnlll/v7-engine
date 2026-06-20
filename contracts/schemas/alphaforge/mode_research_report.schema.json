@@ -1,0 +1,218 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/alphaforge/mode_research_report.schema.json",
+  "title": "ModeResearchReport",
+  "description": "Per-mode research report containing alpha thesis evaluation, validation summary, metrics, cost stress, NO_TRADE comparison, regime breakdown, and verdict. Owned by AlphaForge.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "report_id",
+    "mode",
+    "mode_priority",
+    "report_type",
+    "data_scope",
+    "feature_set_refs",
+    "label_dataset_refs",
+    "alpha_theses",
+    "validation_summary",
+    "metrics",
+    "cost_stress",
+    "no_trade_comparison",
+    "regime_breakdown",
+    "verdict",
+    "blocked_scopes",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version."
+    },
+    "report_id": {
+      "type": "string",
+      "description": "Unique report identifier."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"]
+    },
+    "mode_priority": {
+      "type": "string",
+      "enum": ["PRIMARY", "SECONDARY_BASELINE"]
+    },
+    "report_type": {
+      "type": "string",
+      "enum": ["primary_research_report", "secondary_baseline_report"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "ResearchRunManifest run_id."
+    },
+    "data_scope": {
+      "type": "object",
+      "description": "Data scope of this report.",
+      "properties": {
+        "symbols": { "type": "array", "items": { "type": "string" } },
+        "date_range_start": { "type": "string", "format": "date-time" },
+        "date_range_end": { "type": "string", "format": "date-time" },
+        "primary_timeframes": { "type": "array", "items": { "type": "string" } },
+        "secondary_timeframes": { "type": "array", "items": { "type": "string" } },
+        "data_quality_summary": { "type": "string" }
+      }
+    },
+    "feature_set_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "FeatureSetSpec IDs used."
+    },
+    "label_dataset_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "LabelDatasetSpec IDs used."
+    },
+    "alpha_theses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "alpha_thesis_id": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "string" },
+          "evidence_quality": { "type": "string", "enum": ["STRONG", "MODERATE", "WEAK", "INSUFFICIENT"] }
+        }
+      },
+      "description": "Alpha theses evaluated in this report."
+    },
+    "validation_summary": {
+      "type": "object",
+      "properties": {
+        "validation_report_id": { "type": "string" },
+        "fold_count": { "type": "integer" },
+        "verdict": { "type": "string" },
+        "overfit_risk": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Aggregate performance metrics with confidence intervals.",
+      "properties": {
+        "oos_sharpe": { "$ref": "#/definitions/MetricWithCI" },
+        "oos_expectancy_r": { "$ref": "#/definitions/MetricWithCI" },
+        "oos_win_rate": { "$ref": "#/definitions/MetricWithCI" },
+        "oos_profit_factor": { "$ref": "#/definitions/MetricWithCI" },
+        "oos_max_drawdown_r": { "$ref": "#/definitions/MetricWithCI" },
+        "oos_trade_count": { "type": "integer" },
+        "per_fold_metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "fold": { "type": "integer" },
+              "sharpe": { "type": "number" },
+              "expectancy_r": { "type": "number" },
+              "win_rate": { "type": "number" },
+              "trade_count": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "cost_stress": {
+      "type": "object",
+      "description": "Cost sensitivity analysis.",
+      "properties": {
+        "baseline_fee_pct": { "type": "number" },
+        "baseline_slippage_pct": { "type": "number" },
+        "fee_stress_levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "multiplier": { "type": "number" },
+              "oos_expectancy_r": { "type": "number" },
+              "edge_survives": { "type": "boolean" }
+            }
+          }
+        },
+        "slippage_stress_levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "multiplier": { "type": "number" },
+              "oos_expectancy_r": { "type": "number" },
+              "edge_survives": { "type": "boolean" }
+            }
+          }
+        },
+        "combined_stress_edge_survives": { "type": "boolean" },
+        "break_even_cost_total_pct": { "type": "number" }
+      }
+    },
+    "no_trade_comparison": {
+      "type": "object",
+      "description": "Comparison of active trading vs doing nothing.",
+      "properties": {
+        "long_vs_no_trade": { "type": "string", "description": "Is LONG better than NO_TRADE after costs?" },
+        "short_vs_no_trade": { "type": "string", "description": "Is SHORT better than NO_TRADE after costs?" },
+        "active_beats_no_trade": { "type": "boolean" },
+        "summary": { "type": "string" }
+      }
+    },
+    "regime_breakdown": {
+      "type": "object",
+      "description": "Performance across market regimes.",
+      "properties": {
+        "regimes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "regime": { "type": "string" },
+              "sample_pct": { "type": "number" },
+              "oos_expectancy_r": { "type": "number" },
+              "edge_present": { "type": "boolean" }
+            }
+          }
+        },
+        "edge_only_in_rare_regime": { "type": "boolean" },
+        "summary": { "type": "string" }
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["REJECT", "CONTINUE_RESEARCH", "CANDIDATE_FOR_V7_GATES", "BASELINE_VALID", "BASELINE_WEAK"],
+      "description": "Overall verdict for this mode's research."
+    },
+    "blocked_scopes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Scopes that were blocked from research."
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Known limitations."
+    },
+    "recommended_actions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Recommended next steps."
+    }
+  },
+  "definitions": {
+    "MetricWithCI": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "number" },
+        "ci_lower": { "type": "number" },
+        "ci_upper": { "type": "number" },
+        "ci_level": { "type": "number", "description": "e.g., 0.95 for 95% CI." }
+      }
+    }
+  }
+}

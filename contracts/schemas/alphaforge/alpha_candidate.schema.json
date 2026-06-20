@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/alphaforge/alpha_candidate.schema.json",
+  "title": "AlphaCandidate",
+  "description": "An alpha candidate that has progressed through the research pipeline and may be eligible for V7 evaluation. Owned by AlphaForge.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "alpha_candidate_id",
+    "alpha_thesis_id",
+    "mode",
+    "candidate_type",
+    "feature_set_id",
+    "label_dataset_id",
+    "simulation_profile_id",
+    "status",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version for compatibility tracking."
+    },
+    "alpha_candidate_id": {
+      "type": "string",
+      "description": "Unique identifier for this alpha candidate."
+    },
+    "alpha_thesis_id": {
+      "type": "string",
+      "description": "Reference to the originating alpha thesis."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"],
+      "description": "Trading mode this candidate targets."
+    },
+    "candidate_type": {
+      "type": "string",
+      "enum": ["DIRECTIONAL", "REGIME", "MEAN_REVERSION", "MOMENTUM", "BREAKOUT", "ENSEMBLE", "OTHER"],
+      "description": "Type of alpha candidate."
+    },
+    "feature_set_id": {
+      "type": "string",
+      "description": "Reference to the FeatureSetSpec used."
+    },
+    "label_dataset_id": {
+      "type": "string",
+      "description": "Reference to the LabelDatasetSpec used."
+    },
+    "simulation_profile_id": {
+      "type": "string",
+      "description": "Reference to the simulation profile used for label generation."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PROPOSED", "DATA_READY", "FEATURED", "SIMULATED", "TRAINED", "VALIDATED", "V7_CANDIDATE", "REJECTED", "ARCHIVED"],
+      "description": "Current lifecycle state."
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Known limitations of this candidate."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last update."
+    },
+    "model_artifact_id": {
+      "type": "string",
+      "description": "Reference to ModelArtifact if trained."
+    },
+    "validation_report_id": {
+      "type": "string",
+      "description": "Reference to ValidationReport if validated."
+    },
+    "metrics_summary": {
+      "type": "object",
+      "description": "Key metrics for quick reference.",
+      "properties": {
+        "oos_sharpe": { "type": "number" },
+        "oos_expectancy_r": { "type": "number" },
+        "oos_win_rate": { "type": "number" },
+        "oos_trades": { "type": "integer" }
+      }
+    }
+  }
+}

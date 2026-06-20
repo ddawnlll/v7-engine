@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/alphaforge/model_artifact.schema.json",
+  "title": "ModelArtifact",
+  "description": "Metadata record for a trained model. The model binary is stored externally; this schema records its identity, lineage, and limitations. Owned by AlphaForge.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "model_artifact_id",
+    "model_family",
+    "mode",
+    "training_run_id",
+    "feature_set_id",
+    "label_dataset_id",
+    "validation_report_id",
+    "artifact_uri",
+    "checksum",
+    "limitations",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "model_artifact_id": {
+      "type": "string",
+      "description": "Unique model artifact identifier."
+    },
+    "model_family": {
+      "type": "string",
+      "description": "Model family/type (e.g., 'xgboost', 'lightgbm', 'ensemble')."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"]
+    },
+    "training_run_id": {
+      "type": "string",
+      "description": "ResearchRunManifest run_id that produced this artifact."
+    },
+    "feature_set_id": {
+      "type": "string",
+      "description": "FeatureSetSpec used for training."
+    },
+    "label_dataset_id": {
+      "type": "string",
+      "description": "LabelDatasetSpec used for training."
+    },
+    "validation_report_id": {
+      "type": "string",
+      "description": "Associated ValidationReport ID."
+    },
+    "artifact_uri": {
+      "type": "string",
+      "description": "URI to model binary (NOT stored in repo). E.g., 'file:///home/user/v7-data/models/xgb_scalp_001.json', 's3://bucket/models/...'."
+    },
+    "checksum": {
+      "type": "string",
+      "description": "SHA-256 content hash of the model binary."
+    },
+    "checksum_algorithm": {
+      "type": "string",
+      "description": "Algorithm used for checksum (e.g., 'SHA-256').",
+      "default": "SHA-256"
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Known limitations of this model."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "hyperparameters": {
+      "type": "object",
+      "description": "Training hyperparameters."
+    },
+    "feature_importance": {
+      "type": "object",
+      "description": "Feature importance scores (feature_id → importance)."
+    },
+    "training_metrics": {
+      "type": "object",
+      "description": "Training/validation metrics.",
+      "properties": {
+        "train_accuracy": { "type": "number" },
+        "val_accuracy": { "type": "number" },
+        "train_loss": { "type": "number" },
+        "val_loss": { "type": "number" }
+      }
+    },
+    "model_size_bytes": {
+      "type": "integer",
+      "description": "Size of model binary in bytes."
+    },
+    "framework_version": {
+      "type": "string",
+      "description": "ML framework version used (e.g., 'xgboost==2.1.0')."
+    },
+    "training_duration_seconds": {
+      "type": "number",
+      "description": "Training wall-clock time."
+    },
+    "environment_hash": {
+      "type": "string",
+      "description": "Hash of training environment for reproducibility."
+    }
+  }
+}

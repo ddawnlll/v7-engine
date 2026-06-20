@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/alphaforge/alphaforge_research_report.schema.json",
+  "title": "AlphaForgeResearchReport",
+  "description": "Aggregate cross-mode research report synthesizing all mode reports, promoted/rejected candidates, and V7 handoff packages. Owned by AlphaForge.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "alphaforge_report_id",
+    "run_id",
+    "created_at",
+    "mode_reports",
+    "promoted_candidates",
+    "rejected_candidates",
+    "global_limitations",
+    "v7_handoff_packages"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version."
+    },
+    "alphaforge_report_id": {
+      "type": "string",
+      "description": "Unique identifier for this aggregate report."
+    },
+    "run_id": {
+      "type": "string",
+      "description": "ResearchRunManifest run_id."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "mode_reports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["mode", "report_id", "verdict"],
+        "properties": {
+          "mode": { "type": "string", "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"] },
+          "report_id": { "type": "string" },
+          "verdict": { "type": "string" },
+          "summary": { "type": "string" }
+        }
+      },
+      "description": "Summary of each mode's research report."
+    },
+    "promoted_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "alpha_candidate_id": { "type": "string" },
+          "mode": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      },
+      "description": "Candidates promoted to V7_CANDIDATE or CANDIDATE_FOR_V7_GATES."
+    },
+    "rejected_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "alpha_candidate_id": { "type": "string" },
+          "mode": { "type": "string" },
+          "rejection_reason": { "type": "string" }
+        }
+      },
+      "description": "Candidates rejected with reasons."
+    },
+    "global_limitations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Cross-mode limitations and caveats."
+    },
+    "v7_handoff_packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "handoff_package_id": { "type": "string" },
+          "mode": { "type": "string" },
+          "recommended_status": { "type": "string" }
+        }
+      },
+      "description": "V7HandoffPackage references."
+    },
+    "cross_mode_insights": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Insights that span multiple modes."
+    },
+    "next_research_priorities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Recommended priorities for the next research cycle."
+    }
+  }
+}

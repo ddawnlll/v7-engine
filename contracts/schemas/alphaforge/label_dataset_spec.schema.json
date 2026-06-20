@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/alphaforge/label_dataset_spec.schema.json",
+  "title": "LabelDatasetSpec",
+  "description": "Specification of a label dataset derived from simulation outputs. Owned by AlphaForge.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "label_dataset_id",
+    "mode",
+    "simulation_profile_id",
+    "label_source",
+    "label_fields",
+    "cost_model_ref",
+    "funding_status",
+    "no_trade_comparison",
+    "lineage"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version for compatibility tracking."
+    },
+    "label_dataset_id": {
+      "type": "string",
+      "description": "Unique identifier for this label dataset."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"],
+      "description": "Trading mode."
+    },
+    "simulation_profile_id": {
+      "type": "string",
+      "description": "Simulation profile reference used."
+    },
+    "label_source": {
+      "type": "string",
+      "enum": ["simulation_output"],
+      "description": "Source of labels — always simulation_output."
+    },
+    "label_fields": {
+      "type": "object",
+      "description": "Label field definitions.",
+      "properties": {
+        "classification": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Classification label fields (e.g., best_action_label)."
+        },
+        "regression": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Regression label fields (e.g., long_R_net, short_R_net)."
+        },
+        "path_metrics": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Path metric fields (e.g., mfe_R, mae_R)."
+        },
+        "quality": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Quality assessment fields (e.g., no_trade_quality)."
+        }
+      }
+    },
+    "cost_model_ref": {
+      "type": "string",
+      "description": "Cost model version reference."
+    },
+    "funding_status": {
+      "type": "string",
+      "enum": ["DEFERRED", "IMPLEMENTED", "NOT_APPLICABLE"],
+      "description": "Current funding model status. Currently DEFERRED."
+    },
+    "no_trade_comparison": {
+      "type": "object",
+      "description": "Summary of NO_TRADE label distribution.",
+      "properties": {
+        "correct_no_trade_pct": { "type": "number", "description": "Percentage of rows where NO_TRADE was correct." },
+        "saved_loss_pct": { "type": "number" },
+        "missed_opportunity_pct": { "type": "number" },
+        "ambiguous_no_trade_pct": { "type": "number" }
+      }
+    },
+    "lineage": {
+      "type": "object",
+      "description": "Full provenance chain.",
+      "properties": {
+        "simulation_run_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "SimulationOutput run IDs used."
+        },
+        "simulation_family_version": { "type": "string" },
+        "label_interpretation_version": { "type": "string" },
+        "generated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp."
+    },
+    "checksum": {
+      "type": "string",
+      "description": "Content hash."
+    },
+    "row_count": {
+      "type": "integer",
+      "description": "Number of label rows."
+    },
+    "symbols": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Symbols included in the label dataset."
+    },
+    "date_range": {
+      "type": "object",
+      "properties": {
+        "start": { "type": "string", "format": "date-time" },
+        "end": { "type": "string", "format": "date-time" }
+      },
+      "description": "Date range of the label dataset."
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Known limitations."
+    }
+  }
+}

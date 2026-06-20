@@ -1,0 +1,170 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_7E-MODE-PRIORITY-ALIGNMENT-RESULT"
+  status: "PASS"
+  summary: >
+    Mode priority semantics corrected across 4 V7 docs. SCALP and AGGRESSIVE_SCALP
+    are now documented as PRIMARY business/research modes. SWING is documented as
+    SECONDARY_BASELINE/control mode. SWING LOCKED_INITIAL_BASELINE status preserved
+    but recontextualized as "safer baseline anchor" — not "highest product priority."
+    SCALP/AGGRESSIVE_SCALP HOLD status preserved and clarified as "empirical research
+    required" — not "low priority." All "SWING-first" phrasing removed or recontextualized
+    to distinguish implementation order from business priority.
+
+priority_alignment:
+  before: "SWING implied as primary product mode; SCALP/AGGRESSIVE_SCALP ambiguous priority"
+  after: "SCALP/AGGRESSIVE_SCALP PRIMARY; SWING SECONDARY_BASELINE"
+  semantic_change: >
+    SWING-first implementation order is an architecture validation strategy (lowest risk
+    mode validates the full pipeline first), not a business priority statement.
+    Implementation order and business/research priority are independent dimensions.
+
+mode_priority_matrix:
+  SCALP:
+    business_priority: "PRIMARY"
+    research_priority: "PRIMARY"
+    threshold_status: "HOLD"
+    reason: "empirical evidence required"
+    alphaforge_report_type: "primary_research_report"
+    promotion_readiness: "NOT_PROMOTION_READY_UNTIL_EVIDENCE"
+  AGGRESSIVE_SCALP:
+    business_priority: "PRIMARY"
+    research_priority: "PRIMARY"
+    threshold_status: "HOLD"
+    reason: "empirical evidence required"
+    alphaforge_report_type: "primary_research_report"
+    promotion_readiness: "NOT_PROMOTION_READY_UNTIL_EVIDENCE"
+  SWING:
+    business_priority: "SECONDARY_BASELINE"
+    research_priority: "SECONDARY_BASELINE"
+    threshold_status: "LOCKED_INITIAL_BASELINE"
+    reason: "safer baseline/control mode; easiest to lock"
+    alphaforge_report_type: "secondary_baseline_report"
+    promotion_readiness: "BASELINE_READY_WITH_RECALIBRATION_REQUIRED"
+
+files_changed:
+  created: []
+  modified:
+    - "v7/docs/roadmap.md"
+    - "v7/docs/profitability_thesis.md"
+    - "v7/docs/v7_mode_centric_architecture.md"
+    - "v7/docs/pipeline/evaluation.md"
+    - "v7/docs/runtime/runtime_integration.md"
+
+phrases_removed_or_recontextualized:
+  - original: "SWING-first implementation can proceed"
+    new: "Implementation can proceed with SWING as secondary baseline/control mode"
+    file: "v7/docs/roadmap.md"
+  - original: "**SWING-first.**"
+    new: "Implementation starts with SWING as secondary baseline/control mode — safest, most lockable starting point. Primary business/research priority is SCALP and AGGRESSIVE_SCALP."
+    file: "v7/docs/roadmap.md"
+  - original: "Build and deploy SWING mode first. Then add SCALP."
+    new: "Mode Priority and Implementation Order section with full priority matrix"
+    file: "v7/docs/v7_mode_centric_architecture.md"
+  - original: "SWING-first implementation order — see DEC-016"
+    new: "SWING is secondary baseline / control mode with LOCKED_INITIAL_BASELINE thresholds. SCALP and AGGRESSIVE_SCALP are PRIMARY."
+    file: "v7/docs/profitability_thesis.md"
+  - original: "SWING thresholds enable first implementation"
+    new: "LOCKED_INITIAL_BASELINE means safer baseline anchor — not highest product priority. SCALP/AGGRESSIVE_SCALP are PRIMARY."
+    file: "v7/docs/pipeline/evaluation.md"
+  - original: "SWING-first implementation order means SWING reaches LIVE_ELIGIBLE earlier"
+    new: "SWING is secondary baseline/control mode — validates architecture first, may reach LIVE_ELIGIBLE earlier because LOCKED_INITIAL_BASELINE"
+    file: "v7/docs/runtime/runtime_integration.md"
+
+preserved_locks:
+  - "SWING LOCKED_INITIAL_BASELINE thresholds — all 10 values preserved"
+  - "SWING Recalibration Policy preserved"
+  - "SWING Baseline Rationale table preserved"
+  - "G0-G10 gate sequence preserved"
+  - "Mode timeframe stacks preserved"
+  - "Action space (LONG_NOW/SHORT_NOW/NO_TRADE) preserved"
+  - "DEC-001 through DEC-023 preserved"
+  - "V7 final policy authority preserved"
+
+preserved_holds:
+  - "SCALP promotion thresholds HOLD — empirical evidence required"
+  - "AGGRESSIVE_SCALP promotion thresholds HOLD — empirical evidence required"
+  - "Funding DEFERRED hold preserved"
+  - "CI first green run hold preserved"
+  - "CI_FIRST_GREEN_RUN_HOLD still active"
+
+decisions_added_or_updated:
+  - id: "DEC-024"
+    decision: "SCALP is a PRIMARY business/research mode."
+    files:
+      - "v7/docs/profitability_thesis.md"
+      - "v7/docs/roadmap.md"
+      - "v7/docs/v7_mode_centric_architecture.md"
+  - id: "DEC-025"
+    decision: "AGGRESSIVE_SCALP is a PRIMARY business/research mode."
+    files:
+      - "v7/docs/profitability_thesis.md"
+      - "v7/docs/roadmap.md"
+      - "v7/docs/v7_mode_centric_architecture.md"
+  - id: "DEC-026"
+    decision: "SWING is SECONDARY_BASELINE / CONTROL mode."
+    files:
+      - "v7/docs/profitability_thesis.md"
+      - "v7/docs/roadmap.md"
+      - "v7/docs/v7_mode_centric_architecture.md"
+  - id: "DEC-027"
+    decision: "HOLD on SCALP/AGGRESSIVE_SCALP means empirical research required — not low priority."
+    files:
+      - "v7/docs/profitability_thesis.md"
+      - "v7/docs/pipeline/evaluation.md"
+  - id: "DEC-028"
+    decision: "AlphaForge must produce primary research reports for SCALP/AGGRESSIVE_SCALP and secondary baseline report for SWING."
+    files:
+      - "v7/docs/profitability_thesis.md"
+      - "v7/docs/pipeline/evaluation.md"
+  - id: "DEC-029"
+    decision: "Promotion-readiness and research-priority are independent dimensions."
+    files:
+      - "v7/docs/profitability_thesis.md"
+      - "v7/docs/roadmap.md"
+
+forbidden_changes_check:
+  source_code_changed: false
+  domain_code_changed: false
+  alphaforge_implementation_done: false
+  simulation_changed: false
+  lib_changed: false
+  contracts_changed: false
+  ci_changed: false
+  swing_thresholds_changed: false
+  scalp_thresholds_locked: false
+  aggressive_scalp_thresholds_locked: false
+  funding_hold_removed: false
+  ci_hold_removed: false
+  mode_timeframes_changed: false
+  new_modes_added: false
+  action_space_changed: false
+
+remaining_holds:
+  - id: "HOLD-CI-GREEN-001"
+    title: "CI first green run verification pending"
+    reason: "GitHub'da ilk CI run'ı henüz doğrulanmadı"
+  - id: "HOLD-FUNDING-002"
+    title: "Funding cost model DEFERRED"
+    reason: "Funding cost model LOCKED değil"
+  - id: "HOLD-SCALP-002"
+    title: "SCALP promotion thresholds HOLD"
+    reason: "Empirical evidence required"
+  - id: "HOLD-AGGRESSIVE_SCALP-002"
+    title: "AGGRESSIVE_SCALP promotion thresholds HOLD"
+    reason: "Empirical evidence required"
+
+safe_next_step:
+  id: "P0.8A"
+  title: "Upstream Readiness Audit for AlphaForge"
+  rationale: "Mode priority aligned. Audit lib/simulation/contracts/V7/AlphaForge/CI readiness."
+
+evidence:
+  - "roadmap.md: Mode Priority Alignment section added with full matrix"
+  - "profitability_thesis.md: Mode Priority Model table + DEC-024-029 added"
+  - "v7_mode_centric_architecture.md: Section 8 rewritten with Mode Priority Matrix"
+  - "evaluation.md: Lock Semantics updated; Mode Priority Note added"
+  - "runtime_integration.md: Line 94 updated from SWING-first to secondary baseline"
+  - "grep verification: no remaining SWING-first instances outside historical reports"
+  - "git diff: 5 doc files modified, 0 source code changed"

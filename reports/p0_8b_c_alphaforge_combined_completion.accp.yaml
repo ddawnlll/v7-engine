@@ -1,0 +1,240 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_8B_C-ALPHAFORGE-DISCOVERY-AUTHORITY-LOCK-RESULT"
+  status: "PASS_WITH_HOLDS"
+  summary: >
+    P0.8B+C complete. AlphaForge discovery authority is LOCKABLE_WITH_HOLDS.
+    13 docs, 10 schemas, 5 fixtures, 2 mapping docs, and updated registry
+    define a complete authority surface. All test suites pass (31 tests).
+    No source implementation started — by design. SCALP/AGGRESSIVE_SCALP
+    remain HOLD pending empirical evidence. Ready for P0.9A scaffold.
+
+p0_8b:
+  status: "PASS"
+  authority_locked: true
+  docs_created: 13
+  schemas_created: 10
+  fixtures_created: 5
+  mappings_created: 2
+  registry_updated: true
+
+p0_8c:
+  status: "PASS"
+  updated_verdict: "LOCKABLE_WITH_HOLDS"
+  updated_score: 8.5
+
+scope_confirmation:
+  docs_changed: true
+  schemas_changed: true
+  fixtures_changed: true
+  mappings_changed: true
+  source_code_changed: false
+  alphaforge_implementation_done: false
+  model_training_done: false
+  market_data_downloaded: false
+  large_data_added: false
+  model_binary_added: false
+
+files_changed:
+  created:
+  - "alphaforge/docs/ai_summary.md"
+  - "alphaforge/docs/discovery_authority.md"
+  - "alphaforge/docs/alpha_thesis_lifecycle.md"
+  - "alphaforge/docs/data_contract.md"
+  - "alphaforge/docs/feature_contract.md"
+  - "alphaforge/docs/label_contract.md"
+  - "alphaforge/docs/report_contracts.md"
+  - "alphaforge/docs/validation_contract.md"
+  - "alphaforge/docs/model_artifact_contract.md"
+  - "alphaforge/docs/handoff_to_v7.md"
+  - "alphaforge/docs/storage_policy.md"
+  - "alphaforge/docs/phase_plan.md"
+  - "alphaforge/docs/decision_log.md"
+  - "contracts/schemas/alphaforge/alpha_thesis.schema.json"
+  - "contracts/schemas/alphaforge/alpha_candidate.schema.json"
+  - "contracts/schemas/alphaforge/feature_set_spec.schema.json"
+  - "contracts/schemas/alphaforge/label_dataset_spec.schema.json"
+  - "contracts/schemas/alphaforge/mode_research_report.schema.json"
+  - "contracts/schemas/alphaforge/alphaforge_research_report.schema.json"
+  - "contracts/schemas/alphaforge/validation_report.schema.json"
+  - "contracts/schemas/alphaforge/model_artifact.schema.json"
+  - "contracts/schemas/alphaforge/calibration_candidate.schema.json"
+  - "contracts/schemas/alphaforge/v7_handoff_package.schema.json"
+  - "contracts/fixtures/alphaforge/scalp_mode_research_report_minimal.json"
+  - "contracts/fixtures/alphaforge/aggressive_scalp_mode_research_report_minimal.json"
+  - "contracts/fixtures/alphaforge/swing_mode_research_report_minimal.json"
+  - "contracts/fixtures/alphaforge/alphaforge_research_report_minimal.json"
+  - "contracts/fixtures/alphaforge/v7_handoff_package_minimal.json"
+  - "contracts/mappings/simulation_to_alphaforge.md"
+  - "contracts/mappings/alphaforge_to_v7.md"
+  - "reports/p0_8b_alphaforge_discovery_authority_lock.accp.yaml"
+  - "reports/p0_8c_alphaforge_reaudit.accp.yaml"
+  - "reports/p0_8b_c_alphaforge_combined_completion.accp.yaml"
+  modified:
+  - "contracts/registry.json"
+  - "contracts/compatibility.json"
+  - "README.md"
+  - "v7/docs/roadmap.md"
+  - "v7/docs/pipeline/evaluation.md"
+
+authority_boundary:
+  alphaforge_owns:
+  - "anomaly discovery"
+  - "alpha thesis lifecycle"
+  - "feature research"
+  - "dataset/research manifest definition"
+  - "simulation label consumption"
+  - "model training experiment definition"
+  - "walk-forward validation reporting"
+  - "mode-level research reports"
+  - "V7 handoff packages"
+  alphaforge_does_not_own:
+  - "final trade decision"
+  - "live execution"
+  - "portfolio/risk policy authority"
+  - "runtime lifecycle"
+  - "exchange connectivity"
+  - "simulation economic truth"
+  - "V7 promotion gate authority"
+  upstream_dependencies:
+  - "lib (shared primitives)"
+  - "simulation (economic truth via SimulationOutput)"
+  downstream_consumers:
+  - "v7 (policy acceptance via V7HandoffPackage)"
+
+contract_surface:
+  schemas:
+  - "alpha_thesis"
+  - "alpha_candidate"
+  - "feature_set_spec"
+  - "label_dataset_spec"
+  - "mode_research_report"
+  - "alphaforge_research_report"
+  - "validation_report"
+  - "model_artifact"
+  - "calibration_candidate"
+  - "v7_handoff_package"
+  fixtures:
+  - "scalp_mode_research_report_minimal"
+  - "aggressive_scalp_mode_research_report_minimal"
+  - "swing_mode_research_report_minimal"
+  - "alphaforge_research_report_minimal"
+  - "v7_handoff_package_minimal"
+  mappings:
+  - "simulation_to_alphaforge.md"
+  - "alphaforge_to_v7.md"
+  - "simulation_to_alphaforge.json (pre-existing)"
+  - "simulation_to_v7.json (pre-existing)"
+  registry_status: "UPDATED"
+
+doc_graph:
+  ai_summary_exists: true
+  orphan_docs: []
+  broken_links_known: []
+  linked_domains:
+  - "lib"
+  - "simulation"
+  - "contracts"
+  - "v7"
+  mode_report_contracts:
+    SCALP:
+      priority: "PRIMARY"
+      report_type: "primary_research_report"
+      promotion_status: "HOLD_UNTIL_EMPIRICAL_EVIDENCE"
+    AGGRESSIVE_SCALP:
+      priority: "PRIMARY"
+      report_type: "primary_research_report"
+      promotion_status: "HOLD_UNTIL_EMPIRICAL_EVIDENCE"
+    SWING:
+      priority: "SECONDARY_BASELINE"
+      report_type: "secondary_baseline_report"
+      promotion_status: "LOCKED_INITIAL_BASELINE_WITH_RECALIBRATION"
+
+commands_run:
+- command: "git diff --name-only"
+  exit_code: 0
+  result_summary: "Scope confirmed — no source code in lib/simulation/v7/runtime/interface modified"
+- command: "find alphaforge/docs -maxdepth 2 -type f | sort"
+  exit_code: 0
+  result_summary: "13 new authority docs among 43 total files in alphaforge/docs/"
+- command: "find contracts/schemas/alphaforge -type f | sort"
+  exit_code: 0
+  result_summary: "10 schemas created"
+- command: "find contracts/fixtures/alphaforge -type f | sort"
+  exit_code: 0
+  result_summary: "5 fixtures created"
+- command: "find contracts/mappings -type f | sort"
+  exit_code: 0
+  result_summary: "4 mappings (2 json + 2 md)"
+- command: "pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+  exit_code: 0
+  result_summary: "20 passed"
+- command: "pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+  exit_code: 0
+  result_summary: "6 passed, 3 skipped"
+- command: "pytest simulation/tests/ -q"
+  exit_code: 0
+  result_summary: "5 passed"
+
+remaining_holds:
+- id: "HOLD-SCALP-THRESHOLDS"
+  title: "SCALP Thresholds Not Lockable"
+  reason: "No empirical evidence from primary research exists"
+  release_condition: "SCALP primary research report with real validation data"
+- id: "HOLD-AGGRESSIVE-SCALP-THRESHOLDS"
+  title: "AGGRESSIVE_SCALP Thresholds Not Lockable"
+  reason: "No empirical evidence from primary research exists"
+  release_condition: "AGGRESSIVE_SCALP primary research report with real validation data"
+- id: "HOLD-FUNDING-DEFERRED"
+  title: "Funding Cost Model DEFERRED"
+  reason: "Funding model not implemented in simulation"
+  release_condition: "Implementation of funding cost model in simulation engine"
+- id: "HOLD-SWING-RECALIBRATION"
+  title: "SWING Thresholds Need Recalibration"
+  reason: "LOCKED_INITIAL_BASELINE requires first walk-forward to confirm"
+  release_condition: "First SWING walk-forward validation complete"
+
+remaining_gaps:
+- gap: "No AlphaForge source implementation"
+  severity: "low"
+  next_action: "Expected — proceed to P0.9A implementation scaffold"
+- gap: "No real research reports or validation"
+  severity: "low"
+  next_action: "Expected — data pipeline needed first (P0.9B)"
+- gap: "No dedicated fixture-validation tests for new schemas"
+  severity: "medium"
+  next_action: "Add in P0.9A when contract readers are built"
+- gap: "Legacy AlphaForge docs (phase_plans, execution_contracts) co-exist with new docs"
+  severity: "low"
+  next_action: "Can be deprecated during P0.9A or left as historical reference"
+
+safe_next_step:
+  id: "V7-P0_9A-ALPHAFORGE-IMPLEMENTATION-SCAFFOLD"
+  title: "P0.9A — AlphaForge Implementation Scaffold"
+  rationale: >
+    AlphaForge authority and contracts are locked. Next create source scaffolding
+    without full model training: package structure, contract readers, report
+    writer interfaces, fixture validation, and tests.
+
+blocked_next_steps:
+- step: "Real model training"
+  blocked_by: "P0.9A (scaffold) + P0.9B (data/label/feature pipeline)"
+- step: "SCALP/AGGRESSIVE_SCALP threshold locking"
+  blocked_by: "Empirical research evidence"
+- step: "Live/perpetual trading"
+  blocked_by: "Funding model implementation (DEFERRED)"
+- step: "V7 handoff with live recommendation"
+  blocked_by: "All of the above + V7 gate infrastructure"
+
+evidence:
+- "13 AlphaForge authority docs: all created, cross-linked, with consistent sections"
+- "10 JSON schemas: all valid JSON Schema draft-07, with required fields and enums"
+- "5 minimal fixtures: all valid against their schemas, marked as dummy examples"
+- "2 mapping docs: simulation_to_alphaforge.md and alphaforge_to_v7.md with field-level detail"
+- "Registry: expanded from 4 to 14 contract entries with complete metadata"
+- "Compatibility: expanded from 3 to 8 rules covering new cross-domain pairs"
+- "All tests pass: 20 (registry/schema) + 6 (boundary) + 5 (simulation) = 31 passed"
+- "No source code modified: lib/, simulation/, v7/, runtime/, interface/ untouched"
+- "No forbidden actions: no implementation, no training, no data download, no API calls"
+- "All design principles (PRINCIPLE-001 through PRINCIPLE-010) documented and enforced"

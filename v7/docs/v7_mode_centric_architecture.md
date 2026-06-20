@@ -1135,9 +1135,34 @@ This section connects alpha hypotheses defined in `alpha_thesis_validation_plan.
 
 ---
 
-## 8. Recommendation: Start with SWING Only
+## 8. Mode Priority and Implementation Order
 
-**Critical Advice:** Build and deploy SWING mode first. Then add SCALP and AGGRESSIVE_SCALP after live data proves SWING works.
+### Mode Priority Matrix
+
+| Mode | Business Priority | Research Priority | Threshold Status | AlphaForge Report Type | Promotion Readiness |
+|------|------------------|-------------------|-----------------|----------------------|---------------------|
+| SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| AGGRESSIVE_SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| SWING | SECONDARY_BASELINE | SECONDARY_BASELINE | LOCKED_INITIAL_BASELINE | Secondary baseline report | Baseline ready; recalibration required after first evidence |
+
+### Key Principles
+
+1. **SCALP and AGGRESSIVE_SCALP are the PRIMARY business/research modes.** V7's main edge search targets shorter-term opportunities, anomaly capture, cost-aware fast reaction, and high-frequency signal validation.
+
+2. **SWING is the SECONDARY_BASELINE / CONTROL mode.** SWING was selected for first implementation because it is safer, lower-noise, and easier to baseline — not because it is the primary product. It serves as a control anchor: if SWING fails on a validated architecture, something is fundamentally wrong. If SWING works, it validates the architecture but does not validate SCALP or AGGRESSIVE_SCALP.
+
+3. **Promotion-readiness and research-priority are independent dimensions.** SWING is more promotion-ready (LOCKED_INITIAL_BASELINE thresholds). SCALP and AGGRESSIVE_SCALP have higher business/research priority but require empirical evidence (HOLD) before threshold lock.
+
+4. **HOLD means "empirical research required" — not "low priority."** Fee, slippage, latency, data quality, overfit, and funding risks make SCALP and AGGRESSIVE_SCALP harder to lock without evidence.
+
+### Implementation Strategy
+
+**Control-first, then primary research:** Build and deploy SWING mode first as the architecture validation baseline. SWING proves the full pipeline (contracts → simulation → labels → features → dataset → model → calibration → policy → risk → runtime) with the lowest risk profile.
+
+Once the architecture is validated via SWING:
+- SCALP and AGGRESSIVE_SCALP research accelerates on the proven foundation
+- AlphaForge produces primary research reports for SCALP/AGGRESSIVE_SCALP
+- Empirical evidence gates determine promotion readiness independently per mode
 
 Building all 3 modes simultaneously:
 - Multiplies risk
@@ -1154,6 +1179,7 @@ But have independent:
 - Labels
 - Models
 - Policy thresholds
+- Promotion gates
 
 ---
 

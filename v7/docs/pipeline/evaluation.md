@@ -38,8 +38,9 @@ It is judged by:
 
 ## Inputs
 
-- trained model artifacts (per mode)
-- calibration artifacts (per mode)
+- **AlphaForge handoff packages** (V7HandoffPackage) — AlphaForge delivers evidence packages; V7 gates evaluate them. See [../../../contracts/mappings/alphaforge_to_v7.md](../../../contracts/mappings/alphaforge_to_v7.md)
+- trained model artifacts (per mode) — from AlphaForge ModelArtifact metadata
+- calibration artifacts (per mode) — from AlphaForge CalibrationCandidate
 - policy behavior (per mode, including regime modifiers)
 - replay outcomes
 - paper/live outcomes where available
@@ -196,11 +197,13 @@ Each mode must pass these gates sequentially. No gate may be skipped. Promotion 
 
 ### Mode-Specific Promotion Thresholds
 
-**Owner Review Status (P0.7C):** SWING thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines that enable first implementation. They are *not* permanent empirical truth and must be recalibrated after the first SWING walk-forward/backtest evidence. SCALP and AGGRESSIVE_SCALP thresholds remain **HOLD** or **RESEARCH_ONLY** — they require empirical evidence and owner review before any promotion threshold logic can be implemented for those modes.
+**Owner Review Status (P0.7C):** SWING thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines for the secondary baseline/control mode. They are *not* permanent empirical truth and must be recalibrated after the first SWING walk-forward/backtest evidence. SCALP and AGGRESSIVE_SCALP thresholds remain **HOLD** — they require empirical evidence and owner review before any promotion threshold logic can be implemented for those modes.
+
+**Mode Priority Note (P0.7E):** SCALP and AGGRESSIVE_SCALP are **PRIMARY** business/research modes. Their HOLD status means "empirical research required" — not "low priority." SWING is **SECONDARY_BASELINE** / control mode. Its LOCKED_INITIAL_BASELINE status means "safer initial baseline anchor" — not "highest product priority." AlphaForge must produce primary research reports for SCALP and AGGRESSIVE_SCALP, and a secondary baseline report for SWING. All three modes require AlphaForge research before promotion eligibility can be determined.
 
 **Lock Semantics:**
-- **LOCKED_INITIAL_BASELINE:** Owner-reviewed conservative baseline. Implementation can proceed. Values subject to recalibration after first walk-forward evidence.
-- **HOLD:** Do not implement live/promotion threshold logic for this mode beyond research.
+- **LOCKED_INITIAL_BASELINE:** Owner-reviewed conservative baseline for the secondary baseline/control mode (SWING). Implementation can proceed. Values subject to recalibration after first walk-forward evidence. Does NOT imply highest business priority — see Mode Priority Note above.
+- **HOLD:** Do not implement live/promotion threshold logic for this mode beyond research. HOLD means "empirical evidence required" — this reflects research difficulty (fee, slippage, latency, overfit risks), not low business priority. SCALP and AGGRESSIVE_SCALP are PRIMARY business/research modes on HOLD.
 - **RESEARCH_ONLY:** Mode may be researched, but not promoted to paper/tiny-live/live until empirical evidence and owner review exist.
 
 | Threshold | SWING | SCALP | AGGRESSIVE_SCALP |

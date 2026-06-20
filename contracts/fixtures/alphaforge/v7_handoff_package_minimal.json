@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0.0",
+  "handoff_package_id": "v7hp-example-001",
+  "mode": "SWING",
+  "alpha_candidate_id": "ac-swing-example-001",
+  "mode_research_report_id": "mrr-swing-example-001",
+  "validation_report_id": "vr-swing-example-001",
+  "model_artifact_id": "ma-swing-example-001",
+  "calibration_candidate_id": "cc-swing-example-001",
+  "v7_gate_mapping": {
+    "G0_data_quality": "LabelDatasetSpec lineage and data quality flags",
+    "G1_feature_validity": "FeatureSetSpec with leakage audit",
+    "G2_label_validity": "SimulationOutput → LabelDataset mapping verified",
+    "G3_model_sanity": "ModelArtifact training metrics (dummy)",
+    "G4_oos_performance": "ValidationReport OOS summary (dummy)",
+    "G5_cost_resilience": "ValidationReport cost stress analysis (dummy)",
+    "G6_regime_robustness": "ValidationReport regime breakdown (dummy)",
+    "G7_stability": "ValidationReport symbol and fold stability (dummy)",
+    "G8_calibration": "CalibrationCandidate metrics (dummy)",
+    "G9_no_trade_baseline": "ValidationReport no_trade_comparison (dummy)",
+    "G10_paper_shadow": "Combined evidence package — not yet ready"
+  },
+  "recommended_status": "REVIEW_REQUIRED",
+  "blocked_scopes": [
+    "This is a minimal fixture example — no real data",
+    "No real model trained — all references are dummy IDs",
+    "Funding model DEFERRED — blocks perpetual/live handoff",
+    "SWING is SECONDARY_BASELINE — does not override primary mode priority",
+    "V7 has not reviewed this package — all gates are dummy mapped"
+  ],
+  "limitations": [
+    "This is a minimal fixture for schema validation only",
+    "All referenced IDs are dummy examples — do not expect real artifacts",
+    "No real model binary exists at any URI",
+    "No real validation was performed",
+    "V7 gate mapping is structural only — no real evidence behind gates",
+    "Recommended status REVIEW_REQUIRED means V7 must independently verify everything"
+  ],
+  "lineage": {
+    "data_refs": ["raw-btcusdt-example", "norm-btcusdt-example"],
+    "feature_set_id": "fs-swing-example-001",
+    "label_dataset_id": "lds-swing-example-001",
+    "simulation_profile_id": "swing_profile-1.0.0",
+    "simulation_run_ids": ["sim-example-swing-001"],
+    "training_run_id": "run-example-swing-001",
+    "git_commit": "0000000000000000000000000000000000000000",
+    "lineage_verified": false
+  },
+  "created_at": "2026-06-20T00:00:00Z",
+  "rejection_rules_applied": [
+    "All dummy data — automatically flagged as REVIEW_REQUIRED",
+    "No real OOS evidence — cannot pass G4-G7",
+    "Funding DEFERRED — perpetual/live scope explicitly blocked",
+    "Single symbol only — flagged as limitation"
+  ]
+}

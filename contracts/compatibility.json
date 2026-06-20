@@ -57,6 +57,78 @@
       "required_validation": [
         "schema_parity_test"
       ]
+    },
+    {
+      "source_contract": "SimulationOutput",
+      "target_contract": "LabelDatasetSpec",
+      "compatible_versions": [
+        { "simulation_output": "1.0.0", "label_dataset_spec": "1.0.0" }
+      ],
+      "breaking_change_rules": {
+        "field_removal": "MAJOR bump on source; label derivation must be updated",
+        "field_rename": "MAJOR bump on source; label mapping must be updated",
+        "field_semantic_change": "MAJOR bump on source; label consumers must be revalidated",
+        "new_optional_field": "MINOR bump on source; labels may ignore",
+        "new_required_field": "MAJOR bump on source; labels must include derivation"
+      },
+      "required_validation": [
+        "schema_parity_test",
+        "fixture_roundtrip",
+        "mapping_field_existence"
+      ]
+    },
+    {
+      "source_contract": "ModeResearchReport",
+      "target_contract": "V7HandoffPackage",
+      "compatible_versions": [
+        { "mode_research_report": "1.0.0", "v7_handoff_package": "1.0.0" }
+      ],
+      "breaking_change_rules": {
+        "field_removal": "MAJOR bump on source; handoff must remove reference",
+        "field_rename": "MAJOR bump on source; handoff mapping must be updated",
+        "field_semantic_change": "MAJOR bump on source; V7 gate evaluation must be revalidated",
+        "new_optional_field": "MINOR bump on source; handoff may ignore",
+        "new_required_field": "MAJOR bump on source; handoff must include"
+      },
+      "required_validation": [
+        "schema_parity_test",
+        "fixture_roundtrip"
+      ]
+    },
+    {
+      "source_contract": "ValidationReport",
+      "target_contract": "V7HandoffPackage",
+      "compatible_versions": [
+        { "validation_report": "1.0.0", "v7_handoff_package": "1.0.0" }
+      ],
+      "breaking_change_rules": {
+        "field_removal": "MAJOR bump on source; handoff must remove reference",
+        "field_rename": "MAJOR bump on source; handoff mapping must be updated",
+        "field_semantic_change": "MAJOR bump on source; V7 gate evaluation must be revalidated",
+        "new_optional_field": "MINOR bump on source; handoff may ignore",
+        "new_required_field": "MAJOR bump on source; handoff must include"
+      },
+      "required_validation": [
+        "schema_parity_test",
+        "fixture_roundtrip"
+      ]
+    },
+    {
+      "source_contract": "ModelArtifact",
+      "target_contract": "CalibrationCandidate",
+      "compatible_versions": [
+        { "model_artifact": "1.0.0", "calibration_candidate": "1.0.0" }
+      ],
+      "breaking_change_rules": {
+        "field_removal": "MAJOR bump on source; calibration must remove reference",
+        "field_rename": "MAJOR bump on source; calibration must be updated",
+        "field_semantic_change": "MAJOR bump on source; calibration must be revalidated",
+        "new_optional_field": "MINOR bump on source; calibration may ignore",
+        "new_required_field": "MAJOR bump on source; calibration must include"
+      },
+      "required_validation": [
+        "schema_parity_test"
+      ]
     }
   ]
 }

@@ -72,6 +72,181 @@
       "consumers": [
         "v7"
       ]
+    },
+    {
+      "object_name": "AlphaThesis",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge/alpha_thesis.schema.json",
+      "fixture_file": null,
+      "description": "Formal alpha thesis with hypothesis, expected edge mechanism, required data/features, and rejection criteria",
+      "source_authority": [
+        "alphaforge/docs/alpha_thesis_lifecycle.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "alphaforge"
+      ]
+    },
+    {
+      "object_name": "AlphaCandidate",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge/alpha_candidate.schema.json",
+      "fixture_file": null,
+      "description": "Alpha candidate progressed through research pipeline, potentially eligible for V7 evaluation",
+      "source_authority": [
+        "alphaforge/docs/alpha_thesis_lifecycle.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "alphaforge",
+        "v7"
+      ]
+    },
+    {
+      "object_name": "FeatureSetSpec",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge/feature_set_spec.schema.json",
+      "fixture_file": null,
+      "description": "Mode/timeframe-aware feature set specification with leakage policy",
+      "source_authority": [
+        "alphaforge/docs/feature_contract.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "alphaforge"
+      ]
+    },
+    {
+      "object_name": "LabelDatasetSpec",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge/label_dataset_spec.schema.json",
+      "fixture_file": null,
+      "description": "Label dataset specification derived from simulation outputs",
+      "source_authority": [
+        "alphaforge/docs/label_contract.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "alphaforge"
+      ]
+    },
+    {
+      "object_name": "ModeResearchReport",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge/mode_research_report.schema.json",
+      "fixture_file": "contracts/fixtures/alphaforge/scalp_mode_research_report_minimal.json",
+      "description": "Per-mode research report with data scope, features, labels, validation, metrics, cost stress, NO_TRADE comparison, regime breakdown, and verdict",
+      "source_authority": [
+        "alphaforge/docs/report_contracts.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "alphaforge",
+        "v7"
+      ]
+    },
+    {
+      "object_name": "AlphaForgeResearchReport",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge/alphaforge_research_report.schema.json",
+      "fixture_file": "contracts/fixtures/alphaforge/alphaforge_research_report_minimal.json",
+      "description": "Aggregate cross-mode research report synthesizing all mode reports with promoted/rejected candidates",
+      "source_authority": [
+        "alphaforge/docs/report_contracts.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "v7"
+      ]
+    },
+    {
+      "object_name": "ValidationReport",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge/validation_report.schema.json",
+      "fixture_file": null,
+      "description": "Walk-forward validation report with split policy, OOS summary, symbol stability, regime breakdown, cost stress, NO_TRADE comparison, and overfit risk flags",
+      "source_authority": [
+        "alphaforge/docs/validation_contract.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "alphaforge",
+        "v7"
+      ]
+    },
+    {
+      "object_name": "ModelArtifact",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge/model_artifact.schema.json",
+      "fixture_file": null,
+      "description": "Metadata record for a trained model with artifact URI (model binary stored externally), checksum, and lineage",
+      "source_authority": [
+        "alphaforge/docs/model_artifact_contract.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "alphaforge",
+        "v7"
+      ]
+    },
+    {
+      "object_name": "CalibrationCandidate",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge/calibration_candidate.schema.json",
+      "fixture_file": null,
+      "description": "Calibration assessment for model probability/confidence outputs with ECE, MCE, and bin-level reliability",
+      "source_authority": [
+        "alphaforge/docs/model_artifact_contract.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "alphaforge",
+        "v7"
+      ]
+    },
+    {
+      "object_name": "V7HandoffPackage",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/alphaforge/v7_handoff_package.schema.json",
+      "fixture_file": "contracts/fixtures/alphaforge/v7_handoff_package_minimal.json",
+      "description": "Delivery artifact from AlphaForge to V7 acceptance gates, bundling all evidence for alpha candidate evaluation",
+      "source_authority": [
+        "alphaforge/docs/handoff_to_v7.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "v7"
+      ]
     }
   ]
 }
