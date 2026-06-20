@@ -1,5 +1,7 @@
 # V7 Engine — Monorepo
 
+[![CI](https://github.com/ddawnlll/v7-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/ddawnlll/v7-engine/actions/workflows/ci.yml)
+
 A monorepo for quantitative trading research and production: market data infrastructure,
 feature engineering, regime detection, simulation, XGBoost-based alpha modeling,
 and V7 policy-driven execution.

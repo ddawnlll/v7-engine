@@ -248,6 +248,9 @@ G0_DOC_READY → G1_RESEARCH_BACKTEST → G2_WALK_FORWARD_OOS → G3_COST_STRESS
 - Correlation-aware portfolio — see `DEC-014`.
 - Stop-before-target in same candle — see `DEC-015`.
 - SWING-first implementation order — see `DEC-016`.
+- SWING promotion thresholds are LOCKED_INITIAL_BASELINE (owner-reviewed, recalibratable baselines) — see `DEC-017`.
+- SCALP promotion thresholds remain HOLD until empirical evidence exists — see `DEC-018`.
+- AGGRESSIVE_SCALP promotion thresholds remain HOLD until empirical evidence exists — see `DEC-019`.
 
 ---
 
@@ -256,10 +259,24 @@ G0_DOC_READY → G1_RESEARCH_BACKTEST → G2_WALK_FORWARD_OOS → G3_COST_STRESS
 | Area | Current State | Owner Review |
 |------|--------------|--------------|
 | Funding cost model for perpetuals | DEFERRED — see `simulation/docs/cost_model.md` | Simulation authority |
-| Per-mode promotion thresholds (exact numeric values) | LOCK_CANDIDATE defaults in `pipeline/evaluation.md` | V7 authority |
+| **SWING promotion thresholds** | **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines in `pipeline/evaluation.md`; recalibration required after first walk-forward | ✅ **P0.7C complete** |
+| **SCALP promotion thresholds** | **HOLD** — empirical evidence required before any numeric lock; placeholder values in `pipeline/evaluation.md` are not implementation-ready | V7 authority (post-first-evidence) |
+| **AGGRESSIVE_SCALP promotion thresholds** | **HOLD** — empirical evidence required before any numeric lock; placeholder values in `pipeline/evaluation.md` are not implementation-ready | V7 authority (post-first-evidence) |
 | Mode-specific risk parameters (exact numeric values) | LOCK_CANDIDATE defaults in `pipeline/risk.md` | V7 authority |
 | Minimum training sample per mode | LOCK_CANDIDATE in `pipeline/dataset.md` | V7 authority |
 | Per-mode independent runtime lifecycle | Documented in `runtime/runtime_integration.md` | V7 authority |
+
+---
+
+## P0.7C Threshold Lock Decisions
+
+| Decision ID | Decision | Status |
+|-------------|----------|--------|
+| DEC-017 | SWING is the only mode with LOCKED_INITIAL_BASELINE promotion thresholds. All 10 thresholds (min OOS window, min trades, min expectancy R, max drawdown, min no-trade quality, calibration, cost stress, shadow duration, paper duration, tiny live limit) are owner-reviewed conservative baselines. Recalibration required after first SWING walk-forward. | **LOCKED (P0.7C)** |
+| DEC-018 | SCALP remains HOLD for numeric promotion thresholds. Placeholder values in evaluation.md are not live, not locked, not implementation-ready. No promotion threshold logic for SCALP may be implemented without empirical evidence and owner review. | **HOLD (P0.7C)** |
+| DEC-019 | AGGRESSIVE_SCALP remains HOLD for numeric promotion thresholds. Same constraints as SCALP. | **HOLD (P0.7C)** |
+| DEC-020 | All SWING LOCKED_INITIAL_BASELINE thresholds require explicit recalibration after first SWING walk-forward evidence. Recalibration is owner-reviewed, not automated. | **LOCKED (P0.7C)** |
+| DEC-021 | Funding cost model remains DEFERRED. Perpetual swap live promotion (G3+) blocked until funding model is locked. This hold does not block spot-only SWING implementation. | **HOLD (carry-forward)** |
 
 ---
 

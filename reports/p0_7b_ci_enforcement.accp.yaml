@@ -1,0 +1,169 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_7B-CI-ENFORCEMENT-RESULT"
+  status: "PASS"
+  summary: >
+    .github/workflows/ci.yml created. CI triggers on push and pull_request,
+    runs on ubuntu-latest with Python 3.12, and enforces: contract checks (20 passed),
+    boundary checks (4 passed, 3 skipped), and lib + integration + simulation tests
+    (205 passed local; remaining 17 test_market_data_binance.py tests require
+    `requests` which CI installs — not runnable locally due to homebrew-managed
+    Python preventing pip install). No silent failure: no `|| true`, no
+    continue-on-error, no secrets, no external API calls. README CI badge added.
+
+scope_confirmation:
+  ci_only: true
+  application_code_changed: false
+  domain_code_changed: false
+  v7_engine_changed: false
+  alphaforge_changed: false
+  simulation_engine_changed: false
+  runtime_changed: false
+  interface_changed: false
+  contract_semantics_changed: false
+
+files_changed:
+  created:
+    - ".github/workflows/ci.yml"
+    - "reports/p0_7b_ci_enforcement.accp.yaml"
+  modified:
+    - "README.md"
+
+ci_workflow:
+  path: ".github/workflows/ci.yml"
+  triggers:
+    - "push"
+    - "pull_request"
+  jobs:
+    - "test"
+  runs_on: "ubuntu-latest"
+  python_version: "3.12"
+  required_checks:
+    contracts: "present"
+    boundaries: "present"
+    tests: "present"
+  required_checks_silent_failure: false
+  uses_secrets: false
+  external_api_calls: false
+  steps:
+    - name: "Checkout repository"
+      uses: "actions/checkout@v4"
+    - name: "Setup Python"
+      uses: "actions/setup-python@v5"
+      with:
+        python-version: "3.12"
+    - name: "Upgrade pip"
+      run: "python -m pip install --upgrade pip"
+    - name: "Install dependencies"
+      run: "python -m pip install pytest requests"
+    - name: "Show Python version"
+      run: "python --version"
+    - name: "Run contract checks"
+      run: "make check-contracts"
+    - name: "Run boundary checks"
+      run: "make check-boundaries"
+    - name: "Run lib + integration + simulation tests"
+      run: "PYTHONPATH=. python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q"
+
+dependency_install_strategy:
+  selected_strategy: "pip-install-pytest-requests"
+  reason: >
+    No requirements.txt, requirements-dev.txt, pyproject.toml, setup.cfg, or
+    poetry.lock exists. Makefile install target installs `pytest requests mypy ruff`.
+    mypy and ruff are only used for optional lint/typecheck targets, not for CI
+    test/check commands. Minimal CI dependency set is `pytest` (test runner) and
+    `requests` (needed by lib/tests/test_market_data_binance.py). pip upgraded first.
+
+commands_run:
+  - command: "PYTHONPATH=. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+    exit_code: 0
+    result_summary: "205 passed, 0 failed, 3 skipped (17 tests in test_market_data_binance.py skipped — requires `requests` not installable on homebrew-managed Python 3.14; CI installs `requests` and will run all 222)"
+  - command: "PYTHONPATH=. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+    exit_code: 0
+    result_summary: "20 passed (11 registry + 9 schema parity)"
+  - command: "PYTHONPATH=. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py -q"
+    exit_code: 0
+    result_summary: "4 passed, 3 skipped"
+
+tests_passed: 205
+tests_failed: 0
+tests_skipped: 3
+tests_not_run_locally: 17
+tests_not_run_reason: >
+  test_market_data_binance.py (17 tests) requires `requests` package.
+  Local Python 3.14 is homebrew-managed and rejects `pip install requests`.
+  CI installs `requests` explicitly and will run all 222 tests.
+  Extrapolating from P0.7A report (222 passed, 0 failed), these 17 tests pass.
+
+checks_passed:
+  - "make check-contracts equivalent: 20 passed"
+  - "make check-boundaries equivalent: 4 passed"
+checks_failed: []
+
+owner_review_required:
+  - area: "CI YAML syntax validation"
+    reason: >
+      PyYAML is not available on the local homebrew-managed Python 3.14 to
+      programmatically validate the CI YAML. The YAML was hand-authored with
+      strict structural discipline (2-space indent, no tabs, standard GitHub
+      Actions schema). Manual grep confirmed no forbidden patterns (`|| true`,
+      continue-on-error, secrets). An in-browser GitHub Actions editor or
+      `actionlint` tool can be used for final syntax validation.
+    suggested_decision: "Push to GitHub and verify CI runs green on first commit."
+  - area: "test_market_data_binance.py (17 tests) not verified locally"
+    reason: >
+      `requests` package cannot be installed on the local homebrew-managed
+      Python 3.14. These 17 tests require `requests` for Binance client tests.
+      The P0.7A report confirms they pass (222 total passed, 0 failed). CI
+      installs `requests` and will execute them. Risk is minimal — these are
+      existing passing tests, not new code.
+    suggested_decision: "Let CI run verify these 17 tests on first push."
+  - area: "Python 3.12 vs 3.14 version delta"
+    reason: >
+      CI uses Python 3.12 (minimum required per scripts/setup.sh). Local
+      verification ran on Python 3.14. No version-specific issues observed.
+      Minor risk of syntax/behavior difference between 3.12 and 3.14.
+    suggested_decision: "If CI fails on 3.12, consider 3.13 or 3.14."
+
+remaining_gaps:
+  - gap: "No CI caching of pip packages"
+    severity: "low"
+    recommended_next_patch: "Add actions/cache for ~/.cache/pip to speed up CI runs."
+  - gap: "No CI for lint/typecheck (ruff, mypy)"
+    severity: "low"
+    recommended_next_patch: "Add optional lint/typecheck job to CI (allow-failure initially)."
+  - gap: "No CI badge will show 'no status' until first CI run on GitHub"
+    severity: "low"
+    recommended_next_patch: "Push to GitHub; badge resolves automatically on first run."
+  - gap: "No matrix strategy for multiple Python versions"
+    severity: "low"
+    recommended_next_patch: "Add matrix: python-version: ['3.12', '3.13'] to verify cross-version compatibility."
+
+safe_next_step:
+  id: "P0.7C"
+  title: "SWING Threshold Owner Review"
+  rationale: >
+    Simulation MVP (P0.7A) and CI/CD enforcement (P0.7B) are complete.
+    Next close the LOCK_CANDIDATE SWING threshold blocker without fake-locking
+    SCALP or AGGRESSIVE_SCALP.
+
+blocked_next_steps: []
+
+evidence:
+  - "CI workflow file exists: .github/workflows/ci.yml"
+  - "CI triggers: push, pull_request"
+  - "CI runs: contract checks (make check-contracts)"
+  - "CI runs: boundary checks (make check-boundaries)"
+  - "CI runs: lib + integration + simulation tests"
+  - "No `|| true` in any required step"
+  - "No continue-on-error in any required step"
+  - "No secrets required"
+  - "No external API calls"
+  - "Local contract check: 20 passed"
+  - "Local boundary check: 4 passed, 3 skipped"
+  - "Local tests: 205 passed, 0 failed, 3 skipped"
+  - "17 tests (test_market_data_binance.py) not run locally — needs `requests`; CI installs it"
+  - "No domain/application source code modified (lib/, simulation/, v7/, alphaforge/, runtime/, interface/ untouched)"
+  - "README CI badge added"
+  - "P0.7A report: 222 passed, 0 failed, 3 skipped — consistent with local results"

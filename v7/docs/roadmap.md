@@ -40,7 +40,14 @@ Documentation authority is largely complete for:
 - runtime fallback/deployment policy
 - full pipeline authority set
 
-That means the next work should be implementation-led, not more concept invention.
+**P0.7A-C Lock Status (2026-06-18):**
+- **P0.7A — Simulation MVP:** ✅ PASS. Simulation truth authority has minimal viable implementation (contracts, engine, exits, costs, golden tests, import boundary). 222 tests pass. `SimulationProfile` fixture exists.
+- **P0.7B — CI Enforcement:** ✅ PASS (CI_FIRST_GREEN_RUN_HOLD). `.github/workflows/ci.yml` enforces contract checks, boundary checks, and full test suite on push/PR. First GitHub green run pending verification.
+- **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation. SCALP and AGGRESSIVE_SCALP thresholds are **HOLD** pending empirical evidence.
+
+**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. SWING-first implementation can proceed with locked baseline thresholds. Remaining holds are explicitly scoped (funding DEFERRED, SCALP/AGGRESSIVE_SCALP HOLD, CI first green run hold).
+
+That means the next work should be implementation-led, not more concept invention. **SWING-first.**
 
 ---
 

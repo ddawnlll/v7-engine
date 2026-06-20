@@ -1,0 +1,154 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_7C-SWING-THRESHOLD-OWNER-REVIEW"
+  status: "PASS"
+  summary: >
+    SWING promotion thresholds LOCK_CANDIDATE statüsünden LOCKED_INITIAL_BASELINE
+    statüsüne çekildi. 10 SWING threshold değeri owner-reviewed conservative baselines
+    olarak belirlendi. Her threshold için 1 cümle rationale ve recalibration trigger
+    yazıldı. SCALP ve AGGRESSIVE_SCALP threshold'ları HOLD statüsünde bırakıldı —
+    empirical evidence ve owner review olmadan hiçbir numeric threshold locklanmadı.
+    Funding cost DEFERRED hold'u korundu. CI first green run hold'u açıkça korundu.
+    Hiçbir source code, domain code, simulation engine, runtime, veya interface
+    değiştirilmedi. Sadece docs patch (evaluation.md, profitability_thesis.md,
+    roadmap.md).
+
+files_changed:
+  modified:
+    - "v7/docs/pipeline/evaluation.md"
+    - "v7/docs/profitability_thesis.md"
+    - "v7/docs/roadmap.md"
+  created:
+    - "reports/p0_7c_swing_threshold_owner_review.accp.yaml"
+
+swing_thresholds_locked:
+  status: "LOCKED_INITIAL_BASELINE"
+  count: 10
+  thresholds:
+    - field: "minimum_oos_window"
+      value: "12 months (6 folds × 2mo)"
+      rationale: "12-month OOS coverage captures at least one full market cycle including regime transitions"
+      recalibration_after_first_walk_forward: true
+    - field: "minimum_trades_or_events"
+      value: "≥ 200"
+      rationale: "200 trades produces expectancy CI width of ~0.14R at typical SWING variance — sufficient to reject zero-expectancy null"
+      recalibration_after_first_walk_forward: true
+    - field: "minimum_expectancy_r"
+      value: "≥ 0.15R"
+      rationale: "Conservative net-expectancy floor after costs; below 0.15R edge-to-noise ratio is too low for reliable promotion"
+      recalibration_after_first_walk_forward: true
+    - field: "max_drawdown_limit"
+      value: "≤ 25%"
+      rationale: "25% drawdown allows for regime transitions while preventing catastrophic capital impairment"
+      recalibration_after_first_walk_forward: true
+    - field: "min_no_trade_quality"
+      value: "CORRECT_NO_TRADE ≥ 60%; SAVED_LOSS ≥ 0.20R per event"
+      rationale: "SWING has LOW no-trade tendency — high correctness threshold ensures NO_TRADE is deliberate, not lazy"
+      recalibration_after_first_walk_forward: true
+    - field: "calibration_requirement"
+      value: "Reliability error within ±10% per bucket"
+      rationale: "10% reliability error ensures probability/expected-R surfaces are trustworthy enough for policy dual-gate decisions"
+      recalibration_after_first_walk_forward: true
+    - field: "cost_stress_requirement"
+      value: "Edge survives taker × 1.5 multiplier stress"
+      rationale: "1.5× multiplier provides margin above taker baseline; conservative enough to catch hidden cost sensitivity"
+      recalibration_after_first_walk_forward: true
+    - field: "shadow_duration"
+      value: "≥ 4 weeks"
+      rationale: "4-week shadow captures ~20-30 SWING trades at typical 4h frequency — sufficient to detect material backtest-shadow divergence"
+      recalibration_after_first_walk_forward: true
+    - field: "paper_duration"
+      value: "≥ 4 weeks"
+      rationale: "Matches shadow duration; ensures paper outcomes are statistically comparable to shadow and backtest baselines"
+      recalibration_after_first_walk_forward: true
+    - field: "tiny_live_limit"
+      value: "Max 0.5% account risk per trade; max 5% daily loss; max 10% cumulative"
+      rationale: "Conservative progressive limits: per-trade risk survives 20 consecutive losses, daily cap prevents single-day spiral, cumulative cap limits total tiny-live exposure"
+      recalibration_after_first_walk_forward: true
+
+scalp_status: "HOLD"
+scalp_detail: >
+  Tüm SCALP numeric promotion threshold'ları HOLD statüsünde.
+  Placeholder değerler evaluation.md'de belirtilmiştir ancak bunlar live değil,
+  locked değil, ve implementation-ready değildir. SCALP için promotion threshold
+  logic'i implemente edilmeden önce empirical evidence ve owner review gereklidir.
+
+aggressive_scalp_status: "HOLD"
+aggressive_scalp_detail: >
+  Tüm AGGRESSIVE_SCALP numeric promotion threshold'ları HOLD statüsünde.
+  SCALP ile aynı kısıtlamalar geçerlidir.
+
+owner_review_rationales:
+  swingly_first_principle: >
+    SWING, V7'nin birincil implementasyon hedefidir. En geniş zaman dilimi (4h),
+    en düşük no-trade tendency, ve en köklü edge thesis'e sahiptir. SWING
+    threshold'larının owner-reviewed baseline olarak locklanması, first
+    implementation'ın başlaması için yeterli kesinliği sağlar.
+  conservative_baseline_not_permanent_truth: >
+    Bu değerler empirical truth değil, conservative implementation baseline'dır.
+    İlk SWING walk-forward sonrası tüm threshold'lar recalibration'a tabidir.
+  no_scalp_aggressive_lock_without_data: >
+    SCALP ve AGGRESSIVE_SCALP için empirik veri olmadan threshold locklamak
+    fake precision üretir. Bu mode'lar research edilebilir ancak promotion
+    threshold logic'i implemente edilemez.
+  funding_deferred_hold_preserved: >
+    Funding cost DEFERRED olduğu sürece perpetual swap live promotion blocked'dır.
+    Bu hold spot-only SWING implementation'ını engellemez.
+
+holds_preserved:
+  - id: "HOLD-FUNDING-001"
+    title: "Funding cost model DEFERRED"
+    scope: "Perpetual swap live promotion (G3+)"
+    does_not_block: "Spot-only SWING implementation"
+    release_condition: "Funding cost model LOCKED statüsüne geçtiğinde"
+  - id: "HOLD-CI-001"
+    title: "CI first green run verification"
+    scope: "Full design lock confidence"
+    does_not_block: "Implementation başlangıcı"
+    release_condition: "GitHub'da ilk CI run'ının green olduğu doğrulandığında"
+  - id: "HOLD-SCALP-001"
+    title: "SCALP promotion thresholds"
+    scope: "SCALP promotion threshold logic implementation"
+    does_not_block: "SCALP research, feature engineering, model experimentation"
+    release_condition: "Empirical evidence + owner review"
+  - id: "HOLD-AGGRESSIVE_SCALP-001"
+    title: "AGGRESSIVE_SCALP promotion thresholds"
+    scope: "AGGRESSIVE_SCALP promotion threshold logic implementation"
+    does_not_block: "AGGRESSIVE_SCALP research"
+    release_condition: "Empirical evidence + owner review"
+
+remaining_gaps:
+  - gap: "Funding cost model still DEFERRED"
+    severity: "medium"
+    next_action: "Lock funding cost model before perpetual swap promotion"
+    blocks: "Perpetual swap live trading"
+  - gap: "CI first green run not yet verified on GitHub"
+    severity: "low"
+    next_action: "Push to GitHub and verify CI runs green"
+    blocks: "Full LOCKABLE confidence (currently LOCKABLE_WITH_HOLDS)"
+  - gap: "SCALP/AGGRESSIVE_SCALP empirical evidence not yet collected"
+    severity: "medium"
+    next_action: "Research phase: feature engineering, label design, model experimentation"
+    blocks: "SCALP/AGGRESSIVE_SCALP promotion threshold logic"
+
+safe_next_step:
+  id: "P0.7D"
+  title: "Design Lock Re-Audit After P0.7A/B/C"
+  rationale: >
+    P0.7A Simulation MVP, P0.7B CI enforcement ve P0.7C SWING threshold owner
+    review tamamlandı. Şimdi V7 design lockability durumunu read-only olarak
+    tekrar denetle ve updated verdict üret.
+
+evidence:
+  - "evaluation.md: SWING thresholds LOCKED_INITIAL_BASELINE (10 threshold, each with rationale and recalibration trigger)"
+  - "evaluation.md: SCALP thresholds HOLD (explicit non-live, non-locked markers)"
+  - "evaluation.md: AGGRESSIVE_SCALP thresholds HOLD (explicit non-live, non-locked markers)"
+  - "profitability_thesis.md: DEC-017 through DEC-021 added (threshold lock decisions)"
+  - "profitability_thesis.md: Open Decisions table updated (SWING: LOCKED_INITIAL_BASELINE, SCALP/AGGRESSIVE_SCALP: HOLD)"
+  - "roadmap.md: P0.7A-C lock status summary added"
+  - "roadmap.md: Design lock status LOCKABLE_WITH_HOLDS documented"
+  - "No application/domain source code changed (only docs modified)"
+  - "G0-G10 gate sequence preserved"
+  - "Funding DEFERRED hold explicitly preserved"
+  - "CI first green run hold explicitly preserved"

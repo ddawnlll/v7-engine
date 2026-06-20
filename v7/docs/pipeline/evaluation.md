@@ -196,21 +196,45 @@ Each mode must pass these gates sequentially. No gate may be skipped. Promotion 
 
 ### Mode-Specific Promotion Thresholds
 
-Where exact values are documented in existing authority docs, those values are cited. Values marked **LOCK_CANDIDATE** are conservative defaults requiring owner review before implementation.
+**Owner Review Status (P0.7C):** SWING thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines that enable first implementation. They are *not* permanent empirical truth and must be recalibrated after the first SWING walk-forward/backtest evidence. SCALP and AGGRESSIVE_SCALP thresholds remain **HOLD** or **RESEARCH_ONLY** — they require empirical evidence and owner review before any promotion threshold logic can be implemented for those modes.
+
+**Lock Semantics:**
+- **LOCKED_INITIAL_BASELINE:** Owner-reviewed conservative baseline. Implementation can proceed. Values subject to recalibration after first walk-forward evidence.
+- **HOLD:** Do not implement live/promotion threshold logic for this mode beyond research.
+- **RESEARCH_ONLY:** Mode may be researched, but not promoted to paper/tiny-live/live until empirical evidence and owner review exist.
 
 | Threshold | SWING | SCALP | AGGRESSIVE_SCALP |
 |-----------|-------|-------|------------------|
-| Minimum OOS window | 12 months (6 folds × 2mo) | 12 months (6 folds × 2mo) | 6 months (6 folds × 1mo) **[LOCK_CANDIDATE]** |
-| Minimum trades/events | ≥ 200 **[LOCK_CANDIDATE]** | ≥ 500 **[LOCK_CANDIDATE]** | ≥ 300 **[LOCK_CANDIDATE]** |
-| Minimum expectancy R | ≥ 0.15R **[LOCK_CANDIDATE]** | ≥ 0.05R **[LOCK_CANDIDATE]** | ≥ 0.03R **[LOCK_CANDIDATE]** |
-| Max drawdown limit | ≤ 25% **[LOCK_CANDIDATE]** | ≤ 15% **[LOCK_CANDIDATE]** | ≤ 10% **[LOCK_CANDIDATE]** |
-| Min no-trade quality | CORRECT_NO_TRADE ≥ 60%; SAVED_LOSS ≥ 0.20R per event | CORRECT_NO_TRADE ≥ 55%; SAVED_LOSS ≥ 0.10R per event | CORRECT_NO_TRADE ≥ 50%; SAVED_LOSS ≥ 0.05R per event |
-| Calibration requirement | Reliability error within ±10% per bucket **[LOCK_CANDIDATE]** | Reliability error within ±10% per bucket **[LOCK_CANDIDATE]** | Reliability error within ±15% per bucket **[LOCK_CANDIDATE]** |
-| Cost stress requirement | Edge survives taker × 1.5 multiplier stress **[LOCK_CANDIDATE]** | Edge survives taker × 2.0 multiplier stress; cost-adjusted expectancy ≥ 0.10R | Edge survives taker × 2.5 multiplier stress **[LOCK_CANDIDATE]** |
-| Shadow duration | ≥ 4 weeks **[LOCK_CANDIDATE]** | ≥ 3 weeks **[LOCK_CANDIDATE]** | ≥ 2 weeks **[LOCK_CANDIDATE]** |
-| Paper duration | ≥ 4 weeks **[LOCK_CANDIDATE]** | ≥ 4 weeks **[LOCK_CANDIDATE]** | ≥ 3 weeks **[LOCK_CANDIDATE]** |
-| Tiny live limit | Max 0.5% account risk per trade; max 5% daily loss; max 10% cumulative **[LOCK_CANDIDATE]** | Max 0.25% account risk per trade; max 3% daily loss; max 7% cumulative **[LOCK_CANDIDATE]** | Max 0.1% account risk per trade; max 2% daily loss; max 5% cumulative **[LOCK_CANDIDATE]** |
-| Owner review required | Yes — all LOCK_CANDIDATE values | Yes — all LOCK_CANDIDATE values | Yes — all LOCK_CANDIDATE values |
+| Minimum OOS window | 12 months (6 folds × 2mo) **[LOCKED_INITIAL_BASELINE]** | 12 months (6 folds × 2mo) **[HOLD]** | 6 months (6 folds × 1mo) **[HOLD]** |
+| Minimum trades/events | ≥ 200 **[LOCKED_INITIAL_BASELINE]** | ≥ 500 **[HOLD]** | ≥ 300 **[HOLD]** |
+| Minimum expectancy R | ≥ 0.15R **[LOCKED_INITIAL_BASELINE]** | ≥ 0.05R **[HOLD]** | ≥ 0.03R **[HOLD]** |
+| Max drawdown limit | ≤ 25% **[LOCKED_INITIAL_BASELINE]** | ≤ 15% **[HOLD]** | ≤ 10% **[HOLD]** |
+| Min no-trade quality | CORRECT_NO_TRADE ≥ 60%; SAVED_LOSS ≥ 0.20R per event **[LOCKED_INITIAL_BASELINE]** | CORRECT_NO_TRADE ≥ 55%; SAVED_LOSS ≥ 0.10R per event **[HOLD]** | CORRECT_NO_TRADE ≥ 50%; SAVED_LOSS ≥ 0.05R per event **[HOLD]** |
+| Calibration requirement | Reliability error within ±10% per bucket **[LOCKED_INITIAL_BASELINE]** | Reliability error within ±10% per bucket **[HOLD]** | Reliability error within ±15% per bucket **[HOLD]** |
+| Cost stress requirement | Edge survives taker × 1.5 multiplier stress **[LOCKED_INITIAL_BASELINE]** | Edge survives taker × 2.0 multiplier stress; cost-adjusted expectancy ≥ 0.10R **[HOLD]** | Edge survives taker × 2.5 multiplier stress **[HOLD]** |
+| Shadow duration | ≥ 4 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 3 weeks **[HOLD]** | ≥ 2 weeks **[HOLD]** |
+| Paper duration | ≥ 4 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 4 weeks **[HOLD]** | ≥ 3 weeks **[HOLD]** |
+| Tiny live limit | Max 0.5% account risk per trade; max 5% daily loss; max 10% cumulative **[LOCKED_INITIAL_BASELINE]** | Max 0.25% account risk per trade; max 3% daily loss; max 7% cumulative **[HOLD]** | Max 0.1% account risk per trade; max 2% daily loss; max 5% cumulative **[HOLD]** |
+| Owner review status | **LOCKED_INITIAL_BASELINE** — implementation-ready for SWING | **HOLD** — empirical evidence required | **HOLD** — empirical evidence required |
+
+### SWING Baseline Rationale (Per Threshold)
+
+| Threshold | Value | Rationale | Recalibration Trigger |
+|-----------|-------|-----------|----------------------|
+| Minimum OOS window | 12 months (6 folds × 2mo) | 12-month OOS coverage captures at least one full market cycle including regime transitions; 2-month validation windows balance recency vs statistical power | After first 12-month walk-forward completes |
+| Minimum trades/events | ≥ 200 | 200 trades produces expectancy confidence interval width of ~0.14R at typical SWING variance — sufficient to reject zero-expectancy null | After first walk-forward: if variance higher than expected, increase threshold |
+| Minimum expectancy R | ≥ 0.15R | Conservative net-expectancy floor after costs; below 0.15R the edge-to-noise ratio is too low for reliable promotion | After first walk-forward: recalibrate based on realized cost-adjusted distribution |
+| Max drawdown limit | ≤ 25% | 25% drawdown allows for regime transitions while preventing catastrophic capital impairment; aligned with Kelly-fraction risk sizing | After first multi-regime walk-forward: tighten if drawdown recovery periods exceed 6 months |
+| Min no-trade quality | CORRECT_NO_TRADE ≥ 60%; SAVED_LOSS ≥ 0.20R | SWING has LOW no-trade tendency — high correctness threshold ensures NO_TRADE is deliberate, not lazy | After first evaluation: adjust if MISSED_OPPORTUNITY rate exceeds 25% |
+| Calibration requirement | ±10% per bucket | 10% reliability error ensures probability/expected-R surfaces are trustworthy enough for policy dual-gate decisions | After first calibration run: tighten to ±8% if model shows stable calibration |
+| Cost stress requirement | taker × 1.5 | 1.5× multiplier provides margin above taker baseline; conservative enough to catch hidden cost sensitivity without being so strict it blocks viable edge | After first cost stress run: if edge survives 2.0×, raise stress multiplier |
+| Shadow duration | ≥ 4 weeks | 4-week shadow captures ~20-30 SWING trades at typical 4h frequency — sufficient to detect material backtest-shadow divergence | Always 4-week minimum; extend if first shadow period shows high variance |
+| Paper duration | ≥ 4 weeks | Matches shadow duration; ensures paper outcomes are statistically comparable to shadow and backtest baselines | Always 4-week minimum; extend if paper-shadow divergence detected |
+| Tiny live limit | 0.5% risk/trade; 5% daily; 10% cumulative | Conservative progressive limits: per-trade risk small enough to survive 20 consecutive losses, daily cap prevents single-day spiral, cumulative cap limits total tiny-live exposure | After first tiny-live period: adjust based on realized vs expected loss distribution |
+
+**SWING Recalibration Policy:** All SWING LOCKED_INITIAL_BASELINE thresholds must be recalibrated after the first SWING walk-forward/backtest evidence is available. Recalibration is an owner-reviewed decision, not an automated process. Thresholds do not automatically promote to LOCKED without owner review of the first empirical evidence.
+
+**SCALP and AGGRESSIVE_SCALP Status:** All numeric promotion thresholds for SCALP and AGGRESSIVE_SCALP are **HOLD**. These modes may be researched (feature engineering, label design, model experimentation) but no promotion threshold logic may be implemented until empirical evidence and owner review establish conservative baselines. The values shown in the table are placeholder defaults — they are not live, not locked, and not implementation-ready.
 
 ### Rejection Rules
 
