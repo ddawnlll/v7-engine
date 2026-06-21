@@ -20,6 +20,7 @@ Every subsystem has an `ai_summary.md` that is the canonical dense-synthesis ent
 | Runtime | `runtime/docs/ai_summary.md` | Python backend, API, schema, scan loop |
 | Interface | `interface/docs/ai_summary.md` | React UI, components, pages |
 | AlphaForge | `alphaforge/docs/ai_summary__v7_alphaforge_xgb.md` | Alpha discovery, label engine, XGBoost training |
+| V7 Policy Critic | `v7/docs/policy_critic/ai_summary.md` | Policy Critic RL architecture, offline IQL critic, codebase maps, literature |
 
 **Rule:** If an ai_summary exists for a subsystem, read it before reading any individual doc in that subsystem. The ai_summary is the dense synthesis; individual docs are authority details.
 
@@ -133,6 +134,7 @@ SWING is implemented first as a control baseline to validate the architecture â€
 | `v7/docs/v7_mode_centric_architecture.md` | Mode-specific architecture spec |
 | `v7/docs/pipeline/evaluation.md` | G0-G10 promotion gates |
 | `v7/docs/runtime/runtime_integration.md` | Per-mode readiness states |
+| `v7/docs/policy_critic/ai_summary.md` | Policy Critic RL architecture, design, codebase maps, research |
 | `simulation/docs/cost_model.md` | Fee, slippage, funding cost model |
 | `simulation/docs/profiles.md` | Mode-specific simulation profiles |
 | `.github/workflows/ci.yml` | CI: contract+boundary+tests |

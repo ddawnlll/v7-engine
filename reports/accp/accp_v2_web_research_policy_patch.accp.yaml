@@ -1,0 +1,151 @@
+accp_report:
+  report:
+    accp_version: 2.0.0
+    source_format: ACCP-YAML
+    report_id: ACCP-V2-WEB-RESEARCH-POLICY-PATCH-IPR-001
+    report_type: IPR
+    report_family: core
+    report_name: Implementation Patch Report — ACCP V2 Web Research Policy
+    plan_id: ACCP-V2-WEB-RESEARCH-POLICY-PATCH
+    workspace_id: none
+    repo_root: /home/erfolg/src/v7-engine
+    git_commit: unknown
+    git_branch: feat/p0-8-alphaforge-authority-and-audit
+    report_generated_at: '2026-06-22T00:00:00+00:00'
+    report_stale_after: on_next_commit
+    inspection_mode: mutation_or_patch_proposal
+    confidence: high
+    authority:
+      reports_are_evidence_only: true
+      route_signals_are_advisory: true
+      runtime_must_read_compiled_json: true
+      raw_yaml_is_not_runtime_authority: true
+      rendered_markdown_is_human_preview_only: true
+    agent:
+      agent_id: claude-code
+      agent_role: repo_agent
+      model_name: claude-ocgo-deepseek-v4-flash
+      model_version: unknown
+      session_id: unknown
+      prompt_hash: unknown
+    lineage:
+      parent_report: none
+      supersedes: none
+      triggered_by: ACCP-TASK-ACCP-V2-WEB-RESEARCH-POLICY-PATCH
+      continuation_of: none
+      validates: none
+    references:
+      - id: R001
+        ref: ACCP_V2_STRICT_YAML_ONEFILE_MASTER
+        purpose: Patched ACCP master template with web research source policy
+    assumptions:
+      - id: AS001
+        assumption: The ACCP master template at accp.yaml is the canonical onefile master for ACCP v2.0
+        reason: ACCP master has template_id ACCP_V2_STRICT_YAML_ONEFILE_MASTER
+        confidence: high
+        how_to_verify: Verify accp.yaml has template_id ACCP_V2_STRICT_YAML_ONEFILE_MASTER
+    sections:
+      scope_declaration:
+        summary: Patch ACCP v2 strict YAML onefile master template with internet-backed source research policy for all future research-oriented prompts/reports
+        items:
+          - id: S001
+            label: FACT
+            text: 'Scope: Add research_source_policy block, update strict_generation_rules, add source-oriented template sections to research report types (FER, FDR, RIR, PIR, DCR, WQR), update report_type_registry required_sections, and add source checks to final_generation_checklist.'
+            evidence_refs:
+              - accp.yaml
+            confidence: high
+      implementation_summary:
+        summary: Implementation completed across 5 categories
+        items:
+          - id: CHG001
+            label: FACT
+            text: 'Added research_source_policy block with DEC-ACCP-RESEARCH-001, including source types, citation rules, freshness rules, source quality schema, anti-hallucination rules, and per-report-type applicability.'
+            evidence_refs:
+              - accp.yaml
+            confidence: high
+          - id: CHG002
+            label: FACT
+            text: 'Updated strict_generation_rules with 8 new rules: require_web_research_for_research_reports, require_source_inventory_for_research_reports, require_cited_claims_for_research_reports, require_source_quality_for_research_reports, require_applicability_analysis_for_external_research, forbid_uncited_nontrivial_research_claims, forbid_profitability_claims_from_academic_or_backtest_only_sources, require_unverified_label_when_internet_unavailable.'
+            evidence_refs:
+              - accp.yaml
+            confidence: high
+          - id: CHG003
+            label: FACT
+            text: 'Added source-oriented template sections (source_inventory, cited_claims, source_quality_matrix, conflicting_evidence, applicability_to_target_system) to FER (all 5), FDR (3), RIR (4), PIR (3), DCR (4), and WQR (3) report templates.'
+            evidence_refs:
+              - accp.yaml
+            confidence: high
+          - id: CHG004
+            label: FACT
+            text: 'Updated report_type_registry required_sections for FER, FDR, RIR, PIR, DCR, and WQR to include the new source-oriented sections.'
+            evidence_refs:
+              - accp.yaml
+            confidence: high
+          - id: CHG005
+            label: FACT
+            text: 'Added 5 source-related checks to final_generation_checklist: all_research_reports_have_source_inventory, all_research_reports_have_cited_claims, all_source_backed_claims_have_source_refs, no_uncited_nontrivial_research_claims, no_profitability_claims_from_academic_or_backtest_only_sources.'
+            evidence_refs:
+              - accp.yaml
+            confidence: high
+      changes:
+        summary: Single file modified — accp.yaml
+        items:
+          - id: F001
+            label: FACT
+            text: 'Modified /home/erfolg/src/v7-engine/accp.yaml — added research_source_policy (193 lines), updated strict_generation_rules (8 new rules), added source sections to FER (5 sections), FDR (3), RIR (4), PIR (3), DCR (4), WQR (3), updated report_type_registry for 6 types, added 5 checklist items.'
+            evidence_refs:
+              - accp.yaml
+            confidence: high
+      diff_integrity:
+        base_git_commit: unknown
+        working_tree_clean_before: unknown
+        working_tree_clean_after: unknown
+        files_changed_count: 1
+        total_added_lines: 300-400
+        total_removed_lines: 0
+        diff_hash: unknown
+        changed_files:
+          - id: F001
+            path: accp.yaml
+            change_type: modified
+            before_hash: unknown
+            after_hash: unknown
+            confidence: high
+      validation_handoff:
+        summary: Validate YAML parses and all required checks pass
+        items:
+          - id: V001
+            label: FACT
+            text: 'Validation: Run python3 yaml check, verify existing keys/report types/templates preserved, verify new policy block present, verify strict_generation_rules updated, verify source sections in target templates.'
+            evidence_refs:
+              - commands_expected
+            confidence: high
+      rollback_plan:
+        rollback_required: false
+        no_repo_mutation_performed: false
+        steps:
+          - id: RB001
+            action: 'git checkout -- accp.yaml'
+            target_files:
+              - accp.yaml
+            command_or_manual_step: 'git checkout -- accp.yaml'
+            risk: low
+            validation_after_rollback:
+              - 'python3 -c "import yaml; yaml.safe_load(open(\"accp.yaml\")); print(\"YAML valid after rollback\")"'
+      final_status:
+        status: complete
+        safe_to_continue: yes
+        requires_hir: no
+        reason:
+          - All source policy changes applied to ACCP master template
+          - No existing report types deleted
+          - No existing templates deleted
+          - No version changes
+          - No runtime authority changes
+          - No source code modified
+        self_assessment:
+          required_sections_complete: yes
+          evidence_coverage: high
+          unresolved_gaps:
+            - none
+          confidence_in_own_completeness: high

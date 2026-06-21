@@ -44,6 +44,7 @@ V7-local pipeline docs in `v7/docs/runtime/` (simulation_engine, runtime_integra
 **Dense syntheses live in dedicated per-subsystem summaries:**
 - `runtime/docs/ai_summary.md` — full synthesis: architecture, runtime flow, analyzer pipeline, learning layer, self-learning, schema tables, API route groups, runbook, diagnostic snapshots
 - `interface/docs/ai_summary.md` — full synthesis: workspace structure, page ownership, component architecture, migration plan, data freshness, current-state analysis
+- `v7/docs/policy_critic/ai_summary.md` — Policy Critic RL architecture, IQL critic design, codebase maps (V7/V6, AlphaForge, Simulation, Contracts), literature (offline RL, calibration, reward design, finance RL failures)
 - `ai_summary.md` at repo root — meta-hub linking all subsystem summaries
 
 **Migration status:** Cross-doc links in the migrated trees still reference the V4 layout (e.g. `/Users/hootie/src/trading-bot/v4/...`); those are legacy anchors awaiting path normalization. The operational semantics are authoritative for the V7 operational stack going forward and supersede the V4 originals for V7-internal work.
@@ -1118,6 +1119,21 @@ If policy cannot safely produce clean actionable decision: emit NO_TRADE or degr
 
 ### 19.7 Config Surface Families
 minimum action probability, minimum confidence, minimum expected R, minimum cost-adjusted expectancy, drawdown/adverse-pressure limits, no-trade thresholds, policy score weights, decision margin, timing extension enablement, degraded-result behavior.
+
+### 19.8 Policy Critic (docs/policy_critic/ai_summary.md)
+The V7 Policy Critic is an advisory offline-RL component that inserts between the hard gate (19.2) and the final gate. It reviews proposed LONG/SHORT actions using a learned value function (Implicit Q-Learning, IQL) and returns a verdict: ALLOW, DOWNWEIGHT_CONFIDENCE, VETO_TO_NO_TRADE, or REQUIRE_REVIEW.
+
+**Key properties:**
+- Learns Q(s, LONG), Q(s, SHORT), Q(s, NO_TRADE) via IQL expectile regression over in-sample logged actions only
+- Distributional Q-head (16-32 quantiles) + conformal calibration post-training
+- Advisory-only: hard-gate failure always wins; V7 policy enacts the veto (critic does not override)
+- NO_TRADE is a first-class action with zero-cost baseline (saved_loss_r - 0.5*missed_opportunity_r)
+- Staged rollout: v1 rule-based shadow -> v2 supervised -> v3 offline RL (SWING live veto) -> v4 constrained optimizer
+- Spot-only-valid; perp promotion blocked at G3 (funding_cost_r DEFERRED)
+- Lives in `v7/src/v7/alpha/policy_bridge/` (greenfield — v7/src/ empty today)
+- See full doc tree at `v7/docs/policy_critic/`
+
+**Open HOLDs (must resolve before lock):** replay buffer does not exist; regret_r hardcoded 0.0; per-direction expected_R not in V6; bad_trade_probability/model_disagreement/recent_prediction_error don't exist live; conformal exchangeability violated by time-series; IQL hyperparameters need empirical evidence.
 
 ---
 
