@@ -23,7 +23,7 @@ v7-engine/
 │   ├── src/          ← AlphaForge source code (not yet implemented)
 │   └── docs/         ← authority docs, contracts, phase plans (ai_summary.md hub)
 ├── v7/               ← V7 semantic/runtime/policy authority
-│   └── docs/         ← V7 specifications, contracts, architecture
+│   └── docs/         ← V7 specifications, contracts, architecture, policy_critic/ RL research
 ├── runtime/          ← Python backend (imported from v4, migrated to v7)
 │   ├── api/          ← FastAPI route groups
 │   ├── db/           ← operational schema

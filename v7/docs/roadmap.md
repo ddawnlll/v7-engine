@@ -44,6 +44,7 @@ Documentation authority is largely complete for:
 - **P0.7A — Simulation MVP:** ✅ PASS. Simulation truth authority has minimal viable implementation (contracts, engine, exits, costs, golden tests, import boundary). 222 tests pass. `SimulationProfile` fixture exists.
 - **P0.7B — CI Enforcement:** ✅ PASS (CI_FIRST_GREEN_RUN_HOLD). `.github/workflows/ci.yml` enforces contract checks, boundary checks, and full test suite on push/PR. First GitHub green run pending verification.
 - **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation. SCALP and AGGRESSIVE_SCALP thresholds are **HOLD** pending empirical evidence.
+- **P0.x — Policy Critic RL Research:** ✅ PASS. Full research + codebase mapping (V7 pipeline, AlphaForge, Simulation, Contracts/Runtime) + literature review (offline RL methods, critic/calibration, reward design, finance RL failure modes) + grounded RL architecture recommendation completed. **LOCK_CANDIDATE** — design documented in `v7/docs/policy_critic/`. Open HOLDs (replay buffer, regret_r, funding, per-direction expected_R, synthesized features, conformal exchangeability) must be resolved before lock.
 
 **Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode (LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding DEFERRED, SCALP/AGGRESSIVE_SCALP HOLD, CI first green run hold).
 

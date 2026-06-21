@@ -17,6 +17,108 @@ accp_onefile_master:
     compiled_json_is_runtime_input: true
     raw_yaml_is_not_runtime_authority: true
     rendered_markdown_is_human_preview_only: true
+  research_source_policy:
+    policy_id: DEC-ACCP-RESEARCH-001
+    status: LOCKED_INITIAL
+    title: Internet-backed source research required for ACCP research prompts
+    internet_research_required_for_research_reports: true
+    source_usage_required: true
+    source_citations_required: true
+    minimum_source_count_default: 8
+    minimum_source_count_for_small_scope: 3
+    retrieval_date_required: true
+    source_inventory_required: true
+    source_quality_matrix_required: true
+    cited_claims_required: true
+    applicability_analysis_required: true
+    conflicting_evidence_required: true
+    allowed_no_internet_exception:
+      allowed: true
+      required_reason: true
+      must_mark_claims_as_unverified: true
+      must_emit_missing_evidence_items: true
+    preferred_source_types:
+    - official_documentation
+    - peer_reviewed_paper
+    - arxiv_paper
+    - conference_paper
+    - official_github_repository
+    - reputable_engineering_blog
+    - benchmark_report
+    - standards_documentation
+    - vendor_documentation_with_technical_detail
+    discouraged_source_types:
+    - unsourced_blog_post
+    - SEO_content
+    - low_quality_medium_post
+    - forum_claim_without_evidence
+    - vendor_marketing_without_technical_detail
+    - social_media_claim_without_primary_source
+    required_source_categories_when_relevant:
+    - primary_sources_for_core_algorithms
+    - recent_sources_for_current_tooling
+    - implementation_sources_for_library_behavior
+    - risk_sources_for_known_failure_modes
+    - finance_or_trading_specific_sources
+    - official_api_or_package_docs_for_tool_claims
+    citation_rules:
+    - Every non-trivial technical claim must cite at least one source.
+    - Every algorithm recommendation must cite primary or near-primary sources.
+    - Every claim about current library capability, benchmark, pricing, model capability, API behavior, or tool behavior must cite a recent source.
+    - If sources disagree, summarize the disagreement and explain which side is more applicable.
+    - Do not cite sources that were not actually used.
+    - Do not turn academic benchmark success into profitability claims.
+    - Do not claim live trading readiness from offline or backtest-only evidence.
+    freshness_rules:
+    - For model/tool/API/library claims, prefer sources from the last 12 months.
+    - For foundational algorithms, older primary papers are acceptable.
+    - For trading/finance market-structure claims, prefer recent sources unless the concept is stable.
+    - Always include retrieval_date in source_inventory.
+    source_quality_schema:
+      each_source_must_include:
+      - id
+      - title
+      - author_or_organization
+      - url_or_identifier
+      - date_published_or_updated
+      - retrieval_date
+      - source_type
+      - relevance_to_task
+      - trust_rating
+      - limitations
+    anti_hallucination_rules:
+    - If a source cannot be verified, mark the claim as unverified.
+    - If a result does not directly transfer to the target system, explicitly state the transfer limitation.
+    - If evidence is academic/backtest-only, do not translate it into production/live profitability.
+    - If internet access is unavailable, emit a missing_evidence section and do not claim source-backed confidence.
+    applies_to_report_families:
+    - feature
+    - core
+    - coordination
+    - writing
+    applies_strictly_to_report_types:
+    - RIR
+    - PIR
+    - FER
+    - FDR
+    - WQR
+    - DCR
+    applies_conditionally_to_report_types:
+    - RCA
+    - RAR
+    - PRR
+    - ECR
+    - WDR
+    - WER
+    does_not_apply_by_default_to:
+    - IPR
+    - FPR
+    - FIR
+    - TVR
+    - FVR
+    - EXR
+    - MER
+    exception: Implementation and validation reports do not require internet research unless they make claims about external APIs, libraries, package versions, model capabilities, current pricing, current benchmarks, or external documentation.
   generator_input_schema:
     target_report_types:
     - '{{one_or_more_of_26_report_types}}'
@@ -105,6 +207,14 @@ accp_onefile_master:
     require_diff_integrity_for_mutation: true
     require_rollback_plan_for_mutation: true
     require_hir_for_critical_blockers: true
+    require_web_research_for_research_reports: true
+    require_source_inventory_for_research_reports: true
+    require_cited_claims_for_research_reports: true
+    require_source_quality_for_research_reports: true
+    require_applicability_analysis_for_external_research: true
+    forbid_uncited_nontrivial_research_claims: true
+    forbid_profitability_claims_from_academic_or_backtest_only_sources: true
+    require_unverified_label_when_internet_unavailable: true
   report_type_registry:
     RIR:
       type: RIR
@@ -123,6 +233,10 @@ accp_onefile_master:
       - contracts_and_schemas
       - gaps_and_risks
       - final_status
+      - source_inventory
+      - cited_claims
+      - source_quality_matrix
+      - applicability_to_target_system
     PIR:
       type: PIR
       family: core
@@ -140,13 +254,16 @@ accp_onefile_master:
       - workspace_review
       - decisions
       - final_status
+      - source_inventory
+      - cited_claims
+      - applicability_to_target_system
     EXR:
       type: EXR
       family: core
       name: Execution Run Report
       support_level: schema_strict
       inspection_mode: execution_observation
-      selection_signals: &id025
+      selection_signals: &id003
       - planspec_execution
       - execution_run
       - execution_kernel_trace
@@ -171,7 +288,7 @@ accp_onefile_master:
       name: Manual Execution Report
       support_level: schema_strict
       inspection_mode: manual_execution_trace
-      selection_signals: &id026
+      selection_signals: &id004
       - manual_execution
       - planspec_manual_run
       - code_write_test_next_workspace
@@ -196,7 +313,7 @@ accp_onefile_master:
       name: Implementation Patch Report
       support_level: schema_strict
       inspection_mode: mutation_or_patch_proposal
-      selection_signals: &id003
+      selection_signals: &id005
       - implementation_patch
       - changed_files
       - patch_proposal
@@ -214,7 +331,7 @@ accp_onefile_master:
       name: Test Validation Report
       support_level: schema_strict
       inspection_mode: validation_only
-      selection_signals: &id004
+      selection_signals: &id006
       - validation_commands
       - test_results
       - validation_not_run
@@ -230,7 +347,7 @@ accp_onefile_master:
       name: Handoff / Intervention Report
       support_level: schema_strict
       inspection_mode: pause_or_handoff
-      selection_signals: &id005
+      selection_signals: &id007
       - blocked
       - unsafe
       - authority_ambiguous
@@ -248,7 +365,7 @@ accp_onefile_master:
       name: Regression Analysis Report
       support_level: schema_lite
       inspection_mode: validation_or_analysis
-      selection_signals: &id006
+      selection_signals: &id008
       - regression
       - newly_broken_test
       - validation_regression_analysis
@@ -266,7 +383,7 @@ accp_onefile_master:
       name: Promotion Readiness Report
       support_level: schema_strict
       inspection_mode: promotion_review
-      selection_signals: &id007
+      selection_signals: &id009
       - promotion_readiness
       - workspace_promotion
       - phase_promotion
@@ -283,7 +400,7 @@ accp_onefile_master:
       name: Correction / Amendment Report
       support_level: schema_strict
       inspection_mode: correction
-      selection_signals: &id008
+      selection_signals: &id010
       - correction
       - amendment
       - supersede_prior_report
@@ -297,7 +414,7 @@ accp_onefile_master:
       name: Bug Search Report
       support_level: schema_strict
       inspection_mode: read_only
-      selection_signals: &id009
+      selection_signals: &id011
       - bug_search
       - symptom_search
       - suspect_area
@@ -316,7 +433,7 @@ accp_onefile_master:
       name: Bug Reproduction Report
       support_level: schema_lite
       inspection_mode: validation_only
-      selection_signals: &id010
+      selection_signals: &id012
       - bug_reproduction
       - repro_steps
       - observed_vs_expected
@@ -333,7 +450,7 @@ accp_onefile_master:
       name: Root Cause Analysis Report
       support_level: schema_lite
       inspection_mode: analysis
-      selection_signals: &id011
+      selection_signals: &id013
       - root_cause
       - cause_chain
       - minimal_fix_boundary
@@ -350,7 +467,7 @@ accp_onefile_master:
       name: Fix Patch Report
       support_level: schema_strict
       inspection_mode: mutation_or_patch_proposal
-      selection_signals: &id012
+      selection_signals: &id014
       - fix_patch
       - bug_fix_changes
       required_sections:
@@ -368,7 +485,7 @@ accp_onefile_master:
       name: Fix Validation Report
       support_level: schema_lite
       inspection_mode: validation_only
-      selection_signals: &id013
+      selection_signals: &id015
       - fix_validation
       - repro_before_after
       required_sections:
@@ -383,7 +500,7 @@ accp_onefile_master:
       name: Feature Exploration Report
       support_level: template_available
       inspection_mode: read_only
-      selection_signals: &id014
+      selection_signals: &id016
       - feature_exploration
       - repo_fit
       - feature_risk
@@ -395,13 +512,18 @@ accp_onefile_master:
       - open_questions
       - recommendation
       - final_status
+      - source_inventory
+      - cited_claims
+      - source_quality_matrix
+      - conflicting_evidence
+      - applicability_to_target_system
     FDR:
       type: FDR
       family: feature
       name: Feature Design Report
       support_level: template_available
       inspection_mode: design
-      selection_signals: &id015
+      selection_signals: &id017
       - feature_design
       - architecture_design
       required_sections:
@@ -412,13 +534,16 @@ accp_onefile_master:
       - routes_events_types
       - validation_strategy
       - final_status
+      - source_inventory
+      - cited_claims
+      - applicability_to_target_system
     FCR:
       type: FCR
       family: feature
       name: Feature Contract Report
       support_level: template_available
       inspection_mode: contract_freeze
-      selection_signals: &id016
+      selection_signals: &id018
       - feature_contract_freeze
       - types_routes_events_ownership
       required_sections:
@@ -435,7 +560,7 @@ accp_onefile_master:
       name: Feature Implementation Report
       support_level: template_available
       inspection_mode: mutation_or_patch_proposal
-      selection_signals: &id017
+      selection_signals: &id019
       - feature_implementation
       required_sections:
       - scope_declaration
@@ -452,7 +577,7 @@ accp_onefile_master:
       name: Feature Gate Report
       support_level: template_available
       inspection_mode: validation_only
-      selection_signals: &id018
+      selection_signals: &id020
       - feature_gate
       - rollout_gate
       required_sections:
@@ -468,7 +593,7 @@ accp_onefile_master:
       name: Writing Brief Report
       support_level: template_available
       inspection_mode: brief
-      selection_signals: &id019
+      selection_signals: &id021
       - writing_brief
       required_sections:
       - writing_brief
@@ -483,7 +608,7 @@ accp_onefile_master:
       name: Writing Draft Report
       support_level: template_available
       inspection_mode: draft
-      selection_signals: &id020
+      selection_signals: &id022
       - writing_draft
       required_sections:
       - draft_summary
@@ -498,7 +623,7 @@ accp_onefile_master:
       name: Writing Edit Report
       support_level: template_available
       inspection_mode: edit
-      selection_signals: &id021
+      selection_signals: &id023
       - writing_edit
       required_sections:
       - edit_summary
@@ -513,7 +638,7 @@ accp_onefile_master:
       name: Writing Quality Review Report
       support_level: template_available
       inspection_mode: review
-      selection_signals: &id022
+      selection_signals: &id024
       - writing_quality_review
       required_sections:
       - quality_review_target
@@ -523,13 +648,16 @@ accp_onefile_master:
       - risks
       - decisions
       - final_status
+      - source_inventory
+      - cited_claims
+      - source_quality_matrix
     ECR:
       type: ECR
       family: coordination
       name: Evidence Capsule Report
       support_level: schema_lite
       inspection_mode: evidence_bundle
-      selection_signals: &id023
+      selection_signals: &id025
       - evidence_capsule
       - gate_evidence
       - bridge_evidence
@@ -548,7 +676,7 @@ accp_onefile_master:
       name: Decision / Conflict Report
       support_level: schema_lite
       inspection_mode: decision_record
-      selection_signals: &id024
+      selection_signals: &id026
       - decision
       - conflict
       - tradeoff
@@ -561,33 +689,37 @@ accp_onefile_master:
       - decision
       - downstream_impact
       - final_status
+      - source_inventory
+      - cited_claims
+      - conflicting_evidence
+      - applicability_to_target_system
   selection_rules:
     RIR: *id001
     PIR: *id002
-    EXR: *id025
-    MER: *id026
-    IPR: *id003
-    TVR: *id004
-    HIR: *id005
-    RAR: *id006
-    PRR: *id007
-    CAR: *id008
-    BSR: *id009
-    BRR: *id010
-    RCA: *id011
-    FPR: *id012
-    FVR: *id013
-    FER: *id014
-    FDR: *id015
-    FCR: *id016
-    FIR: *id017
-    FGR: *id018
-    WBR: *id019
-    WDR: *id020
-    WER: *id021
-    WQR: *id022
-    ECR: *id023
-    DCR: *id024
+    EXR: *id003
+    MER: *id004
+    IPR: *id005
+    TVR: *id006
+    HIR: *id007
+    RAR: *id008
+    PRR: *id009
+    CAR: *id010
+    BSR: *id011
+    BRR: *id012
+    RCA: *id013
+    FPR: *id014
+    FVR: *id015
+    FER: *id016
+    FDR: *id017
+    FCR: *id018
+    FIR: *id019
+    FGR: *id020
+    WBR: *id021
+    WDR: *id022
+    WER: *id023
+    WQR: *id024
+    ECR: *id025
+    DCR: *id026
   report_templates:
     RIR:
       report:
@@ -700,6 +832,46 @@ accp_onefile_master:
               unresolved_gaps:
               - '{{gap_or_none}}'
               confidence_in_own_completeness: '{{high_medium_low}}'
+          source_inventory:
+            summary: '{{fill_source_inventory}}'
+            items:
+            - id: '{{source_id}}'
+              title: '{{source_title}}'
+              author_or_organization: '{{author_or_org}}'
+              url_or_identifier: '{{url_or_identifier}}'
+              date_published_or_updated: '{{date_or_unknown}}'
+              retrieval_date: '{{iso_date}}'
+              source_type: '{{official_docs_paper_repo_blog_benchmark_other}}'
+              relevance_to_task: '{{relevance}}'
+              trust_rating: '{{high_medium_low}}'
+              limitations: '{{limitations}}'
+          cited_claims:
+            summary: '{{fill_cited_claims}}'
+            items:
+            - id: '{{claim_id}}'
+              claim: '{{claim_text}}'
+              source_refs:
+              - '{{source_id}}'
+              claim_type: '{{fact_inference_recommendation_risk_assumption}}'
+              confidence: '{{high_medium_low}}'
+          source_quality_matrix:
+            summary: '{{fill_source_quality_matrix}}'
+            items:
+            - id: '{{source_id}}'
+              trust_rating: '{{high_medium_low}}'
+              primary_or_secondary: '{{primary_secondary_tertiary}}'
+              freshness: '{{recent_stable_old_unknown}}'
+              bias_or_limitations: '{{limitations}}'
+              usable_for_decision: '{{yes_no_conditional}}'
+          applicability_to_target_system:
+            summary: '{{fill_applicability_analysis}}'
+            items:
+            - id: '{{applicability_id}}'
+              external_finding: '{{finding}}'
+              applicability: '{{direct_partial_weak_not_applicable}}'
+              reason: '{{reason}}'
+              implementation_risk: '{{low_medium_high}}'
+              confidence: '{{high_medium_low}}'
         compiler_expectations:
           source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
           compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
@@ -817,6 +989,37 @@ accp_onefile_master:
               unresolved_gaps:
               - '{{gap_or_none}}'
               confidence_in_own_completeness: '{{high_medium_low}}'
+          source_inventory:
+            summary: '{{fill_source_inventory}}'
+            items:
+            - id: '{{source_id}}'
+              title: '{{source_title}}'
+              author_or_organization: '{{author_or_org}}'
+              url_or_identifier: '{{url_or_identifier}}'
+              date_published_or_updated: '{{date_or_unknown}}'
+              retrieval_date: '{{iso_date}}'
+              source_type: '{{official_docs_paper_repo_blog_benchmark_other}}'
+              relevance_to_task: '{{relevance}}'
+              trust_rating: '{{high_medium_low}}'
+              limitations: '{{limitations}}'
+          cited_claims:
+            summary: '{{fill_cited_claims}}'
+            items:
+            - id: '{{claim_id}}'
+              claim: '{{claim_text}}'
+              source_refs:
+              - '{{source_id}}'
+              claim_type: '{{fact_inference_recommendation_risk_assumption}}'
+              confidence: '{{high_medium_low}}'
+          applicability_to_target_system:
+            summary: '{{fill_applicability_analysis}}'
+            items:
+            - id: '{{applicability_id}}'
+              external_finding: '{{finding}}'
+              applicability: '{{direct_partial_weak_not_applicable}}'
+              reason: '{{reason}}'
+              implementation_risk: '{{low_medium_high}}'
+              confidence: '{{high_medium_low}}'
         compiler_expectations:
           source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
           compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
@@ -2635,6 +2838,55 @@ accp_onefile_master:
               unresolved_gaps:
               - '{{gap_or_none}}'
               confidence_in_own_completeness: '{{high_medium_low}}'
+          source_inventory:
+            summary: '{{fill_source_inventory}}'
+            items:
+            - id: '{{source_id}}'
+              title: '{{source_title}}'
+              author_or_organization: '{{author_or_org}}'
+              url_or_identifier: '{{url_or_identifier}}'
+              date_published_or_updated: '{{date_or_unknown}}'
+              retrieval_date: '{{iso_date}}'
+              source_type: '{{official_docs_paper_repo_blog_benchmark_other}}'
+              relevance_to_task: '{{relevance}}'
+              trust_rating: '{{high_medium_low}}'
+              limitations: '{{limitations}}'
+          cited_claims:
+            summary: '{{fill_cited_claims}}'
+            items:
+            - id: '{{claim_id}}'
+              claim: '{{claim_text}}'
+              source_refs:
+              - '{{source_id}}'
+              claim_type: '{{fact_inference_recommendation_risk_assumption}}'
+              confidence: '{{high_medium_low}}'
+          source_quality_matrix:
+            summary: '{{fill_source_quality_matrix}}'
+            items:
+            - id: '{{source_id}}'
+              trust_rating: '{{high_medium_low}}'
+              primary_or_secondary: '{{primary_secondary_tertiary}}'
+              freshness: '{{recent_stable_old_unknown}}'
+              bias_or_limitations: '{{limitations}}'
+              usable_for_decision: '{{yes_no_conditional}}'
+          conflicting_evidence:
+            summary: '{{fill_conflicting_evidence_or_none}}'
+            items:
+            - id: '{{conflict_id}}'
+              conflict: '{{conflict_summary_or_none}}'
+              sources_in_tension:
+              - '{{source_id_or_none}}'
+              resolution: '{{how_conflict_was_handled}}'
+              confidence: '{{high_medium_low}}'
+          applicability_to_target_system:
+            summary: '{{fill_applicability_analysis}}'
+            items:
+            - id: '{{applicability_id}}'
+              external_finding: '{{finding}}'
+              applicability: '{{direct_partial_weak_not_applicable}}'
+              reason: '{{reason}}'
+              implementation_risk: '{{low_medium_high}}'
+              confidence: '{{high_medium_low}}'
         compiler_expectations:
           source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
           compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
@@ -2761,6 +3013,37 @@ accp_onefile_master:
               unresolved_gaps:
               - '{{gap_or_none}}'
               confidence_in_own_completeness: '{{high_medium_low}}'
+          source_inventory:
+            summary: '{{fill_source_inventory}}'
+            items:
+            - id: '{{source_id}}'
+              title: '{{source_title}}'
+              author_or_organization: '{{author_or_org}}'
+              url_or_identifier: '{{url_or_identifier}}'
+              date_published_or_updated: '{{date_or_unknown}}'
+              retrieval_date: '{{iso_date}}'
+              source_type: '{{official_docs_paper_repo_blog_benchmark_other}}'
+              relevance_to_task: '{{relevance}}'
+              trust_rating: '{{high_medium_low}}'
+              limitations: '{{limitations}}'
+          cited_claims:
+            summary: '{{fill_cited_claims}}'
+            items:
+            - id: '{{claim_id}}'
+              claim: '{{claim_text}}'
+              source_refs:
+              - '{{source_id}}'
+              claim_type: '{{fact_inference_recommendation_risk_assumption}}'
+              confidence: '{{high_medium_low}}'
+          applicability_to_target_system:
+            summary: '{{fill_applicability_analysis}}'
+            items:
+            - id: '{{applicability_id}}'
+              external_finding: '{{finding}}'
+              applicability: '{{direct_partial_weak_not_applicable}}'
+              reason: '{{reason}}'
+              implementation_risk: '{{low_medium_high}}'
+              confidence: '{{high_medium_low}}'
         compiler_expectations:
           source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
           compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
@@ -3635,6 +3918,37 @@ accp_onefile_master:
               unresolved_gaps:
               - '{{gap_or_none}}'
               confidence_in_own_completeness: '{{high_medium_low}}'
+          source_inventory:
+            summary: '{{fill_source_inventory}}'
+            items:
+            - id: '{{source_id}}'
+              title: '{{source_title}}'
+              author_or_organization: '{{author_or_org}}'
+              url_or_identifier: '{{url_or_identifier}}'
+              date_published_or_updated: '{{date_or_unknown}}'
+              retrieval_date: '{{iso_date}}'
+              source_type: '{{official_docs_paper_repo_blog_benchmark_other}}'
+              relevance_to_task: '{{relevance}}'
+              trust_rating: '{{high_medium_low}}'
+              limitations: '{{limitations}}'
+          cited_claims:
+            summary: '{{fill_cited_claims}}'
+            items:
+            - id: '{{claim_id}}'
+              claim: '{{claim_text}}'
+              source_refs:
+              - '{{source_id}}'
+              claim_type: '{{fact_inference_recommendation_risk_assumption}}'
+              confidence: '{{high_medium_low}}'
+          source_quality_matrix:
+            summary: '{{fill_source_quality_matrix}}'
+            items:
+            - id: '{{source_id}}'
+              trust_rating: '{{high_medium_low}}'
+              primary_or_secondary: '{{primary_secondary_tertiary}}'
+              freshness: '{{recent_stable_old_unknown}}'
+              bias_or_limitations: '{{limitations}}'
+              usable_for_decision: '{{yes_no_conditional}}'
         compiler_expectations:
           source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
           compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
@@ -3896,6 +4210,46 @@ accp_onefile_master:
               unresolved_gaps:
               - '{{gap_or_none}}'
               confidence_in_own_completeness: '{{high_medium_low}}'
+          source_inventory:
+            summary: '{{fill_source_inventory}}'
+            items:
+            - id: '{{source_id}}'
+              title: '{{source_title}}'
+              author_or_organization: '{{author_or_org}}'
+              url_or_identifier: '{{url_or_identifier}}'
+              date_published_or_updated: '{{date_or_unknown}}'
+              retrieval_date: '{{iso_date}}'
+              source_type: '{{official_docs_paper_repo_blog_benchmark_other}}'
+              relevance_to_task: '{{relevance}}'
+              trust_rating: '{{high_medium_low}}'
+              limitations: '{{limitations}}'
+          cited_claims:
+            summary: '{{fill_cited_claims}}'
+            items:
+            - id: '{{claim_id}}'
+              claim: '{{claim_text}}'
+              source_refs:
+              - '{{source_id}}'
+              claim_type: '{{fact_inference_recommendation_risk_assumption}}'
+              confidence: '{{high_medium_low}}'
+          conflicting_evidence:
+            summary: '{{fill_conflicting_evidence_or_none}}'
+            items:
+            - id: '{{conflict_id}}'
+              conflict: '{{conflict_summary_or_none}}'
+              sources_in_tension:
+              - '{{source_id_or_none}}'
+              resolution: '{{how_conflict_was_handled}}'
+              confidence: '{{high_medium_low}}'
+          applicability_to_target_system:
+            summary: '{{fill_applicability_analysis}}'
+            items:
+            - id: '{{applicability_id}}'
+              external_finding: '{{finding}}'
+              applicability: '{{direct_partial_weak_not_applicable}}'
+              reason: '{{reason}}'
+              implementation_risk: '{{low_medium_high}}'
+              confidence: '{{high_medium_low}}'
         compiler_expectations:
           source_path: reports/accp/{{plan_id}}/source/{{report_id}}.accp.yaml
           compiled_json: reports/accp/{{plan_id}}/compiled/{{report_id}}.compiled.json
@@ -3914,3 +4268,8 @@ accp_onefile_master:
   - all_mutation_reports_have_rollback_plan
   - critical_blockers_emit_or_recommend_hir
   - runtime_will_compile_yaml_before_use
+  - all_research_reports_have_source_inventory
+  - all_research_reports_have_cited_claims
+  - all_source_backed_claims_have_source_refs
+  - no_uncited_nontrivial_research_claims
+  - no_profitability_claims_from_academic_or_backtest_only_sources

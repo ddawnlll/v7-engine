@@ -55,6 +55,12 @@ It is not a second architecture spec.
 - `profitability_thesis.md`
 - `roadmap.md`
 
+### 7. Policy Critic (advisory RL component)
+- `policy_critic/ai_summary.md`
+- `policy_critic/design.md`
+- `policy_critic/codebase_maps/` (V7 pipeline, AlphaForge, Simulation, Contracts maps)
+- `policy_critic/research/` (offline RL, calibration, reward design, finance RL literature)
+
 ---
 
 ## What Each Root Doc Answers

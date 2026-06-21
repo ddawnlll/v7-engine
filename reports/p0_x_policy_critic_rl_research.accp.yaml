@@ -1,0 +1,222 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_X-POLICY-CRITIC-RL-RESEARCH"
+  status: "PASS_WITH_HOLDS"
+  summary: >
+    Multi-agent research + codebase-grounded RL architecture design for the
+    V7 Policy Critic. 9 agents (4 codebase mappers + 4 Tavily literature
+    researchers + 1 synthesis agent). Total: ~1M subagent tokens, 159 tool
+    uses, 7.5 min wall-clock. Produced a grounded recommendation:
+    Implicit Q-Learning (IQL) with distributional Q-head + conformal
+    calibration as the primary critic method; advisory-only (veto-to-no-trade);
+    staged v1 rule-based shadow -> v4 constrained optimizer rollout. All
+    codebase findings mapped to real file:line references. All literature
+    cited with source URLs.
+scope_confirmation:
+  research_only: true
+  source_code_changed: false
+  docs_created: true
+  docs_patched: true
+  contracts_patched: false
+  schemas_patched: false
+  implementation_done: false
+  model_training_done: false
+  market_data_downloaded: false
+  only_report_written: false
+research_config:
+  workflow_id: "wf_1dd82b6a-8a2"
+  agent_count: 9
+  subagent_tokens: 998730
+  tool_uses: 159
+  duration_ms: 448172
+  primary_method_recommended: "Implicit Q-Learning (IQL) + distributional Q-head + conformal calibration"
+  runner_up: "Conservative Q-Learning (CQL) — cross-check ensemble only"
+  model_class: "Per-action gradient-boosted quantile/expectile regressor ensemble (XGBoost)"
+  reward_source: "realized_r_net from /simulation engine (engine.py), NOT runtime historical_simulation_engine"
+  training_data_status: "Replay buffer does not exist — must be built"
+overall_verdict:
+  verdict: "LOCK_CANDIDATE"
+  confidence: "high"
+  rationale: >
+    The research is grounded in real codebase files (V6 inference engine,
+    AlphaForge XGBoost scorer, Simulation cost model, Contracts registry)
+    and current literature (IQL, CQL, QR-DQN, conformal prediction, FQE,
+    Deflated Sharpe, FinRL surveys). The IQL recommendation is structurally
+    justified for small-data/OOD-prone trading: in-sample-only updates
+    eliminate the dominant offline-RL failure mode (OOD overestimation) by
+    construction. The advisory-only, hard-gate-never-override constraint
+    aligns with V7's domain boundaries (simulation > realized > contract >
+    runtime > model). However, ten open HOLDs remain (replay buffer,
+    regret_r, funding_cost_r, per-direction expected_R, non-existent
+    features, conformal exchangeability, contract registrations, greenfield
+    deployment path, numeric hyperparameters) — all must be resolved before
+    locking the design.
+  unverified_claims:
+    - "Conformal prediction coverage holds on held-out trading data"
+    - "IQL expectile tau ~0.7-0.8 optimal for this data scale"
+    - "XGBoost quantile regression scales to ~10^6 training transitions"
+    - "Replay buffer build cost and timeline"
+findings:
+  - id: "F-001"
+    category: "codebase_reality"
+    severity: "critical"
+    title: "v7/src/ is empty — V7 policy code is greenfield"
+    detail: "The v7-engine repo's v7/src/ directory contains only .gitkeep. The live decision path runs through the V6 inference engine in /home/erfolg/src/trading-bot/v6/. Policy critic design must account for this interim state."
+  - id: "F-002"
+    category: "codebase_reality"
+    severity: "critical"
+    title: "Replay buffer does not exist"
+    detail: "grep for replay_buffer|offline_rl|experience_buffer|policy_critic across all .py files returns zero source hits. The (state, action, realized_r_net, mae_r, next_state) tuple emitter must be built from scratch. Blocks v2/v3."
+  - id: "F-003"
+    category: "codebase_reality"
+    severity: "high"
+    title: "Fields in user spec that do not exist"
+    detail: "no_trade_margin (is a config key, not a field), bad_trade_probability (must be synthesized), model_disagreement (closest: deterministic_disagreement_reason), recent_prediction_error (closed-loop only), recent_drawdown (use mae_r proxy), cost_bps/slippage_estimate (simulation-side only)"
+  - id: "F-004"
+    category: "codebase_reality"
+    severity: "high"
+    title: "Simulation-to-runtime cost model parity divergence"
+    detail: "The runtime/services/historical_simulation_engine.py uses separate fee_bps/slippage_bps from the authoritative /simulation engine (engine.py). The critic MUST train on /simulation realized_r_net, not the runtime engine's, to avoid reward signal drift."
+  - id: "F-005"
+    category: "research"
+    severity: "info"
+    title: "IQL is the recommended primary method"
+    detail: "IQL's in-sample-only expectile regression structurally prevents OOD overestimation — the dominant offline-RL failure mode in finance. CQL is runner-up for cross-check only. Decision Transformer is data-hungry. BCQ's CVAE is brittle on small samples."
+files_changed:
+  - path: "v7/docs/policy_critic/ai_summary.md"
+    action: "created"
+    purpose: "Dense synthesis entry point for the Policy Critic sub-area"
+  - path: "v7/docs/policy_critic/README.md"
+    action: "created"
+    purpose: "Navigation and reading order"
+  - path: "v7/docs/policy_critic/design.md"
+    action: "created"
+    purpose: "Full design recommendation with rationale"
+  - path: "v7/docs/policy_critic/codebase_maps/v7_pipeline_map.md"
+    action: "created"
+    purpose: "V7/V6 decision flow, gate logic, exact field names"
+  - path: "v7/docs/policy_critic/codebase_maps/alphaforge_map.md"
+    action: "created"
+    purpose: "AlphaForge scorer, calibration, field surface"
+  - path: "v7/docs/policy_critic/codebase_maps/simulation_map.md"
+    action: "created"
+    purpose: "Simulation cost model, reward signals, replay infrastructure"
+  - path: "v7/docs/policy_critic/codebase_maps/contracts_runtime_map.md"
+    action: "created"
+    purpose: "Contract registry, runtime wiring, PolicyCriticReview spec"
+  - path: "v7/docs/policy_critic/research/offline_rl_methods.md"
+    action: "created"
+    purpose: "Offline RL literature (CQL, IQL, BCQ, TD3+BC, AWAC, DT)"
+  - path: "v7/docs/policy_critic/research/critic_calibration.md"
+    action: "created"
+    purpose: "Critic/calibration methods (QR-DQN, conformal, FQE, Cal-QL)"
+  - path: "v7/docs/policy_critic/research/reward_design.md"
+    action: "created"
+    purpose: "Reward design literature (cost-aware, drawdown, NO_TRADE)"
+  - path: "v7/docs/policy_critic/research/finance_rl_failures.md"
+    action: "created"
+    purpose: "Finance RL failure modes (OOD, overfitting, guardrails)"
+  - path: "CLAUDE.md"
+    action: "patched"
+    purpose: "Added Policy Critic row to ai_summary table and Key Files entry"
+  - path: "v7/docs/ai_summary.md"
+    action: "patched"
+    purpose: "Added Policy Critic pointer in per-subsystem summaries list and section 19.8"
+  - path: "v7/docs/README.md"
+    action: "patched"
+    purpose: "Added Policy Critic reading order section"
+  - path: "README.md"
+    action: "patched"
+    purpose: "Minimal v7/docs/ note in monorepo structure"
+  - path: "v7/docs/roadmap.md"
+    action: "patched"
+    purpose: "Added Policy Critic RL Research P0.x entry"
+decisions_locked:
+  - id: "DEC-001"
+    status: "LOCK_CANDIDATE"
+    detail: "IQL + distributional Q-head + conformal is the recommended primary RL method"
+  - id: "DEC-002"
+    status: "LOCK_CANDIDATE"
+    detail: "Critic is advisory-only with veto-to-no-trade; hard gate failure always wins; critic ALLOW != execution eligibility"
+  - id: "DEC-003"
+    status: "LOCK_CANDIDATE"
+    detail: "NO_TRADE is a first-class action with zero-cost baseline reward (saved_loss_r - 0.5*missed_opportunity_r)"
+  - id: "DEC-004"
+    status: "LOCK_CANDIDATE"
+    detail: "Live veto only in SWING (LOCKED_INITIAL_BASELINE); SCALP/AGGRESSIVE shadow-only (HOLD)"
+  - id: "DEC-005"
+    status: "LOCK_CANDIDATE"
+    detail: "Critic reward = realized_r_net from /simulation engine, not runtime historical engine"
+  - id: "DEC-006"
+    status: "HOLD"
+    detail: "Replay buffer must be built before v2/v3 (blocking prerequisite)"
+  - id: "DEC-007"
+    status: "HOLD"
+    detail: "funding_cost_r DEFERRED — critic is spot-only-valid; perp blocked at G3"
+  - id: "DEC-008"
+    status: "HOLD"
+    detail: "IQL expectile tau and conformal coverage are numeric thresholds not lockable without empirical evidence"
+remaining_holds:
+  - id: "H-001"
+    subject: "Replay buffer does not exist"
+    blocking: true
+    blocks: ["v2", "v3"]
+  - id: "H-002"
+    subject: "regret_r hardcoded to 0.0 in engine.py:168"
+    blocking: false
+  - id: "H-003"
+    subject: "funding_cost_r DEFERRED — spot-only-valid"
+    blocking: true
+    blocks: ["perp promotion", "G3"]
+  - id: "H-004"
+    subject: "Per-direction expected_R not in V6 (only single expected_return)"
+    blocking: false
+  - id: "H-005"
+    subject: "bad_trade_probability/model_disagreement/recent_prediction_error don't exist live"
+    blocking: false
+    notes: "Must be synthesized (v2+ derived features) or wait for P9 drift monitoring"
+  - id: "H-006"
+    subject: "Per-decision portfolio drawdown doesn't exist — mae_r proxy used"
+    blocking: false
+  - id: "H-007"
+    subject: "Conformal exchangeability violated by time-series trading data"
+    blocking: false
+  - id: "H-008"
+    subject: "Decision-event family contracts not in registry.json"
+    blocking: false
+    notes: "PolicyCriticReview can proceed independently"
+  - id: "H-009"
+    subject: "v7/src greenfield — live path through V6 sibling repo"
+    blocking: false
+    notes: "Interim wire into runtime adapter (no V6 patch); recommendation"
+  - id: "H-010"
+    subject: "IQL expectile tau and conformal coverage level"
+    blocking: false
+    notes: "Numerical thresholds — LOCKED_INITIAL_BASELINE candidates requiring walk-forward regime-split sweep"
+safe_next_step:
+  - "Review and approve/revise the Policy Critic RL architecture recommendation"
+  - "Resolve H-001: scope the replay buffer build (adapter spec, (state, action, reward, drawdown) tuple schema, simulation routing)"
+  - "Consider wire v1 rule-based critic into runtime adapter path as shadow with PolicyCriticReview contract registration"
+commands_run:
+  - command: "Workflow with 9 agents (4 codebase mappers + 4 Tavily researchers + 1 synthesis)"
+    description: "Multi-agent research orchestration"
+    exit_code: 0
+    evidence: "All 9 agents completed; ~1M tokens; output in /tmp/claude-*/tasks/w0idpufmg.output"
+  - command: "extracted synthesis + research to /tmp/v7critic_research/*.json"
+    description: "Source JSON extraction for doc generation"
+    exit_code: 0
+  - command: "python3 script generating 11 markdown files from JSON"
+    description: "Doc tree generation from extracted research"
+    exit_code: 0
+evidence:
+  workflow_completed: true
+  agent_count: 9
+  subagent_tokens: 998730
+  tool_uses: 159
+  duration_ms: 448172
+  docs_created: 11
+  docs_patched: 5
+  fields_mapped_to_file_line: true
+  literature_sources_cited: true
+  source_urls_count: 50+
