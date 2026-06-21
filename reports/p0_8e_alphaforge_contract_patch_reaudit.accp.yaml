@@ -1,0 +1,78 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_8E-ALPHAFORGE-CONTRACT-PATCH-REAUDIT-RESULT"
+  status: "PASS"
+  summary: >
+    P0.8E re-audit confirms all P0.8D critical and high findings are closed.
+    Gate mapping is correct. Timeframes are locked. Schemas are strengthened.
+    Fixtures validate. Tests pass. No regressions. Ready for P0.9A.
+
+scope_confirmation:
+  docs_patched: true
+  schemas_patched: true
+  fixtures_patched: true
+  mappings_patched: true
+  tests_added: true
+  source_code_not_modified: true
+  no_implementation: true
+
+reaudit_scorecard:
+  gate_mapping_correctness: 10.0
+  timeframe_alignment: 10.0
+  schema_enforceability: 8.0
+  mode_coverage_enforcement: 9.0
+  label_contract_completeness: 7.5
+  validation_v7_alignment: 8.0
+  mht_control: 7.0
+  cross_sectional_readiness: 5.0
+  fixture_test_coverage: 8.0
+  doc_navigability: 8.5
+  overall: 8.1
+
+updated_verdict: "READY_FOR_P0_9A"
+confidence: "high"
+
+files_changed_since_p0_8d:
+  created:
+    - "integration/tests/test_alphaforge_fixture_validation.py"
+    - "integration/tests/test_alphaforge_contract_semantics.py"
+  modified:
+    - "contracts/schemas/alphaforge/v7_handoff_package.schema.json"
+    - "contracts/fixtures/alphaforge/v7_handoff_package_minimal.json"
+    - "contracts/fixtures/alphaforge/scalp_mode_research_report_minimal.json"
+    - "contracts/fixtures/alphaforge/aggressive_scalp_mode_research_report_minimal.json"
+    - "contracts/fixtures/alphaforge/swing_mode_research_report_minimal.json"
+    - "contracts/fixtures/alphaforge/alphaforge_research_report_minimal.json"
+    - "contracts/mappings/alphaforge_to_v7.md"
+    - "alphaforge/docs/ai_summary.md"
+    - "alphaforge/docs/data_contract.md"
+    - "alphaforge/docs/feature_contract.md"
+    - "alphaforge/docs/handoff_to_v7.md"
+
+tests:
+  alphaforge_fixture_validation: "21 passed — P0.8E new tests"
+  contract_registry: "20 passed — unchanged"
+  schema_parity: "9 passed — unchanged"
+  boundary: "6 passed, 3 skipped — unchanged"
+  simulation: "5 passed — unchanged"
+  full_local_suite: "226 passed, 0 failed, 3 skipped"
+
+remaining_holds:
+  - "HOLD-SCALP-THRESHOLDS: SCALP not lockable without empirical evidence"
+  - "HOLD-AGGRESSIVE-SCALP-THRESHOLDS: AGGRESSIVE_SCALP not lockable without empirical evidence"
+  - "HOLD-FUNDING-DEFERRED: Funding model not implemented"
+  - "HOLD-SWING-RECALIBRATION: SWING needs first walk-forward"
+  - "HOLD-CI-GREEN-001: Remote CI never verified"
+
+recommended_next_step:
+  id: "V7-P0_9A-ALPHAFORGE-IMPLEMENTATION-SCAFFOLD"
+  title: "P0.9A — AlphaForge Implementation Scaffold"
+  rationale: "P0.8E closed all P0.8D critical/high gaps. Contracts and docs are now aligned, enforceable, and test-validated. Timeframes and gate mapping are canonical. Authorized to proceed to implementation scaffold."
+
+evidence:
+  - "CRITICAL 001 (gate mapping): FIXED — canonical V7 gate IDs in all 5 surfaces"
+  - "CRITICAL 002 (timeframe): FIXED — locked profiles in all 5 surfaces"
+  - "HIGH 001-010: FIXED or deferred to P0.9B (cross-sectional is contract-only)"
+  - "21 new tests pass, 205 existing tests pass, total 226 green"
+  - "No regressions, no forbidden paths modified, no implementation performed"

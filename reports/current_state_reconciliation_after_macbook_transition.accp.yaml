@@ -1,0 +1,274 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_STATUS-CURRENT-STATE-RECONCILIATION-RESULT"
+  status: "PASS_WITH_HOLDS"
+  summary: >
+    MacBook transition reconciliation complete. V7 Engine is on main branch at
+    commit f5bf539 (merge of feat/p0-8-alphaforge-authority-and-audit). Working
+    tree is CLEAN. All 12 expected P0.7/P0.8 milestone reports exist. P0.8D
+    (Profitability Squeeze Audit) IS completed — verdict
+    READY_FOR_P0_9A_AFTER_TARGETED_PATCH. V7 design is LOCKABLE_WITH_HOLDS
+    (8.1). AlphaForge authority is LOCKABLE_WITH_HOLDS (8.5) with 13 docs,
+    10 schemas, 5 fixtures. All local test suites pass (205/205). Remote CI
+    status UNKNOWN (gh CLI unavailable). P0.8D found 2 CRITICAL and 10 HIGH
+    contract/docs gaps that require P0.8E targeted patch before P0.9A scaffold.
+    Recommended next: V7-P0_8E-ALPHAFORGE-PROFITABILITY-CONTRACT-PATCH.
+scope_confirmation:
+  read_only: true
+  only_report_written: true
+  source_code_changed: false
+  docs_changed: false
+  contracts_changed: false
+  implementation_done: false
+git_state:
+  branch: "main"
+  latest_commit: "f5bf539"
+  dirty_worktree: false
+  untracked_files: []
+completed_milestones:
+  - id: "P0.7A"
+    title: "Simulation MVP Authority"
+    status: "PASS"
+    evidence: "reports/p0_7a_simulation_mvp_authority.accp.yaml exists; simulation/contracts/models.py, engine/engine.py, engine/exits.py, engine/costs.py, golden tests all present; SimulationProfile fixture in registry"
+  - id: "P0.7B"
+    title: "CI/CD Enforcement"
+    status: "PASS_WITH_HOLDS"
+    evidence: "reports/p0_7b_ci_enforcement.accp.yaml exists; .github/workflows/ci.yml enforces contract + boundary + test checks; CI_FIRST_GREEN_RUN_HOLD active (remote run never verified)"
+  - id: "P0.7C"
+    title: "SWING Threshold Owner Review"
+    status: "PASS"
+    evidence: "reports/p0_7c_swing_threshold_owner_review.accp.yaml exists; SWING thresholds LOCKED_INITIAL_BASELINE; evaluation.md updated"
+  - id: "P0.7D"
+    title: "V7 Design Lock Re-Audit"
+    status: "PASS"
+    evidence: "reports/v7_design_lock_reaudit_after_p0_7.accp.yaml exists; score 7.4→8.1; verdict NOT_LOCKABLE→LOCKABLE_WITH_HOLDS"
+  - id: "P0.7C_D Combined"
+    title: "SWING+Design Lock Combined Completion"
+    status: "PASS_WITH_HOLDS"
+    evidence: "reports/p0_7c_d_combined_completion.accp.yaml exists; 3 P0/P1 blockers closed; 4 remaining holds explicit"
+  - id: "P0.7E"
+    title: "Mode Priority Alignment"
+    status: "PASS"
+    evidence: "reports/p0_7e_mode_priority_alignment.accp.yaml exists; SCALP/AGGRESSIVE_SCALP PRIMARY, SWING SECONDARY_BASELINE; SWING-first terminology cleaned from active docs"
+  - id: "P0.8A"
+    title: "Upstream Readiness for AlphaForge"
+    status: "PASS_WITH_HOLDS"
+    evidence: "reports/p0_8a_upstream_readiness_for_alphaforge.accp.yaml exists; readiness scores: lib 8/10, simulation 8/10, contracts 6/10, V7 9/10, AlphaForge 5/10, CI 7/10"
+  - id: "P0.7E_P0_8A Combined"
+    title: "Mode Priority + Upstream Combined Completion"
+    status: "PASS_WITH_HOLDS"
+    evidence: "reports/p0_7e_p0_8a_combined_completion.accp.yaml exists; verdict READY_WITH_HOLDS_FOR_ALPHAFORGE_AUTHORITY_LOCK"
+  - id: "P0.8B"
+    title: "AlphaForge Discovery Authority Lock"
+    status: "PASS"
+    evidence: "reports/p0_8b_alphaforge_discovery_authority_lock.accp.yaml exists; 13 docs, 10 schemas, 5 fixtures, 2 mappings created; registry+compatibility updated"
+  - id: "P0.8C"
+    title: "AlphaForge Re-Audit"
+    status: "PASS"
+    evidence: "reports/p0_8c_alphaforge_reaudit.accp.yaml exists; score 8.5; verdict LOCKABLE_WITH_HOLDS"
+  - id: "P0.8B_C Combined"
+    title: "AlphaForge Authority Lock + Re-Audit Combined"
+    status: "PASS_WITH_HOLDS"
+    evidence: "reports/p0_8b_c_alphaforge_combined_completion.accp.yaml exists; authority boundary LOCKED; safe_next_step flagged P0.9A"
+  - id: "P0.8D"
+    title: "AlphaForge Profitability/Efficiency Squeeze Audit"
+    status: "PASS_WITH_HOLDS"
+    evidence: "reports/p0_8d_alphaforge_profitability_efficiency_squeeze_audit.accp.yaml exists; verdict READY_FOR_P0_9A_AFTER_TARGETED_PATCH; found 2 CRITICAL and 10 HIGH contract/docs/precision gaps; recommended P0.8E before P0.9A"
+missing_or_unknown_milestones:
+  - id: "P0.8E"
+    title: "AlphaForge Profitability Contract/Docs Patch"
+    reason: "Not started. Recommended by P0.8D verdict as prerequisite to P0.9A."
+  - id: "P0.9A"
+    title: "AlphaForge Implementation Scaffold"
+    reason: "Not started. AlphaForge src is .gitkeep only. P0.8E must complete first."
+  - id: "P0.9B"
+    title: "AlphaForge Data/Label Pipeline"
+    reason: "Not started. No evidence of label pipeline, data ingestion, or feature computation."
+v7_state:
+  verdict: "LOCKABLE_WITH_HOLDS"
+  score: 8.1
+  mode_priority:
+    SCALP: "PRIMARY"
+    AGGRESSIVE_SCALP: "PRIMARY"
+    SWING: "SECONDARY_BASELINE"
+  holds:
+    - "HOLD-CI-GREEN-001: CI first green run verification pending (remote run never verified)"
+    - "HOLD-FUNDING-002: Funding cost model DEFERRED (blocks perpetual swap scope)"
+    - "HOLD-SCALP-002: SCALP promotion thresholds HOLD (empirical evidence required)"
+    - "HOLD-AGGRESSIVE_SCALP-002: AGGRESSIVE_SCALP promotion thresholds HOLD (empirical evidence required)"
+    - "HOLD-SWING-RECALIBRATION: SWING thresholds LOCKED_INITIAL_BASELINE but need first walk-forward to confirm"
+alphaforge_state:
+  authority_verdict: "LOCKABLE_WITH_HOLDS"
+  score: 8.5
+  docs_count: 13
+  schemas_count: 10
+  fixtures_count: 5
+  mappings_count: 4
+  implementation_state: "NOT_STARTED"
+  holds:
+    - "HOLD-SCALP-THRESHOLDS: SCALP thresholds not lockable without empirical evidence"
+    - "HOLD-AGGRESSIVE-SCALP-THRESHOLDS: AGGRESSIVE_SCALP thresholds not lockable without empirical evidence"
+    - "HOLD-FUNDING-DEFERRED: Funding cost model not implemented in simulation"
+    - "HOLD-SWING-RECALIBRATION: SWING thresholds need first walk-forward validation"
+    - "CRITICAL (P0.8D): AlphaForge->V7 gate mapping uses wrong G0-G10 numbering vs V7 evaluation.md"
+    - "CRITICAL (P0.8D): Timeframe stacks in data/feature contracts contradict locked simulation profiles (SCALP 1m/5m vs 1h; AGGRESSIVE_SCALP 1m/3m/5m vs 15m)"
+contract_surface_state:
+  registry_status: "UPDATED"
+  compatibility_status: "UPDATED"
+  alphaforge_schema_count: 10
+  alphaforge_fixture_count: 5
+  mapping_docs_count: 4
+p0_8d_state:
+  status: "DONE"
+  verdict: "READY_FOR_P0_9A_AFTER_TARGETED_PATCH"
+  recommended_next_prompt: "V7-P0_8E-ALPHAFORGE-PROFITABILITY-CONTRACT-PATCH"
+test_and_ci_state:
+  local_contract_tests: "PASS"
+  local_boundary_tests: "PASS"
+  local_simulation_tests: "PASS"
+  local_suite: "PASS"
+  remote_ci: "UNKNOWN"
+remaining_holds:
+  - id: "HOLD-CI-GREEN-001"
+    reason: "GitHub CI first green run never verified — local tests green but CI setup never ran remotely"
+    release_condition: "Push to GitHub, verify CI workflow completes green"
+  - id: "HOLD-FUNDING-002"
+    reason: "Funding cost model DEFERRED — simulation/engine/costs.py has explicit unsupported marker"
+    release_condition: "Funding cost model implemented and LOCKED"
+  - id: "HOLD-SCALP-002"
+    reason: "SCALP promotion thresholds held — no empirical evidence exists for primary research mode"
+    release_condition: "Empirical evidence from SCALP research + owner review"
+  - id: "HOLD-AGGRESSIVE_SCALP-002"
+    reason: "AGGRESSIVE_SCALP promotion thresholds held — no empirical evidence exists"
+    release_condition: "Empirical evidence from AGGRESSIVE_SCALP research + owner review"
+  - id: "HOLD-SWING-RECALIBRATION"
+    reason: "SWING LOCKED_INITIAL_BASELINE but first walk-forward validation never run to confirm"
+    release_condition: "First SWING walk-forward validation with real or simulated data"
+  - id: "HOLD-B04-RUNTIME-SIM-CONFLICT"
+    reason: "Runtime simulation services (simulation_service.py, historical_simulation_engine.py) co-exist with /simulation authority — P2 conflict"
+    release_condition: "Deprecation plan written and executed for legacy runtime simulation paths"
+remaining_gaps:
+  - gap: "AlphaForge->V7 gate mapping uses wrong G0-G10 numbering — encoded in v7_handoff_package.schema.json and fixture"
+    severity: "critical"
+    next_action: "P0.8E: renumber to match V7 evaluation.md gates across all contract/docs/fixture surfaces"
+  - gap: "AlphaForge timeframe stacks (SCALP 1m/5m, AGGRESSIVE_SCALP 1m/3m/5m) contradict locked simulation profiles (SCALP 1h, AGGRESSIVE_SCALP 15m)"
+    severity: "critical"
+    next_action: "P0.8E: align data_contract, feature_contract, and mode fixtures to simulation profiles"
+  - gap: "No jsonschema.validate anywhere — fixture compliance unenforced; schema parity tests only cover 4 original contracts, not 10 new AlphaForge schemas"
+    severity: "high"
+    next_action: "P0.8E: add fixture-validation tests using jsonschema.validate for all AlphaForge schemas"
+  - gap: "mode_research_report, v7_handoff_package, validation_report schemas have no nested required — empty payloads pass validation"
+    severity: "high"
+    next_action: "P0.8E: add nested required arrays to cost_stress, no_trade_comparison, regime_breakdown, metrics, v7_gate_mapping"
+  - gap: "AlphaForgeResearchReport schema allows <3 mode reports and incorrect verdict coupling"
+    severity: "high"
+    next_action: "P0.8E: add minItems:3 + if-then verdict-mode coupling"
+  - gap: "AlphaForgeLabel schema omits gross R, cost components, no_trade_quality claimed by label_contract"
+    severity: "high"
+    next_action: "P0.8E: complete AlphaForgeLabel schema + simulation_to_alphaforge.json"
+  - gap: "validation_contract misaligned with V7 gates: 5/3 folds vs 6, HIGH_VOL regime vs TREND, qualitative symbol stability vs 40%/60%"
+    severity: "high"
+    next_action: "P0.8E: align validation_contract to V7 evaluation.md gates"
+  - gap: "No multiple-hypothesis-testing / data-snooping control (FDR or deflated Sharpe)"
+    severity: "high"
+    next_action: "P0.8E: add MHT control to validation_contract + validation_report schema"
+  - gap: "2 legacy combined docs (625KB+578KB) in alphaforge/docs/ risk agent confusion with thin hub"
+    severity: "medium"
+    next_action: "P0.8E: mark SUPERSEDED or relocate to alphaforge/legacy/"
+  - gap: "No SCALP/AGGRESSIVE_SCALP simulation golden tests — only SWING is golden-tested"
+    severity: "high"
+    next_action: "P0.9A/B: add golden tests for primary modes"
+  - gap: "No cross-sectional data layer, point-in-time universe, survivorship handling"
+    severity: "high"
+    next_action: "P0.9B: add multi-symbol data infrastructure (blocks AS-001, AS-004)"
+  - gap: "No order-book/spread/depth data for AGGRESSIVE_SCALP liquidity surfaces"
+    severity: "medium"
+    next_action: "P0.9B or explicitly hold AS-010"
+  - gap: "Funding cost model DEFERRED — blocks perpetual swap scope (AS-006)"
+    severity: "medium"
+    next_action: "Implement funding cost model or defer perp research long-term"
+progress_estimate:
+  v7_preimplementation_design_percent: 90
+  alphaforge_authority_percent: 85
+  alphaforge_implementation_percent: 0
+  simulation_percent: 80
+  contracts_percent: 65
+  total_v7_engine_percent: 25
+  confidence: high
+recommended_next_step:
+  id: "V7-P0_8E-ALPHAFORGE-PROFITABILITY-CONTRACT-PATCH"
+  title: "P0.8E — AlphaForge Profitability Contract / Docs Targeted Patch"
+  rationale: >
+    P0.8D is complete (verdict READY_FOR_P0_9A_AFTER_TARGETED_PATCH). It found
+    2 CRITICAL contradictions (gate numbering, timeframe stacks) and 10 HIGH
+    gaps (loose schemas, missing validation, label schema deficit, validation
+    misalignment, no MHT control). These must be patched before P0.9A scaffold
+    bakes wrong contracts into code and fixture validators. P0.8E is a docs +
+    contracts-only patch (no source implementation, no model training). After
+    P0.8E passes owner review and green CI, proceed to P0.9A.
+blocked_next_steps:
+  - step: "V7-P0_9A-ALPHAFORGE-IMPLEMENTATION-SCAFFOLD"
+    blocked_by: "P0.8E must complete first (CRITICAL gate numbering + timeframe contradictions would bake wrong contracts into code)"
+  - step: "SCALP/AGGRESSIVE_SCALP promotion to paper/tiny-live/live"
+    blocked_by: "HOLD: empirical evidence + owner review required (thresholds not lockable)"
+  - step: "Perpetual swap live trading"
+    blocked_by: "HOLD-FUNDING-002: funding cost model DEFERRED"
+  - step: "Full LOCKABLE (unqualified) declaration"
+    blocked_by: "HOLD-CI-GREEN-001 (remote CI never verified) + HOLD-FUNDING-002 (funding DEFERRED)"
+  - step: "Real model training"
+    blocked_by: "P0.9A scaffold + P0.9B data/label/feature pipeline"
+commands_run:
+  - command: "pwd && git branch --show-current && git remote -v"
+    exit_code: 0
+    result_summary: "main branch, origin https://github.com/ddawnlll/v7-engine/"
+  - command: "git status --short"
+    exit_code: 0
+    result_summary: "Working tree CLEAN — no dirty files, no untracked files"
+  - command: "git log --oneline -n 15"
+    exit_code: 0
+    result_summary: "HEAD at f5bf539 (Merge feat/p0-8-alphaforge-authority-and-audit into main). 14 commits visible."
+  - command: "find reports -maxdepth 1 -type f | sort"
+    exit_code: 0
+    result_summary: "13 reports found (all 12 expected P0.7/P0.8 reports present + v7_design_lock_audit.accp.yaml)"
+  - command: "find alphaforge/docs -maxdepth 1 -type f | sort"
+    exit_code: 0
+    result_summary: "17 files: 13 canonical docs + .DS_Store + ai_summary__v7_alphaforge_xgb.md (625KB) + phase_plans_combined.md (578KB) + ai_summary__v7_alphaforge_xgb.md"
+  - command: "find alphaforge/src -maxdepth 3 -type f"
+    exit_code: 0
+    result_summary: "alphaforge/src/.gitkeep only — NO implementation started"
+  - command: "find contracts/schemas/alphaforge -maxdepth 1 -type f | sort"
+    exit_code: 0
+    result_summary: "10 schema files (alpha_candidate, alpha_thesis, alphaforge_research_report, calibration_candidate, feature_set_spec, label_dataset_spec, model_artifact, mode_research_report, v7_handoff_package, validation_report)"
+  - command: "find contracts/fixtures/alphaforge -maxdepth 1 -type f | sort"
+    exit_code: 0
+    result_summary: "5 fixture files (scalp, aggressive_scalp, swing mode reports + alphaforge_research_report + v7_handoff_package)"
+  - command: "find contracts/mappings -maxdepth 1 -type f | sort"
+    exit_code: 0
+    result_summary: "4 files: alphaforge_to_v7.md, simulation_to_alphaforge.md, simulation_to_alphaforge.json, simulation_to_v7.json"
+  - command: "PYTHONPATH=. python -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+    exit_code: 0
+    result_summary: "20 passed (11 registry + 9 schema parity for original 4 contracts)"
+  - command: "PYTHONPATH=. python -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+    exit_code: 0
+    result_summary: "6 passed, 0 failed, 3 skipped (boundary tests green)"
+  - command: "PYTHONPATH=. python -m pytest simulation/tests/ -q"
+    exit_code: 0
+    result_summary: "5 passed (SWING golden tests only)"
+  - command: "PYTHONPATH=. python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+    exit_code: 0
+    result_summary: "205 passed, 0 failed, 3 skipped (binance 17 tests require requests pkg — CI-only)"
+  - command: "gh run list --limit 5"
+    exit_code: 1
+    result_summary: "gh CLI not available on this Mac — remote CI status UNKNOWN"
+evidence:
+  - "Clean working tree at HEAD f5bf539 on main"
+  - "All 12 expected P0.7/P0.8 milestone reports exist on filesystem"
+  - "P0.8D report exists and concludes READY_FOR_P0_9A_AFTER_TARGETED_PATCH with P0.8E recommendation"
+  - "V7 design LOCKABLE_WITH_HOLDS (8.1) — mode priority SCALP=PRIMARY, AGGRESSIVE_SCALP=PRIMARY, SWING=SECONDARY_BASELINE"
+  - "AlphaForge authority LOCKABLE_WITH_HOLDS (8.5) — 13 docs, 10 schemas, 5 fixtures, 4 mappings"
+  - "AlphaForge src/.gitkeep only — implementation NOT started"
+  - "All local tests pass: 205/205 (3 skipped), 20 contract, 6 boundary, 5 simulation"
+  - "Remote CI status UNKNOWN (gh CLI unavailable on transition machine)"
+  - "P0.8D found 2 CRITICAL gaps (gate numbering, timeframe stacks) and 10+ HIGH gaps in contract precision"
+  - "Safest next step: P0.8E targeted contract patch, then P0.9A scaffold"

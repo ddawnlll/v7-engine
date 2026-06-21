@@ -4,6 +4,8 @@
 
 **Authority:** AlphaForge owns data scope definition. Simulation owns economic truth. This document is LOCKED.
 
+**P0.8E note:** Timeframe requirements corrected to match locked simulation profiles (`simulation/docs/profiles.md`). SCALP = 1h primary / 4h context / 15m refine. AGGRESSIVE_SCALP = 15m primary / 1h context / 5m refine. SWING = 4h primary / 1d context / 1h refine. Previous incorrect timeframes (SCALP 1m/5m, AGGRESSIVE_SCALP 1m/3m/5m) removed.
+
 ---
 
 ## Data Layers
@@ -19,7 +21,7 @@ External/local source layer. NOT stored as large files in repo.
 | source | string | Data provider identifier (e.g., "binance", "local_csv") |
 | exchange | string | Exchange name |
 | symbol | string | Trading symbol (e.g., "BTCUSDT") |
-| interval | string | Candle interval (e.g., "1m", "5m", "15m", "1h", "4h") |
+| interval | string | Candle interval (e.g., "1m", "5m", "15m", "1h", "4h", "1d") |
 | start_ts | string (ISO 8601) | Start timestamp |
 | end_ts | string (ISO 8601) | End timestamp |
 | checksum | string | Content hash for data integrity |
@@ -62,11 +64,12 @@ Mode/timeframe-aware feature matrix. Defined by FeatureSetSpec.
 |-------|------|-------------|
 | feature_set_id | string | Unique identifier |
 | mode | enum | SCALP, AGGRESSIVE_SCALP, SWING |
-| timeframe_stack | array | Timeframes used (e.g., ["5m", "15m", "1h"]) |
+| timeframe_stack | object | { primary, context, refinement } with canonical intervals |
 | feature_groups | array | Feature group identifiers |
 | features | array | Individual feature specifications |
 | source_dataset_refs | array | References to normalized data sources |
 | leakage_policy | object | Leakage prevention rules |
+| cross_sectional | object | Cross-sectional data requirements (P0.9B) |
 | created_at | string (ISO 8601) | Creation timestamp |
 | checksum | string | Content hash |
 
@@ -82,11 +85,12 @@ Simulation-derived economic labels. Defined by LabelDatasetSpec.
 | mode | enum | SCALP, AGGRESSIVE_SCALP, SWING |
 | simulation_profile_id | string | Simulation profile reference |
 | label_source | string | "simulation_output" |
-| label_fields | object | Label field definitions |
+| label_fields | object | Label field definitions (classification, regression, path_metrics, quality, cost) |
 | cost_model_ref | string | Cost model version reference |
-| funding_status | string | Current funding model status |
+| funding_status | string | Current funding model status (DEFERRED/IMPLEMENTED/NOT_APPLICABLE) |
 | no_trade_comparison | object | NO_TRADE comparison metrics |
 | lineage | object | Provenance metadata |
+| cross_sectional_requirements | object | P0.9B: point-in-time universe, survivorship, delisting |
 | checksum | string | Content hash |
 
 ### Layer 5: Research Run Manifest
@@ -110,13 +114,34 @@ Reproducibility metadata for AlphaForge runs.
 
 ---
 
-## Timeframe Requirements Per Mode
+## Timeframe Requirements Per Mode (LOCKED)
 
-| Mode | Primary Timeframes | Secondary Timeframes |
-|------|-------------------|---------------------|
-| SCALP | 1m, 5m | 15m, 1h (context) |
-| AGGRESSIVE_SCALP | 1m, 3m, 5m | 15m (context) |
-| SWING | 1h, 4h | 1d (context) |
+Source of truth: `simulation/docs/profiles.md` and `v7/docs/profitability_thesis.md`.
+
+| Mode | Primary | Context | Refinement |
+|------|---------|---------|------------|
+| SCALP (PRIMARY) | **1h** | 4h | 15m |
+| AGGRESSIVE_SCALP (PRIMARY) | **15m** | 1h | 5m |
+| SWING (SECONDARY_BASELINE) | **4h** | 1d | 1h |
+
+**Previous incorrect values removed in P0.8E:** SCALP 1m/5m and AGGRESSIVE_SCALP 1m/3m/5m were AlphaForge-invented timeframe assumptions that contradict the locked simulation profiles. These incorrect references are purged from all canonical docs and fixtures.
+
+**If 1m/3m/5m appear anywhere:** They must be explicitly marked as DEFERRED/FUTURE and are NOT the canonical locked profile. Real research must use the locked primary timeframes above. Refinement intervals may be explored during research but are not the primary analytical unit.
+
+---
+
+## Cross-Sectional Data Requirements (P0.9B dependency)
+
+Real alpha research requires multi-symbol data with:
+- **Point-in-time universe snapshots:** Which symbols existed at each timestamp.
+- **Symbol membership tracking:** `symbol_membership_start_ts` / `symbol_membership_end_ts`.
+- **Delisting policy:** How symbols that delist during the period are handled.
+- **Missing candle policy:** How gaps are filled or flagged.
+- **Survivorship bias flag:** Explicit indicator that filtering to survivors-only is forbidden.
+- **Cross-sectional rank features:** Relative strength, lead-lag scores, cross-symbol rankings.
+- **UTC grid alignment:** All symbols aligned to common UTC timestamp grid.
+
+These are NOT implemented in P0.8E. They are contract requirements for P0.9B data pipeline.
 
 ---
 
@@ -131,6 +156,7 @@ Every data layer must carry quality flags:
 | VOLUME_SPIKE | Extreme volume detected |
 | STALE_DATA | Data may be delayed or incomplete |
 | OUT_OF_HOURS | Bar outside normal trading hours |
+| SURVIVORSHIP_BIAS_RISK | Universe may be survivors-only |
 | TBD | Quality assessment pending |
 
 ---
@@ -174,14 +200,19 @@ Every data artifact must include:
 - [../../contracts/schemas/alphaforge/feature_set_spec.schema.json](../../contracts/schemas/alphaforge/feature_set_spec.schema.json)
 - [../../contracts/schemas/alphaforge/label_dataset_spec.schema.json](../../contracts/schemas/alphaforge/label_dataset_spec.schema.json)
 - [../../contracts/mappings/simulation_to_alphaforge.md](../../contracts/mappings/simulation_to_alphaforge.md)
+- [../../simulation/docs/profiles.md](../../simulation/docs/profiles.md) — locked mode profiles (source of truth for timeframes)
 
 ## Forbidden Assumptions
 
 - Raw data is NOT stored in repo.
 - External APIs are NOT called during authority lock tasks.
 - Data quality flags are NOT optional — they are required.
+- AlphaForge data timeframes MUST match simulation profile timeframes — no divergence allowed.
+- Cross-sectional research requires point-in-time universe data — NOT single-symbol.
 
 ## Open Holds
 
-- Actual data sources not yet configured (implementation phase).
+- Actual data sources not yet configured (P0.9B implementation phase).
 - Funding model DEFERRED — impacts label cost semantics.
+- Cross-sectional data layer is NOT implemented — contract requirement only.
+- Survivorship bias controls are NOT implemented — contract requirement only.

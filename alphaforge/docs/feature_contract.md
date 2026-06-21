@@ -4,6 +4,8 @@
 
 **Authority:** AlphaForge owns feature research and specification. This document is LOCKED.
 
+**P0.8E note:** Mode-specific timeframe sections corrected to match locked simulation profiles. Previous incorrect SCALP 1m/5m and AGGRESSIVE_SCALP 1m/3m/5m references replaced with canonical timeframes.
+
 ---
 
 ## FeatureSetSpec
@@ -13,11 +15,12 @@ The canonical feature set specification. Schema: [feature_set_spec.schema.json](
 **Required fields:**
 - `feature_set_id` — unique identifier
 - `mode` — SCALP, AGGRESSIVE_SCALP, or SWING
-- `timeframe_stack` — array of timeframes used
+- `timeframe_stack` — object: { primary, context, refinement } with canonical intervals
 - `feature_groups` — array of feature group identifiers
 - `features` — array of individual feature specifications
 - `leakage_policy` — leakage prevention rules
 - `source_dataset_refs` — references to normalized data sources
+- `cross_sectional_requirements` — cross-sectional data requirements (P0.9B)
 - `created_at` — ISO 8601 timestamp
 
 ---
@@ -87,7 +90,7 @@ Purpose: Support/resistance and breakout detection.
 | range_breakout_N | Breakout signal relative to N-bar range |
 
 ### Lead-Lag Group
-Purpose: Cross-timeframe and intermarket relationships.
+Purpose: Cross-timeframe and intermarket relationships. Requires cross-sectional data (P0.9B).
 
 | Feature | Description |
 |---------|-------------|
@@ -101,7 +104,7 @@ Purpose: Market regime classification features.
 | Feature | Description |
 |---------|-------------|
 | trend_strength_N | ADX or similar trend strength |
-| volatility_regime | High/low volatility classification |
+| volatility_regime | TREND_UP/DOWN/RANGE/TRANSITION classification |
 | volume_regime | High/low volume classification |
 | market_hour | Session/time-of-day encoding |
 
@@ -113,7 +116,7 @@ Purpose: Features related to expected trading costs.
 | spread_estimate | Estimated bid-ask spread |
 | liquidity_score | Composite liquidity measure |
 | slippage_risk | Estimated slippage risk |
-| depth_signal | Order book depth signal (if available) |
+| depth_signal | Order book depth signal (if available — P0.9B dependency) |
 
 ---
 
@@ -156,25 +159,37 @@ Every FeatureSetSpec must include a `leakage_policy` section that documents:
 
 ---
 
-## Mode-Specific Feature Needs
+## Mode-Specific Feature Needs (LOCKED timeframes)
+
+Locked profiles from `simulation/docs/profiles.md`. Source of truth — do not override.
 
 ### SCALP (PRIMARY)
-- Primary timeframes: 1m, 5m.
+- **Primary timeframe:** 1h. **Context:** 4h. **Refinement:** 15m.
 - Emphasize: momentum, breakout, cost_proxy, volume.
-- Minimal lookback to avoid staleness.
+- Lookback adapted to 1h primary bars.
 - High sensitivity to spread and slippage features.
+- SCALP HOLD: promotion thresholds require empirical evidence.
 
 ### AGGRESSIVE_SCALP (PRIMARY)
-- Primary timeframes: 1m, 3m, 5m.
+- **Primary timeframe:** 15m. **Context:** 1h. **Refinement:** 5m.
 - Emphasize: momentum, breakout, atr, cost_proxy.
-- Strong leakage controls (high dimensionality risk).
-- Liquidity and spread features are critical.
+- Strong leakage controls (high dimensionality risk at 15m frequency).
+- Liquidity and spread features are critical (order book data: P0.9B dependency).
+- AGGRESSIVE_SCALP HOLD: promotion thresholds require empirical evidence.
 
 ### SWING (SECONDARY_BASELINE)
-- Primary timeframes: 1h, 4h.
+- **Primary timeframe:** 4h. **Context:** 1d. **Refinement:** 1h.
 - Emphasize: returns, volatility, atr, regime, momentum.
-- Standard lookback windows.
+- Standard lookback windows for 4h frequency.
 - Standard leakage controls.
+- SWING thresholds: LOCKED_INITIAL_BASELINE (recalibration pending first walk-forward).
+
+**Previous incorrect values (removed P0.8E):**
+- SCALP 1m, 5m primary → WRONG. Locked profile is 1h.
+- AGGRESSIVE_SCALP 1m, 3m, 5m primary → WRONG. Locked profile is 15m.
+- SWING 1h primary → WRONG. Locked profile is 4h primary with 1h refinement.
+
+Lower-frequency sub-intervals (1m, 3m, 5m) are NOT canonical locked profiles. If explored during research, they must be explicitly marked DEFERRED/FUTURE and cannot be used as the primary analytical unit for mode research reports.
 
 ---
 
@@ -189,13 +204,18 @@ Every FeatureSetSpec must include a `leakage_policy` section that documents:
 ## Related Contracts
 
 - [../../contracts/schemas/alphaforge/feature_set_spec.schema.json](../../contracts/schemas/alphaforge/feature_set_spec.schema.json)
+- [../../simulation/docs/profiles.md](../../simulation/docs/profiles.md) — locked mode profiles (source of truth)
 
 ## Forbidden Assumptions
 
 - Features do NOT guarantee alpha. They are inputs to research, not outcomes.
 - No feature set is "optimal" without validation.
+- Feature timeframes MUST match simulation profile timeframes.
+- SCALP/AGGRESSIVE_SCALP feature sets require empirical tuning (HOLD).
 
 ## Open Holds
 
 - Exact feature formulas may be refined during implementation.
 - SCALP/AGGRESSIVE_SCALP feature sets require empirical tuning.
+- Cross-sectional rank features (cross_sectional_rank, relative_strength) are P0.9B dependencies.
+- Order book / depth features for AGGRESSIVE_SCALP liquidity surfaces are P0.9B dependencies.

@@ -1,0 +1,52 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-P0_9A-ALPHAFORGE-SCAFFOLD-REAUDIT-RESULT"
+  status: "PASS"
+  summary: >
+    P0.9A re-audit confirms scaffold is complete, contract-driven, and test-validated.
+    Package imports cleanly. All contract interfaces are functional. No forbidden
+    operations performed. 266 tests pass (0 failures). Ready for P0.9B.
+
+scope_confirmation:
+  package_created: true
+  contract_surface_unchanged: true
+  schemas_not_modified: true
+  fixtures_not_modified: true
+  v7_not_modified: true
+  simulation_not_modified: true
+  lib_not_modified: true
+  no_model_training: true
+  no_data_download: true
+  no_api_calls: true
+
+reaudit_scorecard:
+  package_importability: 10.0
+  contract_loader_coverage: 9.0
+  validator_correctness: 8.0
+  mode_profile_lock_discipline: 10.0
+  report_builder_validity: 9.0
+  handoff_builder_validity: 9.0
+  writer_safety: 9.0
+  test_coverage: 8.5
+  authority_boundary_preserved: 10.0
+  overall: 9.1
+
+updated_verdict: "READY_FOR_P0_9B"
+confidence: "high"
+
+recommended_next_step:
+  id: "V7-P0_9B-ALPHAFORGE-DATA-LABEL-FEATURE-PIPELINE"
+  title: "P0.9B — AlphaForge Data / Label / Feature Pipeline"
+
+evidence:
+  - "Package structure: 6 modules, 15 files, clean imports"
+  - "Contract loader: all schemas, fixtures, registry, compatibility, mappings loadable"
+  - "Validator: all known fixtures validate; missing files raise explicit errors"
+  - "Registry: all 11 required AlphaForge contracts confirmed registered"
+  - "Mode profiles: frozen dataclass, locked timeframes, ModeError on unknown mode"
+  - "Report builders: all 3 modes + aggregate; mode coverage enforced; no fake profitability"
+  - "Handoff builder: canonical G0_doc_ready…G10_live gate mapping; all NOT_EVALUATED"
+  - "Writer: schema validation before write; tempdir-safe"
+  - "266 tests pass (39 P0.9A + 21 P0.8E + 20 registry + 7 boundary + 5 simulation + 174 lib)"
+  - "Zero forbidden path modifications"

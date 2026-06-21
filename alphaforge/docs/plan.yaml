@@ -1,0 +1,998 @@
+planSpecVersion: "0.1.0"
+kind: "ImplementationPlan"
+profile: "praxis-v0.1"
+
+metadata:
+planId: "AF-IMPLEMENTATION-MASTER-PLAN-V0_1"
+title: "AlphaForge Implementation Master Plan — P0.9B to P1.0"
+description: >
+Contract-driven AlphaForge implementation plan after P0.9A scaffold.
+This plan converts AlphaForge from schema-valid scaffold into a deterministic
+research engine: local data/label/feature pipeline, simulation-derived labels,
+primary mode golden tests, deterministic non-ML research reports, validation
+pipeline, optional ML pilot, and V7 handoff readiness. SCALP is the first
+vertical slice. AGGRESSIVE_SCALP follows after the SCALP path is stable.
+SWING remains secondary baseline/control.
+createdAt: "2026-06-20T00:00:00+03:00"
+humanId: "Mehmet Sokak"
+status: "draft"
+
+authority:
+executor: "ClaudeCode"
+completionAuthority: "PraxisTruthKernel"
+agentSelfReportIsClaimOnly: true
+criteriaSourceRequired: "human"
+reportsAreEvidenceOnly: true
+pluginOwnsTruth: false
+
+workspace:
+root: "."
+allowedFiles:
+- "alphaforge/src/**"
+- "alphaforge/tests/**"
+- "integration/tests/test_alphaforge_*.py"
+- "contracts/fixtures/alphaforge/**"
+- "reports/alphaforge/**"
+- "reports/p0_9b_*.accp.yaml"
+- "reports/p0_9c_*.accp.yaml"
+- "reports/p0_9d_*.accp.yaml"
+- "reports/p1_0_*.accp.yaml"
+- "plans/alphaforge_implementation_master_plan.yaml"
+forbiddenFiles:
+- "lib/**"
+- "simulation/engine/**"
+- "simulation/contracts/**"
+- "v7/**"
+- "runtime/**"
+- "interface/**"
+- "data/**"
+- "datasets/**"
+- "models/**"
+- "artifacts/**"
+- ".github/**"
+- "contracts/schemas/**"
+- "contracts/mappings/**"
+- "alphaforge/docs/**"
+
+execution:
+mode: "single_session"
+agent: "claude-code"
+autonomy: "implementation_allowed"
+canModifyCode: true
+canModifyPlan: false
+canModifyAcceptanceCriteria: false
+maxRepairLoops: 4
+
+tasks:
+
+* id: "TASK-00-BASELINE-STATE"
+  title: "Baseline State and Lock Confirmation"
+  objective: >
+  Confirm P0.8E and P0.9A are truly complete before new implementation starts.
+  This prevents building the data/label/feature pipeline on stale contracts.
+  implementation:
+  instructions:
+  - "Read P0.8E and P0.9A reports."
+  - "Confirm AlphaForge scaffold imports."
+  - "Confirm canonical mode profiles: SCALP 1h/4h/15m, AGGRESSIVE_SCALP 15m/1h/5m, SWING 4h/1d/1h."
+  - "Confirm V7 canonical gates are used by handoff builder."
+  - "Run existing P0.8E/P0.9A tests before modifying implementation."
+  allowedFiles:
+  - "reports/p0_9b_baseline_state.accp.yaml"
+  forbiddenFiles:
+  - "alphaforge/src/**"
+  - "contracts/**"
+  - "lib/**"
+  - "simulation/**"
+  - "v7/**"
+  suggestedSteps:
+  - "Run CMD-AF-PRECHECK."
+  - "Run CMD-AF-P0_9A-TESTS."
+  - "Write baseline state report only if all prechecks pass."
+  antiPatterns:
+  - "Starting implementation with dirty working tree."
+  - "Assuming P0.9A passed without running tests."
+  - "Changing contracts during baseline check."
+  expectedOutputs:
+  - "reports/p0_9b_baseline_state.accp.yaml"
+  artifactPolicy:
+  class: "generated_report"
+  wiringRequired: false
+  reachabilityRequired: false
+  executionRequired: false
+  deterministicEvidenceRequired: true
+  acceptanceCriteria:
+
+  * id: "AC-TASK00-PRECHECKS-PASS"
+    description: "Existing P0.8E/P0.9A tests pass before P0.9B work starts."
+    level: "required"
+    humanApproved: true
+    criteriaSource: "human"
+    verification:
+    type: "test_output"
+    commandRef: "CMD-AF-PRECHECK"
+    deterministic: true
+    canSatisfyFinalGate: true
+    advisoryOnly: false
+    evidenceRefs:
+    - "EV-CMD-AF-PRECHECK"
+    requiredEvidence:
+
+    * "test_output"
+    * "command"
+
+* id: "TASK-01-DATA-MANIFEST-FOUNDATION"
+  title: "Deterministic Local Data Manifest Foundation"
+  objective: >
+  Create the minimal local data manifest layer required for AlphaForge research
+  without downloading market data or calling external APIs.
+  implementation:
+  instructions:
+  - "Implement read-only data manifest objects under AlphaForge source."
+  - "Represent raw_market_data, normalized_market_data, feature_dataset, label_dataset, and research_run_manifest metadata."
+  - "Support local JSON fixture manifests only."
+  - "Require checksum, source, symbol, interval, start_ts, end_ts, timezone, quality_flags, and storage_uri fields."
+  - "Do not implement Binance/API ingestion."
+  - "Do not store large datasets."
+  allowedFiles:
+  - "alphaforge/src/alphaforge/data/**"
+  - "alphaforge/tests/**"
+  - "integration/tests/test_alphaforge_data_manifest.py"
+  - "contracts/fixtures/alphaforge/data_manifest_minimal.json"
+  - "reports/p0_9b_data_manifest.accp.yaml"
+  forbiddenFiles:
+  - "data/**"
+  - "datasets/**"
+  - "lib/**"
+  - "simulation/**"
+  - "v7/**"
+  suggestedSteps:
+  - "Create alphaforge.data.manifest module."
+  - "Create immutable dataclasses or typed dict validators."
+  - "Create a minimal fixture manifest."
+  - "Add tests for load/validate/reject invalid manifest."
+  antiPatterns:
+  - "Downloading real candles."
+  - "Hardcoding real exchange credentials."
+  - "Using current live market data."
+  - "Treating fixture data as real profitability evidence."
+  expectedOutputs:
+  - "alphaforge/src/alphaforge/data/manifest.py"
+  - "integration/tests/test_alphaforge_data_manifest.py"
+  - "contracts/fixtures/alphaforge/data_manifest_minimal.json"
+  artifactPolicy:
+  class: "library_code"
+  wiringRequired: "consumer_or_export"
+  reachabilityRequired: true
+  executionRequired: true
+  deterministicEvidenceRequired: true
+  integrationContract:
+  mode: "consumer_or_export"
+  reason: "Data manifest module must be importable and usable by later label/feature pipeline modules."
+  declaredUnits:
+  - id: "AF-DATA-MANIFEST"
+  path: "alphaforge/src/alphaforge/data/manifest.py"
+  kind: "library_module"
+  language: "python"
+  expectedExports:
+  - "DataManifest"
+  - "DatasetRef"
+  - "load_data_manifest"
+  - "validate_data_manifest"
+  exportSurfaces:
+  - id: "AF-DATA-EXPORTS"
+  path: "alphaforge/src/alphaforge/data/**init**.py"
+  requiredExports:
+  - "DataManifest"
+  - "DatasetRef"
+  - "load_data_manifest"
+  usageProofs:
+  - id: "AF-DATA-MANIFEST-USAGE"
+  commandRef: "CMD-AF-DATA-TESTS"
+  expectedOutputPatterns:
+  - "passed"
+  proves:
+  - "Data manifest module is importable and test-used."
+  acceptanceCriteria:
+
+  * id: "AC-TASK01-MANIFEST-LOADS"
+    description: "Minimal data manifest fixture loads and validates deterministically."
+    level: "required"
+    humanApproved: true
+    criteriaSource: "human"
+    verification:
+    type: "test_output"
+    commandRef: "CMD-AF-DATA-TESTS"
+    deterministic: true
+    canSatisfyFinalGate: true
+    advisoryOnly: false
+    evidenceRefs:
+    - "EV-CMD-AF-DATA-TESTS"
+    requiredEvidence:
+
+    * "test_output"
+    * "source"
+  * id: "AC-TASK01-NO-EXTERNAL-DATA"
+    description: "No external API, market download, or large dataset file is added."
+    level: "required"
+    humanApproved: true
+    criteriaSource: "human"
+    verification:
+    type: "no_diff_contains"
+    patterns:
+    - "requests.get"
+    - "httpx"
+    - "binance"
+    - "ccxt"
+    - "api_key"
+    - "secret"
+    deterministic: true
+    canSatisfyFinalGate: true
+    advisoryOnly: false
+    evidenceRefs:
+    - "EV-DIFF-NO-EXTERNAL-DATA"
+    requiredEvidence:
+
+    * "diff"
+
+* id: "TASK-02-LABEL-ADAPTER"
+  title: "Simulation-Derived Label Adapter"
+  objective: >
+  Implement a deterministic adapter that converts existing simulation truth
+  payloads or fixtures into AlphaForge label dataset records without modifying
+  simulation engine code.
+  implementation:
+  instructions:
+  - "Consume simulation-like fixture payloads or existing SimulationOutput-shaped records."
+  - "Produce AlphaForge label records with long/short/no_trade references, gross/net R, cost fields, exit reason, funding_status, and no_trade_quality."
+  - "Funding must remain DEFERRED unless explicitly supplied by future simulation support."
+  - "Reject labels without simulation lineage."
+  - "Do not modify simulation contracts or engine."
+  allowedFiles:
+  - "alphaforge/src/alphaforge/labels/**"
+  - "alphaforge/tests/**"
+  - "integration/tests/test_alphaforge_label_adapter.py"
+  - "contracts/fixtures/alphaforge/label_dataset_minimal.json"
+  - "reports/p0_9b_label_adapter.accp.yaml"
+  forbiddenFiles:
+  - "simulation/**"
+  - "contracts/schemas/**"
+  - "v7/**"
+  suggestedSteps:
+  - "Create label record dataclass."
+  - "Create simulation_to_label adapter."
+  - "Create fixture for deterministic label dataset."
+  - "Validate output using existing AlphaForge validator."
+  antiPatterns:
+  - "Creating labels without SimulationOutput lineage."
+  - "Treating AlphaForge as economic truth authority."
+  - "Removing funding DEFERRED hold."
+  expectedOutputs:
+  - "alphaforge/src/alphaforge/labels/adapter.py"
+  - "integration/tests/test_alphaforge_label_adapter.py"
+  artifactPolicy:
+  class: "library_code"
+  wiringRequired: "consumer_or_export"
+  reachabilityRequired: true
+  executionRequired: true
+  deterministicEvidenceRequired: true
+  integrationContract:
+  mode: "consumer_or_export"
+  reason: "Label adapter is consumed by feature/report research pipeline."
+  declaredUnits:
+  - id: "AF-LABEL-ADAPTER"
+  path: "alphaforge/src/alphaforge/labels/adapter.py"
+  kind: "library_module"
+  language: "python"
+  expectedExports:
+  - "LabelRecord"
+  - "LabelDataset"
+  - "simulation_output_to_label_record"
+  - "build_label_dataset"
+  usageProofs:
+  - id: "AF-LABEL-USAGE"
+  commandRef: "CMD-AF-LABEL-TESTS"
+  expectedOutputPatterns:
+  - "passed"
+  proves:
+  - "Simulation-derived labels are produced and validated."
+  acceptanceCriteria:
+
+  * id: "AC-TASK02-LABELS-USE-SIMULATION-TRUTH"
+    description: "Label adapter requires simulation lineage and does not invent economic truth."
+    level: "required"
+    humanApproved: true
+    criteriaSource: "human"
+    verification:
+    type: "test_output"
+    commandRef: "CMD-AF-LABEL-TESTS"
+    deterministic: true
+    canSatisfyFinalGate: true
+    advisoryOnly: false
+    evidenceRefs:
+    - "EV-CMD-AF-LABEL-TESTS"
+    requiredEvidence:
+
+    * "test_output"
+    * "source"
+
+* id: "TASK-03-FEATURE-PIPELINE-MINIMAL"
+  title: "Minimal Deterministic Feature Pipeline"
+  objective: >
+  Implement deterministic, leakage-free feature records from local normalized
+  candle fixtures. This stage must stay simple and must not become a full
+  alpha engine yet.
+  implementation:
+  instructions:
+  - "Implement local fixture-based feature construction."
+  - "Support initial feature groups: returns, volatility proxy, range position, volume change, ATR proxy if data allows."
+  - "Expose FeatureRecord and FeatureDataset types."
+  - "Attach feature_set_id, mode, timeframe_stack, source_dataset_refs, and leakage_policy."
+  - "Reject future-looking features."
+  - "No real exchange data."
+  allowedFiles:
+  - "alphaforge/src/alphaforge/features/**"
+  - "integration/tests/test_alphaforge_feature_pipeline.py"
+  - "contracts/fixtures/alphaforge/normalized_candles_minimal.json"
+  - "contracts/fixtures/alphaforge/feature_dataset_minimal.json"
+  - "reports/p0_9b_feature_pipeline.accp.yaml"
+  forbiddenFiles:
+  - "lib/**"
+  - "simulation/**"
+  - "v7/**"
+  - "data/**"
+  - "datasets/**"
+  suggestedSteps:
+  - "Create FeatureRecord and FeatureDataset."
+  - "Create deterministic fixture candles."
+  - "Implement simple returns/range/volume features."
+  - "Add leakage tests."
+  antiPatterns:
+  - "Using future bars."
+  - "Adding ML feature selection."
+  - "Adding external data source."
+  expectedOutputs:
+  - "alphaforge/src/alphaforge/features/pipeline.py"
+  - "integration/tests/test_alphaforge_feature_pipeline.py"
+  artifactPolicy:
+  class: "library_code"
+  wiringRequired: "consumer_or_export"
+  reachabilityRequired: true
+  executionRequired: true
+  deterministicEvidenceRequired: true
+  integrationContract:
+  mode: "consumer_or_export"
+  reason: "Feature pipeline is consumed by deterministic research report builder and later model training."
+  declaredUnits:
+  - id: "AF-FEATURE-PIPELINE"
+  path: "alphaforge/src/alphaforge/features/pipeline.py"
+  kind: "library_module"
+  language: "python"
+  expectedExports:
+  - "FeatureRecord"
+  - "FeatureDataset"
+  - "build_feature_dataset"
+  usageProofs:
+  - id: "AF-FEATURE-USAGE"
+  commandRef: "CMD-AF-FEATURE-TESTS"
+  expectedOutputPatterns:
+  - "passed"
+  proves:
+  - "Feature pipeline runs deterministically on local fixtures."
+  acceptanceCriteria:
+
+  * id: "AC-TASK03-FEATURES-DETERMINISTIC"
+    description: "Feature pipeline produces deterministic fixture-backed features without leakage."
+    level: "required"
+    humanApproved: true
+    criteriaSource: "human"
+    verification:
+    type: "test_output"
+    commandRef: "CMD-AF-FEATURE-TESTS"
+    deterministic: true
+    canSatisfyFinalGate: true
+    advisoryOnly: false
+    evidenceRefs:
+    - "EV-CMD-AF-FEATURE-TESTS"
+    requiredEvidence:
+
+    * "test_output"
+    * "source"
+
+* id: "TASK-04-PRIMARY-MODE-GOLDEN-TESTS"
+  title: "SCALP and AGGRESSIVE_SCALP Golden Tests"
+  objective: >
+  Add deterministic primary-mode golden tests so AlphaForge can prove SCALP
+  and AGGRESSIVE_SCALP mode handling before real research begins.
+  implementation:
+  instructions:
+  - "Create SCALP fixture flow using locked timeframe profile."
+  - "Create AGGRESSIVE_SCALP fixture flow using locked timeframe profile."
+  - "Do not use real market data."
+  - "Verify mode profiles, feature dataset, label dataset, report builder, and handoff builder agree."
+  - "Golden tests must fail on wrong timeframe or wrong mode priority."
+  allowedFiles:
+  - "integration/tests/test_alphaforge_primary_mode_golden.py"
+  - "contracts/fixtures/alphaforge/scalp_*"
+  - "contracts/fixtures/alphaforge/aggressive_scalp_*"
+  - "reports/p0_9b_primary_mode_golden.accp.yaml"
+  forbiddenFiles:
+  - "simulation/**"
+  - "v7/**"
+  - "lib/**"
+  suggestedSteps:
+  - "Use fixture candles + fixture simulation-like outcomes."
+  - "Run pipeline from manifest to feature to label to report."
+  - "Assert schema-valid reports."
+  antiPatterns:
+  - "Claiming golden fixture shows profitability."
+  - "Using fake pass to lock thresholds."
+  expectedOutputs:
+  - "integration/tests/test_alphaforge_primary_mode_golden.py"
+  artifactPolicy:
+  class: "test_only"
+  wiringRequired: "runner_discovery"
+  reachabilityRequired: true
+  executionRequired: true
+  deterministicEvidenceRequired: true
+  integrationContract:
+  mode: "runner_discovery"
+  reason: "Golden tests must be discoverable by pytest and prove primary mode wiring."
+  declaredUnits:
+  - id: "AF-PRIMARY-GOLDEN-TESTS"
+  path: "integration/tests/test_alphaforge_primary_mode_golden.py"
+  kind: "test_module"
+  language: "python"
+  runnerDiscovery:
+  - id: "AF-GOLDEN-RUNNER"
+  commandRef: "CMD-AF-GOLDEN-TESTS"
+  expectedOutputPatterns:
+  - "passed"
+  usageProofs:
+  - id: "AF-GOLDEN-USAGE"
+  commandRef: "CMD-AF-GOLDEN-TESTS"
+  expectedOutputPatterns:
+  - "passed"
+  proves:
+  - "Primary mode golden tests are discoverable and pass."
+  acceptanceCriteria:
+
+  * id: "AC-TASK04-GOLDEN-MODES-PASS"
+    description: "SCALP and AGGRESSIVE_SCALP deterministic golden tests pass and enforce locked profiles."
+    level: "required"
+    humanApproved: true
+    criteriaSource: "human"
+    verification:
+    type: "test_output"
+    commandRef: "CMD-AF-GOLDEN-TESTS"
+    deterministic: true
+    canSatisfyFinalGate: true
+    advisoryOnly: false
+    evidenceRefs:
+    - "EV-CMD-AF-GOLDEN-TESTS"
+    requiredEvidence:
+
+    * "test_output"
+
+* id: "TASK-05-DETERMINISTIC-NONML-RESEARCH-REPORT"
+  title: "Deterministic Non-ML Research Report Path"
+  objective: >
+  Produce schema-valid deterministic research reports from fixture-backed
+  data/feature/label records without model training. This is the first
+  end-to-end AlphaForge research flow, but it must not claim real edge.
+  implementation:
+  instructions:
+  - "Implement a fixture-backed research runner or orchestration helper."
+  - "Input: data manifest + feature dataset + label dataset."
+  - "Output: ModeResearchReport for SCALP and optionally AGGRESSIVE_SCALP/SWING."
+  - "All metrics must be marked deterministic fixture/example metrics."
+  - "No model training."
+  - "No market data."
+  - "No promotion-ready verdict."
+  allowedFiles:
+  - "alphaforge/src/alphaforge/research/**"
+  - "integration/tests/test_alphaforge_nonml_research_report.py"
+  - "reports/alphaforge/fixture_research_reports/**"
+  - "reports/p0_9c_nonml_research_report.accp.yaml"
+  forbiddenFiles:
+  - "models/**"
+  - "data/**"
+  - "datasets/**"
+  - "v7/**"
+  - "simulation/**"
+  suggestedSteps:
+  - "Create research runner with fixture-only inputs."
+  - "Build mode report with no fake profitability."
+  - "Validate report against schema."
+  - "Write output into reports/alphaforge/fixture_research_reports."
+  antiPatterns:
+  - "Calling fixture report real alpha."
+  - "Returning CANDIDATE_FOR_V7_GATES unless explicitly allowed by future empirical evidence."
+  expectedOutputs:
+  - "alphaforge/src/alphaforge/research/runner.py"
+  - "integration/tests/test_alphaforge_nonml_research_report.py"
+  - "reports/alphaforge/fixture_research_reports/scalp_fixture_report.json"
+  artifactPolicy:
+  class: "library_code"
+  wiringRequired: "consumer_or_export"
+  reachabilityRequired: true
+  executionRequired: true
+  deterministicEvidenceRequired: true
+  integrationContract:
+  mode: "consumer_or_export"
+  reason: "Research runner is consumed by later real research and report generation."
+  declaredUnits:
+  - id: "AF-RESEARCH-RUNNER"
+  path: "alphaforge/src/alphaforge/research/runner.py"
+  kind: "library_module"
+  language: "python"
+  expectedExports:
+  - "run_fixture_research"
+  - "build_fixture_mode_report"
+  usageProofs:
+  - id: "AF-NONML-REPORT-USAGE"
+  commandRef: "CMD-AF-NONML-REPORT-TESTS"
+  expectedOutputPatterns:
+  - "passed"
+  proves:
+  - "Fixture-backed non-ML research report path works."
+  acceptanceCriteria:
+
+  * id: "AC-TASK05-NONML-REPORT-VALID"
+    description: "Fixture-backed non-ML ModeResearchReport validates and carries no real profitability claim."
+    level: "required"
+    humanApproved: true
+    criteriaSource: "human"
+    verification:
+    type: "test_output"
+    commandRef: "CMD-AF-NONML-REPORT-TESTS"
+    deterministic: true
+    canSatisfyFinalGate: true
+    advisoryOnly: false
+    evidenceRefs:
+    - "EV-CMD-AF-NONML-REPORT-TESTS"
+    requiredEvidence:
+
+    * "test_output"
+    * "report"
+
+* id: "TASK-06-WALK-FORWARD-VALIDATION-SKELETON"
+  title: "Walk-Forward Validation Skeleton"
+  objective: >
+  Implement validation interfaces and deterministic validation report assembly
+  without claiming real OOS performance.
+  implementation:
+  instructions:
+  - "Implement split policy objects."
+  - "Implement validation report builder from precomputed fixture metrics."
+  - "Include walk_forward_folds, OOS summary, symbol stability, regime breakdown, cost stress, NO_TRADE comparison, and MHT control."
+  - "No training."
+  - "No real performance claims."
+  allowedFiles:
+  - "alphaforge/src/alphaforge/validation/**"
+  - "integration/tests/test_alphaforge_validation_skeleton.py"
+  - "reports/p0_9c_validation_skeleton.accp.yaml"
+  forbiddenFiles:
+  - "models/**"
+  - "data/**"
+  - "datasets/**"
+  suggestedSteps:
+  - "Create validation dataclasses."
+  - "Create validation report builder."
+  - "Validate report schema."
+  antiPatterns:
+  - "Calculating fake OOS edge."
+  - "Using validation skeleton as promotion evidence."
+  expectedOutputs:
+  - "alphaforge/src/alphaforge/validation/splits.py"
+  - "alphaforge/src/alphaforge/validation/reports.py"
+  - "integration/tests/test_alphaforge_validation_skeleton.py"
+  artifactPolicy:
+  class: "library_code"
+  wiringRequired: "consumer_or_export"
+  reachabilityRequired: true
+  executionRequired: true
+  deterministicEvidenceRequired: true
+  integrationContract:
+  mode: "consumer_or_export"
+  reason: "Validation skeleton is required before real research reports and ML pilot."
+  declaredUnits:
+  - id: "AF-VALIDATION-SKELETON"
+  path: "alphaforge/src/alphaforge/validation/reports.py"
+  kind: "library_module"
+  language: "python"
+  expectedExports:
+  - "build_validation_report"
+  usageProofs:
+  - id: "AF-VALIDATION-USAGE"
+  commandRef: "CMD-AF-VALIDATION-TESTS"
+  expectedOutputPatterns:
+  - "passed"
+  proves:
+  - "Validation report skeleton produces schema-valid reports."
+  acceptanceCriteria:
+
+  * id: "AC-TASK06-VALIDATION-SKELETON"
+    description: "Validation report skeleton includes required anti-overfit and cost/no-trade sections."
+    level: "required"
+    humanApproved: true
+    criteriaSource: "human"
+    verification:
+    type: "test_output"
+    commandRef: "CMD-AF-VALIDATION-TESTS"
+    deterministic: true
+    canSatisfyFinalGate: true
+    advisoryOnly: false
+    evidenceRefs:
+    - "EV-CMD-AF-VALIDATION-TESTS"
+    requiredEvidence:
+
+    * "test_output"
+
+* id: "TASK-07-V7-HANDOFF-DRY-RUN"
+  title: "V7 Handoff Dry Run"
+  objective: >
+  Produce a schema-valid V7HandoffPackage from fixture-backed research output
+  with review-only status and blocked scopes. This prepares integration
+  without modifying V7 source.
+  implementation:
+  instructions:
+  - "Use existing handoff builder."
+  - "Build handoff from fixture ModeResearchReport and ValidationReport."
+  - "Ensure canonical V7 gate IDs are NOT_EVALUATED or REVIEW_REQUIRED."
+  - "Ensure live/paper/tiny-live scopes remain blocked."
+  - "Do not modify V7."
+  allowedFiles:
+  - "alphaforge/src/alphaforge/handoff/**"
+  - "integration/tests/test_alphaforge_handoff_dry_run.py"
+  - "reports/alphaforge/handoff_dry_runs/**"
+  - "reports/p1_0_handoff_dry_run.accp.yaml"
+  forbiddenFiles:
+  - "v7/**"
+  - "runtime/**"
+  - "interface/**"
+  suggestedSteps:
+  - "Create dry-run helper if needed."
+  - "Write report to reports/alphaforge/handoff_dry_runs."
+  - "Validate handoff package."
+  antiPatterns:
+  - "Setting any live status."
+  - "Changing V7 gates."
+  expectedOutputs:
+  - "integration/tests/test_alphaforge_handoff_dry_run.py"
+  - "reports/alphaforge/handoff_dry_runs/scalp_fixture_handoff.json"
+  artifactPolicy:
+  class: "library_code"
+  wiringRequired: "consumer_or_export"
+  reachabilityRequired: true
+  executionRequired: true
+  deterministicEvidenceRequired: true
+  integrationContract:
+  mode: "consumer_or_export"
+  reason: "Handoff dry run proves AlphaForge can produce V7-consumable evidence without granting authority."
+  usageProofs:
+  - id: "AF-HANDOFF-DRY-RUN-USAGE"
+  commandRef: "CMD-AF-HANDOFF-DRY-RUN-TESTS"
+  expectedOutputPatterns:
+  - "passed"
+  proves:
+  - "Dry-run handoff package validates and remains review-only."
+  acceptanceCriteria:
+
+  * id: "AC-TASK07-HANDOFF-REVIEW-ONLY"
+    description: "Handoff dry run validates and never recommends live/paper execution."
+    level: "required"
+    humanApproved: true
+    criteriaSource: "human"
+    verification:
+    type: "test_output"
+    commandRef: "CMD-AF-HANDOFF-DRY-RUN-TESTS"
+    deterministic: true
+    canSatisfyFinalGate: true
+    advisoryOnly: false
+    evidenceRefs:
+    - "EV-CMD-AF-HANDOFF-DRY-RUN-TESTS"
+    requiredEvidence:
+
+    * "test_output"
+    * "report"
+
+* id: "TASK-08-ML-PILOT-GATE-DESIGN"
+  title: "ML Pilot Gate Design"
+  objective: >
+  Define the conditions under which actual ML training may start. This task
+  is design/test-gate only unless explicitly unlocked by human owner.
+  implementation:
+  instructions:
+  - "Write an ML pilot readiness report."
+  - "Do not train any model."
+  - "List required preconditions: real data pipeline, label quality, validation skeleton, primary golden tests, cost/no-trade checks."
+  - "Define model artifact safety rules."
+  - "Define when XGBoost/ML training becomes allowed."
+  allowedFiles:
+  - "reports/p0_9d_ml_pilot_gate_design.accp.yaml"
+  - "alphaforge/src/alphaforge/ml/**"
+  - "integration/tests/test_alphaforge_ml_gate.py"
+  forbiddenFiles:
+  - "models/**"
+  - "artifacts/**"
+  - "data/**"
+  - "datasets/**"
+  suggestedSteps:
+  - "Create only gate definitions if code is needed."
+  - "Add tests that training is blocked by default."
+  antiPatterns:
+  - "Training a model prematurely."
+  - "Saving model binaries."
+  expectedOutputs:
+  - "reports/p0_9d_ml_pilot_gate_design.accp.yaml"
+  artifactPolicy:
+  class: "generated_report"
+  wiringRequired: false
+  reachabilityRequired: false
+  executionRequired: false
+  deterministicEvidenceRequired: true
+  acceptanceCriteria:
+
+  * id: "AC-TASK08-ML-NOT-STARTED"
+    description: "ML training remains blocked until explicit human unlock after pipeline evidence."
+    level: "required"
+    humanApproved: true
+    criteriaSource: "human"
+    verification:
+    type: "no_diff_contains"
+    patterns:
+    - "fit("
+    - "XGB"
+    - "xgboost"
+    - "sklearn"
+    - "joblib.dump"
+    - "pickle.dump"
+    deterministic: true
+    canSatisfyFinalGate: true
+    advisoryOnly: false
+    evidenceRefs:
+    - "EV-DIFF-NO-ML"
+    requiredEvidence:
+
+    * "diff"
+
+commands:
+exactAllowedCommands:
+- id: "CMD-AF-PRECHECK"
+kind: "final_validation"
+command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_fixture_validation.py integration/tests/test_alphaforge_contract_semantics.py integration/tests/test_alphaforge_scaffold_imports.py integration/tests/test_alphaforge_contract_loader.py integration/tests/test_alphaforge_report_builders.py integration/tests/test_alphaforge_handoff_builder.py -q"
+cwd: "."
+evidenceRequired: true
+timeoutSeconds: 120
+noTestsFoundIsFailure: true
+watchModeForbidden: true
+expectedExitCode: 0
+networkAllowed: false
+shellAllowed: true
+expectedOutputPatterns:
+- "passed"
+- id: "CMD-AF-P0_9A-TESTS"
+kind: "targeted_test"
+command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_scaffold_imports.py integration/tests/test_alphaforge_contract_loader.py integration/tests/test_alphaforge_report_builders.py integration/tests/test_alphaforge_handoff_builder.py -q"
+cwd: "."
+evidenceRequired: true
+timeoutSeconds: 120
+noTestsFoundIsFailure: true
+watchModeForbidden: true
+expectedExitCode: 0
+networkAllowed: false
+shellAllowed: true
+expectedOutputPatterns:
+- "passed"
+- id: "CMD-AF-DATA-TESTS"
+kind: "targeted_test"
+command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_data_manifest.py -q"
+cwd: "."
+evidenceRequired: true
+timeoutSeconds: 120
+noTestsFoundIsFailure: true
+watchModeForbidden: true
+expectedExitCode: 0
+networkAllowed: false
+shellAllowed: true
+expectedOutputPatterns:
+- "passed"
+- id: "CMD-AF-LABEL-TESTS"
+kind: "targeted_test"
+command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_label_adapter.py -q"
+cwd: "."
+evidenceRequired: true
+timeoutSeconds: 120
+noTestsFoundIsFailure: true
+watchModeForbidden: true
+expectedExitCode: 0
+networkAllowed: false
+shellAllowed: true
+expectedOutputPatterns:
+- "passed"
+- id: "CMD-AF-FEATURE-TESTS"
+kind: "targeted_test"
+command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_feature_pipeline.py -q"
+cwd: "."
+evidenceRequired: true
+timeoutSeconds: 120
+noTestsFoundIsFailure: true
+watchModeForbidden: true
+expectedExitCode: 0
+networkAllowed: false
+shellAllowed: true
+expectedOutputPatterns:
+- "passed"
+- id: "CMD-AF-GOLDEN-TESTS"
+kind: "targeted_test"
+command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_primary_mode_golden.py -q"
+cwd: "."
+evidenceRequired: true
+timeoutSeconds: 120
+noTestsFoundIsFailure: true
+watchModeForbidden: true
+expectedExitCode: 0
+networkAllowed: false
+shellAllowed: true
+expectedOutputPatterns:
+- "passed"
+- id: "CMD-AF-NONML-REPORT-TESTS"
+kind: "targeted_test"
+command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_nonml_research_report.py -q"
+cwd: "."
+evidenceRequired: true
+timeoutSeconds: 120
+noTestsFoundIsFailure: true
+watchModeForbidden: true
+expectedExitCode: 0
+networkAllowed: false
+shellAllowed: true
+expectedOutputPatterns:
+- "passed"
+- id: "CMD-AF-VALIDATION-TESTS"
+kind: "targeted_test"
+command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_validation_skeleton.py -q"
+cwd: "."
+evidenceRequired: true
+timeoutSeconds: 120
+noTestsFoundIsFailure: true
+watchModeForbidden: true
+expectedExitCode: 0
+networkAllowed: false
+shellAllowed: true
+expectedOutputPatterns:
+- "passed"
+- id: "CMD-AF-HANDOFF-DRY-RUN-TESTS"
+kind: "targeted_test"
+command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_handoff_dry_run.py -q"
+cwd: "."
+evidenceRequired: true
+timeoutSeconds: 120
+noTestsFoundIsFailure: true
+watchModeForbidden: true
+expectedExitCode: 0
+networkAllowed: false
+shellAllowed: true
+expectedOutputPatterns:
+- "passed"
+- id: "CMD-AF-FULL-LOCAL"
+kind: "final_validation"
+command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+cwd: "."
+evidenceRequired: true
+timeoutSeconds: 300
+noTestsFoundIsFailure: false
+watchModeForbidden: true
+expectedExitCode: 0
+networkAllowed: false
+shellAllowed: true
+expectedOutputPatterns:
+- "passed"
+validationEvidenceRules:
+finalPromotionRequiresExactAllowedCommand: true
+discoveryCommandsMayNotSatisfyFinalValidation: true
+runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+hardDeniedCommands:
+- id: "DCMD-NO-LIVE-API"
+kind: "runtime_probe"
+command: "any command calling Binance/live/external market APIs"
+pattern: "binance|ccxt|requests.get|httpx|websocket|api_key|secret"
+reason: "External market/API calls are forbidden in this plan."
+- id: "DCMD-NO-MODEL-TRAINING"
+kind: "runtime_probe"
+command: "any command performing ML training"
+pattern: "xgboost|XGB|sklearn|fit\(|joblib.dump|pickle.dump"
+reason: "ML training is blocked until explicit ML pilot unlock."
+- id: "DCMD-NO-WATCH"
+kind: "targeted_test"
+command: "pytest watch mode or long-running watcher"
+pattern: "watch|--looponfail"
+reason: "Validation must be deterministic and terminating."
+- id: "DCMD-NO-NETWORK-INSTALL"
+kind: "build"
+command: "pip install or network dependency install"
+pattern: "pip install|poetry add|uv add|npm install"
+reason: "Dependency changes require separate approval."
+
+evidence:
+ledgerRequired: true
+requiredEvidenceTypes:
+- "diff"
+- "source"
+- "wiring"
+- "command"
+- "test_output"
+- "schema_validation"
+- "report"
+hashWhenAvailable: true
+
+gates:
+sequence:
+- "SchemaGate"
+- "LockGate"
+- "EvidenceGate"
+- "WiringGate"
+- "ExecGate"
+- "FinalGate"
+verdicts:
+- "PASS"
+- "HOLD"
+- "FAIL"
+reasonCodes:
+SchemaGate:
+- "PLAN_SCHEMA_VALID"
+- "TASKS_HAVE_ACCEPTANCE_CRITERIA"
+- "COMMAND_REFS_RESOLVE"
+LockGate:
+- "ALLOWED_FILES_RESPECTED"
+- "FORBIDDEN_FILES_UNCHANGED"
+- "PLAN_NOT_MODIFIED_BY_AGENT"
+EvidenceGate:
+- "EVIDENCE_LEDGER_PRESENT"
+- "COMMAND_OUTPUT_ATTACHED"
+- "DIFF_ATTACHED"
+WiringGate:
+- "NO_ORPHAN_RUNTIME_MODULES"
+- "EXPORT_SURFACES_PRESENT"
+- "RUNNER_DISCOVERY_PROVEN"
+ExecGate:
+- "EXACT_ALLOWED_COMMANDS_PASS"
+- "NO_DENIED_COMMANDS_USED"
+FinalGate:
+- "ALL_REQUIRED_ACCEPTANCE_CRITERIA_PASS"
+- "REPORTS_ARE_EVIDENCE_ONLY"
+- "NO_FALSE_COMPLETION"
+
+repair:
+enabled: true
+failedCriteriaOnly: true
+mayModifyAcceptanceCriteria: false
+mayModifyPlan: false
+allowedFilesFromFailedTasksOnly: true
+maxRepairLoops: 4
+reverifyCommand: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+repairPacketFormat:
+json: true
+markdown: true
+
+locking:
+lockRequired: true
+canonicalHashRequired: true
+planLockFile: "plans/alphaforge_implementation_master_plan.lock.json"
+hashes:
+- "planHash"
+- "acceptanceCriteriaHash"
+- "artifactPolicyHash"
+- "integrationContractHash"
+- "commandPolicyHash"
+- "allowedFilesHash"
+- "forbiddenFilesHash"
+
+reports:
+protocol: "ACCP"
+artifactDirectory: "reports/alphaforge"
+reportsAreEvidenceOnly: true
+reportsDoNotAuthorizeExecution: true
+commandEvidenceRequired: true
+repairPacketRequiredOnHoldOrFail: true

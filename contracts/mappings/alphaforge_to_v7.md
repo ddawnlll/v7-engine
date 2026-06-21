@@ -4,6 +4,28 @@
 
 **Authority:** AlphaForge produces evidence. V7 is the final acceptance authority. This mapping is LOCKED.
 
+**P0.8E note:** Gate mapping corrected to match V7 canonical gate IDs from `v7/docs/pipeline/evaluation.md`. Previous AlphaForge-invented gate names (G0: Data Quality, G1: Feature Validity, etc.) have been replaced with the authoritative V7 gate sequence: G0_DOC_READY through G10_LIVE.
+
+---
+
+## V7 Canonical Gate Reference
+
+Source of truth: `v7/docs/pipeline/evaluation.md`. V7 defines the following promotion gates:
+
+| Gate | V7 Name | Meaning |
+|------|---------|---------|
+| G0 | DOC_READY | Mode has complete docs, contracts, labels, model outputs, and risk rules |
+| G1 | RESEARCH_BACKTEST | Initial research backtest with cost-honest labels and no-trade quality |
+| G2 | WALK_FORWARD_OOS | Walk-forward out-of-sample evidence across multiple folds |
+| G3 | COST_STRESS | Fee, slippage, spread, and funding stress where applicable |
+| G4 | REGIME_BREAKDOWN | Performance evaluated per TREND_UP, TREND_DOWN, RANGE, TRANSITION |
+| G5 | SYMBOL_STABILITY | No single symbol or cluster explains majority of edge |
+| G6 | CALIBRATION_RELIABILITY | Probability and expected-R surfaces calibrated enough for policy gates |
+| G7 | SHADOW | Live-market observation without order placement |
+| G8 | PAPER | Paper trading with runtime lifecycle and outcome reconciliation |
+| G9 | TINY_LIVE | Small real-capital live validation with strict kill switches |
+| G10 | LIVE | Production-eligible mode after independent promotion |
+
 ---
 
 ## AlphaForge Output → V7 Gates
@@ -12,28 +34,29 @@
 
 | AlphaForge Evidence | V7 Gate | Purpose |
 |--------------------|---------|---------|
-| `data_scope` (symbols, date range, data quality) | G0: Data Quality | Confirm data integrity and scope |
-| `feature_set_refs` + leakage audit | G1: Feature Validity | Confirm features are valid and leak-free |
-| `label_dataset_refs` + simulation lineage | G2: Label Validity | Confirm labels from authoritative simulation |
-| `metrics.oos_*` (sharpe, expectancy, win rate) | G4: OOS Performance | Confirm edge exists out-of-sample |
-| `cost_stress` (fee, slippage, combined) | G5: Cost Resilience | Confirm edge survives realistic costs |
-| `regime_breakdown` (per-regime metrics) | G6: Regime Robustness | Confirm edge across market regimes |
-| `no_trade_comparison` (active vs no-trade) | G9: No-Trade Baseline | Confirm alpha beats doing nothing |
+| `data_scope` (symbols, date range, data quality, timeframe stack) | G0: DOC_READY | Confirm data integrity, complete docs, and scope |
+| `metrics` (oos_sharpe, oos_expectancy_r, oos_win_rate) | G1: RESEARCH_BACKTEST | Initial research backtest evidence |
+| `validation_summary` (fold_count, verdict, overfit_risk) | G2: WALK_FORWARD_OOS | Walk-forward OOS evidence reference |
+| `cost_stress` (fee, slippage, combined stress levels) | G3: COST_STRESS | Confirm edge survives realistic costs |
+| `regime_breakdown` (per-regime metrics across TREND_UP/DOWN/RANGE/TRANSITION) | G4: REGIME_BREAKDOWN | Confirm edge across market regimes |
+| `metrics` symbol/regime slicing consistency | G5: SYMBOL_STABILITY | Confirm no single symbol/cluster dominates |
 | Overall `verdict` | V7 Decision Input | Synthesis for V7 evaluation |
+| `no_trade_comparison` (active vs no-trade) | All gates (cross-cutting quality) | Confirm alpha beats doing nothing |
 
 ### ValidationReport → V7 Promotion Gates
 
 | AlphaForge Evidence | V7 Gate | Purpose |
 |--------------------|---------|---------|
-| `split_policy` (train/val/OOS config) | G0-G4 methodology audit | Confirm valid split design |
-| `walk_forward_folds` (per-fold metrics) | G4: OOS Performance | Detailed fold-level evidence |
-| `oos_summary` (aggregate OOS metrics) | G4: OOS Performance | Aggregate OOS assessment |
-| `symbol_stability` (cross-symbol variance) | G7: Stability | Confirm edge across symbols |
-| `regime_breakdown` (detailed by regime) | G6: Regime Robustness | Detailed regime analysis |
-| `cost_stress` (sensitivity levels) | G5: Cost Resilience | Detailed cost sensitivity |
-| `no_trade_comparison` | G9: No-Trade Baseline | Detailed no-trade analysis |
+| `split_policy` (train/val/OOS config, purge, embargo) | G0-G2 methodology audit | Confirm valid split design |
+| `walk_forward_folds` (per-fold metrics, 6 folds min) | G2: WALK_FORWARD_OOS | Detailed fold-level evidence |
+| `oos_summary` (aggregate OOS metrics) | G2: WALK_FORWARD_OOS | Aggregate OOS assessment |
+| `cost_stress` (fee, slippage, funding sensitivity levels) | G3: COST_STRESS | Detailed cost sensitivity |
+| `regime_breakdown` (TREND_UP/DOWN/RANGE/TRANSITION) | G4: REGIME_BREAKDOWN | Detailed regime analysis |
+| `symbol_stability` (per-symbol contribution, 40%/60% limits) | G5: SYMBOL_STABILITY | Confirm edge across symbols |
+| `no_trade_comparison` | All gates (cross-cutting) | Detailed no-trade analysis |
 | `overfit_risk_flags` | V7 Risk Assessment | Overfit risk for V7 to evaluate |
-| `verdict` (PASS/FAIL/INCONCLUSIVE) | V7 Decision Input | Validation conclusion |
+| `multiple_hypothesis_control` | V7 Risk Assessment | Data-snooping / MHT control evidence |
+| `verdict` (PASS/PASS_WITH_LIMITATIONS/FAIL_*/INCONCLUSIVE) | V7 Decision Input | Validation conclusion |
 
 ### ModelArtifact → V7 Model Loading
 
@@ -54,17 +77,17 @@
 
 | AlphaForge Evidence | V7 Gate | Purpose |
 |--------------------|---------|---------|
-| `calibration_method` | G8: Calibration | How was calibration done? |
-| `calibration_metrics.ece` | G8: Calibration | Is calibration acceptable? |
-| `confidence_bins` | G8: Calibration | Bin-level reliability assessment |
-| `status` (CALIBRATED/UNCALIBRATED/UNRELIABLE) | G8: Calibration | Go/no-go for probability use |
+| `calibration_method` | G6: CALIBRATION_RELIABILITY | How was calibration done? |
+| `calibration_metrics.ece` | G6: CALIBRATION_RELIABILITY | Is calibration acceptable? |
+| `confidence_bins` | G6: CALIBRATION_RELIABILITY | Bin-level reliability assessment |
+| `status` (CALIBRATED/UNCALIBRATED/UNRELIABLE) | G6: CALIBRATION_RELIABILITY | Go/no-go for probability use |
 
 ### V7HandoffPackage → V7 Review Queue
 
 | Handoff Field | V7 Action |
 |--------------|-----------|
 | `handoff_package_id` | Identity for V7 tracking |
-| `v7_gate_mapping` (G0-G10 evidence references) | Structured gate evaluation |
+| `v7_gate_mapping` (G0_doc_ready through G10_live with evidence_ref and status per gate) | Structured gate evaluation |
 | `recommended_status` | Suggestion (not binding) |
 | `blocked_scopes` | Scopes V7 should NOT extrapolate to |
 | `limitations` | Known issues for V7 awareness |
@@ -111,7 +134,7 @@ If V7 rejects a handoff package:
 
 - [../alphaforge/docs/handoff_to_v7.md](../alphaforge/docs/handoff_to_v7.md)
 - [../alphaforge/docs/report_contracts.md](../alphaforge/docs/report_contracts.md)
-- [../v7/docs/pipeline/evaluation.md](../v7/docs/pipeline/evaluation.md) — V7 G0-G10 gates
+- [../v7/docs/pipeline/evaluation.md](../v7/docs/pipeline/evaluation.md) — V7 canonical G0-G10 gates (source of truth)
 
 ## Related Contracts
 
@@ -128,5 +151,6 @@ If V7 rejects a handoff package:
 ## Open Holds
 
 - Actual V7 gate evaluation logic is defined in V7 pipeline docs, not here.
-- Gate G10 (Paper/Shadow) requires paper trading infrastructure not yet built.
+- Gates G7 (SHADOW), G8 (PAPER), G9 (TINY_LIVE), G10 (LIVE) require infrastructure not yet built.
 - Funding DEFERRED blocks perpetual/live gate evaluation.
+- P0.8E: gate IDs now match V7 evaluation.md canonical names; mapping verified.

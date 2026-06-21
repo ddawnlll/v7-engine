@@ -10,9 +10,9 @@
     "symbols": ["BTCUSDT"],
     "date_range_start": "2025-01-01T00:00:00Z",
     "date_range_end": "2026-06-01T00:00:00Z",
-    "primary_timeframes": ["1m", "3m", "5m"],
-    "secondary_timeframes": ["15m"],
-    "data_quality_summary": "Example data scope — not real market data. All values are dummy examples for schema validation only."
+    "primary_timeframes": ["15m"],
+    "secondary_timeframes": ["1h", "5m"],
+    "data_quality_summary": "P0.8E: timeframes corrected to locked simulation profile: AGGRESSIVE_SCALP primary 15m, context 1h, refinement 5m."
   },
   "feature_set_refs": ["fs-aggressive-scalp-example-001"],
   "label_dataset_refs": ["lds-aggressive-scalp-example-001"],
@@ -26,7 +26,7 @@
   ],
   "validation_summary": {
     "validation_report_id": "vr-aggressive-scalp-example-001",
-    "fold_count": 5,
+    "fold_count": 6,
     "verdict": "INCONCLUSIVE",
     "overfit_risk": "CRITICAL"
   },
@@ -42,7 +42,8 @@
       { "fold": 2, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 },
       { "fold": 3, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 },
       { "fold": 4, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 },
-      { "fold": 5, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 }
+      { "fold": 5, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 },
+      { "fold": 6, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 }
     ]
   },
   "cost_stress": {
@@ -59,30 +60,53 @@
       { "multiplier": 2.0, "oos_expectancy_r": -0.3, "edge_survives": false }
     ],
     "combined_stress_edge_survives": false,
-    "break_even_cost_total_pct": 0.005
+    "break_even_cost_total_pct": 0.005,
+    "cost_stress_verdict": "FAIL_EDGE_DESTROYED_BY_COSTS",
+    "net_edge_after_costs": -0.02
   },
   "no_trade_comparison": {
-    "long_vs_no_trade": "NO_TRADE beats LONG in this example (dummy data)",
-    "short_vs_no_trade": "NO_TRADE beats SHORT in this example (dummy data)",
+    "long_vs_no_trade": "NO_TRADE beats LONG in dummy example",
+    "short_vs_no_trade": "NO_TRADE beats SHORT in dummy example",
     "active_beats_no_trade": false,
-    "summary": "Dummy example — no real edge demonstrated. Higher cost sensitivity than SCALP due to trade frequency."
+    "no_trade_baseline": "NO_TRADE dominates — dummy example",
+    "saved_loss_count": 0,
+    "missed_opportunity_count": 0,
+    "trade_vs_no_trade_verdict": "NO_TRADE_DOMINATES",
+    "summary": "Dummy example — no real edge demonstrated. Higher cost sensitivity than SCALP."
   },
   "regime_breakdown": {
+    "regimes_tested": ["TREND_UP", "TREND_DOWN", "RANGE", "TRANSITION"],
     "regimes": [
-      { "regime": "HIGH_VOL_UP", "sample_pct": 0.25, "oos_expectancy_r": 0.0, "edge_present": false },
-      { "regime": "HIGH_VOL_DOWN", "sample_pct": 0.25, "oos_expectancy_r": 0.0, "edge_present": false },
-      { "regime": "LOW_VOL_RANGE", "sample_pct": 0.25, "oos_expectancy_r": 0.0, "edge_present": false },
-      { "regime": "NORMAL", "sample_pct": 0.25, "oos_expectancy_r": 0.0, "edge_present": false }
+      { "regime": "TREND_UP", "sample_pct": 0.25, "oos_expectancy_r": 0.0, "edge_present": false },
+      { "regime": "TREND_DOWN", "sample_pct": 0.25, "oos_expectancy_r": 0.0, "edge_present": false },
+      { "regime": "RANGE", "sample_pct": 0.25, "oos_expectancy_r": 0.0, "edge_present": false },
+      { "regime": "TRANSITION", "sample_pct": 0.25, "oos_expectancy_r": 0.0, "edge_present": false }
     ],
+    "best_regime": "NONE",
+    "worst_regime": "NONE",
     "edge_only_in_rare_regime": false,
-    "summary": "Dummy example — no real regime analysis."
+    "regime_stability_verdict": "NOT_EVALUATED",
+    "summary": "P0.8E: regime taxonomy aligned to V7 evaluation.md."
+  },
+  "v7_gate_readiness": {
+    "gates_mapped": ["G0_doc_ready", "G1_research_backtest", "G2_walk_forward_oos", "G3_cost_stress", "G4_regime_breakdown", "G5_symbol_stability"],
+    "gates_not_ready": ["G6_calibration_reliability", "G7_shadow", "G8_paper", "G9_tiny_live", "G10_live"],
+    "overall_readiness": "NOT_READY"
+  },
+  "multiple_hypothesis_control": {
+    "tested_hypothesis_count": 1,
+    "correction_method": "NONE_APPLIED",
+    "corrected_significance": null,
+    "data_snooping_risk_flag": "CRITICAL",
+    "deflated_sharpe_or_equivalent": null,
+    "notes": "P0.8E: MHT field added. High dimensionality at 15m makes MHT critical."
   },
   "verdict": "CONTINUE_RESEARCH",
   "blocked_scopes": [
     "No real empirical data — this is a minimal fixture example",
     "Funding model DEFERRED — perpetual/live scope blocked",
     "AGGRESSIVE_SCALP thresholds HOLD — not lockable without empirical evidence",
-    "Liquidity/spread data not available",
+    "Liquidity/spread data not available (P0.9B dependency)",
     "Latency analysis not performed"
   ],
   "limitations": [
@@ -90,11 +114,11 @@
     "All metric values are dummy zeros — do not interpret as real research",
     "Single symbol limitation (BTCUSDT only)",
     "Higher fee/slippage sensitivity than SCALP",
-    "Liquidity and latency caveats apply but not yet measured"
+    "P0.8E: timeframes corrected to locked profile: AGGRESSIVE_SCALP primary 15m"
   ],
   "recommended_actions": [
-    "Obtain real market data with spread/liquidity information",
-    "Run actual simulation for AGGRESSIVE_SCALP mode",
+    "Obtain real market data at 15m primary timeframe with spread/liquidity info",
+    "Run AGGRESSIVE_SCALP simulation with locked profile (15m primary / 1h context / 5m refinement)",
     "Generate real labels and compute features with strong leakage controls",
     "Conduct latency feasibility analysis",
     "Re-evaluate after empirical evidence is available"

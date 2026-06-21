@@ -6,21 +6,27 @@
   "mode_reports": [
     {
       "mode": "SCALP",
+      "mode_priority": "PRIMARY",
       "report_id": "mrr-scalp-example-001",
+      "report_type": "primary_research_report",
       "verdict": "CONTINUE_RESEARCH",
-      "summary": "SCALP primary research — dummy example. No empirical evidence yet. CONTINUE_RESEARCH."
+      "summary": "SCALP primary research — dummy example. No empirical evidence yet."
     },
     {
       "mode": "AGGRESSIVE_SCALP",
+      "mode_priority": "PRIMARY",
       "report_id": "mrr-aggressive-scalp-example-001",
+      "report_type": "primary_research_report",
       "verdict": "CONTINUE_RESEARCH",
-      "summary": "AGGRESSIVE_SCALP primary research — dummy example. No empirical evidence yet. CONTINUE_RESEARCH."
+      "summary": "AGGRESSIVE_SCALP primary research — dummy example. No empirical evidence yet."
     },
     {
       "mode": "SWING",
+      "mode_priority": "SECONDARY_BASELINE",
       "report_id": "mrr-swing-example-001",
+      "report_type": "secondary_baseline_report",
       "verdict": "BASELINE_WEAK",
-      "summary": "SWING secondary baseline — dummy example. No empirical evidence yet. BASELINE_WEAK."
+      "summary": "SWING secondary baseline — dummy example. No empirical evidence yet."
     }
   ],
   "promoted_candidates": [],
@@ -37,18 +43,19 @@
     "No real models were trained",
     "No real validation was performed",
     "All three modes have zero empirical evidence",
-    "Funding model is DEFERRED for all modes"
+    "Funding model is DEFERRED for all modes",
+    "P0.8E: mode coverage enforced (SCALP+AGGRESSIVE_SCALP PRIMARY, SWING SECONDARY_BASELINE)"
   ],
   "v7_handoff_packages": [],
   "cross_mode_insights": [
     "Dummy example — no cross-mode insights available",
-    "SCALP and AGGRESSIVE_SCALP share cost-sensitivity concerns",
-    "SWING provides architectural baseline for validation pipeline"
+    "SCALP and AGGRESSIVE_SCALP share cost-sensitivity concerns at higher frequencies",
+    "SWING provides secondary baseline for architectural validation at 4h"
   ],
   "next_research_priorities": [
-    "Obtain real market data for all modes",
-    "Run simulations for SCALP and AGGRESSIVE_SCALP",
-    "Validate SWING baseline with real data",
+    "Obtain real market data for all modes at locked primary timeframes",
+    "Run simulations for SCALP (1h) and AGGRESSIVE_SCALP (15m)",
+    "Validate SWING baseline (4h) with real data",
     "Establish empirical evidence before any V7 handoff"
   ]
 }

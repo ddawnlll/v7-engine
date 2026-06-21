@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://v7-engine/contracts/schemas/alphaforge/v7_handoff_package.schema.json",
   "title": "V7HandoffPackage",
-  "description": "The delivery artifact from AlphaForge to V7 acceptance gates. Bundles all evidence V7 needs to evaluate an alpha candidate. Owned by AlphaForge; accepted/rejected by V7.",
+  "description": "The delivery artifact from AlphaForge to V7 acceptance gates. Bundles all evidence V7 needs to evaluate an alpha candidate. Owned by AlphaForge; accepted/rejected by V7. Gate IDs reference v7/docs/pipeline/evaluation.md as canonical source of truth. P0.8E: corrected gate mapping to match V7 canonical G0-G10 names.",
   "type": "object",
   "required": [
     "schema_version",
@@ -20,52 +20,119 @@
     "lineage"
   ],
   "properties": {
-    "schema_version": {
-      "type": "string"
-    },
-    "handoff_package_id": {
-      "type": "string",
-      "description": "Unique handoff package identifier."
-    },
-    "mode": {
-      "type": "string",
-      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"]
-    },
-    "alpha_candidate_id": {
-      "type": "string",
-      "description": "AlphaCandidate reference."
-    },
-    "mode_research_report_id": {
-      "type": "string",
-      "description": "ModeResearchReport reference."
-    },
-    "validation_report_id": {
-      "type": "string",
-      "description": "ValidationReport reference."
-    },
-    "model_artifact_id": {
-      "type": "string",
-      "description": "ModelArtifact reference."
-    },
-    "calibration_candidate_id": {
-      "type": "string",
-      "description": "CalibrationCandidate reference."
-    },
+    "schema_version": { "type": "string" },
+    "handoff_package_id": { "type": "string", "description": "Unique handoff package identifier." },
+    "mode": { "type": "string", "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"] },
+    "alpha_candidate_id": { "type": "string", "description": "AlphaCandidate reference." },
+    "mode_research_report_id": { "type": "string", "description": "ModeResearchReport reference." },
+    "validation_report_id": { "type": "string", "description": "ValidationReport reference." },
+    "model_artifact_id": { "type": "string", "description": "ModelArtifact reference." },
+    "calibration_candidate_id": { "type": "string", "description": "CalibrationCandidate reference." },
     "v7_gate_mapping": {
       "type": "object",
-      "description": "Mapping of AlphaForge evidence to V7 promotion gates (G0-G10).",
+      "description": "Mapping of AlphaForge evidence to V7 canonical promotion gates. Gate IDs match v7/docs/pipeline/evaluation.md exactly. P0.8E corrected from invented gate names to canonical V7 gate IDs.",
+      "required": [
+        "G0_doc_ready",
+        "G1_research_backtest",
+        "G2_walk_forward_oos",
+        "G3_cost_stress",
+        "G4_regime_breakdown",
+        "G5_symbol_stability",
+        "G6_calibration_reliability",
+        "G7_shadow",
+        "G8_paper",
+        "G9_tiny_live",
+        "G10_live"
+      ],
       "properties": {
-        "G0_data_quality": { "type": "string", "description": "Evidence reference for data quality." },
-        "G1_feature_validity": { "type": "string" },
-        "G2_label_validity": { "type": "string" },
-        "G3_model_sanity": { "type": "string" },
-        "G4_oos_performance": { "type": "string" },
-        "G5_cost_resilience": { "type": "string" },
-        "G6_regime_robustness": { "type": "string" },
-        "G7_stability": { "type": "string" },
-        "G8_calibration": { "type": "string" },
-        "G9_no_trade_baseline": { "type": "string" },
-        "G10_paper_shadow": { "type": "string" }
+        "G0_doc_ready": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G0: DOC_READY" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        },
+        "G1_research_backtest": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G1: RESEARCH_BACKTEST" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        },
+        "G2_walk_forward_oos": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G2: WALK_FORWARD_OOS" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        },
+        "G3_cost_stress": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G3: COST_STRESS" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        },
+        "G4_regime_breakdown": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G4: REGIME_BREAKDOWN" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        },
+        "G5_symbol_stability": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G5: SYMBOL_STABILITY" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        },
+        "G6_calibration_reliability": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G6: CALIBRATION_RELIABILITY" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        },
+        "G7_shadow": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G7: SHADOW (infrastructure not yet built)" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        },
+        "G8_paper": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G8: PAPER (infrastructure not yet built)" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        },
+        "G9_tiny_live": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G9: TINY_LIVE (infrastructure not yet built)" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        },
+        "G10_live": {
+          "type": "object",
+          "required": ["evidence_ref", "status"],
+          "properties": {
+            "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G10: LIVE (infrastructure not yet built)" },
+            "status": { "type": "string", "enum": ["PASS", "PENDING", "NOT_EVALUATED"] }
+          }
+        }
       }
     },
     "recommended_status": {
@@ -73,19 +140,12 @@
       "enum": ["REVIEW_REQUIRED", "SHADOW_READY", "PROMOTION_CANDIDATE"],
       "description": "AlphaForge recommendation. V7 is NOT bound by this."
     },
-    "blocked_scopes": {
-      "type": "array",
-      "items": { "type": "string" },
-      "description": "Scopes explicitly blocked/not covered by this package."
-    },
-    "limitations": {
-      "type": "array",
-      "items": { "type": "string" },
-      "description": "Known limitations."
-    },
+    "blocked_scopes": { "type": "array", "items": { "type": "string" }, "description": "Scopes explicitly blocked/not covered." },
+    "limitations": { "type": "array", "items": { "type": "string" }, "description": "Known limitations." },
     "lineage": {
       "type": "object",
       "description": "Full provenance chain from raw data to handoff.",
+      "required": ["data_refs", "feature_set_id", "label_dataset_id", "simulation_profile_id", "lineage_verified"],
       "properties": {
         "data_refs": { "type": "array", "items": { "type": "string" } },
         "feature_set_id": { "type": "string" },
@@ -97,14 +157,11 @@
         "lineage_verified": { "type": "boolean" }
       }
     },
-    "created_at": {
-      "type": "string",
-      "format": "date-time"
-    },
+    "created_at": { "type": "string", "format": "date-time" },
     "rejection_rules_applied": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Which rejection rules were evaluated and passed before handoff."
+      "description": "Which rejection rules were evaluated and passed before handoff. 12 V7 handoff rejection rules apply."
     }
   }
 }

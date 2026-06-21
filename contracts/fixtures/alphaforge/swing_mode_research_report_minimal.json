@@ -10,9 +10,9 @@
     "symbols": ["BTCUSDT"],
     "date_range_start": "2025-01-01T00:00:00Z",
     "date_range_end": "2026-06-01T00:00:00Z",
-    "primary_timeframes": ["1h", "4h"],
-    "secondary_timeframes": ["1d"],
-    "data_quality_summary": "Example data scope — not real market data. All values are dummy examples for schema validation only."
+    "primary_timeframes": ["4h"],
+    "secondary_timeframes": ["1d", "1h"],
+    "data_quality_summary": "P0.8E: SWING primary timeframe corrected to 4h (locked simulation profile). Context: 1d. Refinement: 1h."
   },
   "feature_set_refs": ["fs-swing-example-001"],
   "label_dataset_refs": ["lds-swing-example-001"],
@@ -26,7 +26,7 @@
   ],
   "validation_summary": {
     "validation_report_id": "vr-swing-example-001",
-    "fold_count": 3,
+    "fold_count": 6,
     "verdict": "INCONCLUSIVE",
     "overfit_risk": "MEDIUM"
   },
@@ -40,7 +40,10 @@
     "per_fold_metrics": [
       { "fold": 1, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 },
       { "fold": 2, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 },
-      { "fold": 3, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 }
+      { "fold": 3, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 },
+      { "fold": 4, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 },
+      { "fold": 5, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 },
+      { "fold": 6, "sharpe": 0.0, "expectancy_r": 0.0, "win_rate": 0.0, "trade_count": 0 }
     ]
   },
   "cost_stress": {
@@ -55,22 +58,46 @@
       { "multiplier": 1.5, "oos_expectancy_r": -0.05, "edge_survives": false }
     ],
     "combined_stress_edge_survives": false,
-    "break_even_cost_total_pct": 0.03
+    "break_even_cost_total_pct": 0.03,
+    "cost_stress_verdict": "FAIL_EDGE_DESTROYED_BY_COSTS",
+    "net_edge_after_costs": -0.005
   },
   "no_trade_comparison": {
-    "long_vs_no_trade": "Unclear in this example (dummy data)",
-    "short_vs_no_trade": "Unclear in this example (dummy data)",
+    "long_vs_no_trade": "Unclear in dummy example",
+    "short_vs_no_trade": "Unclear in dummy example",
     "active_beats_no_trade": false,
-    "summary": "Dummy example — no real edge demonstrated. Lower cost sensitivity than SCALP modes."
+    "no_trade_baseline": "NO_TRADE dominates — dummy example",
+    "saved_loss_count": 0,
+    "missed_opportunity_count": 0,
+    "trade_vs_no_trade_verdict": "NO_TRADE_DOMINATES",
+    "summary": "Dummy example — no real edge demonstrated."
   },
   "regime_breakdown": {
+    "regimes_tested": ["TREND_UP", "TREND_DOWN", "RANGE", "TRANSITION"],
     "regimes": [
-      { "regime": "HIGH_VOL", "sample_pct": 0.33, "oos_expectancy_r": 0.0, "edge_present": false },
-      { "regime": "LOW_VOL", "sample_pct": 0.33, "oos_expectancy_r": 0.0, "edge_present": false },
-      { "regime": "NORMAL", "sample_pct": 0.34, "oos_expectancy_r": 0.0, "edge_present": false }
+      { "regime": "TREND_UP", "sample_pct": 0.30, "oos_expectancy_r": 0.0, "edge_present": false },
+      { "regime": "TREND_DOWN", "sample_pct": 0.25, "oos_expectancy_r": 0.0, "edge_present": false },
+      { "regime": "RANGE", "sample_pct": 0.30, "oos_expectancy_r": 0.0, "edge_present": false },
+      { "regime": "TRANSITION", "sample_pct": 0.15, "oos_expectancy_r": 0.0, "edge_present": false }
     ],
+    "best_regime": "NONE",
+    "worst_regime": "NONE",
     "edge_only_in_rare_regime": false,
-    "summary": "Dummy example — no real regime analysis."
+    "regime_stability_verdict": "NOT_EVALUATED",
+    "summary": "P0.8E: regime taxonomy aligned to V7 evaluation.md."
+  },
+  "v7_gate_readiness": {
+    "gates_mapped": ["G0_doc_ready", "G1_research_backtest", "G2_walk_forward_oos", "G3_cost_stress", "G4_regime_breakdown", "G5_symbol_stability"],
+    "gates_not_ready": ["G6_calibration_reliability", "G7_shadow", "G8_paper", "G9_tiny_live", "G10_live"],
+    "overall_readiness": "NOT_READY"
+  },
+  "multiple_hypothesis_control": {
+    "tested_hypothesis_count": 1,
+    "correction_method": "NONE_APPLIED",
+    "corrected_significance": null,
+    "data_snooping_risk_flag": "MEDIUM",
+    "deflated_sharpe_or_equivalent": null,
+    "notes": "P0.8E: MHT field added."
   },
   "verdict": "BASELINE_WEAK",
   "blocked_scopes": [
@@ -82,10 +109,11 @@
     "This is a minimal fixture for schema validation only",
     "All metric values are dummy — do not interpret as real research",
     "SWING thresholds are LOCKED_INITIAL_BASELINE — recalibration pending",
-    "Secondary baseline only — primary modes (SCALP, AGGRESSIVE_SCALP) have priority"
+    "Secondary baseline only — primary modes (SCALP, AGGRESSIVE_SCALP) have priority",
+    "P0.8E: timeframes corrected to locked profile: SWING primary 4h"
   ],
   "recommended_actions": [
-    "Obtain real market data",
+    "Obtain real market data at 4h primary timeframe",
     "Run SWING simulation with LOCKED_INITIAL_BASELINE thresholds",
     "Validate baseline architecture before tuning",
     "Recalibrate thresholds after first walk-forward"
