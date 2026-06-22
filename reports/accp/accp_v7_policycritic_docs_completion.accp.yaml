@@ -1,7 +1,7 @@
 accp_version: "2.0.0"
 source_format: "ACCP-YAML"
 task_id: "accp_v7_policycritic_docs_port"
-title: "V7 Policy Critic Docs Port to Correct v7-engine Repo — ACCP Completion Report"
+title: "V7 Policy Critic Docs — Partner-Grade Design Package — ACCP Completion Report"
 created_at: "2026-06-23T00:00:00Z"
 model: "DeepSeek V4 Pro (via Claude Code Fable 5)"
 effort: "ultracode"
@@ -57,32 +57,75 @@ repo_verification:
 
 # --- FILES CREATED ---
 files_created:
-  - "policycritic/docs/README.md"
-  - "policycritic/docs/ai_summary.md"
-  - "policycritic/docs/policy_critic_design.md"
-  - "policycritic/docs/rl_intro_for_v7.md"
-  - "policycritic/docs/pipeline.md"
-  - "policycritic/docs/authority_and_boundaries.md"
-  - "policycritic/docs/replay_buffer_design.md"
-  - "policycritic/docs/rollout_plan.md"
-  - "policycritic/docs/source_inventory.md"
-  - "reports/accp/accp_v7_policycritic_docs_completion.accp.yaml"
+  core:
+    - "policycritic/docs/README.md"
+    - "policycritic/docs/ai_summary.md"
+    - "policycritic/docs/folder_tree.md"
+    - "policycritic/docs/implementation_file_map.md"
+    - "policycritic/docs/problem_statement.md"
+  design:
+    - "policycritic/docs/policy_critic_design.md"
+    - "policycritic/docs/rl_intro_for_v7.md"
+    - "policycritic/docs/pipeline.md"
+    - "policycritic/docs/authority_and_boundaries.md"
+    - "policycritic/docs/replay_buffer_design.md"
+    - "policycritic/docs/rollout_plan.md"
+    - "policycritic/docs/source_inventory.md"
+  phase_plans:
+    - "policycritic/docs/phase_plans/README.md"
+    - "policycritic/docs/phase_plans/phase_0_research_and_design.md"
+    - "policycritic/docs/phase_plans/phase_1_observability_and_schema.md"
+    - "policycritic/docs/phase_plans/phase_2_shadow_replay_buffer.md"
+    - "policycritic/docs/phase_plans/phase_3_offline_training_and_evaluation.md"
+    - "policycritic/docs/phase_plans/phase_4_shadow_critic_runtime.md"
+    - "policycritic/docs/phase_plans/phase_5_guarded_influence.md"
+    - "policycritic/docs/phase_plans/phase_6_business_validation.md"
+  research:
+    - "policycritic/docs/research/README.md"
+    - "policycritic/docs/research/rl_basics.md"
+    - "policycritic/docs/research/offline_rl.md"
+    - "policycritic/docs/research/implicit_q_learning_iql.md"
+    - "policycritic/docs/research/conservative_q_learning_cql.md"
+    - "policycritic/docs/research/decision_transformer.md"
+    - "policycritic/docs/research/distributional_rl_quantile_q.md"
+    - "policycritic/docs/research/conformal_calibration.md"
+    - "policycritic/docs/research/ope_and_fqe.md"
+    - "policycritic/docs/research/backtest_overfitting_dsr_pbo.md"
+    - "policycritic/docs/research/safe_rl_and_shielding.md"
+    - "policycritic/docs/research/reward_hacking.md"
+    - "policycritic/docs/research/financial_ml_validation.md"
+    - "policycritic/docs/research/gbdt_vs_deep_rl_for_tabular_finance.md"
+    - "policycritic/docs/research/trading_rl_failure_modes.md"
+  business:
+    - "policycritic/docs/business/README.md"
+    - "policycritic/docs/business/business_plan.md"
+    - "policycritic/docs/business/profitability_calculation.md"
+    - "policycritic/docs/business/unit_economics.md"
+    - "policycritic/docs/business/risk_register.md"
+    - "policycritic/docs/business/go_to_market_internal_strategy.md"
+  quality:
+    - "policycritic/docs/quality/README.md"
+    - "policycritic/docs/quality/self_scorecard.md"
+    - "policycritic/docs/quality/independent_ai_review_packet.md"
+    - "policycritic/docs/quality/acceptance_rubric.md"
+  report:
+    - "reports/accp/accp_v7_policycritic_docs_completion.accp.yaml"
+  total_new_files: 42
 
-files_modified: []
+files_modified:
+  - "README.md (added policycritic/ to repo structure)"
+  - "ai_summary.md (added Policy Critic to subsystem map)"
+  - "v7/docs/policy_critic/ai_summary.md (added supplementary docs reference)"
+  - "policycritic/docs/README.md (expanded navigation to all subdirectories)"
+
 files_not_modified:
-  - "runtime/runtime/scan_runtime.py"
-  - "runtime/runtime/execution_orchestrator.py"
-  - "runtime/services/analyzer_engine_adapter.py"
-  - "runtime/db/repos/shadow_policy_repo.py"
-  - "runtime/db/repos/policy_dataset_repo.py"
-  - "runtime/db/models.py"
-  - "simulation/engine/engine.py"
-  - "simulation/engine/costs.py"
-  - "contracts/registry.json"
-  - "v7/docs/policy_critic/ai_summary.md"
-  - "v7/docs/policy_critic/design.md"
-  - "alphaforge/docs/ai_summary__v7_alphaforge_xgb.md"
-  - "Any file outside policycritic/docs/ and reports/accp/"
+  - "All Python source files"
+  - "All contract files"
+  - "All config files"
+  - "All test files"
+  - "All runtime files"
+  - "All frontend files"
+  - ".claude/ (not committed)"
 
 # --- DESIGN DECISIONS PRESERVED ---
 design_decisions:

@@ -107,6 +107,8 @@ Q(s, NO_TRADE)  -- same, for not trading (first-class action, zero-cost baseline
 | `research/reward_design.md` | Reward design literature (cost-aware, drawdown, NO_TRADE) |
 | `research/finance_rl_failures.md` | Finance RL failure modes (OOD, overfitting, guardrails) |
 
+**Supplementary expanded docs**: `policycritic/docs/` contains the expanded partner-grade package with business plan, profitability calculation, 7 phase plans, 15 deep research docs, risk register, and quality scoring. See `policycritic/docs/README.md`.
+
 ## Reading Order
 
 1. `ai_summary.md` (this file) -- dense summary

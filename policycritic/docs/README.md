@@ -7,11 +7,11 @@
 
 ## What This Folder Is
 
-This folder contains the research documentation and design specification for the **V7 Policy Critic** — a proposed advisory layer that reviews trade decisions and emits risk assessments, confidence adjustments, and NO_TRADE veto recommendations.
+This folder contains the **partner-grade** research documentation, design specification, business plan, and quality scoring for the **V7 Policy Critic** — a proposed advisory layer that reviews trade decisions and emits risk assessments, confidence adjustments, and NO_TRADE veto recommendations.
 
 All content in this folder is **documentation and design only**. No runtime behavior has been changed. No production code has been written. No RL implementation exists.
 
-This folder is a **supplementary, flat-navigation version** of the existing `v7/docs/policy_critic/` doc tree. The canonical authority remains `v7/docs/policy_critic/ai_summary.md` and `v7/docs/policy_critic/design.md`. When these docs conflict with the canonical docs, the canonical docs win.
+This folder is a **supplementary, expanded package** complementing the existing `v7/docs/policy_critic/` doc tree. The canonical authority remains `v7/docs/policy_critic/ai_summary.md` and `v7/docs/policy_critic/design.md`. When these docs conflict with the canonical docs, the canonical docs win.
 
 ## What Is the Policy Critic?
 
@@ -110,10 +110,20 @@ The V6 inference engine lives in a **sibling repo** (`/home/erfolg/src/trading-b
 
 ## Documents In This Folder
 
+### Core Docs
+
 | Document | Purpose |
 |---|---|
 | [README.md](README.md) | This file — folder overview and design position |
 | [ai_summary.md](ai_summary.md) | Agent context: repo facts, boundaries, current holds |
+| [folder_tree.md](folder_tree.md) | Planned docs layout and future implementation layout |
+| [implementation_file_map.md](implementation_file_map.md) | Current + future files, ownership, connection plan |
+| [problem_statement.md](problem_statement.md) | Exact problem, scope, failure modes, success criteria |
+
+### Design Docs
+
+| Document | Purpose |
+|---|---|
 | [policy_critic_design.md](policy_critic_design.md) | Full architecture: authority hierarchy, data flow, contract sketch |
 | [rl_intro_for_v7.md](rl_intro_for_v7.md) | RL teaching doc: fundamentals to safe RL for V7 engineers |
 | [pipeline.md](pipeline.md) | Four-stage pipeline: V1 shadow → V2 supervised → V3 IQL → V4 optimizer |
@@ -121,6 +131,59 @@ The V6 inference engine lives in a **sibling repo** (`/home/erfolg/src/trading-b
 | [replay_buffer_design.md](replay_buffer_design.md) | Technical spec: tuple fields, storage, lineage, prerequisites |
 | [rollout_plan.md](rollout_plan.md) | Staged rollout with entry/exit criteria and PR sequencing |
 | [source_inventory.md](source_inventory.md) | Curated bibliography with trust ratings and V7 applicability |
+
+### Phase Plans ([phase_plans/](phase_plans/))
+
+| Document | Purpose |
+|---|---|
+| [README.md](phase_plans/README.md) | Phase overview and reading order |
+| [phase_0_research_and_design.md](phase_plans/phase_0_research_and_design.md) | Current phase: docs, research, design lock |
+| [phase_1_observability_and_schema.md](phase_plans/phase_1_observability_and_schema.md) | Contracts, schemas, audit trail |
+| [phase_2_shadow_replay_buffer.md](phase_plans/phase_2_shadow_replay_buffer.md) | Replay buffer emitter + storage |
+| [phase_3_offline_training_and_evaluation.md](phase_plans/phase_3_offline_training_and_evaluation.md) | Supervised + OPE/FQE + IQL training |
+| [phase_4_shadow_critic_runtime.md](phase_plans/phase_4_shadow_critic_runtime.md) | Shadow-only critic in scan loop |
+| [phase_5_guarded_influence.md](phase_plans/phase_5_guarded_influence.md) | Advisory influence with hard gate limits |
+| [phase_6_business_validation.md](phase_plans/phase_6_business_validation.md) | Profitability evidence, live readiness |
+
+### Research ([research/](research/))
+
+| Document | Topic |
+|---|---|
+| [README.md](research/README.md) | Research index and reading order |
+| [rl_basics.md](research/rl_basics.md) | MDP, Bellman, Q-learning, policy gradients |
+| [offline_rl.md](research/offline_rl.md) | Offline RL problem, distribution shift, algorithms |
+| [implicit_q_learning_iql.md](research/implicit_q_learning_iql.md) | IQL deep-dive |
+| [conservative_q_learning_cql.md](research/conservative_q_learning_cql.md) | CQL deep-dive |
+| [decision_transformer.md](research/decision_transformer.md) | DT architecture and why rejected for V7 |
+| [distributional_rl_quantile_q.md](research/distributional_rl_quantile_q.md) | QR-DQN, IQN, risk-aware gating |
+| [conformal_calibration.md](research/conformal_calibration.md) | Conformal prediction, exchangeability, time-series |
+| [ope_and_fqe.md](research/ope_and_fqe.md) | Off-policy evaluation, FQE, importance sampling |
+| [backtest_overfitting_dsr_pbo.md](research/backtest_overfitting_dsr_pbo.md) | DSR, PBO, CSCV, walk-forward |
+| [safe_rl_and_shielding.md](research/safe_rl_and_shielding.md) | Shielded RL, safety architectures |
+| [reward_hacking.md](research/reward_hacking.md) | Specification gaming, trading failure modes |
+| [financial_ml_validation.md](research/financial_ml_validation.md) | WF-CV, purging, embargo, meta-labeling |
+| [gbdt_vs_deep_rl_for_tabular_finance.md](research/gbdt_vs_deep_rl_for_tabular_finance.md) | Trees vs neural nets on tabular data |
+| [trading_rl_failure_modes.md](research/trading_rl_failure_modes.md) | OOD, regime shift, look-ahead, survivorship |
+
+### Business ([business/](business/))
+
+| Document | Purpose |
+|---|---|
+| [README.md](business/README.md) | Business section overview |
+| [business_plan.md](business/business_plan.md) | Strategic rationale, staged investment, ROI logic |
+| [profitability_calculation.md](business/profitability_calculation.md) | Scenario-based formulas, break-even analysis |
+| [unit_economics.md](business/unit_economics.md) | Per-trade economics, cost structure |
+| [risk_register.md](business/risk_register.md) | Ranked risks with mitigations |
+| [go_to_market_internal_strategy.md](business/go_to_market_internal_strategy.md) | Internal rollout, team readiness, operational plan |
+
+### Quality ([quality/](quality/))
+
+| Document | Purpose |
+|---|---|
+| [README.md](quality/README.md) | Quality section overview |
+| [self_scorecard.md](quality/self_scorecard.md) | Internal self-score across 10 dimensions |
+| [independent_ai_review_packet.md](quality/independent_ai_review_packet.md) | Packet for external AI review |
+| [acceptance_rubric.md](quality/acceptance_rubric.md) | Partner acceptance criteria |
 
 ## Key Design Position
 
