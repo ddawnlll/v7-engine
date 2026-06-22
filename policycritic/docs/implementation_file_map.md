@@ -98,7 +98,228 @@ These files exist in v7-engine today and are directly relevant to a future Polic
 
 ---
 
-## 3. How the Policy Critic Connects Without Becoming Final Authority
+## 3. Executive Summary
+
+The Policy Critic is a proposed advisory component that inserts between V7 policy gates and the final operational gate. It consumes AlphaForge alpha evidence, emits a PolicyCriticReview verdict (ALLOW / DOWNWEIGHT_CONFIDENCE / VETO_TO_NO_TRADE / REQUIRE_REVIEW), and V7 policy enacts the verdict — not the critic itself. Implementation requires 12 PRs across 6 phases. Zero implementation exists today. This file maps every file that would be created, touched, or must not be touched.
+
+---
+
+## 4. Future PR Sequence
+
+### PR Summary
+
+| PR | Phase | Scope | Files Touched | Live Authority |
+|----|-------|-------|--------------|----------------|
+| PR-01 | 1 | Contract-only critic verdict schema | 3 created, 2 modified | None |
+| PR-02 | 2 | Replay buffer schema + migration | 2 created, 1 modified | None |
+| PR-03 | 2 | Replay writer (shadow-only) | 2 created | None |
+| PR-04 | 3 | Offline dataset builder | 2 created | None |
+| PR-05 | 3 | Leakage + temporal validation checks | 3 created | None |
+| PR-06 | 3 | OPE/FQE evaluator | 2 created | None |
+| PR-07 | 3 | IQL/CQL offline training sandbox | 3 created | None |
+| PR-08 | 3 | Calibration + distributional uncertainty wrapper | 2 created | None |
+| PR-09 | 4 | Shadow runtime runner | 4 created, 1 modified | Shadow only |
+| PR-10 | 4 | Shadow reporting dashboard/API | 2 created | Shadow only |
+| PR-11 | 5 | Guarded influence proposal | 3 created, 1 modified | Advisory (gated) |
+| PR-12 | 6 | Business validation + go/no-go review | 3 created | Conditional |
+
+### Detailed PR Specifications
+
+#### PR-01: Contract-Only Critic Verdict Schema
+- **Scope**: Define PolicyCriticReview contract. Zero runtime code.
+- **Files created**: `contracts/schemas/policy_critic_review.schema.json`, `contracts/fixtures/policy_critic_review_minimal.json`, `contracts/mappings/policy_critic_to_decision_event.json`
+- **Files modified**: `contracts/registry.json` (append), `contracts/compatibility.json` (append)
+- **Allowed behavior**: Schema validation passes. Fixture roundtrip test passes.
+- **Forbidden behavior**: Any Python code importing or using the schema.
+- **Acceptance criteria**: `make check-contracts` passes. Schema validates against metaschema.
+- **Evidence required**: Schema parity test output.
+- **Rollback**: Remove appended entries, delete new files.
+- **Merge blockers**: Schema validation failure. Registry inconsistency.
+
+#### PR-02: Replay Buffer Schema + Migration
+- **Scope**: Define ReplayBufferTuple table + migration. Zero data emission.
+- **Files created**: `runtime/db/repos/replay_buffer_repo.py`, migration file
+- **Files modified**: `runtime/db/models.py` (append model)
+- **Allowed behavior**: Migration runs forward and backward cleanly.
+- **Forbidden behavior**: Any tuple emission. Any critic invocation.
+- **Acceptance criteria**: Migration applies and rolls back. Model validates.
+- **Evidence required**: Migration test output.
+- **Rollback**: Downgrade migration, remove model.
+
+#### PR-03: Replay Writer (Shadow-Only)
+- **Scope**: Tuple assembler that pairs canonical state with SimulationOutput. Persists tuples. Zero live influence.
+- **Files created**: `runtime/services/policy/__init__.py`, `runtime/services/policy/replay_buffer_emitter.py`
+- **Allowed behavior**: Tuples stored in replay_buffer_tuple table. Data split labeled correctly.
+- **Forbidden behavior**: Any critic inference. Any execution influence. Any modification to scan loop.
+- **Acceptance criteria**: ≥ 100 tuples stored. NO_TRADE records ≥ 20%. Temporal leakage test passes.
+- **Evidence required**: Tuple count. NO_TRADE ratio. Leakage test.
+- **Rollback**: Delete emitter service. Truncate replay buffer table.
+
+#### PR-04: Offline Dataset Builder
+- **Scope**: Build train/val/test splits from replay buffer with purge+embargo.
+- **Files created**: `runtime/services/policy/offline_dataset_builder.py`, `runtime/services/policy/dataset_split_validator.py`
+- **Allowed behavior**: Produces split datasets as file artifacts. Splits validated for temporal ordering.
+- **Forbidden behavior**: Any training. Any inference.
+- **Acceptance criteria**: 70/15/15 split. No overlap detected. Purge verified.
+- **Evidence required**: Split statistics. Leakage detection report.
+- **Rollback**: Delete dataset files.
+
+#### PR-05: Leakage + Temporal Validation Checks
+- **Scope**: Automated tests verifying no temporal leakage in replay buffer and dataset splits.
+- **Files created**: `tests/runtime/policy_critic/test_replay_buffer_no_leakage.py`, `tests/runtime/policy_critic/test_temporal_splits.py`, `tests/runtime/policy_critic/test_no_lookahead.py`
+- **Allowed behavior**: Tests pass. CI enforces.
+- **Forbidden behavior**: Any production code changes.
+- **Acceptance criteria**: All leakage tests pass. CI gate enforced.
+- **Evidence required**: CI output.
+- **Rollback**: Delete test files (no production impact).
+
+#### PR-06: OPE/FQE Evaluator
+- **Scope**: Implement Fitted Q-Evaluation + DSR/PBO computation.
+- **Files created**: `runtime/services/policy/ope_evaluator.py`, `runtime/services/policy/dsr_pbo_calculator.py`
+- **Allowed behavior**: Computes FQE 95% CI, DSR p-value, PBO estimate from offline dataset.
+- **Forbidden behavior**: Any critic deployment. Any live influence.
+- **Acceptance criteria**: FQE CI computed. DSR/PBO values produced. Reports generated.
+- **Evidence required**: OPE report with CI, DSR, PBO values.
+- **Rollback**: Delete evaluator files (no production impact).
+
+#### PR-07: IQL/CQL Offline Training Sandbox
+- **Scope**: Train IQL and CQL critics on offline dataset. Produce model artifacts.
+- **Files created**: `alphaforge/training/critic_iql_v3.py`, `alphaforge/training/critic_cql_v3.py`, `alphaforge/training/critic_training_config.py`
+- **Allowed behavior**: Training runs. Model artifacts saved. Training metrics logged.
+- **Forbidden behavior**: Any model deployment. Any runtime inference.
+- **Acceptance criteria**: IQL expectile loss converges. CQL conservative penalty applied. Bellman error not diverging.
+- **Evidence required**: Training curves. Final model artifacts.
+- **Rollback**: Delete training scripts and artifacts.
+
+#### PR-08: Calibration + Distributional Uncertainty Wrapper
+- **Scope**: Conformal calibration retrofit on IQL distributional Q-head. Uncertainty quantification.
+- **Files created**: `alphaforge/training/critic_calibration.py`, `alphaforge/training/critic_uncertainty.py`
+- **Allowed behavior**: Calibration report produced. Coverage measured.
+- **Forbidden behavior**: Any runtime deployment.
+- **Acceptance criteria**: Conformal coverage within tolerance. Quantile crossing resolved.
+- **Evidence required**: Calibration report. Coverage-vs-nominal plot.
+- **Rollback**: Delete calibration files.
+
+#### PR-09: Shadow Runtime Runner
+- **Scope**: Wire critic into scan runtime in shadow-only mode. Record PolicyCriticReview for every decision. Zero execution influence.
+- **Files created**: `v7/src/v7/alpha/policy_bridge/policy_critic/__init__.py`, `v7/src/v7/alpha/policy_bridge/policy_critic/contracts.py`, `v7/src/v7/alpha/policy_bridge/policy_critic/critic_engine.py`, `runtime/services/policy/policy_critic_adapter.py`
+- **Files modified**: `runtime/runtime/scan_runtime.py` (add critic invocation point — advisory only)
+- **Allowed behavior**: Critic invoked for every scan decision. PolicyCriticReview persisted. Zero execution influence.
+- **Forbidden behavior**: Any confidence adjustment applied to execution. Any gate override.
+- **Acceptance criteria**: 100% scan coverage. Zero live influence confirmed. Safe degrade tested.
+- **Evidence required**: Shadow audit log. Zero-influence verification.
+- **Rollback**: Disable critic via config. Remove invocation from scan_runtime.
+
+#### PR-10: Shadow Reporting Dashboard/API
+- **Scope**: API endpoint and dashboard for shadow critic verdicts.
+- **Files created**: `runtime/api/routes/policy_critic_shadow.py`, interface dashboard component
+- **Allowed behavior**: Read-only API. Dashboard displays verdicts.
+- **Forbidden behavior**: Any write/execute capability.
+- **Acceptance criteria**: API returns verdicts. Dashboard renders.
+- **Evidence required**: API response. Dashboard screenshot.
+- **Rollback**: Remove route and dashboard component.
+
+#### PR-11: Guarded Influence Proposal
+- **Scope**: Enable critic DOWNWEIGHT_CONFIDENCE and VETO_TO_NO_TRADE in SWING mode only. V7 policy enacts verdicts. Human approval required.
+- **Files created**: `runtime/services/policy/policy_critic_registry_service.py`, `v7/src/v7/alpha/policy_bridge/policy_critic/rule_based_critic_v1.py`, `v7/src/v7/alpha/policy_bridge/policy_critic/supervised_critic_v2.py`
+- **Files modified**: `runtime/runtime/scan_runtime.py` (verdict enactment)
+- **Allowed behavior**: DOWNWEIGHT adjusts confidence via recorded multiplier. VETO sets NO_TRADE via policy. All changes visible in runtime_interpretation.
+- **Forbidden behavior**: Direct execution control. Gate bypass. SCALP/AGGRESSIVE influence.
+- **Acceptance criteria**: Veto rate bounded. DSR maintained. Human approval documented.
+- **Evidence required**: 30-day shadow evidence. DSR/PBO report. Human approval record.
+- **Rollback**: Disable influence via config. Revert to shadow-only.
+
+#### PR-12: Business Validation + Go/No-Go Review
+- **Scope**: ≥ 90 day evidence package. V4 constrained optimizer (if applicable). Live consideration decision.
+- **Files created**: `v7/src/v7/alpha/policy_bridge/policy_critic/iql_critic_v3.py`, `v7/src/v7/alpha/policy_bridge/policy_critic/constrained_optimizer_v4.py`, evidence package report
+- **Allowed behavior**: Evidence compiled. Decision documented.
+- **Forbidden behavior**: Automatic live promotion.
+- **Acceptance criteria**: All metrics maintained ≥ 90 days. All stakeholders signed off.
+- **Evidence required**: 90-day evidence package. Signed approvals.
+- **Rollback**: Disable all critic influence. Archive evidence.
+
+---
+
+## 5. Implementation Readiness Checklist
+
+### Schema & Contract (6 items)
+- [ ] PolicyCriticReview schema versioned (v1.0.0)
+- [ ] Schema validates against JSON Schema metaschema
+- [ ] Fixture roundtrip test passes
+- [ ] Registry entry consistent with existing entries
+- [ ] Compatibility entry defines breaking-change rules
+- [ ] Contract reviewed by at least one reviewer
+
+### Data Infrastructure (8 items)
+- [ ] Replay buffer table migration applied and rollback tested
+- [ ] Tuple assembler routes through /simulation engine (NOT runtime historical engine)
+- [ ] NO_TRADE records captured (≥ 20% of total)
+- [ ] Temporal ordering enforced in all data splits
+- [ ] Look-ahead leakage blocked (purge + embargo validated)
+- [ ] Survivorship bias documented and mitigated (delisted assets included)
+- [ ] Reward normalization statistics computed on training split only
+- [ ] Replay buffer retention policy defined
+
+### Training & Evaluation (10 items)
+- [ ] FQE implementation matches literature (Fu et al. 2021)
+- [ ] OPE report exists with 95% CI
+- [ ] DSR p-value computed with correct N_trials
+- [ ] PBO estimate via CSCV procedure
+- [ ] Walk-forward validation with ≥ 4/5 folds and purge+embargo
+- [ ] Conformal calibration report with coverage-vs-nominal
+- [ ] Distributional uncertainty report (quantile spread analysis)
+- [ ] Bellman error monitored (not diverging)
+- [ ] IQL/CQL disagreement rate tracked and bounded
+- [ ] Champion anti-regression test against previous critic version
+
+### Runtime Safety (10 items)
+- [ ] Shadow-only runner: zero execution influence
+- [ ] Zero-influence verification test passes
+- [ ] Safe degrade: critic unavailable → system unchanged
+- [ ] Critic inference latency < 10ms p99
+- [ ] Kill switch defined and tested (POLICY_CRITIC_ACTIVE=false)
+- [ ] Rollback tested: disable critic → revert to gate-only
+- [ ] Human approval gate exists (required for Phase 5+)
+- [ ] Audit log complete: every verdict in runtime_interpretation
+- [ ] No hidden veto: every suppression reason visible
+- [ ] Model registry separation: critic artifacts separate from scorer artifacts
+
+### Business Validation (8 items)
+- [ ] Shadow comparison ≥ 90 days
+- [ ] False veto cost measured (shadow: vetoed trades that would have won)
+- [ ] False allow cost measured (shadow: allowed trades that lost)
+- [ ] Per-regime breakdown shows no single-regime degradation
+- [ ] Drawdown profile not worsened
+- [ ] Transaction cost impact analyzed
+- [ ] Business go/no-go checkpoint documented
+- [ ] All stakeholders signed off for any live transition
+
+### Authority Boundary (6 items)
+- [ ] Critic never calls ExecutionOrchestrator directly
+- [ ] Critic never imports broker/order APIs
+- [ ] Critic verdict ALWAYS has is_advisory=true
+- [ ] V7 policy enacts verdict (NOT critic)
+- [ ] Operational hard gate always runs after critic
+- [ ] Simulation truth hierarchy preserved (critic uses simulation realized_r_net only)
+
+**Total: 48 checklist items**
+
+---
+
+## 6. Definition of Implementation-Ready
+
+A Policy Critic version is **implementation-ready** when:
+
+1. All schema and contract items pass (6/6)
+2. All data infrastructure items pass (8/8)
+3. Training metrics meet evidence gates (DSR p<0.05, PBO<0.10, FQE CI overlaps)
+4. All runtime safety items pass (10/10)
+5. Shadow evidence ≥ required period (30 days for V1→V2, 90 days for live consideration)
+6. Human approval documented for any live influence
+
+---
+
+## 7. How the Policy Critic Connects Without Becoming Final Authority
 
 ### 3.1 Integration Architecture
 

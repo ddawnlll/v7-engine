@@ -114,6 +114,39 @@ alphaforge/docs/                         ← AlphaForge authority docs
 v7/docs/pipeline/                        ← V7 pipeline authority docs
 ```
 
+## Docs vs Runtime Boundary
+
+```
+DOCS ONLY (this phase — Phase 0):
+  policycritic/docs/**/*          ← created, safe to modify
+  README.md, ai_summary.md        ← navigation updates only
+  v7/docs/policy_critic/ai_summary.md ← reference addition only
+  reports/accp/*.accp.yaml        ← new report created
+
+RUNTIME (NOT touched):
+  runtime/**/*.py                 ← all Python source preserved
+  simulation/**/*.py              ← economic truth preserved
+  contracts/registry.json         ← only append later, never now
+  alphaforge/docs/**/*            ← design authority preserved
+  v7/docs/policy_critic/**/*      ← canonical docs preserved (except ai_summary link)
+  interface/**/*.{ts,tsx}         ← frontend preserved
+  tests/**/*                      ← test files preserved
+  .claude/                        ← not committed
+```
+
+## Files Intentionally Not Created (This PR)
+
+The following are planned but explicitly NOT created in this docs-only PR:
+
+- `runtime/services/policy/*.py` (all runtime services — implementation phase)
+- `v7/src/v7/alpha/policy_bridge/**/*.py` (all V7-native code — greenfield)
+- `contracts/schemas/policy_critic_review.schema.json` (contract — Phase 1)
+- `runtime/db/repos/replay_buffer_repo.py` (storage — Phase 2)
+- `alphaforge/training/critic_*.py` (training — Phase 3)
+- `tests/runtime/policy_critic/*.py` (tests — Phase 5+)
+
+These are documented in `implementation_file_map.md` §2 (Future PR Sequence).
+
 ## Canonical Authority Note
 
-The authoritative Policy Critic docs live at `v7/docs/policy_critic/`. This `policycritic/docs/` tree is a supplementary, flat-navigation expansion. When conflicts arise, `v7/docs/policy_critic/` wins.
+The authoritative Policy Critic docs live at `v7/docs/policy_critic/`. This `policycritic/docs/` tree is a supplementary, expanded package. When conflicts arise, `v7/docs/policy_critic/` wins.
