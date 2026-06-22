@@ -1,0 +1,177 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "accp_v7_policycritic_docs_port"
+title: "V7 Policy Critic Docs Port to Correct v7-engine Repo — ACCP Completion Report"
+created_at: "2026-06-23T00:00:00Z"
+model: "DeepSeek V4 Pro (via Claude Code Fable 5)"
+effort: "ultracode"
+
+# --- MCP VERIFICATION ---
+tavily_mcp:
+  tool_name: "mcp__tavily__tavily-search"
+  status: "authenticated_and_usable"
+  verification_query: "Implicit Q-Learning offline reinforcement learning paper"
+  evidence: "Returned 5 results: arXiv primary paper (2110.06169), Semantic Scholar, TransferLab summary"
+  additional_searches:
+    - "Conservative Q-Learning CQL offline RL Kumar Levine NeurIPS 2020"
+    - "Deflated Sharpe Ratio backtest overfitting Lopez de Prado probability PBO CSCV"
+    - "safe reinforcement learning shielding Alshiekh survey Garcia Fernandez"
+    - "distributional reinforcement learning quantile regression QR-DQN IQN Dabney"
+    - "off-policy evaluation FQE fitted Q-evaluation offline RL benchmark Fu 2021"
+    - "tree-based models GBDT outperform deep learning tabular data finance Grinsztajn 2022"
+  all_succeeded: true
+  no_fallback_used: true
+
+# --- SOURCE MATERIAL ---
+source_material:
+  old_repo: "~/src/trading-bot-pr"
+  old_docs_dir: "~/src/trading-bot-pr/policycritic/docs/"
+  old_accp: "~/src/trading-bot-pr/reports/accp/accp_v7_policycritic_docs_completion.accp.yaml"
+  adaptation_method: "Verified all repo-specific claims against v7-engine; marked unverifiable claims as old_repo_context_unverified"
+
+# --- REPO FACT VERIFICATION ---
+repo_verification:
+  confirmed_existing:
+    - "runtime/db/repos/shadow_policy_repo.py (ShadowPolicyRepository)"
+    - "runtime/db/repos/policy_dataset_repo.py (PolicyDatasetRepository)"
+    - "runtime/runtime/scan_runtime.py (ScanRuntime)"
+    - "runtime/runtime/execution_orchestrator.py (ExecutionOrchestrator)"
+    - "simulation/engine/engine.py (economic truth)"
+    - "simulation/engine/costs.py (cost model, funding DEFERRED)"
+    - "contracts/registry.json (15 registered contracts)"
+    - "v7/docs/policy_critic/ai_summary.md (canonical critic synthesis)"
+    - "v7/docs/policy_critic/design.md (canonical design)"
+    - "v7/docs/policy_critic/codebase_maps/ (4 map files)"
+    - "v7/docs/policy_critic/research/ (4 research files)"
+    - "alphaforge/docs/ai_summary__v7_alphaforge_xgb.md (AlphaForge XGBoost design)"
+    - "alphaforge/docs/schemas/prediction_schema_v1.json (prediction row schema)"
+    - "alphaforge/src/.gitkeep (greenfield marker)"
+    - "v7/src/.gitkeep (greenfield marker)"
+  confirmed_missing:
+    - "runtime/contracts/policy_contract.py (old_repo_context_unverified)"
+    - "runtime/services/policy/policy_engine.py (old_repo_context_unverified)"
+    - "runtime/services/policy/rule_based_policy_engine.py (old_repo_context_unverified)"
+    - "runtime/services/policy/rl_policy_stub.py (old_repo_context_unverified)"
+    - "docs/v7/architecture_review.md (old_repo_context_unverified)"
+    - "docs/v6/ai_summary.md (old_repo_context_unverified)"
+
+# --- FILES CREATED ---
+files_created:
+  - "policycritic/docs/README.md"
+  - "policycritic/docs/ai_summary.md"
+  - "policycritic/docs/policy_critic_design.md"
+  - "policycritic/docs/rl_intro_for_v7.md"
+  - "policycritic/docs/pipeline.md"
+  - "policycritic/docs/authority_and_boundaries.md"
+  - "policycritic/docs/replay_buffer_design.md"
+  - "policycritic/docs/rollout_plan.md"
+  - "policycritic/docs/source_inventory.md"
+  - "reports/accp/accp_v7_policycritic_docs_completion.accp.yaml"
+
+files_modified: []
+files_not_modified:
+  - "runtime/runtime/scan_runtime.py"
+  - "runtime/runtime/execution_orchestrator.py"
+  - "runtime/services/analyzer_engine_adapter.py"
+  - "runtime/db/repos/shadow_policy_repo.py"
+  - "runtime/db/repos/policy_dataset_repo.py"
+  - "runtime/db/models.py"
+  - "simulation/engine/engine.py"
+  - "simulation/engine/costs.py"
+  - "contracts/registry.json"
+  - "v7/docs/policy_critic/ai_summary.md"
+  - "v7/docs/policy_critic/design.md"
+  - "alphaforge/docs/ai_summary__v7_alphaforge_xgb.md"
+  - "Any file outside policycritic/docs/ and reports/accp/"
+
+# --- DESIGN DECISIONS PRESERVED ---
+design_decisions:
+  - "Policy Critic is advisory only — NOT a decision maker"
+  - "Hard gates (Runtime Risk Gate, Final Operational Gate, V7 Policy Gates) retain hard veto"
+  - "Critic cannot open trades, close trades, bypass gates, or hold live veto"
+  - "SWING is LOCKED_INITIAL_BASELINE for first live veto candidate"
+  - "SCALP/AGGRESSIVE_SCALP thresholds HOLD"
+  - "XGBoost-first model class per AlphaForge design"
+  - "Shadow mode before any live influence"
+  - "Replay buffer is prerequisite for all offline learning"
+  - "Simulation engine (/simulation/engine/engine.py) is single economic truth"
+  - "Each version transition requires evidence gates (DSR, PBO, FQE, walk-forward, human approval)"
+  - "Do not implement RL now — docs/design only"
+  - "IQL as primary, CQL as cross-check ensemble member"
+  - "Distributional + conformal for V3 IQL critic"
+  - "NO_TRADE is first-class action with zero-cost baseline"
+  - "Funding cost DEFERRED — spot-only valid for critic training"
+  - "No hidden veto — every critic verdict visible in runtime_interpretation"
+  - "V7 owns final trade decisions per CLAUDE.md domain boundaries"
+  - "Truth hierarchy: simulation > realized > contract > runtime > model"
+
+# --- ACCEPTANCE CRITERIA ---
+acceptance_criteria:
+  policycritic_docs_created: true
+  docs_only: true
+  no_runtime_changed: true
+  no_production_code_changed: true
+  no_engine_changes: true
+  no_policy_gate_changes: true
+  no_action_enum_changes: true
+  no_trade_logic_changes: true
+  no_test_logic_changes: true
+  source_inventory_created: true
+  replay_buffer_prereq_documented: true
+  authority_boundaries_documented: true
+  accp_completion_report_created: true
+  old_repo_unverified_claims_marked: true
+  tavily_mcp_used_exclusively: true
+
+# --- RESULT ---
+result: "COMPLETE"
+scope_confirmation: "Docs/design only. 10 files created. Zero production code changes. Zero runtime behavior changes. All old-repo-specific claims marked old_repo_context_unverified."
+
+# --- KNOWN LIMITATIONS ---
+known_limitations:
+  - "IQL expectile τ optimal range for financial data is unverified (extrapolated from D4RL benchmark)"
+  - "Replay buffer minimum sizes (1000 V2, 10000 V3) are heuristic estimates — need power analysis"
+  - "30-day shadow burn-in period is a rule of thumb — not empirically derived"
+  - "Financial applicability of offline RL algorithms (IQL, CQL) is unproven — all tested on D4RL/game tasks"
+  - "PolicyCriticReview contract is a design sketch only — not registered in contracts/registry.json"
+  - "No formal shield verification methodology is specified for V4"
+  - "v7/src/ is greenfield — AlphaForge P5/P6/P9 not started"
+  - "Replay buffer does not exist — no (s,a,r,s',terminal) tuple emitter"
+  - "Two simulation paths diverge: /simulation engine vs runtime historical engine"
+  - "Funding cost DEFERRED — critic spot-only-valid"
+  - "regret_r hardcoded to 0.0 in simulation engine.py:168"
+  - "CatBoost-as-primary claim from old repo marked old_repo_context_unverified — V6 lives in sibling repo"
+  - "PolicyEngine abstract interface claim from old repo marked old_repo_context_unverified — does not exist in v7-engine"
+  - "Several old-repo file paths do not exist in v7-engine (see repo_verification.confirmed_missing)"
+
+# --- REMAINING HOLDS ---
+remaining_holds:
+  - "HOLD-REPLAY: No replay buffer exists"
+  - "HOLD-RL: No RL implementation"
+  - "HOLD-CRITIC: No critic implementation"
+  - "HOLD-SCALP: SCALP/AGGRESSIVE_SCALP thresholds HOLD"
+  - "HOLD-FUNDING: Funding cost model DEFERRED"
+  - "HOLD-V7-SRC: v7/src/ greenfield"
+  - "HOLD-LIVE: No live trading"
+
+# --- SAFE NEXT STEP ---
+safe_next_step: "Review and approve policycritic/docs/. Then define PolicyCriticReview contract per contracts/README.md 6-step procedure and register in contracts/registry.json."
+
+# --- COMMANDS RUN ---
+commands_run:
+  - "git branch --show-current"
+  - "git status --short"
+  - "mkdir -p policycritic/docs reports/accp"
+  - "Verified file existence for all referenced paths in old docs"
+  - "Tavily MCP: 7 searches across RL topics"
+
+# --- EVIDENCE ---
+evidence:
+  tavily_mcp_authenticated: true
+  repo_structure_verified: true
+  old_docs_read: true
+  existing_policy_critic_docs_read: true
+  contracts_registry_read: true
+  simulation_engine_verified: true
+  files_created_count: 10
+  zero_existing_files_modified: true
