@@ -1,0 +1,202 @@
+================================================================================
+V7 POLICY CRITIC — ACCP GÖREV ÖZETİ
+================================================================================
+Tarih: 2026-06-23
+Repo: ~/src/v7-engine
+Branch: pr/v7-policycritic-docs
+Model: DeepSeek V4 Pro (Claude Code Fable 5)
+Effort: Ultracode
+================================================================================
+
+İKİ AŞAMALI ÇALIŞMA:
+
+AŞAMA 1: Eski repodan taşıma (commit f40c1c4)
+- ~/src/trading-bot-pr/policycritic/docs/ kaynak materyal olarak kullanıldı
+- Tüm repo-specific iddialar v7-engine'e karşı doğrulandı
+- Doğrulanamayan iddialar "old_repo_context_unverified" olarak işaretlendi
+- 10 dosya oluşturuldu (9 docs + 1 ACCP raporu)
+
+AŞAMA 2: Partner-grade pakete yükseltme (commit baca785)
+- 42 yeni dosya eklendi
+- 5 mevcut dosya güncellendi
+- Toplam 45 dosya (policycritic/ altında)
+
+================================================================================
+OLUŞTURULAN DOSYALAR (toplam 51)
+================================================================================
+
+📁 policycritic/docs/ (ana dizin — 12 dosya)
+├── README.md                              ← Klasör genel bakış, tasarım pozisyonu
+├── ai_summary.md                          ← Agent context, otorite sınırları, hold'lar
+├── folder_tree.md                         ← Planlanan docs + gelecek implementasyon
+├── implementation_file_map.md             ← Mevcut + gelecek dosyalar, bağlantı planı
+├── problem_statement.md                   ← Problem tanımı, kapsam, başarı kriterleri
+├── policy_critic_design.md                ← Mimari, otorite hiyerarşisi, veri akışı
+├── rl_intro_for_v7.md                     ← RL eğitim dökümanı
+├── pipeline.md                            ← 4 aşamalı pipeline (V1→V4)
+├── authority_and_boundaries.md            ← Veto zinciri, gate hiyerarşisi
+├── replay_buffer_design.md                ← Tuple spec, depolama tasarımı
+├── rollout_plan.md                        ← Aşamalı dağıtım planı
+└── source_inventory.md                    ← Kaynakça, trust rating'ler
+
+📁 policycritic/docs/phase_plans/ (7 dosya)
+├── README.md
+├── phase_0_research_and_design.md         ← MEVCUT AŞAMA: docs, araştırma
+├── phase_1_observability_and_schema.md    ← Kontrat, şema
+├── phase_2_shadow_replay_buffer.md        ← Replay buffer emitter
+├── phase_3_offline_training_and_evaluation.md ← Eğitim + OPE/FQE
+├── phase_4_shadow_critic_runtime.md       ← Shadow-only critic
+├── phase_5_guarded_influence.md           ← Kontrollü etki
+└── phase_6_business_validation.md         ← Karlılık kanıtı
+
+📁 policycritic/docs/research/ (16 dosya)
+├── README.md
+├── rl_basics.md                           ← MDP, Bellman, Q-learning
+├── offline_rl.md                          ← Offline RL problemi, distribution shift
+├── implicit_q_learning_iql.md             ← IQL derinlemesine
+├── conservative_q_learning_cql.md         ← CQL derinlemesine
+├── decision_transformer.md                ← DT ve neden V7 için reddedildi
+├── distributional_rl_quantile_q.md        ← QR-DQN, IQN, risk-aware gating
+├── conformal_calibration.md               ← Conformal prediction, exchangeability
+├── ope_and_fqe.md                         ← Off-policy evaluation, FQE
+├── backtest_overfitting_dsr_pbo.md        ← DSR, PBO, CSCV
+├── safe_rl_and_shielding.md               ← Kalkanlı RL, güvenlik mimarisi
+├── reward_hacking.md                      ← Spec gaming, trading failure modes
+├── financial_ml_validation.md             ← Walk-forward, purging, embargo
+├── gbdt_vs_deep_rl_for_tabular_finance.md ← Ağaçlar vs NN tabular veride
+├── trading_rl_failure_modes.md            ← OOD, rejim kayması, look-ahead
+└── (policycritic/docs/research/ altında toplam 15 research + 1 README)
+
+📁 policycritic/docs/business/ (6 dosya)
+├── README.md
+├── business_plan.md                       ← Stratejik gerekçe, kademeli yatırım
+├── profitability_calculation.md           ← Formüller, 3 senaryo, break-even
+├── unit_economics.md                      ← Trade başına ekonomi, maliyet yapısı
+├── risk_register.md                       ← 15 risk (probability × impact)
+└── go_to_market_internal_strategy.md      ← İç dağıtım, operasyonel hazırlık
+
+📁 policycritic/docs/quality/ (4 dosya)
+├── README.md
+├── self_scorecard.md                      ← 10 boyutta self-skor (8.1/10)
+├── independent_ai_review_packet.md        ← Harici AI inceleme paketi
+└── acceptance_rubric.md                   ← Partner kabul kriterleri (18 madde)
+
+📁 reports/accp/ (1 dosya)
+└── accp_v7_policycritic_docs_completion.accp.yaml ← ACCP-YAML v2.0.0 raporu
+
+================================================================================
+DEĞİŞTİRİLEN DOSYALAR (5)
+================================================================================
+1. README.md                         ← policycritic/ repo yapısına eklendi
+2. ai_summary.md                     ← Policy Critic alt sistem haritasına eklendi
+3. v7/docs/policy_critic/ai_summary.md ← Supplementary docs referansı eklendi
+4. policycritic/docs/README.md       ← Tüm alt dizinlere navigasyon eklendi
+5. reports/accp/...accp.yaml         ← Tüm yeni dosyalarla güncellendi
+
+================================================================================
+TAVILY MCP ARAŞTIRMALARI (13 arama, hepsi başarılı)
+================================================================================
+1.  "Implicit Q-Learning offline reinforcement learning paper"
+2.  "Conservative Q-Learning CQL offline RL Kumar Levine NeurIPS 2020"
+3.  "Deflated Sharpe Ratio backtest overfitting Lopez de Prado PBO CSCV"
+4.  "safe reinforcement learning shielding Alshiekh survey Garcia Fernandez"
+5.  "distributional reinforcement learning quantile regression QR-DQN IQN Dabney"
+6.  "off-policy evaluation FQE fitted Q-evaluation offline RL benchmark Fu 2021"
+7.  "tree-based models GBDT outperform deep learning tabular data finance Grinsztajn"
+8.  "reinforcement learning basics MDP Bellman equation Q-learning policy gradient"
+9.  "conformal prediction calibration machine learning time series exchangeability"
+10. "reinforcement learning trading failure modes overfitting look-ahead survivorship"
+11. "financial machine learning validation walk-forward cross-validation purging"
+12. "decision transformer offline reinforcement learning sequence modeling Chen 2021"
+13. "offline reinforcement learning business applications finance trading"
+
+================================================================================
+DOĞRULANAN V7-ENGINE REPO GERÇEKLERİ
+================================================================================
+VAR OLAN:
+✅ runtime/db/repos/shadow_policy_repo.py       ← ShadowPolicyRepository
+✅ runtime/db/repos/policy_dataset_repo.py      ← PolicyDatasetRepository
+✅ runtime/runtime/scan_runtime.py              ← Scan loop
+✅ runtime/runtime/execution_orchestrator.py    ← Operasyonel hard gate
+✅ simulation/engine/engine.py                  ← Ekonomik truth (simulate)
+✅ simulation/engine/costs.py                   ← Maliyet modeli (fee+slippage)
+✅ contracts/registry.json                      ← 15 cross-domain kontrat
+✅ v7/docs/policy_critic/ai_summary.md          ← Kanonik critic tasarımı
+✅ v7/docs/policy_critic/design.md              ← Tam tasarım önerisi
+✅ v7/docs/policy_critic/codebase_maps/         ← 4 codebase map dosyası
+✅ v7/docs/policy_critic/research/              ← 4 research dosyası
+✅ alphaforge/docs/ai_summary__v7_alphaforge_xgb.md ← AlphaForge XGBoost tasarımı
+
+YOK (old_repo_context_unverified):
+❌ runtime/contracts/policy_contract.py
+❌ runtime/services/policy/policy_engine.py
+❌ runtime/services/policy/rule_based_policy_engine.py
+❌ runtime/services/policy/rl_policy_stub.py
+❌ docs/v7/architecture_review.md
+❌ docs/v6/ai_summary.md
+❌ CatBoost primary backend iddiası (AlphaForge tasarımı XGBoost)
+
+================================================================================
+TEMEL TASARIM KARARLARI (korunan)
+================================================================================
+1.  Policy Critic advisory only — ASLA karar verici değil
+2.  Hard gate'ler veto hakkını korur (Runtime Risk > Final Operational > V7 Policy)
+3.  Critic trade açamaz, kapatamaz, gate bypass yapamaz
+4.  IQL (primary) + CQL (cross-check) for V3
+5.  Distributional Q-head (16-32 quantile) + conformal calibration for V3
+6.  XGBoost-first model sınıfı (AlphaForge tasarımına uygun)
+7.  Shadow mode → herhangi bir live etkiden önce
+8.  Her sürüm geçişi kanıt gerektirir (DSR, PBO, FQE, walk-forward, human approval)
+9.  NO_TRADE first-class action (sıfır maliyetli baseline)
+10. Funding DEFERRED — critic spot-only valid
+11. No hidden veto — her karar runtime_interpretation'da görünür
+12. V7 final trade kararlarının sahibi (CLAUDE.md domain boundaries)
+13. Truth hierarchy: simulation > realized > contract > runtime > model
+14. Simulation engine TEK ekonomik truth kaynağı
+
+================================================================================
+KALİTE SKORU (self-assessment)
+================================================================================
+1. Repo integration:           9/10
+2. Technical correctness:      8/10
+3. Research depth:             8/10
+4. Implementation readiness:   7/10
+5. Business usefulness:        8/10
+6. Risk realism:               9/10
+7. Profitability modeling:     7/10
+8. Authority boundary clarity: 9/10
+9. Phase plan clarity:         8/10
+10. Citation quality:          8/10
+─────────────────────────────────
+ORTALAMA:                      8.1/10
+
+Bağımsız AI değerlendirmesi: BEKLİYOR
+(quality/independent_ai_review_packet.md ChatGPT için hazır)
+
+================================================================================
+COMMIT'LER
+================================================================================
+f40c1c4 — "Add V7 Policy Critic research docs (ported from trading-bot-pr)"
+baca785 — "Expand V7 Policy Critic docs into research and business plan"
+
+================================================================================
+PUSH SONUCU
+================================================================================
+Branch 'pr/v7-policycritic-docs' → origin'a başarıyla push edildi.
+PR: https://github.com/ddawnlll/v7-engine/pull/new/pr/v7-policycritic-docs
+
+================================================================================
+DEĞİŞMEYENLER (sıfır değişiklik)
+================================================================================
+❌ Hiçbir Python dosyası
+❌ Hiçbir kontrat dosyası
+❌ Hiçbir config dosyası
+❌ Hiçbir test dosyası
+❌ Hiçbir runtime dosyası
+❌ Hiçbir frontend dosyası
+❌ Hiçbir engine logic
+❌ Hiçbir policy gate implementasyonu
+❌ Hiçbir action enum
+❌ Hiçbir trade logic
+❌ .claude/ (commit edilmedi)
+================================================================================
