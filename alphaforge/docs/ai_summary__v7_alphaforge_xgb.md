@@ -1,5 +1,11 @@
 # V7 AlphaForge XGB — COMPLETE AI SUMMARY
 
+> **⚠️ SUPERSEDED — HISTORICAL REFERENCE ONLY**
+> This combined document (625KB) was the pre-authority-lock AlphaForge reference. It has been superseded by the 12 canonical AlphaForge docs listed in `alphaforge/docs/ai_summary.md`. Do not use this document as a current authority. See `alphaforge/docs/ai_summary.md` for the canonical entry point.
+>
+> Superseded by: P0.8B Authority Lock (2026-06-18)
+> Canonical entry: `alphaforge/docs/ai_summary.md`
+
 ## META
 
 This document is a dense, machine-readable AI implementation reference for adding a V7-compatible alpha generation system.

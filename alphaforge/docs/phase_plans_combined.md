@@ -1,5 +1,11 @@
 # V7 AlphaForge XGB — Combined Phase Plans
 
+> **⚠️ SUPERSEDED — HISTORICAL REFERENCE ONLY**
+> This combined document (578KB) was the pre-P0.8B combined phase plans reference. It has been superseded by `alphaforge/docs/phase_plan.md`. Do not use this document for current phase planning. See `alphaforge/docs/phase_plan.md` for the canonical phase plan.
+>
+> Superseded by: P0.8B Authority Lock (2026-06-18)
+> Canonical entry: `alphaforge/docs/phase_plan.md`
+
 Generated from individual v4.1.1 template-based phase plan files.
 
 ---

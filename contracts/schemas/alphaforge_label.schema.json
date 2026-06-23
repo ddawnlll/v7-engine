@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://v7-engine/contracts/schemas/alphaforge_label.schema.json",
   "title": "AlphaForgeLabel",
-  "description": "Training label row produced by AlphaForge from simulation outputs. Contains classification label, regression targets for R returns, and path quality metrics.",
+  "description": "Training label row produced by AlphaForge from simulation outputs. Contains classification label, regression targets for R returns (gross and net), cost decomposition, path quality metrics, NO_TRADE quality assessment, and lineage. P0.8E: gross/net cost fields added, no_trade_quality, exit_reason, resolution_status, and lineage fields completed.",
   "type": "object",
   "required": [
     "symbol",
@@ -12,8 +12,15 @@
     "label_interpretation_version",
     "long_R_net",
     "short_R_net",
+    "long_R_gross",
+    "short_R_gross",
+    "total_cost_r_long",
+    "total_cost_r_short",
     "best_action_label",
-    "label_validity"
+    "no_trade_quality",
+    "label_validity",
+    "resolution_status",
+    "simulation_profile_id"
   ],
   "properties": {
     "symbol": {
@@ -37,38 +44,109 @@
       "type": "string",
       "description": "Version of the label interpretation family."
     },
+    "simulation_profile_id": {
+      "type": "string",
+      "description": "P0.8E: simulation profile reference for lineage tracking."
+    },
+    "simulation_engine_version": {
+      "type": "string",
+      "description": "P0.8E: simulation engine version at label generation time."
+    },
+    "cost_model_version": {
+      "type": "string",
+      "description": "P0.8E: cost model version reference."
+    },
+    "funding_status": {
+      "type": "string",
+      "enum": ["DEFERRED", "IMPLEMENTED", "NOT_APPLICABLE"],
+      "description": "P0.8E: funding model status. Currently DEFERRED."
+    },
+    "long_R_gross": {
+      "type": "number",
+      "description": "P0.8E: gross R for LONG_NOW before costs (from ActionOutcome.realized_r_gross)."
+    },
     "long_R_net": {
       "type": "number",
-      "description": "Net R for LONG_NOW action (from simulation ActionOutcome.realized_r_net)."
+      "description": "Net R for LONG_NOW action after costs (from ActionOutcome.realized_r_net)."
+    },
+    "short_R_gross": {
+      "type": "number",
+      "description": "P0.8E: gross R for SHORT_NOW before costs (from ActionOutcome.realized_r_gross)."
     },
     "short_R_net": {
       "type": "number",
-      "description": "Net R for SHORT_NOW action (from simulation ActionOutcome.realized_r_net)."
+      "description": "Net R for SHORT_NOW action after costs (from ActionOutcome.realized_r_net)."
+    },
+    "fee_cost_r_long": {
+      "type": "number",
+      "description": "P0.8E: fee cost in R terms for LONG_NOW."
+    },
+    "fee_cost_r_short": {
+      "type": "number",
+      "description": "P0.8E: fee cost in R terms for SHORT_NOW."
+    },
+    "slippage_cost_r_long": {
+      "type": "number",
+      "description": "P0.8E: slippage cost in R terms for LONG_NOW."
+    },
+    "slippage_cost_r_short": {
+      "type": "number",
+      "description": "P0.8E: slippage cost in R terms for SHORT_NOW."
+    },
+    "total_cost_r_long": {
+      "type": "number",
+      "description": "P0.8E: total cost (fee+slippage+spread) in R terms for LONG_NOW."
+    },
+    "total_cost_r_short": {
+      "type": "number",
+      "description": "P0.8E: total cost (fee+slippage+spread) in R terms for SHORT_NOW."
     },
     "best_action_label": {
       "type": "string",
       "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE", "AMBIGUOUS_STATE"],
       "description": "Classification label: the best comparative action."
     },
+    "best_action_after_cost": {
+      "type": "string",
+      "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE", "AMBIGUOUS_STATE"],
+      "description": "P0.8E: best action after applying all costs. May differ from best_action_label if costs flip the decision."
+    },
+    "action_gap_R": {
+      "type": "number",
+      "description": "Gap between best and second-best action in R terms."
+    },
+    "is_ambiguous": {
+      "type": "boolean",
+      "description": "P0.8E: whether the best action is ambiguous (gap below threshold)."
+    },
     "label_validity": {
       "type": "string",
       "description": "Derived from resolution_status and is_ambiguous. Controls whether this row is used for training."
     },
-    "long_mae_R": {
-      "type": "number",
-      "description": "MAE in R terms for LONG_NOW."
+    "resolution_status": {
+      "type": "string",
+      "description": "P0.8E: how the simulation resolved (e.g., TARGET_HIT, STOP_HIT, TIME_EXIT, UNRESOLVED)."
     },
-    "short_mae_R": {
-      "type": "number",
-      "description": "MAE in R terms for SHORT_NOW."
+    "exit_reason": {
+      "type": "string",
+      "description": "P0.8E: reason for trade exit (from simulation engine)."
     },
-    "long_mfe_R": {
-      "type": "number",
-      "description": "MFE in R terms for LONG_NOW."
+    "no_trade_quality": {
+      "type": "string",
+      "enum": ["CORRECT_NO_TRADE", "SAVED_LOSS", "MISSED_OPPORTUNITY", "AMBIGUOUS_NO_TRADE"],
+      "description": "P0.8E: NO_TRADE quality classification — first-class label, not a fallback."
     },
-    "short_mfe_R": {
+    "was_correct_skip": {
+      "type": "boolean",
+      "description": "P0.8E: whether skipping the trade was correct (no positive edge available)."
+    },
+    "saved_loss_r": {
       "type": "number",
-      "description": "MFE in R terms for SHORT_NOW."
+      "description": "P0.8E: loss saved by not trading, in R terms."
+    },
+    "missed_opportunity_r": {
+      "type": "number",
+      "description": "P0.8E: opportunity missed by not trading, in R terms."
     },
     "regret_R": {
       "type": "number",
@@ -82,13 +160,25 @@
       "type": "number",
       "description": "Missed opportunity score from NoTradeOutcome."
     },
+    "long_mfe_R": {
+      "type": "number",
+      "description": "MFE in R terms for LONG_NOW."
+    },
+    "short_mfe_R": {
+      "type": "number",
+      "description": "MFE in R terms for SHORT_NOW."
+    },
+    "long_mae_R": {
+      "type": "number",
+      "description": "MAE in R terms for LONG_NOW."
+    },
+    "short_mae_R": {
+      "type": "number",
+      "description": "MAE in R terms for SHORT_NOW."
+    },
     "path_quality_score": {
       "type": "number",
       "description": "Path quality score for the best action."
-    },
-    "action_gap_R": {
-      "type": "number",
-      "description": "Gap between best and second-best action in R terms."
     }
   }
 }

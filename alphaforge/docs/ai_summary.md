@@ -2,7 +2,7 @@
 
 **Thin hub.** Read this first (1–2 minutes) to understand AlphaForge.
 
-**P0.8E updated.** Gate mapping corrected to V7 canonical IDs. Timeframe stacks aligned to locked simulation profiles. Nested schema requirements strengthened. Fixture validation tests added.
+**P0.8E complete.** Gate mapping corrected to V7 canonical IDs. Timeframe stacks aligned to locked simulation profiles. Label schema completed (gross/net cost, NO_TRADE quality). Validation contract aligned to V7 gates (6-fold, canonical regimes). MHT/data-snooping controls added. Nested schema requirements strengthened. Fixture validation and schema strictness tests pass. P0.9A gated on P0.8E PASS.
 
 ---
 
@@ -151,9 +151,9 @@ V7HandoffPackage (canonical G0-G10 gate mapping) ──► V7 Acceptance Gates
 
 1. **P0.8B:** Authority lock, docs, contracts — DONE
 2. **P0.8C:** Re-audit after authority lock — DONE
-3. **P0.8D:** Profitability/efficiency squeeze audit — DONE (READY_FOR_P0_9A_AFTER_TARGETED_PATCH)
-4. **P0.8E:** Contract/docs patch (this task) — fix gate mapping, timeframes, strengthen schemas, add fixture tests — IN PROGRESS
-5. **P0.9A:** AlphaForge implementation scaffold (package structure, contract readers, report writer interfaces)
+3. **P0.8D:** Profitability/efficiency squeeze audit — DONE
+4. **P0.8E:** Contract/docs patch (this task) — fix gate mapping, timeframes, strengthen schemas, add fixture tests — IN PROGRESS (BLOCKS P0.9A)
+5. **P0.9A:** AlphaForge implementation scaffold — BLOCKED (requires P0.8E PASS)
 6. **P0.9B:** Data/label/feature pipeline
 7. **P0.9C:** All-mode research reports
 8. **P1.0:** V7 handoff candidate

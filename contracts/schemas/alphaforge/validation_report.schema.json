@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://v7-engine/contracts/schemas/alphaforge/validation_report.schema.json",
   "title": "ValidationReport",
-  "description": "Walk-forward validation report for an alpha candidate. Documents split policy, OOS results, symbol stability, regime breakdown, cost stress, NO_TRADE comparison, and overfit risk. Owned by AlphaForge.",
+  "description": "Walk-forward validation report for an alpha candidate. Documents split policy, OOS results, symbol stability, regime breakdown, cost stress, NO_TRADE comparison, MHT/data-snooping controls, and overfit risk. Owned by AlphaForge. P0.8E: MHT controls added, nested required strengthened, regime taxonomy aligned to V7 canonical (TREND_UP/DOWN/RANGE/TRANSITION), cost stress expanded with spread+funding_deferred_block, calibration mapped to G6.",
   "type": "object",
   "required": [
     "schema_version",
@@ -16,6 +16,7 @@
     "cost_stress",
     "no_trade_comparison",
     "overfit_risk_flags",
+    "multiple_hypothesis_control",
     "verdict"
   ],
   "properties": {
@@ -52,12 +53,18 @@
       "type": "object",
       "required": ["fold_count", "fold_type", "folds"],
       "properties": {
-        "fold_count": { "type": "integer" },
+        "fold_count": {
+          "type": "integer",
+          "description": "P0.8E: minimum 6 folds required for all modes (aligned to V7 G2: WALK_FORWARD_OOS).",
+          "minimum": 6
+        },
         "fold_type": { "type": "string", "enum": ["anchored", "rolling"] },
         "folds": {
           "type": "array",
+          "minItems": 6,
           "items": {
             "type": "object",
+            "required": ["fold_number", "train_start", "train_end", "test_start", "test_end"],
             "properties": {
               "fold_number": { "type": "integer" },
               "train_start": { "type": "string", "format": "date-time" },
@@ -76,6 +83,7 @@
     },
     "oos_summary": {
       "type": "object",
+      "required": ["oos_expectancy_r", "oos_sharpe", "oos_win_rate", "oos_trade_count", "oos_positive_expectancy"],
       "properties": {
         "oos_sharpe": { "type": "number" },
         "oos_expectancy_r": { "type": "number" },
@@ -89,22 +97,38 @@
     },
     "symbol_stability": {
       "type": "object",
+      "required": ["symbols_tested", "symbol_count", "max_single_symbol_concentration", "max_cluster_concentration"],
       "properties": {
         "symbols_tested": { "type": "array", "items": { "type": "string" } },
         "symbol_count": { "type": "integer" },
+        "max_single_symbol_concentration": {
+          "type": "number",
+          "description": "P0.8E: max single symbol contribution to total edge. Must be ≤0.40 per V7 G5."
+        },
+        "max_cluster_concentration": {
+          "type": "number",
+          "description": "P0.8E: max correlated cluster contribution to total edge. Must be ≤0.60 per V7 G5."
+        },
         "single_symbol_limitation": { "type": "boolean" },
-        "cross_symbol_metric_variance": { "type": "string", "description": "Qualitative assessment." }
+        "cross_symbol_metric_variance": { "type": "number", "description": "Quantitative variance of OOS expectancy across symbols." }
       }
     },
     "regime_breakdown": {
       "type": "object",
+      "required": ["regimes", "edge_only_in_rare_regime"],
       "properties": {
         "regimes": {
           "type": "array",
+          "minItems": 4,
           "items": {
             "type": "object",
+            "required": ["regime", "sample_pct", "oos_expectancy_r", "edge_present"],
             "properties": {
-              "regime": { "type": "string" },
+              "regime": {
+                "type": "string",
+                "enum": ["TREND_UP", "TREND_DOWN", "RANGE", "TRANSITION"],
+                "description": "P0.8E: V7 canonical regime taxonomy."
+              },
               "sample_pct": { "type": "number" },
               "oos_expectancy_r": { "type": "number" },
               "oos_sharpe": { "type": "number" },
@@ -118,27 +142,65 @@
     },
     "cost_stress": {
       "type": "object",
+      "required": [
+        "baseline_fee_pct",
+        "baseline_slippage_pct",
+        "baseline_spread_pct",
+        "fee_stress_edge_survives",
+        "slippage_stress_edge_survives",
+        "combined_stress_edge_survives",
+        "funding_deferred_block"
+      ],
       "properties": {
         "baseline_fee_pct": { "type": "number" },
         "baseline_slippage_pct": { "type": "number" },
+        "baseline_spread_pct": {
+          "type": "number",
+          "description": "P0.8E: baseline spread or spread proxy estimate. Required for cost stress."
+        },
         "fee_stress_edge_survives": { "type": "boolean" },
         "slippage_stress_edge_survives": { "type": "boolean" },
+        "spread_stress_edge_survives": { "type": "boolean", "description": "P0.8E: spread stress survival check." },
         "combined_stress_edge_survives": { "type": "boolean" },
         "break_even_cost_total_pct": { "type": "number" },
-        "cost_edge_destroyed": { "type": "boolean" }
+        "cost_edge_destroyed": { "type": "boolean" },
+        "scalp_cost_adjusted_expectancy_r": {
+          "type": "number",
+          "description": "P0.8E: SCALP reference minimum cost-adjusted OOS expectancy. Must be ≥0.10R per V7 G3."
+        },
+        "funding_deferred_block": {
+          "type": "object",
+          "required": ["funding_deferred", "block_reason"],
+          "description": "P0.8E: required when funding model is DEFERRED. Blocks live/perpetual promotion.",
+          "properties": {
+            "funding_deferred": { "type": "boolean" },
+            "block_reason": { "type": "string" },
+            "affected_scopes": { "type": "array", "items": { "type": "string" } }
+          }
+        }
       }
     },
     "no_trade_comparison": {
       "type": "object",
+      "required": ["active_beats_no_trade", "summary"],
       "properties": {
         "long_better_than_no_trade": { "type": "boolean" },
         "short_better_than_no_trade": { "type": "boolean" },
         "active_beats_no_trade": { "type": "boolean" },
+        "saved_loss_r": {
+          "type": "number",
+          "description": "P0.8E: saved loss in R terms from NO_TRADE."
+        },
+        "missed_opportunity_r": {
+          "type": "number",
+          "description": "P0.8E: missed opportunity in R terms from NO_TRADE."
+        },
         "summary": { "type": "string" }
       }
     },
     "overfit_risk_flags": {
       "type": "object",
+      "required": ["overfit_risk_overall"],
       "properties": {
         "train_oos_gap": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
         "fold_instability": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
@@ -149,10 +211,78 @@
         "overfit_risk_overall": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
       }
     },
+    "multiple_hypothesis_control": {
+      "type": "object",
+      "description": "P0.8E: MHT and data-snooping controls. Required — reports without MHT control carry a blocking hold.",
+      "required": [
+        "tested_hypothesis_count",
+        "correction_method",
+        "data_snooping_risk_flag"
+      ],
+      "properties": {
+        "tested_hypothesis_count": {
+          "type": "integer",
+          "description": "Total number of hypotheses/theses/feature-sets tested.",
+          "minimum": 1
+        },
+        "correction_method": {
+          "type": "string",
+          "enum": ["FDR", "Bonferroni", "Deflated_Sharpe", "PBO", "NONE_APPLIED"],
+          "description": "MHT correction method. NONE_APPLIED requires a blocking hold."
+        },
+        "corrected_significance": {
+          "type": ["number", "null"],
+          "description": "Significance after correction (null if NONE_APPLIED)."
+        },
+        "false_discovery_control": {
+          "type": "boolean",
+          "description": "Whether FDR or equivalent false discovery control is active."
+        },
+        "deflated_sharpe_or_equivalent": {
+          "type": ["number", "null"],
+          "description": "Deflated Sharpe ratio or PBO risk assessment result."
+        },
+        "pbo_or_backtest_overfit_risk": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL", "NOT_RUN"],
+          "description": "Probability of Backtest Overfit assessment."
+        },
+        "trial_count_disclosure": {
+          "type": "integer",
+          "description": "Number of trial configurations tested."
+        },
+        "rejected_candidate_count": {
+          "type": "integer",
+          "description": "Number of candidates rejected during this research run."
+        },
+        "data_snooping_risk_flag": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+          "description": "Overall data-snooping risk assessment."
+        },
+        "blocking_hold": {
+          "type": "string",
+          "description": "Required if correction_method is NONE_APPLIED. Explains why MHT was not run."
+        }
+      }
+    },
+    "calibration_gate_alignment": {
+      "type": "object",
+      "description": "P0.8E: calibration reliability mapped to V7 G6: CALIBRATION_RELIABILITY.",
+      "required": ["calibration_candidate_id"],
+      "properties": {
+        "calibration_candidate_id": { "type": "string" },
+        "ece": { "type": "number", "description": "Expected Calibration Error." },
+        "mce": { "type": "number", "description": "Maximum Calibration Error." },
+        "confidence_bin_count": { "type": "integer" },
+        "reliability_within_bounds": { "type": "boolean" },
+        "calibration_status": { "type": "string", "enum": ["CALIBRATED", "UNCALIBRATED", "UNRELIABLE"] }
+      }
+    },
     "verdict": {
       "type": "string",
-      "enum": ["PASS", "PASS_WITH_LIMITATIONS", "FAIL_OVERFIT", "FAIL_COST", "FAIL_REGIME", "FAIL_OOS", "INCONCLUSIVE"],
-      "description": "Validation verdict."
+      "enum": ["PASS", "PASS_WITH_LIMITATIONS", "FAIL_OVERFIT", "FAIL_COST", "FAIL_REGIME", "FAIL_OOS", "FAIL_MHT", "INCONCLUSIVE"],
+      "description": "Validation verdict. P0.8E: FAIL_MHT added for MHT/data-snooping failures."
     },
     "limitations": {
       "type": "array",

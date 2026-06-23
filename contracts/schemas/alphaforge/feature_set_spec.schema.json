@@ -30,9 +30,14 @@
       "description": "Trading mode this feature set targets."
     },
     "timeframe_stack": {
-      "type": "array",
-      "items": { "type": "string" },
-      "description": "Timeframes used in this feature set (e.g., ['5m', '15m', '1h'])."
+      "type": "object",
+      "description": "Mode-specific timeframe stack. P0.8E: must use locked simulation profile timeframes — SCALP {1h,4h,15m}, AGGRESSIVE_SCALP {15m,1h,5m}, SWING {4h,1d,1h}. No array-like alternatives allowed.",
+      "required": ["primary", "context", "refinement"],
+      "properties": {
+        "primary": { "type": "string", "description": "Primary decision interval." },
+        "context": { "type": "array", "items": { "type": "string" }, "description": "Context/higher timeframe(s)." },
+        "refinement": { "type": "array", "items": { "type": "string" }, "description": "Refinement/lower timeframe(s)." }
+      }
     },
     "feature_groups": {
       "type": "array",

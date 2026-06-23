@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://v7-engine/contracts/schemas/alphaforge/alphaforge_research_report.schema.json",
   "title": "AlphaForgeResearchReport",
-  "description": "Aggregate cross-mode research report synthesizing all mode reports, promoted/rejected candidates, and V7 handoff packages. Owned by AlphaForge.",
+  "description": "Aggregate cross-mode research report synthesizing all mode reports, promoted/rejected candidates, and V7 handoff packages. Owned by AlphaForge. P0.8E: all three modes (SCALP, AGGRESSIVE_SCALP, SWING) required in mode_reports. Nested required fields strengthened.",
   "type": "object",
   "required": [
     "schema_version",
@@ -34,17 +34,21 @@
     },
     "mode_reports": {
       "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
       "items": {
         "type": "object",
-        "required": ["mode", "report_id", "verdict"],
+        "required": ["mode", "report_id", "verdict", "mode_priority", "report_type"],
         "properties": {
           "mode": { "type": "string", "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"] },
+          "mode_priority": { "type": "string", "enum": ["PRIMARY", "SECONDARY_BASELINE"] },
           "report_id": { "type": "string" },
+          "report_type": { "type": "string", "enum": ["primary_research_report", "secondary_baseline_report"] },
           "verdict": { "type": "string" },
           "summary": { "type": "string" }
         }
       },
-      "description": "Summary of each mode's research report."
+      "description": "Summary of each mode's research report. P0.8E: exactly 3 modes required (SCALP, AGGRESSIVE_SCALP, SWING). Mode-to-verdict coupling enforced (PRIMARY→primary_research_report, SECONDARY_BASELINE→secondary_baseline_report)."
     },
     "promoted_candidates": {
       "type": "array",

@@ -89,6 +89,23 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 **Verdict:** LOCKABLE_WITH_HOLDS. Ready for P0.9A implementation scaffold.
 
+**P0.8C — AlphaForge Re-Audit:** ✅ PASS. Post-authority-lock re-audit confirmed AlphaForge docs, contracts, fixtures, and tests are self-consistent. `reports/p0_8c_alphaforge_reaudit.accp.yaml`.
+
+**P0.8D — AlphaForge Profitability/Efficiency Squeeze Audit:** ✅ PASS. Identified critical contract/doc drift (gate mapping, timeframe alignment, label schema gaps, validation contract misalignment, MHT absence, schema strictness). Recommended P0.8E targeted patch. `reports/p0_8d_alphaforge_profitability_efficiency_squeeze_audit.accp.yaml`.
+
+**P0.8E — AlphaForge Contract/Docs Profitability Patch:** ✅ PASS (2026-06-23). All 8 objectives complete:
+- Gate mapping corrected to V7 canonical G0-G10
+- Timeframe stacks reconciled to locked simulation profiles
+- AlphaForgeLabel schema completed (gross/net cost, NO_TRADE quality, lineage)
+- Validation contract aligned to V7 gates (6-fold, canonical regimes)
+- MHT/data-snooping controls added
+- Schema strictness tightened (nested required, empty payload rejection)
+- Legacy combined docs marked SUPERSEDED
+- P0.9A gated on P0.8E PASS
+295 tests pass, 0 failures. `reports/p0_8e_alphaforge_profitability_contract_patch.accp.yaml`.
+
+**Status:** P0.9A (AlphaForge implementation scaffold) is now unblocked. P0.8E prerequisites satisfied.
+
 ### Implementation Sequence
 
 SWING is implemented first as the **control baseline** — it validates the entire architecture (contracts, simulation truth, labels, features, model training, calibration, policy, portfolio, risk, runtime integration) with the lowest risk. Once the architecture is proven via SWING, SCALP and AGGRESSIVE_SCALP research accelerates on a validated foundation.
@@ -143,7 +160,7 @@ Exit condition:
 ### Phase 3 — Labels and features
 Goal:
 - implement label generation by `model_scope`
-- implement canonical-state feature generation for scope defaults (`SWING` 4h/1d/1h, `SCALP` 15m/1h/5m, `AGGRESSIVE_SCALP` 1m-or-3m with 5m/15m context)
+- implement canonical-state feature generation for scope defaults (`SWING` 4h/1d/1h, `SCALP` 1h/4h/15m, `AGGRESSIVE_SCALP` 15m/1h/5m)
 - implement schema/version tests
 
 Exit condition:

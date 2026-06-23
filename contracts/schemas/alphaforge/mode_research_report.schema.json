@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://v7-engine/contracts/schemas/alphaforge/mode_research_report.schema.json",
   "title": "ModeResearchReport",
-  "description": "Per-mode research report containing alpha thesis evaluation, validation summary, metrics, cost stress, NO_TRADE comparison, regime breakdown, and verdict. Owned by AlphaForge.",
+  "description": "Per-mode research report containing alpha thesis evaluation, validation summary, metrics, cost stress, NO_TRADE comparison, regime breakdown, MHT control, and verdict. Owned by AlphaForge. P0.8E: nested required fields strengthened — empty cost_stress, no_trade_comparison, regime_breakdown, or metrics cannot pass.",
   "type": "object",
   "required": [
     "schema_version",
@@ -54,7 +54,8 @@
     },
     "data_scope": {
       "type": "object",
-      "description": "Data scope of this report.",
+      "description": "Data scope of this report. P0.8E: primary_timeframes and symbols required.",
+      "required": ["symbols", "primary_timeframes"],
       "properties": {
         "symbols": { "type": "array", "items": { "type": "string" } },
         "date_range_start": { "type": "string", "format": "date-time" },
@@ -78,6 +79,7 @@
       "type": "array",
       "items": {
         "type": "object",
+        "required": ["alpha_thesis_id", "status"],
         "properties": {
           "alpha_thesis_id": { "type": "string" },
           "title": { "type": "string" },
@@ -85,20 +87,22 @@
           "evidence_quality": { "type": "string", "enum": ["STRONG", "MODERATE", "WEAK", "INSUFFICIENT"] }
         }
       },
-      "description": "Alpha theses evaluated in this report."
+      "description": "Alpha theses evaluated in this report. P0.8E: each thesis must have id and status."
     },
     "validation_summary": {
       "type": "object",
+      "required": ["validation_report_id", "fold_count", "verdict"],
       "properties": {
         "validation_report_id": { "type": "string" },
-        "fold_count": { "type": "integer" },
+        "fold_count": { "type": "integer", "description": "P0.8E: minimum 6 folds." },
         "verdict": { "type": "string" },
         "overfit_risk": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
       }
     },
     "metrics": {
       "type": "object",
-      "description": "Aggregate performance metrics with confidence intervals.",
+      "description": "Aggregate performance metrics with confidence intervals. P0.8E: oos_expectancy_r, oos_sharpe, oos_trade_count required.",
+      "required": ["oos_expectancy_r", "oos_sharpe", "oos_trade_count"],
       "properties": {
         "oos_sharpe": { "$ref": "#/definitions/MetricWithCI" },
         "oos_expectancy_r": { "$ref": "#/definitions/MetricWithCI" },
@@ -123,7 +127,8 @@
     },
     "cost_stress": {
       "type": "object",
-      "description": "Cost sensitivity analysis.",
+      "description": "Cost sensitivity analysis. P0.8E: baseline values and combined_stress_edge_survives required — empty cost_stress cannot pass.",
+      "required": ["baseline_fee_pct", "baseline_slippage_pct", "combined_stress_edge_survives"],
       "properties": {
         "baseline_fee_pct": { "type": "number" },
         "baseline_slippage_pct": { "type": "number" },
@@ -155,7 +160,8 @@
     },
     "no_trade_comparison": {
       "type": "object",
-      "description": "Comparison of active trading vs doing nothing.",
+      "description": "Comparison of active trading vs doing nothing. P0.8E: active_beats_no_trade and summary required — empty no_trade_comparison cannot pass.",
+      "required": ["active_beats_no_trade", "summary"],
       "properties": {
         "long_vs_no_trade": { "type": "string", "description": "Is LONG better than NO_TRADE after costs?" },
         "short_vs_no_trade": { "type": "string", "description": "Is SHORT better than NO_TRADE after costs?" },
@@ -165,7 +171,8 @@
     },
     "regime_breakdown": {
       "type": "object",
-      "description": "Performance across market regimes.",
+      "description": "Performance across market regimes. P0.8E: regimes array and edge_only_in_rare_regime required — empty regime_breakdown cannot pass.",
+      "required": ["regimes", "edge_only_in_rare_regime"],
       "properties": {
         "regimes": {
           "type": "array",
@@ -202,6 +209,75 @@
       "type": "array",
       "items": { "type": "string" },
       "description": "Recommended next steps."
+    },
+    "v7_gate_readiness": {
+      "type": "object",
+      "description": "P0.8E: per-mode V7 gate readiness assessment. Maps which gates this mode's evidence addresses.",
+      "required": ["gates_mapped", "overall_readiness"],
+      "properties": {
+        "gates_mapped": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Canonical V7 gate IDs this mode's evidence covers."
+        },
+        "gates_not_ready": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Canonical V7 gate IDs not yet addressed."
+        },
+        "overall_readiness": {
+          "type": "string",
+          "enum": ["READY", "PARTIALLY_READY", "NOT_READY"],
+          "description": "Overall readiness for V7 handoff."
+        }
+      }
+    },
+    "multiple_hypothesis_control": {
+      "type": "object",
+      "description": "P0.8E: MHT and data-snooping controls for this mode's research. Required — a report without MHT control carries a blocking hold.",
+      "required": ["tested_hypothesis_count", "correction_method", "data_snooping_risk_flag"],
+      "properties": {
+        "tested_hypothesis_count": {
+          "type": "integer",
+          "description": "Total number of hypotheses/theses/feature-sets tested for this mode.",
+          "minimum": 1
+        },
+        "correction_method": {
+          "type": "string",
+          "enum": ["FDR", "Bonferroni", "Deflated_Sharpe", "PBO", "NONE_APPLIED"],
+          "description": "MHT correction method. NONE_APPLIED requires a blocking hold."
+        },
+        "corrected_significance": {
+          "type": ["number", "null"],
+          "description": "Significance after correction (null if NONE_APPLIED)."
+        },
+        "data_snooping_risk_flag": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+          "description": "Overall data-snooping risk assessment for this mode."
+        },
+        "deflated_sharpe_or_equivalent": {
+          "type": ["number", "null"],
+          "description": "Deflated Sharpe ratio or PBO risk assessment result."
+        },
+        "pbo_or_backtest_overfit_risk": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL", "NOT_RUN"],
+          "description": "Probability of Backtest Overfit assessment."
+        },
+        "trial_count_disclosure": {
+          "type": "integer",
+          "description": "Number of trial configurations tested for this mode."
+        },
+        "rejected_candidate_count": {
+          "type": "integer",
+          "description": "Number of candidates rejected during this mode's research."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes on MHT methodology or limitations."
+        }
+      }
     }
   },
   "definitions": {
