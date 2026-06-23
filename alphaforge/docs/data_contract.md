@@ -114,9 +114,9 @@ Reproducibility metadata for AlphaForge runs.
 
 | Mode | Primary Timeframes | Secondary Timeframes |
 |------|-------------------|---------------------|
-| SCALP | 1m, 5m | 15m, 1h (context) |
-| AGGRESSIVE_SCALP | 1m, 3m, 5m | 15m (context) |
-| SWING | 1h, 4h | 1d (context) |
+| SWING | 4h | 1d (context), 1h (refine) |
+| SCALP | 1h | 4h (context), 15m (refine) |
+| AGGRESSIVE_SCALP | 15m | 1h (context), 5m (refine) |
 
 ---
 

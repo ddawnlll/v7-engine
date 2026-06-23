@@ -143,7 +143,7 @@ Exit condition:
 ### Phase 3 — Labels and features
 Goal:
 - implement label generation by `model_scope`
-- implement canonical-state feature generation for scope defaults (`SWING` 4h/1d/1h, `SCALP` 15m/1h/5m, `AGGRESSIVE_SCALP` 1m-or-3m with 5m/15m context)
+- implement canonical-state feature generation for scope defaults (`SWING` 4h/1d/1h, `SCALP` 1h/4h/15m, `AGGRESSIVE_SCALP` 15m/1h/5m)
 - implement schema/version tests
 
 Exit condition:
@@ -338,6 +338,34 @@ Minimal rule set:
 - rollback changes forward active authority, not historical records
 
 Do not collapse these into one vague “publish” step.
+
+---
+
+## P0.8E + P0.9A — AlphaForge Authority Lock and Implementation Scaffold (2026-06-23)
+
+**What changed:**
+- P0.8E verification found 5 blocker categories that were repaired
+- Gate mapping aligned to canonical V7 G0-G10 (no old names)
+- AlphaForgeLabel schema completed (24 required fields: gross/net R, cost decomposition, NO_TRADE quality, funding)
+- MHT/data-snooping block added to all 3 AlphaForge report schemas with blocking semantics
+- Timeframe drift fixed: SCALP primary=1h, AGGRESSIVE_SCALP primary=15m
+- Schema strictness: 6-fold minimum, cost_stress/no_trade_comparison required fields, empty payloads fail
+- P0.9A scaffold: 9 modules + 6 test files (48 tests, all passing)
+- Implementation readiness: ~5.5 → ~7.0
+
+**Lock status:**
+- AlphaForge contracts: LOCKED (canonical G0-G10, label schema, MHT, timeframes)
+- Implementation scaffold: LOCKED_INITIAL_BASELINE
+- NO_TRADE as metric/comparator (not promotion gate): LOCKED
+- Funding: DEFERRED (blocks perpetual/live claims)
+
+**Remaining holds:**
+- No real profitability evidence (HOLD — requires simulation labels, features, training, WF, OOS)
+- SCALP/AGGRESSIVE_SCALP thresholds (HOLD — empirical backtest evidence required)
+- XGBoost training (DEFERRED to P0.9B/P0.9C)
+- Real data ingestion (DEFERRED to P0.9B)
+
+**Safe next step:** V7-P0.9B AlphaForge deterministic data-label-feature pipeline
 
 ---
 

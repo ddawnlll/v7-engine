@@ -16,6 +16,7 @@
     "cost_stress",
     "no_trade_comparison",
     "overfit_risk_flags",
+    "multiple_hypothesis_control",
     "verdict"
   ],
   "properties": {
@@ -52,10 +53,12 @@
       "type": "object",
       "required": ["fold_count", "fold_type", "folds"],
       "properties": {
-        "fold_count": { "type": "integer" },
+        "fold_count": { "type": "integer", "minimum": 6, "description": "Minimum 6 walk-forward folds required." },
         "fold_type": { "type": "string", "enum": ["anchored", "rolling"] },
         "folds": {
           "type": "array",
+          "minItems": 6,
+          "description": "Minimum 6 walk-forward folds. Each fold: 12-month train, 2-month validation.",
           "items": {
             "type": "object",
             "properties": {
@@ -89,11 +92,15 @@
     },
     "symbol_stability": {
       "type": "object",
+      "description": "Symbol stability assessment. Max single symbol concentration: 0.40. Max cluster concentration: 0.60.",
+      "required": ["symbols_tested", "symbol_count", "max_single_symbol_concentration", "max_cluster_concentration", "single_symbol_limitation"],
       "properties": {
-        "symbols_tested": { "type": "array", "items": { "type": "string" } },
-        "symbol_count": { "type": "integer" },
+        "symbols_tested": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "symbol_count": { "type": "integer", "minimum": 1 },
+        "max_single_symbol_concentration": { "type": "number", "minimum": 0, "maximum": 1, "description": "Maximum fraction of total edge from any single symbol. Must be <= 0.40." },
+        "max_cluster_concentration": { "type": "number", "minimum": 0, "maximum": 1, "description": "Maximum fraction of total edge from any symbol cluster. Must be <= 0.60." },
         "single_symbol_limitation": { "type": "boolean" },
-        "cross_symbol_metric_variance": { "type": "string", "description": "Qualitative assessment." }
+        "cross_symbol_metric_variance": { "type": "string", "description": "Qualitative assessment of cross-symbol variance." }
       }
     },
     "regime_breakdown": {
@@ -118,18 +125,39 @@
     },
     "cost_stress": {
       "type": "object",
+      "description": "Cost stress analysis. Required components: fee, slippage, spread_or_proxy, funding_or_deferred_block. Empty cost_stress must fail validation.",
+      "required": [
+        "baseline_fee_pct",
+        "baseline_slippage_pct",
+        "spread_or_proxy",
+        "funding_or_deferred_block",
+        "fee_stress_edge_survives",
+        "slippage_stress_edge_survives",
+        "combined_stress_edge_survives",
+        "break_even_cost_total_pct",
+        "cost_edge_destroyed"
+      ],
       "properties": {
-        "baseline_fee_pct": { "type": "number" },
-        "baseline_slippage_pct": { "type": "number" },
-        "fee_stress_edge_survives": { "type": "boolean" },
-        "slippage_stress_edge_survives": { "type": "boolean" },
-        "combined_stress_edge_survives": { "type": "boolean" },
-        "break_even_cost_total_pct": { "type": "number" },
-        "cost_edge_destroyed": { "type": "boolean" }
+        "baseline_fee_pct": { "type": "number", "minimum": 0, "description": "Baseline fee percentage (taker rate)." },
+        "baseline_slippage_pct": { "type": "number", "minimum": 0, "description": "Baseline slippage percentage (volatility-adjusted)." },
+        "spread_or_proxy": { "type": "string", "description": "Spread assumption or proxy used for cost calculation." },
+        "funding_or_deferred_block": { "type": "string", "description": "Funding cost treatment: DEFERRED (blocks perpetual/live claims) or APPLIED with rate." },
+        "fee_stress_edge_survives": { "type": "boolean", "description": "Edge survives 2x fee stress." },
+        "slippage_stress_edge_survives": { "type": "boolean", "description": "Edge survives 2x slippage stress." },
+        "combined_stress_edge_survives": { "type": "boolean", "description": "Edge survives combined 2x fee + 2x slippage stress." },
+        "break_even_cost_total_pct": { "type": "number", "description": "Total cost percentage at which edge breaks even." },
+        "cost_edge_destroyed": { "type": "boolean", "description": "True if edge is destroyed at baseline costs." }
       }
     },
     "no_trade_comparison": {
       "type": "object",
+      "description": "Comparison of active trading vs doing nothing. Empty no_trade_comparison must fail validation.",
+      "required": [
+        "long_better_than_no_trade",
+        "short_better_than_no_trade",
+        "active_beats_no_trade",
+        "summary"
+      ],
       "properties": {
         "long_better_than_no_trade": { "type": "boolean" },
         "short_better_than_no_trade": { "type": "boolean" },
@@ -149,10 +177,72 @@
         "overfit_risk_overall": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
       }
     },
+    "multiple_hypothesis_control": {
+      "type": "object",
+      "description": "Multiple hypothesis testing and data snooping controls. BLOCKING: NONE_APPLIED or NOT_RUN prevent strong edge/profitability claims. Reports may still be generated but must be marked HOLD or BLOCKED_FOR_MHT.",
+      "required": [
+        "mht_status",
+        "tested_hypothesis_count",
+        "tested_feature_count",
+        "tested_thesis_count",
+        "correction_method",
+        "trial_count_disclosure",
+        "rejected_candidate_count"
+      ],
+      "properties": {
+        "mht_status": {
+          "type": "string",
+          "enum": ["APPLIED_AND_PASSED", "APPLIED_WITH_WARNINGS", "NOT_RUN", "NONE_APPLIED"],
+          "description": "MHT control status. NOT_RUN or NONE_APPLIED: edge/profitability claims are blocked; report must be marked HOLD or BLOCKED_FOR_MHT."
+        },
+        "tested_hypothesis_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of distinct hypotheses tested in this research cycle."
+        },
+        "tested_feature_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of features screened/tested across all hypotheses."
+        },
+        "tested_thesis_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of alpha theses evaluated."
+        },
+        "correction_method": {
+          "type": "string",
+          "description": "MHT correction method used. Examples: Bonferroni, Holm-Bonferroni, Benjamini-Hochberg (FDR), Deflated Sharpe Ratio (DSR), PBO (probability of backtest overfitting), family-wise error rate (FWER) control.",
+          "examples": ["Bonferroni", "Holm-Bonferroni", "Benjamini-Hochberg", "DeflatedSharpeRatio", "PBO", "FWER_Control"]
+        },
+        "false_discovery_control": {
+          "type": "string",
+          "description": "FDR control method description or NONE if not applied."
+        },
+        "deflated_sharpe_or_pbo_assessment": {
+          "type": "string",
+          "description": "Deflated Sharpe Ratio or Probability of Backtest Overfitting assessment result. Required when MHT is applied."
+        },
+        "trial_count_disclosure": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of trials (hyperparameter/seed/feature configurations) evaluated. Must be disclosed honestly even if MHT was not applied."
+        },
+        "rejected_candidate_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of candidates rejected due to MHT correction (e.g., failed FDR threshold)."
+        },
+        "mht_block_reason": {
+          "type": "string",
+          "description": "If mht_status is NOT_RUN or NONE_APPLIED: explain why MHT was not applied and what evidence is blocked."
+        }
+      }
+    },
     "verdict": {
       "type": "string",
-      "enum": ["PASS", "PASS_WITH_LIMITATIONS", "FAIL_OVERFIT", "FAIL_COST", "FAIL_REGIME", "FAIL_OOS", "INCONCLUSIVE"],
-      "description": "Validation verdict."
+      "enum": ["PASS", "PASS_WITH_LIMITATIONS", "FAIL_OVERFIT", "FAIL_COST", "FAIL_REGIME", "FAIL_OOS", "INCONCLUSIVE", "BLOCKED_FOR_MHT"],
+      "description": "Validation verdict. BLOCKED_FOR_MHT when multiple_hypothesis_control.mht_status is NOT_RUN or NONE_APPLIED."
     },
     "limitations": {
       "type": "array",

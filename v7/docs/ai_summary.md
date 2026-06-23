@@ -1922,8 +1922,8 @@ min_confidence, min_expected_r, max_expected_drawdown, enable_entry_timing_obser
 | TradeOutcome | Atomic normalized consequence record for one DecisionEvent |
 | model_scope | Operating mode (SWING, SCALP, AGGRESSIVE_SCALP) with own intervals/horizon/artifact |
 | SWING | Primary 4h, HTF 1d, refinement 1h, swing horizon labels |
-| SCALP | Primary 15m, HTF 1h, refinement 5m, scalp horizon labels |
-| AGGRESSIVE_SCALP | Primary 1m/3m, HTF 5m+15m, immediate/very short horizon |
+| SCALP | Primary 1h, HTF 4h, refinement 15m, scalp horizon labels |
+| AGGRESSIVE_SCALP | Primary 15m, HTF 1h, refinement 5m, aggressive scalp horizon labels |
 | Runtime simulation engine | Runtime-hosted simulation that defines economic truth for all downstream stages |
 | Canonical state | Standardized market state per symbol per timestamp for live/replay/evaluation |
 | Hybrid supervised model | Model with classification heads (action selection) AND regression heads (economic quality) |

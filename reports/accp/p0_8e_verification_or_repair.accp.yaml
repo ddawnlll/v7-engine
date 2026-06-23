@@ -1,0 +1,65 @@
+---
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "V7-P0_8E-VERIFY-REPAIR-THEN-P0_9A-ALPHAFORGE-SCAFFOLD"
+phase: "PHASE_A_AND_B"
+result: "P0_8E_REPAIRED_PASS"
+scope_confirmation: "Phase A verification found 5 blocker categories. Phase B repaired all blockers."
+
+p0_8e_verification_summary:
+  initial_verdict: "P0_8E_REPAIR_REQUIRED"
+  blockers_found: 5
+  blockers_repaired: 5
+  final_verdict: "P0_8E_REPAIRED_PASS"
+
+answers_to_primary_questions:
+  gate_mapping:
+    answer: "P0.8E did NOT close gate mapping. Old names existed in v7_handoff_package. Repaired to canonical G0-G10."
+    changed_files:
+      - contracts/schemas/alphaforge/v7_handoff_package.schema.json
+      - contracts/fixtures/alphaforge/v7_handoff_package_minimal.json
+    grep_evidence: "OLD_GATE_NAMES_CLEAN_IN_SCHEMAS_AND_FIXTURES"
+    test_evidence: "48 alphaforge tests PASS including test_handoff_builder"
+  validation_contract:
+    answer: "validation_report.schema.json aligned to canonical V7 G0-G10. 6-fold minimum. Cost stress requires fee/slippage/spread/funding_gate."
+    changed_files:
+      - contracts/schemas/alphaforge/validation_report.schema.json
+  mht_validation_report:
+    answer: "MHT/data-snooping block added to 3 report schemas. mht_status NOT_RUN/NONE_APPLIED blocks profitability claims."
+    changed_files:
+      - contracts/schemas/alphaforge/validation_report.schema.json
+      - contracts/schemas/alphaforge/mode_research_report.schema.json
+      - contracts/schemas/alphaforge/alphaforge_research_report.schema.json
+    blocking_semantics: "NOT_RUN or NONE_APPLIED → BLOCKED_FOR_MHT verdict"
+  label_schema:
+    answer: "24 required fields including gross/net R, cost decomposition, no_trade_quality, funding_status=DEFERRED."
+    changed_files:
+      - contracts/schemas/alphaforge_label.schema.json
+      - contracts/fixtures/alphaforge_label_minimal.json
+
+commands_run:
+  - "grep old gates: CLEAN in schemas/fixtures"
+  - "grep canonical gates: PRESENT"
+  - "grep MHT: PRESENT in 3 report schemas"
+  - "test_contract_registry: 20 passed"
+  - "test_schema_parity: 20 passed"
+  - "alphaforge/tests: 48 passed"
+  - "import_boundaries: 7 passed, 2 skipped"
+  - "simulation/tests: 5 passed"
+  - "non-binance suite: 206 passed, 2 skipped"
+  - "total: 254 passed, 0 failed, 2 skipped"
+
+changed_files:
+  - contracts/schemas/alphaforge/v7_handoff_package.schema.json
+  - contracts/fixtures/alphaforge/v7_handoff_package_minimal.json
+  - contracts/schemas/alphaforge_label.schema.json
+  - contracts/fixtures/alphaforge_label_minimal.json
+  - contracts/schemas/alphaforge/validation_report.schema.json
+  - contracts/schemas/alphaforge/mode_research_report.schema.json
+  - contracts/schemas/alphaforge/alphaforge_research_report.schema.json
+  - alphaforge/docs/data_contract.md
+  - v7/docs/ai_summary.md
+  - v7/docs/contracts/analysis_request.md
+  - v7/docs/roadmap.md
+
+final_status: "P0_8E_REPAIRED_PASS"

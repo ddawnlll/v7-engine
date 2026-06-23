@@ -53,19 +53,25 @@
     },
     "v7_gate_mapping": {
       "type": "object",
-      "description": "Mapping of AlphaForge evidence to V7 promotion gates (G0-G10).",
+      "description": "Mapping of AlphaForge evidence to canonical V7 promotion gates G0-G10. Mirrors v7/docs/pipeline/evaluation.md. NO_TRADE is a metric/comparator family, not a promotion gate.",
+      "required": [
+        "G0_doc_ready", "G1_research_backtest", "G2_walk_forward_oos",
+        "G3_cost_stress", "G4_regime_breakdown", "G5_symbol_stability",
+        "G6_calibration_reliability", "G7_shadow", "G8_paper",
+        "G9_tiny_live", "G10_live"
+      ],
       "properties": {
-        "G0_data_quality": { "type": "string", "description": "Evidence reference for data quality." },
-        "G1_feature_validity": { "type": "string" },
-        "G2_label_validity": { "type": "string" },
-        "G3_model_sanity": { "type": "string" },
-        "G4_oos_performance": { "type": "string" },
-        "G5_cost_resilience": { "type": "string" },
-        "G6_regime_robustness": { "type": "string" },
-        "G7_stability": { "type": "string" },
-        "G8_calibration": { "type": "string" },
-        "G9_no_trade_baseline": { "type": "string" },
-        "G10_paper_shadow": { "type": "string" }
+        "G0_doc_ready":             { "type": "string", "description": "DOC_READY: Mode has complete docs, contracts, labels, model outputs, and risk rules." },
+        "G1_research_backtest":     { "type": "string", "description": "RESEARCH_BACKTEST: Initial research backtest with cost-honest labels and no-trade quality." },
+        "G2_walk_forward_oos":      { "type": "string", "description": "WALK_FORWARD_OOS: Walk-forward out-of-sample evidence across minimum 6 folds." },
+        "G3_cost_stress":           { "type": "string", "description": "COST_STRESS: Fee, slippage, spread, and funding stress where applicable." },
+        "G4_regime_breakdown":      { "type": "string", "description": "REGIME_BREAKDOWN: Performance evaluated per TREND_UP, TREND_DOWN, RANGE, TRANSITION." },
+        "G5_symbol_stability":      { "type": "string", "description": "SYMBOL_STABILITY: No single symbol >40% of total edge; no cluster >60%." },
+        "G6_calibration_reliability": { "type": "string", "description": "CALIBRATION_RELIABILITY: Probability and expected-R surfaces calibrated enough for policy gates." },
+        "G7_shadow":                { "type": "string", "description": "SHADOW: Live-market observation without order placement." },
+        "G8_paper":                 { "type": "string", "description": "PAPER: Paper trading with runtime lifecycle and outcome reconciliation." },
+        "G9_tiny_live":             { "type": "string", "description": "TINY_LIVE: Small real-capital live validation with strict kill switches." },
+        "G10_live":                 { "type": "string", "description": "LIVE: Production-eligible mode after independent promotion." }
       }
     },
     "recommended_status": {
