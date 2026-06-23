@@ -1,0 +1,577 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-00-VERIFY
+  title: AlphaForge P0.8E/P0.9A — Baseline Verification Subplan
+  description: 'Verification-only subplan that establishes the clean baseline for AlphaForge implementation. Validates that
+    P0.8E (profitability contract patch, contracts, fixtures, schemas, integration tests) and P0.9A (authority, audit, report
+    contracts) are in a consistent, passing state before any implementation work begins. No code is written, no files are
+    modified. This subplan is gated by the master plan WAVE-00-VERIFY and must complete before WAVE-01-IMPLEMENT.
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - plans/alphaforge/**
+  - reports/accp/**
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/docs/**
+  - alphaforge/src/**
+  - alphaforge/tests/**
+  - artifacts/**
+  - contracts/fixtures/**
+  - contracts/mappings/**
+  - contracts/schemas/**
+  - data/**
+  - datasets/**
+  - integration/tests/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/contracts/**
+  - simulation/engine/**
+  - simulation/tests/**
+  - v7/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: analysis_only
+  canModifyCode: false
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 0
+tasks:
+- id: WS-00-VERIFY-BASELINE
+  title: Verify P0.8E/P0.9A Baseline Cleanliness
+  objective: 'Single verification workspace. Runs all 7 allowed commands sequentially, captures evidence, performs forbidden
+    file and forbidden pattern scans, and emits a single ACCP-YAML report. No files are modified. If any command fails, the
+    workspace halts and reports the failure.
+
+    '
+  implementation:
+    instructions:
+    - '[must] [schema_validation] PHASE 0 — SELF-VALIDATION. Before executing any command, validate this subplan file (plans/alphaforge/00_baseline_verify.plan.yaml)
+      against template.json. Confirm all 15 required root keys are present, planSpecVersion is exactly "5.0.0-alpha2", kind
+      is "ImplementationPlan", and all nested required fields are satisfied. Record the validation outcome.
+
+      '
+    - '[must] [discovery] PHASE 1 — GIT CLEANLINESS. Run CMD-discover-git-status. Inspect the output. The only expected untracked
+      paths are under plans/ and reports/. If any file under alphaforge/src/, alphaforge/tests/, lib/, simulation/, runtime/,
+      interface/, data/, datasets/, models/, artifacts/, or .github/ appears as modified (M), deleted (D), or untracked (??),
+      this is a HARD FAILURE. Record full git status output as evidence.
+
+      '
+    - '[must] [targeted_test] PHASE 2 — P0.8E INTEGRATION TESTS. Run CMD-test-integration-alphaforge. This executes all 7
+      integration test files for AlphaForge: test_alphaforge_contract_loader.py, test_alphaforge_contract_semantics.py, test_alphaforge_fixture_validation.py,
+      test_alphaforge_handoff_builder.py, test_alphaforge_report_builders.py, test_alphaforge_scaffold_imports.py, test_alphaforge_schema_strictness.py.
+      All must pass. Capture stdout, stderr, and exit code. If any test fails, STOP — do not proceed.
+
+      '
+    - '[must] [targeted_test] PHASE 3 — CONTRACT REGISTRY AND SCHEMA PARITY. Run CMD-test-contract-registry-schema. This validates
+      that contracts/registry.json is consistent, all registered contract files exist on disk, and all schema files parse
+      as valid JSON Schema. All tests must pass.
+
+      '
+    - '[must] [targeted_test] PHASE 4 — IMPORT BOUNDARIES. Run CMD-test-import-boundaries. This validates that lib/ does not
+      import from alphaforge/v7/simulation, that cross-domain imports respect the truth hierarchy (simulation > realized >
+      contract > runtime > model), and that no circular imports exist. All tests must pass.
+
+      '
+    - '[must] [targeted_test] PHASE 5 — SIMULATION TESTS. Run CMD-test-simulation. This executes all simulation tests (costs,
+      indicators, market data contracts, market data quality, time utilities). All tests must pass. Simulation owns economic
+      truth — any failure here invalidates the entire baseline.
+
+      '
+    - '[should] [targeted_test] PHASE 6 — ALPHAFORGE UNIT TESTS (INFORMATIONAL). Run CMD-test-alphaforge. At P0.8E/P0.9A baseline,
+      alphaforge/tests/ is expected to contain no test files. The command may report "no tests collected." This is EXPECTED
+      and does not indicate a failure. Record the output as informational evidence. If tests ARE found, they must pass.
+
+      '
+    - '[must] [final_validation] PHASE 7 — FINAL COMPREHENSIVE VALIDATION. Run CMD-final-validation. This executes the full
+      test suite (lib, integration, simulation, alphaforge) in a single pass, excluding only the Binance market data test
+      which requires network. All collected tests must pass with exit code 0. This is the authoritative pass/fail signal for
+      the baseline.
+
+      '
+    - '[must] [security_scan] PHASE 8 — FORBIDDEN PATTERN SCAN. After all test commands pass, perform a forbidden pattern
+      scan across all source directories. Search for: (a) xgboost imports or usage, (b) XGBClassifier/XGBRegressor references,
+      (c) fit() calls on ML models, (d) profitability claims or profit assertions, (e) live trading references, (f) exchange
+      API key patterns. Use grep or similar read-only discovery. Any match is a HARD FAILURE. Record scan results as evidence.
+
+      '
+    - '[must] [security_scan] PHASE 9 — FORBIDDEN FILE SCAN. Confirm that no file in forbidden directories (alphaforge/src/,
+      alphaforge/tests/, lib/, simulation/engine/, simulation/contracts/, runtime/, interface/, data/, datasets/, models/,
+      artifacts/, .github/, contracts/fixtures/, contracts/schemas/, contracts/mappings/) was modified during this verification.
+      Compare git status before and after. Any modification is a HARD FAILURE.
+
+      '
+    - '[must] [reporting] PHASE 10 — EVIDENCE ASSEMBLY AND ACCP REPORT. Collect all command outputs, exit codes, scan results,
+      and validation outcomes. Assemble into a single ACCP-YAML v2.0.0 report at reports/accp/alphaforge_baseline_verify.accp.yaml.
+      The report must include: result (PASS or FAIL), evidence items for each command (id, type, path, content_hash), forbidden
+      pattern scan results, forbidden file scan results, git status snapshot, and a summary verdict. If any phase failed,
+      result must be FAIL and the report must enumerate each failure with the relevant command output.
+
+      '
+    allowedFiles:
+    - reports/accp/**
+    - plans/alphaforge/**
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - lib/**
+    - simulation/engine/**
+    - simulation/contracts/**
+    - simulation/tests/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    - contracts/fixtures/**
+    - contracts/schemas/**
+    - contracts/mappings/**
+    - integration/tests/**
+    - v7/**
+    - alphaforge/docs/**
+  artifactPolicy:
+    class: test_only
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-00-01
+    description: Subplan 00_baseline_verify.plan.yaml self-validates against template.json with zero schema violations.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+    requiredEvidence:
+    - schema_validation
+  - id: AC-00-02
+    description: CMD-discover-git-status exits 0 and shows clean working tree (only untracked plans/ and reports/ permitted).
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-00-03
+    description: CMD-test-integration-alphaforge exits 0 — all 7 P0.8E integration test files pass (contract_loader, contract_semantics,
+      fixture_validation, handoff_builder, report_builders, scaffold_imports, schema_strictness).
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-integration-alphaforge
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-00-04
+    description: CMD-test-contract-registry-schema exits 0 — contract registry integrity and schema parity validated.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-contract-registry-schema
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-00-05
+    description: CMD-test-import-boundaries exits 0 — lib, integration, and simulation import boundaries enforced.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-import-boundaries
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-00-06
+    description: CMD-test-simulation exits 0 — all simulation tests pass (costs, indicators, market data, time).
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-simulation
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-00-07
+    description: CMD-test-alphaforge executes without error — alphaforge/tests/ is expected empty at P0.8E/P0.9A baseline;
+      no tests collected is NOT a failure.
+    level: advisory
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: true
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-00-08
+    description: CMD-final-validation exits 0 — comprehensive full-suite pass (lib + integration + simulation + alphaforge,
+      excluding binance).
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-final-validation
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-00-09
+    description: 'Forbidden pattern scan: zero matches for xgboost, XGBClassifier, XGBRegressor, fit(), profitability claims,
+      live trading, exchange API keys across all source directories.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-00-10
+    description: 'Forbidden file scan: zero modifications to any file in alphaforge/src/, alphaforge/tests/, lib/, simulation/engine/,
+      simulation/contracts/, runtime/, interface/, data/, datasets/, models/, artifacts/, .github/, contracts/fixtures/, contracts/schemas/,
+      contracts/mappings/.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-00-11
+    description: 'P0.8E contract artifacts present and valid: contracts/fixtures/alphaforge/*.json, contracts/schemas/alphaforge/*.schema.json,
+      contracts/mappings/*.md load as valid JSON/parseable documents.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-00-12
+    description: P0.9A audit report present at reports/accp/alphaforge_final_design_profitability_audit.accp.yaml and parses
+      as valid ACCP-YAML v2.0.0.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+      - source
+    requiredEvidence:
+    - source
+    - report
+  - id: AC-00-13
+    description: ACCP baseline verification report emitted at reports/accp/alphaforge_baseline_verify.accp.yaml with result
+      PASS, all evidence items attached, and accp_version 2.0.0.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+  - id: AC-00-14
+    description: All 14 acceptance criteria are individually evaluated and their verification outcomes recorded in the ACCP
+      report.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+commands:
+  exactAllowedCommands:
+  - id: CMD-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-integration-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_*.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-contract-registry-schema
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py
+      -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-import-boundaries
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py
+      simulation/tests/test_import_boundary.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-simulation
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-final-validation
+    kind: final_validation
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/
+      -q --ignore=lib/tests/test_market_data_binance.py
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 300
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network or market data during deterministic AlphaForge verification.
+  - id: DCMD-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-no-binance
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior allowed.
+  - id: DCMD-no-xgboost-training
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|fit\(|import xgboost
+    reason: No model training in verification subplan.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - diff
+  - source
+  - command
+  - test_output
+  - schema_validation
+  - report
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: false
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 0
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-00-verify.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: false

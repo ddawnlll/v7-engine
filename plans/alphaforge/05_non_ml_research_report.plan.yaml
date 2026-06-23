@@ -1,0 +1,1231 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-05
+  title: AlphaForge 05 — Non-ML Research Report Implementation
+  description: 'Implement alphaforge/src/alphaforge/reports/research.py — the non-ML research-report generation module. Adds
+    label distribution analysis, NO_TRADE quality breakdown, cost impact summary, and MHT hold semantics on top of the existing
+    scaffold builders. All reports are fixture-only, deterministic, and verdict INCONCLUSIVE. No model training. No XGBoost.
+    No profitability claims. Extends P0.9A scaffold with P0.9C non-ML analysis logic.
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - alphaforge/docs/report_contracts.md
+  - alphaforge/src/alphaforge/reports/__init__.py
+  - alphaforge/src/alphaforge/reports/research.py
+  - alphaforge/tests/**
+  - contracts/fixtures/alphaforge/*mode_research_report_minimal.json
+  - contracts/fixtures/alphaforge/alphaforge_research_report_minimal.json
+  - contracts/schemas/alphaforge/alphaforge_research_report.schema.json
+  - contracts/schemas/alphaforge/mode_research_report.schema.json
+  - integration/tests/__init__.py
+  - integration/tests/test_alphaforge_research_report.py
+  - reports/accp/**
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/src/**
+  - alphaforge/src/alphaforge/reports/builders.py
+  - alphaforge/tests/**
+  - artifacts/**
+  - data/**
+  - datasets/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/**
+  - simulation/contracts/**
+  - simulation/engine/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+- id: WS-05-SCHEMA
+  title: 'WS-05-SCHEMA: Reconcile Report Contracts with Schemas'
+  objective: 'WS-05-SCHEMA: Reconcile Report Contracts with Schemas'
+  implementation:
+    instructions:
+    - '[must] [action] Read report_contracts.md and enumerate every required section for ModeResearchReport (header, data_scope,
+      feature_set_refs, label_dataset_refs, alpha_theses, validation_summary, metrics, cost_stress, no_trade_comparison, regime_breakdown,
+      verdict, blocked_scopes, limitations). Cross-reference each against mode_research_report.schema.json required array.
+      Confirm 1:1 mapping for all 17 required top-level keys.'
+    - '[must] [action] Cross-reference alphaforge_research_report.schema.json required array (9 keys: schema_version, alphaforge_report_id,
+      run_id, created_at, mode_reports, promoted_candidates, rejected_candidates, global_limitations, v7_handoff_packages)
+      against report_contracts.md aggregate report sections. Confirm mode_reports minItems: 3 constraint (all three modes
+      required).'
+    - '[must] [action] Verify P0.8E nested required fields: cost_stress.baseline_fee_pct, cost_stress.combined_stress_edge_survives,
+      no_trade_comparison.active_beats_no_trade, no_trade_comparison.summary, regime_breakdown.regimes, regime_breakdown.edge_only_in_rare_regime,
+      metrics.oos_expectancy_r, metrics.oos_sharpe, metrics.oos_trade_count, multiple_hypothesis_control.tested_hypothesis_count,
+      multiple_hypothesis_control.correction_method, multiple_hypothesis_control.data_snooping_risk_flag. Confirm all documented
+      in report_contracts.md.'
+    - '[must] [action] Confirm verdict enum coupling: PRIMARY modes (SCALP, AGGRESSIVE_SCALP) allow REJECT/CONTINUE_RESEARCH/CANDIDATE_FOR_V7_GATES.
+      SECONDARY_BASELINE (SWING) allows REJECT/BASELINE_WEAK/BASELINE_VALID/CANDIDATE_FOR_V7_GATES. Document any gap between
+      schema enums and contract docs.'
+    - '[must] [action] Identify extension points for research.py: label_distribution output feeds label_dataset_refs section;
+      no_trade_quality outputs feed no_trade_comparison section; cost_impact feeds cost_stress section; mht_hold_summary feeds
+      multiple_hypothesis_control section.'
+    - '[should] [action] Document the complete schema-to-contract mapping in a comment block at the top of research.py (to
+      be created in WS-05-LABEL-DISTRIBUTION). No code changes to schemas or contracts.md.'
+    - '[should] [action] Verify existing minimal fixtures (scalp_mode_research_report_minimal.json, aggressive_scalp_mode_research_report_minimal.json,
+      swing_mode_research_report_minimal.json, alphaforge_research_report_minimal.json) validate against their respective
+      schemas. Report any validation gaps.'
+    allowedFiles:
+    - alphaforge/docs/report_contracts.md
+    - contracts/schemas/alphaforge/mode_research_report.schema.json
+    - contracts/schemas/alphaforge/alphaforge_research_report.schema.json
+    - contracts/fixtures/alphaforge/*mode_research_report_minimal.json
+    - contracts/fixtures/alphaforge/alphaforge_research_report_minimal.json
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-05-SCHEMA-01
+    description: All 17 required top-level keys in mode_research_report.schema.json are accounted for in report_contracts.md
+      with 1:1 mapping
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema:contracts/schemas/alphaforge/mode_research_report.schema.json
+      - doc:alphaforge/docs/report_contracts.md
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-SCHEMA-02
+    description: All 9 required top-level keys in alphaforge_research_report.schema.json are accounted for in report_contracts.md
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema:contracts/schemas/alphaforge/alphaforge_research_report.schema.json
+      - doc:alphaforge/docs/report_contracts.md
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-SCHEMA-03
+    description: P0.8E nested required fields in cost_stress (baseline_fee_pct, combined_stress_edge_survives) documented
+      in report_contracts.md
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema:contracts/schemas/alphaforge/mode_research_report.schema.json
+      - doc:alphaforge/docs/report_contracts.md
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-SCHEMA-04
+    description: P0.8E nested required fields in no_trade_comparison (active_beats_no_trade, summary) documented in report_contracts.md
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema:contracts/schemas/alphaforge/mode_research_report.schema.json
+      - doc:alphaforge/docs/report_contracts.md
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-SCHEMA-05
+    description: P0.8E nested required fields in metrics (oos_expectancy_r, oos_sharpe, oos_trade_count) documented in report_contracts.md
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema:contracts/schemas/alphaforge/mode_research_report.schema.json
+      - doc:alphaforge/docs/report_contracts.md
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-SCHEMA-06
+    description: P0.8E nested required fields in multiple_hypothesis_control (tested_hypothesis_count, correction_method,
+      data_snooping_risk_flag) documented in report_contracts.md
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema:contracts/schemas/alphaforge/mode_research_report.schema.json
+      - doc:alphaforge/docs/report_contracts.md
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-SCHEMA-07
+    description: 'Verdict enum coupling confirmed: PRIMARY→{REJECT, CONTINUE_RESEARCH, CANDIDATE_FOR_V7_GATES}, SECONDARY_BASELINE→{REJECT,
+      BASELINE_WEAK, BASELINE_VALID, CANDIDATE_FOR_V7_GATES}'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema:contracts/schemas/alphaforge/mode_research_report.schema.json
+      - doc:alphaforge/docs/report_contracts.md
+    requiredEvidence:
+    - source
+    - command
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-05-SCHEMA'
+    usageProofs:
+    - id: USE-WS-05-SCHEMA
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-05-SCHEMA
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-05-LABEL-DISTRIBUTION
+  title: 'WS-05-LABEL-DISTRIBUTION: Implement analyze_label_distribution()'
+  objective: 'WS-05-LABEL-DISTRIBUTION: Implement analyze_label_distribution()'
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/src/alphaforge/reports/research.py with module docstring and schema audit comment
+      block from WS-05-SCHEMA mapping all 17 ModeResearchReport keys and 9 AlphaForgeResearchReport keys to their contract
+      sections.'
+    - '[must] [action] Implement analyze_label_distribution(labels: list[dict], mode: str) -> dict. Input is a list of AlphaForgeLabel
+      dicts consumed from TASK-04 LabeledDataset. Output is a LabelDistribution dict with keys: total_count, long_pct, short_pct,
+      no_trade_pct, ambiguous_pct, best_action_counts (dict of best_action_label -> count), label_validity_distribution (dict
+      of validity -> count).'
+    - '[must] [action] Compute percentages as (count / total) * 100 rounded to 1 decimal. Handle empty input gracefully —
+      return zeros with total_count=0 and empty best_action_counts/label_validity_distribution.'
+    - '[must] [action] Return shape: {total_count: int, long_pct: float, short_pct: float, no_trade_pct: float, ambiguous_pct:
+      float, best_action_counts: {action: count}, label_validity_distribution: {validity: count}}. All float values rounded
+      to 1 decimal place.'
+    - '[must] [action] Update alphaforge/src/alphaforge/reports/__init__.py to export analyze_label_distribution.'
+    - '[must] [action] Add helper _parse_best_action(label: dict) -> str that extracts best_action_label, handling missing
+      keys gracefully (return ''UNKNOWN'').'
+    - '[must] [action] Add helper _parse_label_validity(label: dict) -> str that extracts label_validity, handling missing
+      keys gracefully (return ''UNKNOWN'').'
+    allowedFiles:
+    - alphaforge/src/alphaforge/reports/__init__.py
+    - alphaforge/src/alphaforge/reports/research.py
+    forbiddenFiles:
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+    - alphaforge/src/alphaforge/reports/builders.py
+    dependencies:
+    - WS-05-SCHEMA
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-05-LABEL-01
+    description: analyze_label_distribution() exists in research.py and is exported from __init__.py
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - import_check
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-LABEL-02
+    description: analyze_label_distribution() returns dict with keys total_count, long_pct, short_pct, no_trade_pct, ambiguous_pct,
+      best_action_counts, label_validity_distribution
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-LABEL-03
+    description: Percentages sum to 100.0 (+/- 0.5 tolerance) when all labels have valid best_action_label
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-LABEL-04
+    description: Empty input returns all zeros with total_count=0 and empty best_action_counts/label_validity_distribution
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-LABEL-05
+    description: best_action_counts maps each unique best_action_label to its integer count
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-LABEL-06
+    description: label_validity_distribution maps each unique label_validity value to its integer count
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-LABEL-07
+    description: No xgboost import, no XGBClassifier, no XGBRegressor, no fit() call in research.py
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+      commandRef: CMD-no-training-scan
+    requiredEvidence:
+    - source
+    - command
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-05-LABEL-DISTRIBUTION'
+    usageProofs:
+    - id: USE-WS-05-LABEL-DISTRIBUTION
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-05-LABEL-DISTRIBUTION
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-05-NO-TRADE
+  title: 'WS-05-NO-TRADE: Implement analyze_no_trade_quality()'
+  objective: 'WS-05-NO-TRADE: Implement analyze_no_trade_quality()'
+  implementation:
+    instructions:
+    - '[must] [action] Implement analyze_no_trade_quality(labels: list[dict], mode: str, threshold: float = 0.5) -> dict in
+      research.py.'
+    - '[must] [action] Enumerate the 4 NO_TRADE subcategories: (1) NO_EDGE — simulation found no directional edge above noise,
+      (2) COST_DOMINATED — gross edge positive but net edge negative after costs, (3) AMBIGUOUS — label validity insufficient
+      to assign direction, (4) EXCLUDED — data quality or scope filter excluded the bar. Each subcategory must carry name,
+      count, and pct fields.'
+    - '[must] [action] Return shape: {total_no_trade: int, no_trade_pct: float, subcategories: [{name: str, count: int, pct:
+      float}] (exactly 4 entries), dominates_directional: bool, directional_pct: float, summary: str}.'
+    - '[must] [action] Set dominates_directional = True when no_trade_pct > threshold AND no_trade_pct > max(long_pct, short_pct).
+      Default threshold 0.5 (50%).'
+    - '[must] [action] When label data lacks subcategory detail (scaffold fixture case), assign all NO_TRADE labels to NO_EDGE
+      subcategory and document the limitation in the summary string.'
+    - '[must] [action] Handle empty input gracefully — return zeros with total_no_trade=0, all four subcategories with count=0
+      and pct=0.0, dominates_directional=False.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/reports/research.py
+    forbiddenFiles:
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+    - alphaforge/src/alphaforge/reports/builders.py
+    dependencies:
+    - WS-05-LABEL-DISTRIBUTION
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-05-NOTRADE-01
+    description: analyze_no_trade_quality() exists in research.py with correct signature (labels, mode, threshold)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-NOTRADE-02
+    description: Returns dict with keys total_no_trade, no_trade_pct, subcategories, dominates_directional, directional_pct,
+      summary
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-NOTRADE-03
+    description: 'subcategories array has exactly 4 entries: NO_EDGE, COST_DOMINATED, AMBIGUOUS, EXCLUDED — each with name,
+      count, pct'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-NOTRADE-04
+    description: dominates_directional is True when no_trade_pct > 0.5 and no_trade_pct exceeds max(long_pct, short_pct)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-NOTRADE-05
+    description: dominates_directional is False when directional labels (LONG+SHORT) constitute majority
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-NOTRADE-06
+    description: Empty input returns total_no_trade=0, four subcategories each with count=0/pct=0.0, dominates_directional=False
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-NOTRADE-07
+    description: No xgboost import, no XGBClassifier, no XGBRegressor, no fit() call in research.py
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+      commandRef: CMD-no-training-scan
+    requiredEvidence:
+    - source
+    - command
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-05-NO-TRADE'
+    usageProofs:
+    - id: USE-WS-05-NO-TRADE
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-05-NO-TRADE
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-05-COST-MHT
+  title: 'WS-05-COST-MHT: Implement Cost Impact Summary and MHT Hold Semantics'
+  objective: 'WS-05-COST-MHT: Implement Cost Impact Summary and MHT Hold Semantics'
+  implementation:
+    instructions:
+    - '[must] [action] Implement cost_impact_summary(labels: list[dict], mode: str) -> dict in research.py.'
+    - '[must] [action] Extract gross_R values from label rows (field: gross_r or gross_r_multiple). Compute mean gross R.
+      Extract net_R values (field: net_r or net_r_multiple). Compute mean net R. Cost drag = mean_gross_R - mean_net_R. cost_drag_pct
+      = (cost_drag / abs(mean_gross_R)) * 100 if mean_gross_R != 0 else 0.0.'
+    - '[must] [action] Return shape: {gross_r_mean: float, net_r_mean: float, cost_drag: float, cost_drag_pct: float, sample_count:
+      int, has_sufficient_sample: bool, summary: str}. has_sufficient_sample is True when sample_count >= 100.'
+    - '[must] [action] Handle empty input — return zeros with sample_count=0, has_sufficient_sample=False, summary=''No label
+      data available for cost analysis.'''
+    - '[must] [action] Implement mht_hold_summary(tested_hypothesis_count: int, correction_method: str = ''NONE_APPLIED'')
+      -> dict in research.py.'
+    - '[must] [action] When correction_method is NONE_APPLIED, return {correction_method: ''NONE_APPLIED'', corrected_significance:
+      null, hold_active: true, hold_reason: str, requires_model_training: true, notes: str}. hold_reason must state that MHT
+      correction requires model training which is not performed in this non-ML phase. notes must document what training artifacts
+      would be needed to lift the hold.'
+    - '[must] [action] Implement assemble_non_ml_research_context(labels: list[dict], mode: str) -> dict that aggregates label_distribution
+      + no_trade_quality + cost_impact + mht_hold into a single context dict with keys label_distribution, no_trade_quality,
+      cost_impact, mht_hold. This is the P0.9A extension point consumed by builders.py.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/reports/research.py
+    forbiddenFiles:
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+    - alphaforge/src/alphaforge/reports/builders.py
+    dependencies:
+    - WS-05-NO-TRADE
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-05-COST-01
+    description: cost_impact_summary() returns dict with gross_r_mean, net_r_mean, cost_drag, cost_drag_pct, sample_count,
+      has_sufficient_sample, summary
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-COST-02
+    description: cost_drag = gross_r_mean - net_r_mean; cost_drag_pct computed correctly when gross_r_mean != 0; cost_drag_pct
+      = 0.0 when gross_r_mean == 0
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-COST-03
+    description: Empty input returns sample_count=0, has_sufficient_sample=False, all R values 0.0
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-COST-04
+    description: mht_hold_summary() returns correction_method='NONE_APPLIED', corrected_significance=null, hold_active=true,
+      requires_model_training=true
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-COST-05
+    description: mht_hold_summary hold_reason explicitly states that MHT correction requires model training; notes documents
+      training artifacts needed to lift hold
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-COST-06
+    description: assemble_non_ml_research_context() aggregates all four analysis dicts into single context with keys label_distribution,
+      no_trade_quality, cost_impact, mht_hold
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-COST-07
+    description: No xgboost import, no XGBClassifier, no XGBRegressor, no fit() call in research.py
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+      commandRef: CMD-no-training-scan
+    requiredEvidence:
+    - source
+    - command
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-05-COST-MHT'
+    usageProofs:
+    - id: USE-WS-05-COST-MHT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-05-COST-MHT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-05-VALIDATION
+  title: 'WS-05-VALIDATION: Create Tests for Research Report Generation'
+  objective: 'WS-05-VALIDATION: Create Tests for Research Report Generation'
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/tests/test_research_report.py with unit tests for all five analysis functions (analyze_label_distribution,
+      analyze_no_trade_quality, cost_impact_summary, mht_hold_summary, assemble_non_ml_research_context).'
+    - '[must] [action] Test analyze_label_distribution with a fixture of 100 mock labels (40 LONG, 30 SHORT, 20 NO_TRADE,
+      10 AMBIGUOUS). Verify percentages: 40.0, 30.0, 20.0, 10.0. Verify best_action_counts has correct keys and counts. Verify
+      label_validity_distribution maps each validity to correct count.'
+    - '[must] [action] Test analyze_label_distribution with empty list — verify all zeros with total_count=0.'
+    - '[must] [action] Test analyze_no_trade_quality with fixture where NO_TRADE dominates (60 NO_TRADE out of 100). Verify
+      dominates_directional=True. Test with fixture where directional dominates (20 NO_TRADE out of 100). Verify dominates_directional=False.'
+    - '[must] [action] Test cost_impact_summary with fixture labels carrying gross_r and net_r fields. Verify cost_drag =
+      gross_r_mean - net_r_mean exactly. Test with gross_r_mean=0 (edge case) — verify cost_drag_pct=0.0 and no division-by-zero.'
+    - '[must] [action] Test mht_hold_summary with default NONE_APPLIED — verify hold_active=True, requires_model_training=True,
+      corrected_significance is None. Test that hold_reason string contains ''model training''.'
+    - '[must] [action] Test assemble_non_ml_research_context with mock label list — verify all four sub-keys present and correctly
+      typed. Verify context dict is JSON-serializable.'
+    allowedFiles:
+    - alphaforge/tests/**
+    - integration/tests/test_alphaforge_research_report.py
+    - integration/tests/__init__.py
+    forbiddenFiles:
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+    - alphaforge/src/alphaforge/reports/builders.py
+    dependencies:
+    - WS-05-COST-MHT
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-05-TEST-01
+    description: test_analyze_label_distribution_with_fixture passes with correct percentages (40.0/30.0/20.0/10.0)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-TEST-02
+    description: test_analyze_label_distribution_empty passes with all zeros and total_count=0
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-TEST-03
+    description: test_analyze_no_trade_quality_dominates passes when NO_TRADE > 50%
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-TEST-04
+    description: test_analyze_no_trade_quality_not_dominant passes when directional > NO_TRADE
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-TEST-05
+    description: test_cost_impact_summary_computation passes with correct cost drag arithmetic and zero-gross edge case
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-TEST-06
+    description: test_mht_hold_summary_requires_model_training passes with hold_active=True and hold_reason containing 'model
+      training'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-TEST-07
+    description: test_assemble_context_all_keys_present passes with all four sub-dicts populated and JSON-serializable
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-05-VALIDATION'
+    usageProofs:
+    - id: USE-WS-05-VALIDATION
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-05-VALIDATION
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-05-REPORT
+  title: 'WS-05-REPORT: Run Integration Tests and Emit ACCP Report'
+  objective: 'WS-05-REPORT: Run Integration Tests and Emit ACCP Report'
+  implementation:
+    instructions:
+    - '[must] [action] Create integration/tests/test_alphaforge_research_report.py with integration tests for schema-valid
+      report generation across all modes.'
+    - '[must] [action] Test that build_mode_research_report() + research context produces schema-valid ModeResearchReport
+      for all 3 modes (SCALP, AGGRESSIVE_SCALP, SWING). Validate each against mode_research_report.schema.json with all 17
+      required keys present.'
+    - '[must] [action] Test that build_alphaforge_research_report() produces schema-valid AlphaForgeResearchReport aggregate
+      with all 9 required keys present. Validate against alphaforge_research_report.schema.json. Verify mode_reports array
+      has exactly 3 entries (SCALP, AGGRESSIVE_SCALP, SWING).'
+    - '[must] [action] Test that all report verdicts are INCONCLUSIVE — no CANDIDATE_FOR_V7_GATES. PRIMARY modes (SCALP, AGGRESSIVE_SCALP):
+      verdict must be CONTINUE_RESEARCH or REJECT. SECONDARY_BASELINE (SWING): verdict must be BASELINE_WEAK or REJECT. INCONCLUSIVE
+      is the synthetic check: no report may carry a promotion-authorizing verdict.'
+    - '[must] [action] Test that no profitability claims exist in any report output. Verify cost_stress.combined_stress_edge_survives
+      is False. Verify no_trade_comparison.active_beats_no_trade is False. Verify no field claims ''alpha works'' or ''profitable''.'
+    - '[must] [action] Run CMD-test-alphaforge and CMD-test-integration-alphaforge. Both must exit 0 with zero failures.'
+    - '[must] [action] Run CMD-no-training-scan on alphaforge/src/alphaforge/reports/ — confirm grep finds zero matches (exit
+      code 1). No xgboost, XGBClassifier, XGBRegressor, or fit() in any report source file.'
+    - '[must] [action] Emit ACCP-YAML 2.0.0 report to reports/accp/alphaforge_research_report.accp.yaml with required keys:
+      result, scope_confirmation, files_changed, decisions_locked, remaining_holds, safe_next_step, commands_run, evidence.'
+    allowedFiles:
+    - integration/tests/test_alphaforge_research_report.py
+    - integration/tests/__init__.py
+    - reports/accp/**
+    forbiddenFiles:
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+    - alphaforge/src/**
+    dependencies:
+    - WS-05-VALIDATION
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-05-REPORT-01
+    description: test_mode_research_report_scalp_validates — SCALP ModeResearchReport validates against schema with all 17
+      required keys
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-REPORT-02
+    description: test_mode_research_report_aggressive_scalp_validates — AGGRESSIVE_SCALP ModeResearchReport validates against
+      schema with all 17 required keys
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-REPORT-03
+    description: test_mode_research_report_swing_validates — SWING ModeResearchReport validates against schema with all 17
+      required keys
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-REPORT-04
+    description: test_alphaforge_research_report_aggregate_validates — AlphaForgeResearchReport validates against schema with
+      all 9 required keys and exactly 3 mode_reports
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-REPORT-05
+    description: test_all_verdicts_inconclusive — no report carries CANDIDATE_FOR_V7_GATES; PRIMARY modes are CONTINUE_RESEARCH
+      or REJECT; SWING is BASELINE_WEAK or REJECT
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-REPORT-06
+    description: test_no_profitability_claims — combined_stress_edge_survives=False, active_beats_no_trade=False, no 'profitable'
+      or 'alpha works' claims in any report
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-05-REPORT-07
+    description: ACCP report emitted at reports/accp/alphaforge_research_report.accp.yaml with all 8 required keys (result,
+      scope_confirmation, files_changed, decisions_locked, remaining_holds, safe_next_step, commands_run, evidence)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - source
+    - command
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-05-REPORT'
+    usageProofs:
+    - id: USE-WS-05-REPORT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-05-REPORT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+commands:
+  exactAllowedCommands:
+  - id: CMD-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-integration-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_*.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-contract-registry-schema
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py
+      -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-import-boundaries
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py
+      simulation/tests/test_import_boundary.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-simulation
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-no-training-scan
+    kind: targeted_test
+    command: grep -rn 'xgboost\|XGBClassifier\|XGBRegressor\|\.fit(' alphaforge/src/alphaforge/reports/ --include='*.py'
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 1
+    networkAllowed: false
+    shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network or market data during deterministic AlphaForge implementation.
+  - id: DCMD-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-no-binance
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior allowed.
+  - id: DCMD-no-xgboost-training
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|fit\(|import xgboost
+    reason: No model training in deterministic research report plan.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - diff
+  - source
+  - wiring
+  - command
+  - test_output
+  - schema_validation
+  - report
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-05.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

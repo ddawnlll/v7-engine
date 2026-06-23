@@ -1,0 +1,1208 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-02-LABEL-ADAPTER
+  title: AlphaForge P0.9B — Label Adapter (TASK-02 of Master Execution Plan)
+  description: 'Implement `alphaforge/src/alphaforge/labels/adapter.py` — a deterministic adapter that transforms SimulationOutput
+    fixture records into AlphaForgeLabel records per label_contract.md and simulation_to_alphaforge.md mapping.
+
+    The LabelAdapter class performs field-level mapping of all 15 fields from long_R_net through cost_impact_short, classifies
+    NO_TRADE quality into four categories (CORRECT_NO_TRADE, SAVED_LOSS, MISSED_OPPORTUNITY, AMBIGUOUS_NO_TRADE), filters
+    rows by label_validity, and validates outputs against alphaforge_label.schema.json. All mapping is derived from the authoritative
+    simulation_to_alphaforge.json field-level mapping. The adapter is fully deterministic — same SimulationOutput inputs always
+    produce identical AlphaForgeLabel outputs.
+
+    Cost-aware fields (gross R vs net R, fee_cost_r, slippage_cost_r, total_cost_r) are mapped explicitly. The cost-consumed-edge
+    case (gross > 0 but net < 0) is flagged. Funding status is propagated as DEFERRED.
+
+    This is a deterministic data transformation with no network calls, no exchange APIs, no model training, and no simulation
+    semantics modification. SimulationOutput is consumed as-is; AlphaForge does not reimplement simulation logic.
+
+    Predecessor: TASK-01-DATA-MANIFEST. Successor: TASK-03-FEATURE-PIPELINE.
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - alphaforge/docs/label_contract.md
+  - alphaforge/src/alphaforge/labels/__init__.py
+  - alphaforge/src/alphaforge/labels/adapter.py
+  - alphaforge/tests/test_label_adapter_no_trade.py
+  - alphaforge/tests/test_label_adapter_schema.py
+  - contracts/fixtures/alphaforge_label_minimal.json
+  - contracts/fixtures/simulation_output_minimal.json
+  - contracts/mappings/simulation_to_alphaforge.json
+  - contracts/mappings/simulation_to_alphaforge.md
+  - contracts/registry.json
+  - contracts/schemas/alphaforge_label.schema.json
+  - contracts/schemas/simulation_output.schema.json
+  - plans/alphaforge/02_label_adapter.plan.yaml
+  - reports/accp/alphaforge_label_adapter.accp.yaml
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/src/**
+  - alphaforge/src/alphaforge/contracts/**
+  - alphaforge/src/alphaforge/data/**
+  - alphaforge/src/alphaforge/handoff/**
+  - alphaforge/src/alphaforge/modes/**
+  - alphaforge/src/alphaforge/reports/**
+  - alphaforge/tests/**
+  - artifacts/**
+  - data/**
+  - datasets/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/contracts/**
+  - simulation/engine/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+- id: WS-02-MAPPING-DESIGN
+  title: Design LabelAdapter Class — Field Mapping and NO_TRADE Quality Classification
+  objective: Design LabelAdapter Class — Field Mapping and NO_TRADE Quality Classification
+  implementation:
+    instructions:
+    - '[must] [action] Read alphaforge/docs/label_contract.md fully. Document every one of the 15 label fields that the adapter
+      must map: long_R_net, short_R_net, long_mfe_R, short_mfe_R, long_mae_R, short_mae_R, saved_loss_score, missed_opportunity_score,
+      no_trade_quality, best_action_label, label_validity, long_R_gross, short_R_gross, cost_impact_long, cost_impact_short.
+      Cross-reference each against the simulation_to_alphaforge.json field mapping to confirm source paths and types.
+
+      '
+    - '[must] [action] Design the LabelAdapter class signature. It must expose two public methods: adapt_simulation_output(sim_output:
+      dict) -> dict that produces an AlphaForgeLabel-compatible dict, and classify_no_trade_quality(no_trade_outcome: dict)
+      -> str that returns one of CORRECT_NO_TRADE, SAVED_LOSS, MISSED_OPPORTUNITY, AMBIGUOUS_NO_TRADE. Document the input
+      contract (SimulationOutput shape) and output contract (AlphaForgeLabel shape) with type annotations.
+
+      '
+    - '[must] [action] Design the NO_TRADE quality classifier logic. Define the decision rules: CORRECT_NO_TRADE when was_correct_skip
+      is True and both saved_loss_score and missed_opportunity_score are low; SAVED_LOSS when saved_loss_score exceeds threshold;
+      MISSED_OPPORTUNITY when missed_opportunity_score exceeds threshold; AMBIGUOUS_NO_TRADE when signals conflict or scores
+      are within ambiguity margin. Specify the threshold values and the tie-breaking order.
+
+      '
+    - '[must] [action] Design cost-aware field population. Map long_R_gross and short_R_gross from realized_r_gross. Map fee_cost_r_long/short
+      from fee_cost_r. Map slippage_cost_r_long/short from slippage_cost_r. Map total_cost_r_long/short from total_cost_r.
+      Define the cost-consumed-edge detection: if realized_r_gross > 0 AND realized_r_net < 0, set a flag or record a warning.
+      Document that funding_status is always DEFERRED.
+
+      '
+    - '[must] [action] Design label_validity filtering logic. Rows with resolution_status UNRESOLVED or INVALIDATED must be
+      excluded (label_validity = "invalid"). Rows with is_ambiguous = true must be excluded unless the ambiguity is resolvable
+      (label_validity = "ambiguous_excluded"). Rows with resolution_status COMPLETE and is_ambiguous = false produce label_validity
+      = "valid". Document the validity enum values and their inclusion/exclusion rules for training.
+
+      '
+    - '[must] [action] Verify that the design does not require network access, exchange API keys, Binance imports, or real
+      market data. Explicitly enumerate which Python stdlib modules the implementation will use (dataclasses, json, copy,
+      typing, enum) and confirm no external pip dependencies beyond what alphaforge already declares.
+
+      '
+    - '[must] [action] Confirm domain boundary: alphaforge.labels must not import from simulation/, v7/, runtime/, or interface/.
+      It may import from alphaforge.contracts.loader, alphaforge.paths, and alphaforge.errors. Document the allowed import
+      surface.
+
+      '
+    allowedFiles:
+    - alphaforge/docs/label_contract.md
+    - contracts/mappings/simulation_to_alphaforge.md
+    - contracts/mappings/simulation_to_alphaforge.json
+    - contracts/schemas/alphaforge_label.schema.json
+    - contracts/schemas/simulation_output.schema.json
+    - contracts/registry.json
+    - plans/alphaforge/02_label_adapter.plan.yaml
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+  artifactPolicy:
+    class: documentation
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: false
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-02-001
+    description: label_contract.md field definitions are fully documented and cross-referenced against simulation_to_alphaforge.json
+      — all 15 fields confirmed with source paths and types
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-02-002
+    description: 'LabelAdapter class signature is designed with adapt_simulation_output(sim_output: dict) -> dict and classify_no_trade_quality(no_trade_outcome:
+      dict) -> str documented with type annotations'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-02-003
+    description: NO_TRADE quality classifier decision rules are specified for all 4 categories with threshold values and tie-breaking
+      order — CORRECT_NO_TRADE, SAVED_LOSS, MISSED_OPPORTUNITY, AMBIGUOUS_NO_TRADE
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-02-004
+    description: 'Cost-aware field mapping is designed: gross_R, fee_cost_r, slippage_cost_r, total_cost_r for both LONG and
+      SHORT sides — cost-consumed-edge flag logic defined'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-02-005
+    description: label_validity filtering logic is specified with enum values (valid, invalid, ambiguous_excluded) and inclusion/exclusion
+      rules for training
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-02-006
+    description: Design explicitly confirms no network access, no exchange API, no Binance import, no xgboost — allowed imports
+      limited to stdlib and existing alphaforge modules
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-02-007
+    description: 'Domain boundary confirmed: alphaforge.labels does not import from simulation/, v7/, runtime/, or interface/
+      — allowed import surface documented'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-02-008
+    description: No source files in alphaforge/src/ are created or modified during design phase
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - diff
+      - command
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - diff
+    - command
+- id: WS-02-IMPLEMENT
+  title: Implement LabelAdapter — adapt_simulation_output() and classify_no_trade_quality()
+  objective: Implement LabelAdapter — adapt_simulation_output() and classify_no_trade_quality()
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/src/alphaforge/labels/__init__.py that exports LabelAdapter and the public functions
+      adapt_simulation_output and classify_no_trade_quality. Follow the existing alphaforge __init__.py convention for exports.
+
+      '
+    - '[must] [action] Create alphaforge/src/alphaforge/labels/adapter.py with the LabelAdapter class. Implement adapt_simulation_output(sim_output:
+      dict) -> dict that maps all 15 fields from SimulationOutput to AlphaForgeLabel format per simulation_to_alphaforge.json.
+      Use explicit field access (no wildcard passthrough). Handle missing optional fields gracefully with None defaults. Populate
+      all required fields: symbol, timestamp (from decision_timestamp), mode, simulation_family_version, label_interpretation_version,
+      long_R_net, short_R_net, long_R_gross, short_R_gross, total_cost_r_long, total_cost_r_short, best_action_label, no_trade_quality,
+      label_validity, resolution_status, simulation_profile_id.
+
+      '
+    - '[must] [action] Implement classify_no_trade_quality(no_trade_outcome: dict) -> str with the decision rules from the
+      design phase. Use was_correct_skip, saved_loss_score, and missed_opportunity_score as primary signals. CORRECT_NO_TRADE:
+      was_correct_skip is True AND both scores below threshold. SAVED_LOSS: saved_loss_score > missed_opportunity_score AND
+      saved_loss_score >= threshold. MISSED_OPPORTUNITY: missed_opportunity_score > saved_loss_score AND missed_opportunity_score
+      >= threshold. AMBIGUOUS_NO_TRADE: scores within ambiguity margin or signals conflict. The function must be deterministic
+      — no randomness, no external state.
+
+      '
+    - '[must] [action] Implement cost-aware field population. Map long_R_gross from long_outcome.realized_r_gross, short_R_gross
+      from short_outcome.realized_r_gross. Map fee_cost_r_long from long_outcome.fee_cost_r, fee_cost_r_short from short_outcome.fee_cost_r.
+      Map slippage_cost_r_long from long_outcome.slippage_cost_r, slippage_cost_r_short from short_outcome.slippage_cost_r.
+      Map total_cost_r_long from long_outcome.total_cost_r, total_cost_r_short from short_outcome.total_cost_r. Add cost_impact_long
+      and cost_impact_short as total_cost_r aliases for downstream compatibility. Detect cost-consumed-edge: if long_R_gross
+      > 0 and long_R_net < 0 (or short equivalent), record in a warnings list.
+
+      '
+    - '[must] [action] Implement label_validity filtering. Derive label_validity from resolution_status and is_ambiguous:
+      COMPLETE + not ambiguous -> "valid"; COMPLETE + ambiguous -> "ambiguous_excluded"; UNRESOLVED -> "invalid"; INVALIDATED
+      -> "invalid". The adapt_simulation_output function must still produce a label for invalid rows (so consumers can inspect),
+      but label_validity must correctly flag them.
+
+      '
+    - '[must] [action] Ensure deterministic output. Do not use random, time, or any non-deterministic source. Do not generate
+      timestamps — use decision_timestamp from input. Do not generate IDs — use simulation_run_id from input. All field values
+      must be direct mappings or deterministic computations from input fields. Same SimulationOutput must produce bit-for-bit
+      identical AlphaForgeLabel dict.
+
+      '
+    - '[must] [action] Set funding_status to "DEFERRED" on every output record. Propagate simulation_family_version from lineage.simulation_family_version.
+      Propagate simulation_profile_id from lineage.simulation_profile_version. Set cost_model_version from lineage.cost_model_version
+      if available. Set simulation_engine_version from lineage.simulation_family_version. Set label_interpretation_version
+      to "1.0.0" (this adapter''s version).
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/labels/__init__.py
+    - alphaforge/src/alphaforge/labels/adapter.py
+    - contracts/schemas/alphaforge_label.schema.json
+    - contracts/mappings/simulation_to_alphaforge.json
+    - contracts/fixtures/simulation_output_minimal.json
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/data/**
+    - alphaforge/src/alphaforge/contracts/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/src/alphaforge/reports/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    dependencies:
+    - WS-02-MAPPING-DESIGN
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-02-009
+    description: __init__.py exports LabelAdapter, adapt_simulation_output, and classify_no_trade_quality
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: integration_contract
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - wiring
+    requiredEvidence:
+    - source
+    - wiring
+  - id: AC-02-010
+    description: adapt_simulation_output() maps all 15 fields from SimulationOutput to AlphaForgeLabel dict — long_R_net through
+      cost_impact_short — with correct types
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-011
+    description: classify_no_trade_quality() returns correct category for all 4 NO_TRADE quality types given representative
+      no_trade_outcome dicts
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-012
+    description: 'Cost-aware fields correctly populated: long_R_gross, short_R_gross, fee_cost_r_long/short, slippage_cost_r_long/short,
+      total_cost_r_long/short derived from ActionOutcome fields'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-013
+    description: 'Cost-consumed-edge is detected: when long_R_gross > 0 and long_R_net < 0 (or short equivalent), a warning
+      is recorded'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-014
+    description: 'label_validity filtering works correctly: COMPLETE + not ambiguous row returns ''valid''; UNRESOLVED row
+      returns ''invalid''; INVALIDATED row returns ''invalid'''
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-015
+    description: Same SimulationOutput input produces bit-for-bit identical AlphaForgeLabel output on repeated invocations
+      — deterministic output verified
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      - command
+    requiredEvidence:
+    - source
+    - test_output
+    - command
+  - id: AC-02-016
+    description: Adapter does not import from simulation/, v7/, runtime/, or interface/ — import boundary enforced
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-02-IMPLEMENT'
+    usageProofs:
+    - id: USE-WS-02-IMPLEMENT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-02-IMPLEMENT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-02-NO-TRADE-TESTS
+  title: Test NO_TRADE Quality Classification and Best Action Labels
+  objective: Test NO_TRADE Quality Classification and Best Action Labels
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/tests/test_label_adapter_no_trade.py. Write a test for each of the 4 NO_TRADE quality
+      categories using crafted no_trade_outcome fixture dicts. CORRECT_NO_TRADE test: was_correct_skip=True, saved_loss_score
+      low, missed_opportunity_score low. SAVED_LOSS test: saved_loss_score high, missed_opportunity_score low. MISSED_OPPORTUNITY
+      test: saved_loss_score low, missed_opportunity_score high. AMBIGUOUS_NO_TRADE test: scores within ambiguity margin or
+      conflicting signals. Verify classify_no_trade_quality() returns the exact expected string for each case.
+
+      '
+    - '[must] [action] Write tests for all 4 best_action_label values: LONG_NOW, SHORT_NOW, NO_TRADE, AMBIGUOUS_STATE. Use
+      minimal but valid SimulationOutput fixture dicts with best_action set to each value. Verify adapt_simulation_output()
+      sets best_action_label correctly in the output. Verify that best_action_after_cost is also populated when cost fields
+      are present.
+
+      '
+    - '[must] [action] Write a deterministic output test: call adapt_simulation_output() twice with the identical SimulationOutput
+      fixture dict and assert the two AlphaForgeLabel dicts are equal (deep equality). Run with multiple fixture variants
+      (different modes, different symbols, edge-case values). This must pass with identical bit-for-bit output.
+
+      '
+    - '[must] [action] Write tests for label_validity filtering: create SimulationOutput fixture variants with resolution_status
+      COMPLETE (expect valid), UNRESOLVED (expect invalid), INVALIDATED (expect invalid). Create a variant with is_ambiguous
+      True (expect ambiguous_excluded). Verify adapt_simulation_output() still produces output for all cases but sets label_validity
+      correctly.
+
+      '
+    - '[must] [action] Test NO_TRADE quality when no_trade_outcome has edge-case values: zero scores, negative scores (if
+      allowed), missing optional fields. Verify classify_no_trade_quality() handles these gracefully without crashing and
+      returns a valid enum value.
+
+      '
+    - '[must] [action] Test that the adapter does not modify the input SimulationOutput dict. Pass a deep-copied fixture,
+      call adapt_simulation_output(), and assert the original dict is unchanged. This verifies the "SimulationOutput consumed
+      as-is" requirement.
+
+      '
+    - '[must] [action] Run CMD-test-alphaforge and CMD-discover-git-status. All tests must pass green. git status must show
+      only allowed file modifications.
+
+      '
+    allowedFiles:
+    - alphaforge/tests/test_label_adapter_no_trade.py
+    - alphaforge/src/alphaforge/labels/__init__.py
+    - alphaforge/src/alphaforge/labels/adapter.py
+    - contracts/fixtures/simulation_output_minimal.json
+    - contracts/schemas/simulation_output.schema.json
+    - contracts/schemas/alphaforge_label.schema.json
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/data/**
+    - alphaforge/src/alphaforge/contracts/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/src/alphaforge/reports/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    dependencies:
+    - WS-02-IMPLEMENT
+  artifactPolicy:
+    class: test_only
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-02-017
+    description: classify_no_trade_quality() returns 'CORRECT_NO_TRADE' when was_correct_skip=True, saved_loss_score < 0.3,
+      missed_opportunity_score < 0.3
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-018
+    description: classify_no_trade_quality() returns 'SAVED_LOSS' when saved_loss_score >= 0.5 and saved_loss_score > missed_opportunity_score
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-019
+    description: classify_no_trade_quality() returns 'MISSED_OPPORTUNITY' when missed_opportunity_score >= 0.5 and missed_opportunity_score
+      > saved_loss_score
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-020
+    description: classify_no_trade_quality() returns 'AMBIGUOUS_NO_TRADE' when |saved_loss_score - missed_opportunity_score|
+      < 0.2 and both scores below 0.5
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-021
+    description: adapt_simulation_output() sets best_action_label to LONG_NOW, SHORT_NOW, NO_TRADE, or AMBIGUOUS_STATE matching
+      SimulationOutput.best_action
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-022
+    description: 'Deterministic output: two invocations of adapt_simulation_output() with identical input produce deep-equal
+      AlphaForgeLabel dicts — verified across 5+ fixture variants'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-023
+    description: label_validity is 'valid' for COMPLETE + not ambiguous; 'invalid' for UNRESOLVED; 'invalid' for INVALIDATED;
+      'ambiguous_excluded' for COMPLETE + ambiguous
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-024
+    description: Input SimulationOutput dict is not mutated by adapt_simulation_output() — original fixture dict is unchanged
+      after adapter call
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+- id: WS-02-SCHEMA-TESTS
+  title: Schema Validation Tests — Output Compliance, Error Handling, and Cost-Aware Correctness
+  objective: Schema Validation Tests — Output Compliance, Error Handling, and Cost-Aware Correctness
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/tests/test_label_adapter_schema.py. Write a test that validates adapt_simulation_output()
+      output against alphaforge_label.schema.json using jsonschema.validate(). Use the simulation_output_minimal.json fixture
+      as input. Assert all required fields are present, all enum values are valid, all number fields are numbers, all string
+      fields are strings, and all boolean fields are booleans.
+
+      '
+    - '[must] [action] Write negative tests for invalid SimulationOutput inputs. Test missing required top-level fields (simulation_run_id,
+      decision_timestamp, mode, long_outcome, short_outcome, no_trade_outcome, best_action). Assert the adapter raises a specific,
+      descriptive error (ValueError or custom AlphaForgeError) rather than producing a malformed label. Test wrong mode values
+      (not in SWING/SCALP/AGGRESSIVE_SCALP) and assert handling.
+
+      '
+    - '[must] [action] Write tests for missing optional fields in SimulationOutput. Fields like monte_carlo_run_id, second_best_action,
+      invalidity_reason are optional and must not cause adapter failure. Similarly, optional fields within ActionOutcome and
+      NoTradeOutcome must use None defaults. Assert adapter handles all optional-field-absent cases gracefully.
+
+      '
+    - '[must] [action] Write a cost-aware field correctness test. Using a SimulationOutput fixture with known cost values,
+      verify that long_R_net = long_R_gross - total_cost_r_long (with tolerance for compounding precision), and similarly
+      for short side. Verify that fee_cost_r_long + slippage_cost_r_long approximately equals total_cost_r_long (simulation
+      may not guarantee exact additivity due to compounding, but deviation must be < 0.0001 R).
+
+      '
+    - '[must] [action] Write a cross-mode test: adapt a SWING fixture, a SCALP fixture, and an AGGRESSIVE_SCALP fixture. Verify
+      output mode field matches input. Verify that different modes produce valid AlphaForgeLabel records. Verify that SCALP
+      and AGGRESSIVE_SCALP labels carry the expected cost sensitivity characteristics.
+
+      '
+    - '[must] [action] Write a schema validation test for the minimal AlphaForgeLabel fixture (contracts/fixtures/alphaforge_label_minimal.json)
+      to confirm the schema itself is valid and the adapter output matches the expected shape.
+
+      '
+    - '[must] [action] Run CMD-test-alphaforge, CMD-test-integration-alphaforge, CMD-test-contract-registry-schema, and CMD-test-import-boundaries.
+      All must pass green. Confirm no forbidden imports were added.
+
+      '
+    allowedFiles:
+    - alphaforge/tests/test_label_adapter_schema.py
+    - alphaforge/src/alphaforge/labels/__init__.py
+    - alphaforge/src/alphaforge/labels/adapter.py
+    - contracts/schemas/alphaforge_label.schema.json
+    - contracts/schemas/simulation_output.schema.json
+    - contracts/fixtures/simulation_output_minimal.json
+    - contracts/fixtures/alphaforge_label_minimal.json
+    - contracts/registry.json
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/data/**
+    - alphaforge/src/alphaforge/contracts/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/src/alphaforge/reports/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    dependencies:
+    - WS-02-NO-TRADE-TESTS
+  artifactPolicy:
+    class: test_only
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-02-025
+    description: Adapter output validates against alphaforge_label.schema.json — jsonschema.validate() passes with no validation
+      errors for output from valid SimulationOutput fixture
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - schema_validation
+      - test_output
+    requiredEvidence:
+    - source
+    - schema_validation
+    - test_output
+  - id: AC-02-026
+    description: Adapter raises descriptive error (ValueError or AlphaForgeError) when SimulationOutput is missing required
+      field simulation_run_id — does not produce malformed label
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-027
+    description: Adapter raises descriptive error for invalid mode value (not in SWING/SCALP/AGGRESSIVE_SCALP)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-028
+    description: Adapter handles missing optional fields gracefully — monte_carlo_run_id, second_best_action, invalidity_reason
+      absence does not cause crash
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-029
+    description: 'Cost-aware fields are numerically correct: long_R_net = long_R_gross - total_cost_r_long within 0.0001 R
+      tolerance for known-cost fixture'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-030
+    description: 'Cross-mode test passes: SWING, SCALP, and AGGRESSIVE_SCALP fixtures all produce valid AlphaForgeLabel records
+      with correct mode field'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-02-031
+    description: Minimal AlphaForgeLabel fixture (contracts/fixtures/alphaforge_label_minimal.json) passes schema validation
+      — confirms schema is correct
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - schema_validation
+    requiredEvidence:
+    - source
+    - schema_validation
+- id: WS-02-REPORT
+  title: ACCP Report and Final Validation — Evidence Collection and Gate Promotion
+  objective: ACCP Report and Final Validation — Evidence Collection and Gate Promotion
+  implementation:
+    instructions:
+    - '[must] [action] Run CMD-final-validation: the full validation suite covering lib/, integration/, simulation/, and alphaforge/
+      tests. All tests must pass green with exit code 0. Capture the full test output as evidence.
+
+      '
+    - '[must] [action] Emit the ACCP implementation report to reports/accp/alphaforge_label_adapter.accp.yaml following the
+      accp_version "2.0.0" and source_format "ACCP-YAML" convention. Required keys: result, scope_confirmation, files_changed,
+      decisions_locked, remaining_holds, safe_next_step, commands_run, evidence. Document all 35+ acceptance criteria with
+      pass/fail status and evidence references.
+
+      '
+    - '[must] [action] Verify all acceptance criteria are covered by at least one evidence type. AC-02-001 through AC-02-035
+      must all have evidence. Mark any criterion that cannot be satisfied as a remaining hold with explicit release condition.
+
+      '
+    - '[must] [action] Confirm no forbidden files were modified. Run git status --porcelain and verify only allowed files
+      appear in the diff. Document any unexpected changes as anomalies in the ACCP report.
+
+      '
+    - '[must] [action] Verify deterministic output stability once more: run the full adapter test suite twice and confirm
+      identical results both times. Document the checksum of the test output in the ACCP report for auditability.
+
+      '
+    - '[should] [action] Update the AlphaForge roadmap (if applicable) to reflect completion of TASK-02-LABEL-ADAPTER. Document
+      that the label adapter integration contract is now available for TASK-03-FEATURE-PIPELINE. Note any remaining holds
+      (funding DEFERRED, cost model version pinning).
+
+      '
+    - '[must] [action] Run CMD-discover-git-status as final state confirmation. The git working tree must show only the expected
+      new and modified files. No unapproved file changes are permitted.
+
+      '
+    allowedFiles:
+    - reports/accp/alphaforge_label_adapter.accp.yaml
+    - alphaforge/src/alphaforge/labels/__init__.py
+    - alphaforge/src/alphaforge/labels/adapter.py
+    - alphaforge/tests/test_label_adapter_no_trade.py
+    - alphaforge/tests/test_label_adapter_schema.py
+    - contracts/schemas/alphaforge_label.schema.json
+    - contracts/schemas/simulation_output.schema.json
+    - contracts/registry.json
+    - plans/alphaforge/02_label_adapter.plan.yaml
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/data/**
+    - alphaforge/src/alphaforge/contracts/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/src/alphaforge/reports/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    dependencies:
+    - WS-02-SCHEMA-TESTS
+  artifactPolicy:
+    class: generated_report
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-02-032
+    description: CMD-final-validation passes with exit code 0 — all lib, integration, simulation, and alphaforge tests green
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-final-validation
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-02-033
+    description: 'ACCP report emitted to reports/accp/alphaforge_label_adapter.accp.yaml with all required keys: result, scope_confirmation,
+      files_changed, decisions_locked, remaining_holds, safe_next_step, commands_run, evidence'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+      - source
+    requiredEvidence:
+    - report
+    - source
+  - id: AC-02-034
+    description: All 35 acceptance criteria (AC-02-001 through AC-02-035) have at least one evidence type assigned and pass/fail
+      status documented
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - manual_review
+      - report
+    requiredEvidence:
+    - manual_review
+    - report
+  - id: AC-02-035
+    description: Git status shows only allowed files modified — no forbidden file changes, no unexpected artifacts
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - diff
+      - command
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - diff
+    - command
+commands:
+  exactAllowedCommands:
+  - id: CMD-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-integration-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_*.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-contract-registry-schema
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py
+      -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-import-boundaries
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py
+      simulation/tests/test_import_boundary.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-simulation
+    kind: targeted_test
+    command: PYTHONPATH=. python3 -m pytest simulation/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-final-validation
+    kind: final_validation
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/
+      -q --ignore=lib/tests/test_market_data_binance.py
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 300
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network calls during deterministic label adapter implementation.
+  - id: DCMD-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-no-binance
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior allowed.
+  - id: DCMD-no-xgboost-training
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|fit\(|import xgboost
+    reason: No model training in deterministic label adapter.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - diff
+  - source
+  - wiring
+  - command
+  - test_output
+  - schema_validation
+  - manual_review
+  - report
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-02-label-adapter.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

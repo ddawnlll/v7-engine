@@ -1,0 +1,1416 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-07
+  title: '07 — V7 Handoff Dry Run: Input Contract, Gate Mapping, Dry Run Builder, Promotion Guard, Schema Tests, ACCP Report'
+  description: 'Implements alphaforge/src/alphaforge/handoff/dry_run.py — the AlphaForge V7 handoff dry run module that consumes
+    ModeResearchReport and ValidationReport skeletons, assembles a V7HandoffPackage via the P0.9A handoff builder, applies
+    promotion guards (never PROMOTION_CANDIDATE or SHADOW_READY from dry run), and enforces all 12 handoff rejection rules
+    from handoff_to_v7.md. All 10 canonical V7 gate IDs (G0_doc_ready through G10_live) are validated. Output schema validated
+    against v7_handoff_package.schema.json.
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - alphaforge/docs/handoff_to_v7.md
+  - alphaforge/src/alphaforge/constants.py
+  - alphaforge/src/alphaforge/errors.py
+  - alphaforge/src/alphaforge/handoff/**
+  - alphaforge/src/alphaforge/handoff/__init__.py
+  - alphaforge/tests/**
+  - contracts/fixtures/alphaforge/*_mode_research_report_minimal.json
+  - contracts/fixtures/alphaforge/v7_handoff_package_minimal.json
+  - contracts/mappings/alphaforge_to_v7.md
+  - contracts/schemas/alphaforge/mode_research_report.schema.json
+  - contracts/schemas/alphaforge/v7_handoff_package.schema.json
+  - contracts/schemas/alphaforge/validation_report.schema.json
+  - integration/tests/test_alphaforge_*.py
+  - reports/accp/**
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/src/**
+  - alphaforge/tests/**
+  - artifacts/**
+  - data/**
+  - datasets/**
+  - integration/tests/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/contracts/**
+  - simulation/engine/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+- id: WS-07-INPUT-CONTRACT
+  title: Define Dry Run Input Contract — ModeResearchReport and ValidationReport Field Mapping
+  objective: Define Dry Run Input Contract — ModeResearchReport and ValidationReport Field Mapping
+  implementation:
+    instructions:
+    - '[must] [action] Read alphaforge/docs/handoff_to_v7.md and contracts/mappings/alphaforge_to_v7.md to identify all mapping
+      rules from AlphaForge reports to V7HandoffPackage fields.
+
+      '
+    - '[must] [action] Define INPUT_CONTRACT_MAP: a frozen dict mapping ModeResearchReport fields to V7HandoffPackage fields.
+      Required ModeResearchReport fields: report_id, mode, mode_priority, report_type, data_scope (symbols, primary_timeframes,
+      date_range_start, date_range_end), feature_set_refs, label_dataset_refs, alpha_theses (list of {alpha_thesis_id, status,
+      evidence_quality}), validation_summary (validation_report_id, fold_count, verdict, overfit_risk), metrics (oos_expectancy_r,
+      oos_sharpe, oos_trade_count, oos_win_rate, oos_profit_factor, oos_max_drawdown_r, per_fold_metrics), cost_stress (baseline_fee_pct,
+      baseline_slippage_pct, combined_stress_edge_survives, fee_stress_levels, slippage_stress_levels, break_even_cost_total_pct),
+      no_trade_comparison (active_beats_no_trade, summary, long_vs_no_trade, short_vs_no_trade), regime_breakdown (regimes
+      array with {regime, sample_pct, oos_expectancy_r, edge_present}, edge_only_in_rare_regime, summary), verdict (REJECT/CONTINUE_RESEARCH/CANDIDATE_FOR_V7_GATES/BASELINE_VALID/
+      BASELINE_WEAK), blocked_scopes, limitations, recommended_actions, v7_gate_readiness (gates_mapped, gates_not_ready,
+      overall_readiness), multiple_hypothesis_control (tested_hypothesis_count, correction_method, data_snooping_risk_flag,
+      deflated_sharpe_or_equivalent, pbo_or_backtest_overfit_risk, trial_count_disclosure, rejected_candidate_count, blocking_hold).
+
+      '
+    - '[must] [action] Define VALIDATION_REPORT_INPUT_MAP: a frozen dict mapping ValidationReport fields to V7HandoffPackage
+      fields. Required ValidationReport fields: validation_report_id, mode, alpha_candidate_id, model_artifact_id, split_policy
+      (train_pct, validation_pct, oos_pct, purge_window_bars, embargo_policy, chronological_split), walk_forward_folds (fold_count
+      >= 6, fold_type anchored/rolling, folds array with {fold_number, train_start, train_end, test_start, test_end, train_sharpe,
+      test_sharpe, test_expectancy_r, test_win_rate, test_trade_count}), oos_summary (oos_expectancy_r, oos_sharpe, oos_win_rate,
+      oos_trade_count, oos_positive_expectancy, oos_max_drawdown_r, oos_profit_factor, fold_stability_score), symbol_stability
+      (symbols_tested, symbol_count, max_single_symbol_concentration <= 0.40, max_cluster_concentration <= 0.60, single_symbol_limitation,
+      cross_symbol_metric_variance), regime_breakdown (regimes array with {regime: TREND_UP/TREND_DOWN/RANGE/TRANSITION, sample_pct,
+      oos_expectancy_r, oos_sharpe, edge_present}, edge_only_in_rare_regime, rare_regime_untradeable), cost_stress (baseline_fee_pct,
+      baseline_slippage_pct, baseline_spread_pct, fee_stress_edge_survives, slippage_stress_edge_survives, spread_stress_edge_survives,
+      combined_stress_edge_survives, break_even_cost_total_pct, cost_edge_destroyed, scalp_cost_adjusted_expectancy_r >= 0.10R
+      for SCALP, funding_deferred_block {funding_deferred: bool, block_reason, affected_scopes}), no_trade_comparison (active_beats_no_trade,
+      long_better_than_no_trade, short_better_than_no_trade, saved_loss_r, missed_opportunity_r, summary), overfit_risk_flags
+      (overfit_risk_overall LOW/MEDIUM/HIGH/CRITICAL, train_oos_gap, fold_instability, feature_to_sample_ratio, top_feature_dominance,
+      calibration_degradation, purge_violation_detected), multiple_hypothesis_control (tested_hypothesis_count >= 1, correction_method
+      FDR/Bonferroni/Deflated_Sharpe/PBO/ NONE_APPLIED, corrected_significance, false_discovery_control, data_snooping_risk_flag,
+      pbo_or_backtest_overfit_risk, trial_count_disclosure, rejected_candidate_count, blocking_hold), calibration_gate_alignment
+      (calibration_candidate_id, ece, mce, confidence_bin_count, reliability_within_bounds, calibration_status CALIBRATED/UNCALIBRATED/UNRELIABLE),
+      verdict (PASS/PASS_WITH_LIMITATIONS/FAIL_OVERFIT/ FAIL_COST/FAIL_REGIME/FAIL_OOS/FAIL_MHT/INCONCLUSIVE), limitations,
+      created_at.
+
+      '
+    - '[must] [action] Define the DryRunInput namedtuple/dataclass: {mode (SCALP/AGGRESSIVE_SCALP/SWING), mode_research_report
+      (dict matching mode_research_report.schema.json), validation_report (dict matching validation_report.schema.json), handoff_package_id
+      (str | None), alpha_candidate_id (str | None), model_artifact_id (str | None), calibration_candidate_id (str | None)}.
+
+      '
+    - '[must] [action] Write the MODE_RESEARCH_REPORT_REQUIRED_FIELDS and VALIDATION_REPORT_REQUIRED_FIELDS constants as frozensets
+      derived from their respective JSON schemas. Use these for structural validation before assembly.
+
+      '
+    - '[must] [action] Do NOT read or modify any files under alphaforge/src/** or alphaforge/tests/**. This workspace defines
+      the contract only — it references allowed docs and schemas.
+
+      '
+    allowedFiles:
+    - alphaforge/docs/handoff_to_v7.md
+    - contracts/schemas/alphaforge/mode_research_report.schema.json
+    - contracts/schemas/alphaforge/validation_report.schema.json
+    - contracts/schemas/alphaforge/v7_handoff_package.schema.json
+    - contracts/mappings/alphaforge_to_v7.md
+    - alphaforge/src/alphaforge/handoff/__init__.py
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - integration/tests/**
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-07-IC-01
+    description: 'INPUT_CONTRACT_MAP is a frozen dict with keys for every ModeResearchReport field consumed by V7HandoffPackage:
+      report_id maps to mode_research_report_id, mode maps to mode, data_scope.symbols maps to lineage.data_refs, feature_set_refs
+      maps to lineage.feature_set_id, label_dataset_refs maps to lineage.label_dataset_id, validation_summary.validation_report_id
+      maps to validation_report_id, cost_stress maps to G3_cost_stress evidence_ref, regime_breakdown maps to G4_regime_breakdown
+      evidence_ref, no_trade_comparison maps to cross-cutting quality evidence, metrics.oos_expectancy_r maps to G1_research_backtest
+      evidence_ref, verdict maps to recommended_status decision input, blocked_scopes maps to blocked_scopes, limitations
+      maps to limitations, overall_readiness maps to recommended_status decision input, multiple_hypothesis_control maps to
+      G0_doc_ready evidence_ref.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+    requiredEvidence:
+    - schema_validation
+  - id: AC-07-IC-02
+    description: 'VALIDATION_REPORT_INPUT_MAP is a frozen dict with keys for every ValidationReport field consumed: validation_report_id
+      maps to validation_report_id, mode maps to mode, alpha_candidate_id maps to alpha_candidate_id, model_artifact_id maps
+      to model_artifact_id, calibration_gate_alignment.calibration_candidate_id maps to calibration_candidate_id, oos_summary.{oos_expectancy_r,
+      oos_sharpe, oos_win_rate, oos_trade_count, oos_positive_expectancy, fold_stability_score} map to G2_walk_forward_oos
+      evidence_ref, symbol_stability.{max_single_symbol_concentration, max_cluster_concentration, symbols_tested} map to G5_symbol_stability
+      evidence_ref, cost_stress.{combined_stress_edge_survives, cost_edge_destroyed, scalp_cost_adjusted_expectancy_r, funding_deferred_block}
+      map to G3_cost_stress evidence_ref, regime_breakdown.{regimes, edge_only_in_rare_regime} map to G4_regime_breakdown
+      evidence_ref, calibration_gate_alignment.{ece, mce, reliability_within_bounds, calibration_status} map to G6_calibration_reliability
+      evidence_ref, overfit_risk_flags.overfit_risk_overall maps to rejection rule evaluation, multiple_hypothesis_control.{correction_method,
+      data_snooping_risk_flag, pbo_or_backtest_overfit_risk} maps to rejection rule evaluation, verdict maps to recommended_status
+      decision input, limitations maps to limitations.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+    requiredEvidence:
+    - schema_validation
+  - id: AC-07-IC-03
+    description: 'DryRunInput data class has exactly 7 fields: mode (str enum), mode_research_report (dict), validation_report
+      (dict), handoff_package_id (str | None), alpha_candidate_id (str | None), model_artifact_id (str | None), calibration_candidate_id
+      (str | None).'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+    requiredEvidence:
+    - schema_validation
+  - id: AC-07-IC-04
+    description: 'MODE_RESEARCH_REPORT_REQUIRED_FIELDS is a frozenset containing exactly the 15 top-level required keys from
+      mode_research_report.schema.json: schema_version, report_id, mode, mode_priority, report_type, data_scope, feature_set_refs,
+      label_dataset_refs, alpha_theses, validation_summary, metrics, cost_stress, no_trade_comparison, regime_breakdown, verdict,
+      blocked_scopes, limitations.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+    requiredEvidence:
+    - schema_validation
+  - id: AC-07-IC-05
+    description: 'VALIDATION_REPORT_REQUIRED_FIELDS is a frozenset containing exactly the 13 top-level required keys from
+      validation_report.schema.json: schema_version, validation_report_id, mode, split_policy, walk_forward_folds, oos_summary,
+      symbol_stability, regime_breakdown, cost_stress, no_trade_comparison, overfit_risk_flags, multiple_hypothesis_control,
+      verdict.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+    requiredEvidence:
+    - schema_validation
+  - id: AC-07-IC-06
+    description: 'validate_input_reports(mode_research_report: dict, validation_report: dict) -> DryRunInput exists and raises
+      InputContractError when required fields are missing from either report skeleton.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-07-INPUT-CONTRACT'
+    usageProofs:
+    - id: USE-WS-07-INPUT-CONTRACT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-07-INPUT-CONTRACT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-07-GATE-MAPPING
+  title: Implement validate_gate_mapping() — Canonical Gate Name Validation
+  objective: Implement validate_gate_mapping() — Canonical Gate Name Validation
+  implementation:
+    instructions:
+    - '[must] [action] Implement validate_gate_mapping(gate_mapping: dict) -> bool. The function must verify that exactly
+      11 keys exist in gate_mapping: G0_doc_ready, G1_research_backtest, G2_walk_forward_oos, G3_cost_stress, G4_regime_breakdown,
+      G5_symbol_stability, G6_calibration_reliability, G7_shadow, G8_paper, G9_tiny_live, G10_live. These gate IDs must match
+      CANONICAL_V7_GATES from constants.py exactly.
+
+      '
+    - '[must] [action] If any canonical gate is missing, raise GateMappingError(message=f"Missing canonical V7 gate: {missing_gate}").
+      The error must list ALL missing gates if multiple are absent.
+
+      '
+    - '[must] [action] If extra/unknown gate keys are present (e.g., old AlphaForge-invented names like G0_data_quality, G1_feature_validity,
+      etc.), raise GateMappingError(message=f"Unknown gate(s) in mapping: {unknown_gates}. Use canonical V7 gate IDs from
+      handoff_to_v7.md."). The error must list ALL unknown gate names found.
+
+      '
+    - '[must] [action] Each gate entry must be a dict with exactly keys ''evidence_ref'' (str) and ''status'' (str enum: PASS,
+      PENDING, NOT_EVALUATED). Raise GateMappingError for any gate entry missing required keys or with invalid status values.
+
+      '
+    - '[must] [action] Reference CANONICAL_V7_GATES from alphaforge.constants — do NOT hardcode gate name strings inline.
+      The canonical list is the single source of truth.
+
+      '
+    - '[must] [action] Define GateMappingError as a new exception class in alphaforge/errors.py (or in handoff module if errors
+      module not accessible). Must inherit from AlphaForgeError or base Exception with an appropriate message.
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/constants.py
+    - alphaforge/docs/handoff_to_v7.md
+    - contracts/schemas/alphaforge/v7_handoff_package.schema.json
+    forbiddenFiles:
+    - alphaforge/tests/**
+    - integration/tests/**
+    dependencies:
+    - WS-07-INPUT-CONTRACT
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-07-GM-01
+    description: 'validate_gate_mapping() returns True when input has exactly 11 keys matching CANONICAL_V7_GATES: G0_doc_ready,
+      G1_research_backtest, G2_walk_forward_oos, G3_cost_stress, G4_regime_breakdown, G5_symbol_stability, G6_calibration_reliability,
+      G7_shadow, G8_paper, G9_tiny_live, G10_live — each with evidence_ref (str) and status (PASS|PENDING|NOT_EVALUATED).'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-GM-02
+    description: validate_gate_mapping() raises GateMappingError listing all missing gates when G4_regime_breakdown and G7_shadow
+      are absent from mapping.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-GM-03
+    description: validate_gate_mapping() raises GateMappingError listing all unknown gate names when old AlphaForge-invented
+      gates (G0_data_quality, G1_feature_validity, G2_label_validity, G3_model_sanity, G4_oos_performance, G5_cost_resilience,
+      G6_regime_robustness, G7_stability, G8_calibration, G9_no_trade_baseline, G10_paper_shadow) are present.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-GM-04
+    description: validate_gate_mapping() raises GateMappingError when a gate entry is missing 'evidence_ref' (e.g., only has
+      'status') or missing 'status' (e.g., only has 'evidence_ref').
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-GM-05
+    description: validate_gate_mapping() raises GateMappingError when a gate entry has status value outside enum {PASS, PENDING,
+      NOT_EVALUATED}, e.g., 'FAILED', 'UNKNOWN', or 'IN_PROGRESS'.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-GM-06
+    description: validate_gate_mapping() accepts an empty dict and raises GateMappingError listing all 11 missing canonical
+      gates.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-GM-07
+    description: GateMappingError inherits from Exception (or AlphaForgeError) and its message includes both the list of offending
+      gate names and a reference to handoff_to_v7.md for canonical gate names.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-07-GATE-MAPPING'
+    usageProofs:
+    - id: USE-WS-07-GATE-MAPPING
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-07-GATE-MAPPING
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-07-DRY-RUN-BUILDER
+  title: Implement run_handoff_dry_run() — Assemble V7HandoffPackage via P0.9A Builder
+  objective: Implement run_handoff_dry_run() — Assemble V7HandoffPackage via P0.9A Builder
+  implementation:
+    instructions:
+    - '[must] [action] Implement run_handoff_dry_run(dry_run_input: DryRunInput) -> dict. This is the main entry point. It
+      consumes a DryRunInput containing ModeResearchReport and ValidationReport dicts, plus optional override IDs (handoff_package_id,
+      alpha_candidate_id, model_artifact_id, calibration_candidate_id).
+
+      '
+    - '[must] [action] Internally call validate_input_reports() to verify structural completeness of both report skeletons.
+      Raise InputContractError if validation fails before any assembly.
+
+      '
+    - '[must] [action] Build the gate mapping for all 10 canonical gates using _make_gate_entry() with status=''NOT_EVALUATED''.
+      Evidence refs should be populated from the report skeletons: G0 maps to data_scope + authority docs reference, G1 maps
+      to ModeResearchReport metrics, G2 maps to ValidationReport oos_summary + walk_forward_folds, G3 maps to ValidationReport
+      cost_stress, G4 maps to ValidationReport regime_breakdown, G5 maps to ValidationReport symbol_stability, G6 maps to
+      ValidationReport calibration_gate_alignment, G7/G8/G9/G10 map to infrastructure-not-yet-built messages.
+
+      '
+    - '[must] [action] Call validate_gate_mapping() on the assembled gate mapping BEFORE calling the P0.9A builder. If validation
+      fails, raise GateMappingError and abort — do not produce a partial package.
+
+      '
+    - '[must] [action] Call builders.build_v7_handoff_package(mode=mode, handoff_package_id=pid, alpha_candidate_id=acid,
+      mode_research_report_id=mrid, validation_report_id=vrid, model_artifact_id=maid, calibration_candidate_id=ccid, recommended_status=status)
+      from alphaforge.handoff.builders. Do NOT duplicate assembly logic already in builders.py. Provide the assembled gate_mapping
+      as an override if the builder supports it; otherwise, post-process the returned package to replace the gate_mapping
+      with the one assembled from report evidence.
+
+      '
+    - '[must] [action] After assembly, validate the complete output payload against v7_handoff_package.schema.json using alphaforge.contracts.validator.
+      Raise HandoffBuildError if validation fails with the list of errors.
+
+      '
+    - '[must] [action] Populate blocked_scopes from both report skeletons: copy ModeResearchReport.blocked_scopes and ValidationReport
+      symbol_stability.single_symbol_limitation info. Add standard dry-run blocking scopes: hedging/shared/shadow-disabled.
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/constants.py
+    - alphaforge/src/alphaforge/errors.py
+    - contracts/schemas/alphaforge/v7_handoff_package.schema.json
+    forbiddenFiles:
+    - alphaforge/tests/**
+    - integration/tests/**
+    dependencies:
+    - WS-07-GATE-MAPPING
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-07-DRB-01
+    description: 'run_handoff_dry_run(dry_run_input) returns a dict that validates against v7_handoff_package.schema.json
+      with all 13 required root keys present: schema_version (str), handoff_package_id (str), mode (enum SCALP|AGGRESSIVE_SCALP|SWING),
+      alpha_candidate_id (str), mode_research_report_id (str), validation_report_id (str), model_artifact_id (str), calibration_candidate_id
+      (str), v7_gate_mapping (object with 11 required gate keys), recommended_status (enum REVIEW_REQUIRED|SHADOW_READY|PROMOTION_CANDIDATE),
+      blocked_scopes (array of strings), limitations (array of strings), lineage (object with required keys data_refs, feature_set_id,
+      label_dataset_id, simulation_profile_id, lineage_verified).'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+    requiredEvidence:
+    - schema_validation
+  - id: AC-07-DRB-02
+    description: 'v7_gate_mapping in output has exactly 11 keys: G0_doc_ready, G1_research_backtest, G2_walk_forward_oos,
+      G3_cost_stress, G4_regime_breakdown, G5_symbol_stability, G6_calibration_reliability, G7_shadow, G8_paper, G9_tiny_live,
+      G10_live — all with status NOT_EVALUATED.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-DRB-03
+    description: recommended_status in output is exactly REVIEW_REQUIRED — never SHADOW_READY, never PROMOTION_CANDIDATE.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-DRB-04
+    description: 'blocked_scopes in output includes at least: (a) scopes from ModeResearchReport.blocked_scopes, (b) funding_deferred_block
+      info from ValidationReport cost_stress if funding_deferred is true, (c) standard dry-run scope blockers (no shadow,
+      no paper, no live infrastructure).'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-DRB-05
+    description: run_handoff_dry_run() calls builders.build_v7_handoff_package() — the P0.9A handoff builder. It does NOT
+      duplicate the complete assembly logic (mode key derivation, profile lookup, default ID generation, lineage assembly)
+      that already exists in builders.py.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-07-DRB-06
+    description: run_handoff_dry_run() raises InputContractError when mode_research_report is missing required top-level keys
+      (e.g., missing report_id, mode, metrics, cost_stress, regime_breakdown, verdict, multiple_hypothesis_control, or blocked_scopes).
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-DRB-07
+    description: run_handoff_dry_run() raises InputContractError when validation_report is missing required top-level keys
+      (e.g., missing validation_report_id, mode, split_policy, walk_forward_folds, oos_summary, symbol_stability, regime_breakdown,
+      cost_stress, overfit_risk_flags, multiple_hypothesis_control, calibration_gate_alignment, or verdict).
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-07-DRY-RUN-BUILDER'
+    usageProofs:
+    - id: USE-WS-07-DRY-RUN-BUILDER
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-07-DRY-RUN-BUILDER
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-07-NO-PROMOTION
+  title: Implement Promotion Guard and 12 Handoff Rejection Rules
+  objective: Implement Promotion Guard and 12 Handoff Rejection Rules
+  implementation:
+    instructions:
+    - '[must] [action] Implement _guard_promotion_status(recommended_status: str) -> None. Raise PromotionGuardError if recommended_status
+      is PROMOTION_CANDIDATE or SHADOW_READY. The error message must state: "Dry run cannot recommend {status}. Only REVIEW_REQUIRED
+      is allowed from dry run. Real promotion evidence requires walk-forward validation, shadow trading, and live data." The
+      guard must be a hard assertion, not a warning.
+
+      '
+    - '[must] [action] Call _guard_promotion_status() inside run_handoff_dry_run() BEFORE calling build_v7_handoff_package().
+      Ensure the builder is never invoked with an invalid status.
+
+      '
+    - '[must] [action] Implement _evaluate_rejection_rules(mode_research_report: dict, validation_report: dict, is_dry_run:
+      bool) -> RejectionRulesResult. RejectionRulesResult is a namedtuple/dataclass with fields: passed (list[str]), failed
+      (list[str]), blocked (list[str]), is_rejected (bool). Evaluate all 12 handoff rejection rules from alphaforge/docs/handoff_to_v7.md.
+
+      '
+    - '[must] [action] Rule 1 (Missing evidence): Check that mode_research_report_id and validation_report_id are present
+      and non-empty. If either is missing, add to failed list. Rule 2 (Incomplete gate mapping): Gate mapping validation is
+      handled separately by validate_gate_mapping() — this rule checks that validate_gate_mapping was called and passed. If
+      mapping is incomplete, add to failed list. Rule 3 (Lineage break): Check that mode_research_report.lineage or validation_report
+      split_policy.chronological_split is present. If lineage_verified is False in the assembled package, and this is NOT
+      a dry run, add to failed list. In dry run, flag as blocked with reason "Lineage verification deferred — dry run."
+
+      '
+    - '[must] [action] Rule 4 (Checksum mismatch): In dry run, always pass (no real model binary). Add to blocked list with
+      reason "Checksum verification deferred — dry run, no real model binary." Rule 5 (Validation failure): Check validation_report.verdict.
+      If verdict is FAIL_OVERFIT or FAIL_COST or FAIL_REGIME or FAIL_OOS or FAIL_MHT, add to failed list. If verdict is INCONCLUSIVE
+      or PASS_WITH_LIMITATIONS, add to blocked list. If PASS, add to passed list. Rule 6 (Cost vulnerability): Check validation_report.cost_stress.cost_edge_destroyed.
+      If True, add to failed. If combined_stress_edge_survives is False, add to failed. If scalp_cost_adjusted_expectancy_r
+      < 0.10R for SCALP mode, add to failed.
+
+      '
+    - '[must] [action] Rule 7 (Overfit detected): Check validation_report.overfit_risk_flags. If overfit_risk_overall is CRITICAL,
+      add to failed. If HIGH, add to blocked. If purge_violation_detected is True, add to failed. If train_oos_gap is HIGH,
+      add to blocked. Rule 8 (Single-symbol overfitting): Check validation_report.symbol_stability. If max_single_symbol_concentration
+      > 0.40, add to failed. If single_symbol_limitation is True, add to blocked. Rule 9 (Calibration unusable): Check validation_report.calibration_gate_alignment.
+      If calibration_status is UNRELIABLE, add to failed. If UNCALIBRATED, add to blocked. Rule 10 (Funding unknown): Check
+      validation_report.cost_stress.funding_deferred_block. If funding_deferred is True, add to blocked with reason from block_reason.
+
+      '
+    - '[must] [action] Rule 11 (Blocked scope violation): Check mode_research_report.blocked_scopes against the mode. If mode
+      is SCALP but blocked_scopes references "SCALP blocked", add to failed. Generally, if any blocked scope contradicts the
+      mode, add to failed. Rule 12 (Policy conflict): In dry run, always add to blocked list with reason "Policy conflict
+      check deferred — dry run, no V7 policy loaded." After evaluating all 12 rules, populate rejection_rules_applied list
+      on the output package with a summary string per rule.
+
+      '
+    - '[must] [action] Define PromotionGuardError as a new exception class. Must inherit from the project''s base error (Exception
+      or AlphaForgeError). The message must reference handoff_to_v7.md and the V7 final authority principle ("AlphaForge RECOMMENDS.
+      V7 DECIDES.").
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/constants.py
+    - alphaforge/src/alphaforge/errors.py
+    - alphaforge/docs/handoff_to_v7.md
+    forbiddenFiles:
+    - alphaforge/tests/**
+    - integration/tests/**
+    dependencies:
+    - WS-07-DRY-RUN-BUILDER
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-07-NP-01
+    description: _guard_promotion_status('PROMOTION_CANDIDATE') raises PromotionGuardError with message containing 'Dry run
+      cannot recommend PROMOTION_CANDIDATE' and 'REVIEW_REQUIRED is allowed'.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-02
+    description: _guard_promotion_status('SHADOW_READY') raises PromotionGuardError with message containing 'Dry run cannot
+      recommend SHADOW_READY'.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-03
+    description: _guard_promotion_status('REVIEW_REQUIRED') returns None (passes silently).
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-04
+    description: run_handoff_dry_run() calls _guard_promotion_status() and passes recommended_status='REVIEW_REQUIRED' — the
+      guard does not raise.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-05
+    description: 'Rejection rule 5 (Validation failure): _evaluate_rejection_rules() with validation_report.verdict=''FAIL_OVERFIT''
+      returns is_rejected=True with ''Validation failure: FAIL_OVERFIT'' in failed list.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-06
+    description: 'Rejection rule 6 (Cost vulnerability): _evaluate_rejection_rules() with cost_stress.cost_edge_destroyed=True
+      returns is_rejected=True with ''Cost vulnerability: edge destroyed'' in failed list.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-07
+    description: 'Rejection rule 7 (Overfit detected): _evaluate_rejection_rules() with overfit_risk_flags.overfit_risk_overall=''CRITICAL''
+      returns is_rejected=True with ''Overfit detected: CRITICAL'' in failed list.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-08
+    description: 'Rejection rule 8 (Single-symbol overfitting): _evaluate_rejection_rules() with symbol_stability.max_single_symbol_concentration=0.45
+      (>0.40) returns is_rejected=True with ''Single-symbol overfitting: concentration 0.45 exceeds 0.40'' in failed list.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-09
+    description: 'Rejection rule 9 (Calibration unusable): _evaluate_rejection_rules() with calibration_gate_alignment.calibration_status=''UNRELIABLE''
+      returns is_rejected=True with ''Calibration unusable: UNRELIABLE'' in failed list.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-10
+    description: 'Rejection rule 10 (Funding unknown): _evaluate_rejection_rules() with cost_stress.funding_deferred_block.funding_deferred=True
+      returns is_rejected=False (not failed) with ''Funding unknown: DEFERRED blocks perpetual/live'' in blocked list (blocked,
+      not failed, since dry run allows partial infrastructure).'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-11
+    description: 'rejection_rules_applied in output package contains exactly 12 entries, one per rejection rule from handoff_to_v7.md,
+      each as a string summarizing the evaluation result for that rule (e.g., ''Rule 1 (Missing evidence): PASSED — all required
+      reports present'', ''Rule 10 (Funding unknown): BLOCKED — funding DEFERRED blocks perpetual/live'').'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-07-NP-12
+    description: 'PromotionGuardError inherits from Exception (or AlphaForgeError) with message referencing handoff_to_v7.md
+      and V7 final authority: ''AlphaForge RECOMMENDS. V7 DECIDES.'''
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-07-NO-PROMOTION'
+    usageProofs:
+    - id: USE-WS-07-NO-PROMOTION
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-07-NO-PROMOTION
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-07-SCHEMA-TESTS
+  title: Create Schema Validation and Integration Tests for Dry Run
+  objective: Create Schema Validation and Integration Tests for Dry Run
+  implementation:
+    instructions:
+    - '[must] [action] Create test file alphaforge/tests/test_dry_run.py. Test class TestGateMappingValidation with 7 test
+      methods covering: (1) all canonical gates present and valid, (2) missing gates raises GateMappingError, (3) unknown/old
+      gate names raises GateMappingError, (4) missing evidence_ref key raises GateMappingError, (5) missing status key raises
+      GateMappingError, (6) invalid status enum value raises GateMappingError, (7) empty dict raises GateMappingError listing
+      all 11 missing gates.
+
+      '
+    - '[must] [action] Create test class TestDryRunBuilder with test methods: (1) valid SWING input produces schema-valid
+      output, (2) valid SCALP input produces schema-valid output, (3) valid AGGRESSIVE_SCALP input produces schema-valid output,
+      (4) all 11 gate keys present with status NOT_EVALUATED, (5) recommended_status is REVIEW_REQUIRED, (6) blocked_scopes
+      populated from report skeletons, (7) missing ModeResearchReport fields raises InputContractError, (8) missing ValidationReport
+      fields raises InputContractError, (9) all 12 rejection_rules_applied entries present.
+
+      '
+    - '[must] [action] Create test class TestPromotionGuard with test methods: (1) PROMOTION_CANDIDATE raises PromotionGuardError,
+      (2) SHADOW_READY raises PromotionGuardError, (3) REVIEW_REQUIRED passes silently, (4) guard called before builder in
+      run_handoff_dry_run() flow.
+
+      '
+    - '[must] [action] Create test class TestRejectionRules with test methods covering all 12 rules: (1) rule 1 — missing
+      evidence fails, (2) rule 5 — FAIL_OVERFIT verdict fails, (3) rule 5 — INCONCLUSIVE verdict blocked, (4) rule 6 — cost_edge_destroyed
+      fails, (5) rule 7 — overfit CRITICAL fails, (6) rule 7 — overfit HIGH blocked, (7) rule 8 — single-symbol >0.40 fails,
+      (8) rule 9 — UNRELIABLE calibration fails, (9) rule 10 — funding deferred blocked, (10) rule 12 — policy conflict deferred
+      in dry run, (11) all-pass scenario returns is_rejected=False, (12) multiple failures scenario returns all failures in
+      failed list.
+
+      '
+    - '[must] [action] Create integration test in integration/tests/test_alphaforge_handoff_dry_run.py. Test that run_handoff_dry_run()
+      output validates against v7_handoff_package.schema.json using alphaforge.contracts.validator.validate_payload(). Test
+      end-to-end that the P0.9A handoff builder is actually called (verify by checking that output has all fields populated
+      by build_v7_handoff_package, not inline duplicated logic).
+
+      '
+    - '[must] [action] Test that gate names in output match CANONICAL_V7_GATES from constants.py: G0_doc_ready through G10_live.
+      Test that old AlphaForge gate names (e.g., G0_data_quality) are NEVER present in output gate_mapping keys.
+
+      '
+    - '[must] [action] Run CMD-test-alphaforge and CMD-test-integration-alphaforge. All tests must pass. If no tests are found,
+      fail. All test fixtures must use skeleton/dummy IDs — no real model paths, no real data paths, no live exchange references.
+
+      '
+    allowedFiles:
+    - alphaforge/tests/**
+    - integration/tests/test_alphaforge_*.py
+    - contracts/schemas/alphaforge/v7_handoff_package.schema.json
+    - contracts/fixtures/alphaforge/v7_handoff_package_minimal.json
+    - contracts/fixtures/alphaforge/*_mode_research_report_minimal.json
+    forbiddenFiles:
+    - alphaforge/src/**
+    dependencies:
+    - WS-07-NO-PROMOTION
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-07-ST-01
+    description: 'TestGateMappingValidation.test_all_canonical_gates_present_and_valid passes: input with all 11 canonical
+      gate IDs (G0_doc_ready through G10_live), each with evidence_ref and status=''NOT_EVALUATED'', returns True from validate_gate_mapping().'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - test_output
+  - id: AC-07-ST-02
+    description: 'TestSchemaValidation.test_output_validates_against_v7_handoff_package_schema passes: run_handoff_dry_run()
+      output for SWING mode is validated by validate_payload() against v7_handoff_package.schema.json and result.valid is
+      True.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - test_output
+  - id: AC-07-ST-03
+    description: 'TestDryRunBuilder.test_all_gates_not_evaluated passes: all 11 gate entries in output.v7_gate_mapping have
+      status=''NOT_EVALUATED''.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - test_output
+  - id: AC-07-ST-04
+    description: 'TestDryRunBuilder.test_recommended_status_review_required passes: output.recommended_status equals ''REVIEW_REQUIRED''
+      exactly.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - test_output
+  - id: AC-07-ST-05
+    description: 'TestPromotionGuard.test_promotion_candidate_raises passes: calling _guard_promotion_status(''PROMOTION_CANDIDATE'')
+      raises PromotionGuardError.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - test_output
+  - id: AC-07-ST-06
+    description: 'TestIntegrationHandoffDryRun.test_dry_run_calls_p0_9a_builder passes: output from run_handoff_dry_run()
+      includes all fields normally populated by build_v7_handoff_package() (schema_version, handoff_package_id, mode, created_at,
+      lineage with all required keys) confirming the P0.9A builder is called.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-integration-alphaforge
+    requiredEvidence:
+    - test_output
+  - id: AC-07-ST-07
+    description: 'TestRejectionRules.test_all_pass_scenario passes: with clean PASS verdict, LOW overfit risk, valid calibration,
+      and concentration within limits, _evaluate_rejection_rules() returns is_rejected=False and all 12 rules appear as PASSED
+      in rejection_rules_applied.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-07-SCHEMA-TESTS'
+    usageProofs:
+    - id: USE-WS-07-SCHEMA-TESTS
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-07-SCHEMA-TESTS
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-07-REPORT
+  title: Run Full Test Suite and Emit ACCP-YAML Report
+  objective: Run Full Test Suite and Emit ACCP-YAML Report
+  implementation:
+    instructions:
+    - '[must] [action] Run CMD-test-alphaforge. All tests must pass. If any fail, STOP and emit repair packet.'
+    - '[must] [action] Run CMD-test-integration-alphaforge. All tests must pass. If any fail, STOP.'
+    - '[must] [action] Run CMD-test-contract-registry-schema to verify contract registry and schema parity.'
+    - '[must] [action] Run CMD-test-import-boundaries to verify no cross-domain boundary violations.'
+    - '[must] [action] Run CMD-test-simulation to verify simulation tests still pass.'
+    - '[must] [action] Run CMD-discover-git-status and confirm clean working tree.'
+    - '[must] [action] Emit ACCP-YAML report at reports/accp/alphaforge_handoff_dry_run.accp.yaml. Format: accp_version: "2.0.0",
+      source_format: "ACCP-YAML". Required keys: result (PASS/FAIL/INCONCLUSIVE), scope_confirmation, files_changed, decisions_locked,
+      remaining_holds, safe_next_step, commands_run (list of {command_id, exit_code, evidence}), evidence (summary text).
+      Report must be machine-readable — do not wrap in markdown.
+
+      '
+    allowedFiles:
+    - reports/accp/**
+    - alphaforge/tests/**
+    - integration/tests/test_alphaforge_*.py
+    forbiddenFiles:
+    - alphaforge/src/**
+    dependencies:
+    - WS-07-SCHEMA-TESTS
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-07-RP-01
+    description: CMD-test-alphaforge exits 0 with all tests in test_dry_run.py passing.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-07-RP-02
+    description: CMD-test-integration-alphaforge exits 0 with integration test test_alphaforge_handoff_dry_run.py passing.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-integration-alphaforge
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-07-RP-03
+    description: CMD-test-contract-registry-schema exits 0.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-contract-registry-schema
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-07-RP-04
+    description: CMD-test-import-boundaries exits 0.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-import-boundaries
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-07-RP-05
+    description: CMD-test-simulation exits 0.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-simulation
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-07-RP-06
+    description: CMD-discover-git-status shows clean working tree.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - command
+  - id: AC-07-RP-07
+    description: ACCP-YAML report exists at reports/accp/alphaforge_handoff_dry_run.accp.yaml with accp_version '2.0.0', source_format
+      'ACCP-YAML', and all required keys present.
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-07-REPORT'
+    usageProofs:
+    - id: USE-WS-07-REPORT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-07-REPORT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+commands:
+  exactAllowedCommands:
+  - id: CMD-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-integration-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_*.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-contract-registry-schema
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py
+      -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-import-boundaries
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py
+      simulation/tests/test_import_boundary.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-simulation
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-final-validation
+    kind: final_validation
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/
+      -q --ignore=lib/tests/test_market_data_binance.py
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 300
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network or market data during deterministic AlphaForge implementation.
+  - id: DCMD-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-no-binance
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior allowed.
+  - id: DCMD-no-xgboost-training
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|fit\(|import xgboost
+    reason: No model training in deterministic scaffold plan.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - diff
+  - source
+  - wiring
+  - command
+  - test_output
+  - schema_validation
+  - report
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-07.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

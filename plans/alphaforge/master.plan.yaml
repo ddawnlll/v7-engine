@@ -1,0 +1,636 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-MASTER
+  title: AlphaForge P0.9B/P0.9C/P1.0 — Master Orchestration Plan
+  description: 'Master orchestrator for the AlphaForge deterministic implementation pipeline. This plan does NOT contain implementation
+    instructions for individual modules. It gates and sequences 10 subplans (00-baseline through 09-final). Execution of subplans
+    is ordered, gated, and evidence-backed. No model training, no live trading, no profitability claims. All work is fixture-only
+    and deterministic.
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - alphaforge/src/**
+  - alphaforge/tests/**
+  - contracts/fixtures/alphaforge/**
+  - integration/tests/test_alphaforge_*.py
+  - plans/alphaforge/00_baseline_verify.plan.yaml
+  - plans/alphaforge/01_data_manifest.plan.yaml
+  - plans/alphaforge/02_label_adapter.plan.yaml
+  - plans/alphaforge/03_feature_pipeline.plan.yaml
+  - plans/alphaforge/04_dataset_assembler.plan.yaml
+  - plans/alphaforge/05_non_ml_research_report.plan.yaml
+  - plans/alphaforge/06_walk_forward_validation.plan.yaml
+  - plans/alphaforge/07_v7_handoff_dry_run.plan.yaml
+  - plans/alphaforge/08_ml_pilot_gate.plan.yaml
+  - plans/alphaforge/09_final_validation.plan.yaml
+  - reports/accp/**
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/src/**
+  - alphaforge/tests/**
+  - artifacts/**
+  - data/**
+  - datasets/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/contracts/**
+  - simulation/engine/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+- id: WS-MASTER-00-VERIFY
+  title: Execute Baseline Verification Subplan
+  objective: Execute Baseline Verification Subplan
+  implementation:
+    instructions:
+    - '[must] [action] Load and validate subplan plans/alphaforge/00_baseline_verify.plan.yaml against template.json.'
+    - '[must] [action] Execute all workspaces defined in the subplan in order.'
+    - '[must] [action] Run CMD-discover-git-status and confirm clean working tree before proceeding.'
+    - '[must] [action] Emit ACCP report reports/accp/alphaforge_baseline_verify.accp.yaml.'
+    allowedFiles:
+    - plans/alphaforge/00_baseline_verify.plan.yaml
+    - reports/accp/**
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+  artifactPolicy:
+    class: cli_command
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-MASTER-00-01
+    description: Subplan 00_baseline_verify.plan.yaml validates against template.json
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+    requiredEvidence:
+    - schema_validation
+  - id: AC-MASTER-00-02
+    description: CMD-test-alphaforge exits 0 with all tests passing
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-MASTER-00-03
+    description: CMD-test-integration-alphaforge exits 0
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-integration-alphaforge
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-MASTER-00-04
+    description: CMD-discover-git-status shows clean working tree
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - command
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-MASTER-00-VERIFY'
+    usageProofs:
+    - id: USE-WS-MASTER-00-VERIFY
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-MASTER-00-VERIFY
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-MASTER-01-IMPLEMENT
+  title: Execute Implementation Subplans In Order
+  objective: Execute Implementation Subplans In Order
+  implementation:
+    instructions:
+    - '[must] [action] For each subplan 01 through 08, in order: (a) validate subplan against template.json, (b) execute all
+      workspaces, (c) emit ACCP report, (d) run CMD-test-alphaforge, (e) confirm tests pass before next subplan.'
+    - '[must] [action] If any subplan fails validation or tests, STOP. Do not proceed to next subplan. Emit repair packet.'
+    - '[must] [action] No model training. No xgboost import. No fit() calls. Verify after each subplan.'
+    - '[must] [action] No profitability claims. Verify report verdicts are INCONCLUSIVE or NOT_EVALUATED.'
+    allowedFiles:
+    - plans/alphaforge/01_data_manifest.plan.yaml
+    - plans/alphaforge/02_label_adapter.plan.yaml
+    - plans/alphaforge/03_feature_pipeline.plan.yaml
+    - plans/alphaforge/04_dataset_assembler.plan.yaml
+    - plans/alphaforge/05_non_ml_research_report.plan.yaml
+    - plans/alphaforge/06_walk_forward_validation.plan.yaml
+    - plans/alphaforge/07_v7_handoff_dry_run.plan.yaml
+    - plans/alphaforge/08_ml_pilot_gate.plan.yaml
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - integration/tests/test_alphaforge_*.py
+    - contracts/fixtures/alphaforge/**
+    - reports/accp/**
+    forbiddenFiles:
+    - lib/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    dependencies:
+    - WS-MASTER-00-VERIFY
+  artifactPolicy:
+    class: cli_command
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-MASTER-01-01
+    description: Subplan 01_data_manifest.plan.yaml validates and all workspaces pass
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+      - test_output
+    requiredEvidence:
+    - schema_validation
+    - test_output
+  - id: AC-MASTER-01-02
+    description: Subplan 02_label_adapter.plan.yaml validates and all workspaces pass
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+      - test_output
+    requiredEvidence:
+    - schema_validation
+    - test_output
+  - id: AC-MASTER-01-03
+    description: Subplan 03_feature_pipeline.plan.yaml validates and all workspaces pass
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+      - test_output
+    requiredEvidence:
+    - schema_validation
+    - test_output
+  - id: AC-MASTER-01-04
+    description: Subplan 04_dataset_assembler.plan.yaml validates and all workspaces pass
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+      - test_output
+    requiredEvidence:
+    - schema_validation
+    - test_output
+  - id: AC-MASTER-01-05
+    description: Subplan 05_non_ml_research_report.plan.yaml validates and all workspaces pass
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+      - test_output
+    requiredEvidence:
+    - schema_validation
+    - test_output
+  - id: AC-MASTER-01-06
+    description: Subplan 06_walk_forward_validation.plan.yaml validates and all workspaces pass
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+      - test_output
+    requiredEvidence:
+    - schema_validation
+    - test_output
+  - id: AC-MASTER-01-07
+    description: Subplan 07_v7_handoff_dry_run.plan.yaml validates and all workspaces pass
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+      - test_output
+    requiredEvidence:
+    - schema_validation
+    - test_output
+  - id: AC-MASTER-01-08
+    description: Subplan 08_ml_pilot_gate.plan.yaml validates and all workspaces pass
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - schema_validation
+      - test_output
+    requiredEvidence:
+    - schema_validation
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-MASTER-01-IMPLEMENT'
+    usageProofs:
+    - id: USE-WS-MASTER-01-IMPLEMENT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-MASTER-01-IMPLEMENT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-MASTER-02-FINAL
+  title: Execute Final Validation Subplan
+  objective: Execute Final Validation Subplan
+  implementation:
+    instructions:
+    - '[must] [action] Load and validate subplan plans/alphaforge/09_final_validation.plan.yaml against template.json.'
+    - '[must] [action] Execute all workspaces defined in the subplan in order.'
+    - '[must] [action] Run CMD-final-validation and confirm exit 0.'
+    - '[must] [action] Run forbidden file scan — confirm no files in lib/, simulation/engine/, runtime/, interface/, data/,
+      datasets/, models/, artifacts/, .github/ were modified.'
+    - '[must] [action] Run no-profitability-claim scan across all new code.'
+    - '[must] [action] Run no-training scan — confirm no xgboost import or fit() call.'
+    - '[must] [action] Emit ACCP report reports/accp/alphaforge_final_validation.accp.yaml.'
+    allowedFiles:
+    - plans/alphaforge/09_final_validation.plan.yaml
+    - reports/accp/**
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    dependencies:
+    - WS-MASTER-01-IMPLEMENT
+  artifactPolicy:
+    class: cli_command
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-MASTER-02-01
+    description: CMD-final-validation exits 0 with all tests passing
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-final-validation
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-MASTER-02-02
+    description: Forbidden file scan shows no modifications to lib/, simulation/engine/, runtime/, interface/, data/, datasets/,
+      models/, artifacts/, .github/
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-MASTER-02-03
+    description: No profitability claims in any new or modified source file
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - manual_review
+    requiredEvidence:
+    - source
+    - manual_review
+  - id: AC-MASTER-02-04
+    description: No xgboost import, XGBClassifier, XGBRegressor, or fit() in any new source file
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - source
+    - command
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-MASTER-02-FINAL'
+    usageProofs:
+    - id: USE-WS-MASTER-02-FINAL
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-MASTER-02-FINAL
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+commands:
+  exactAllowedCommands:
+  - id: CMD-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-integration-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_*.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-contract-registry-schema
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py
+      -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-import-boundaries
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py
+      simulation/tests/test_import_boundary.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-simulation
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-final-validation
+    kind: final_validation
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/
+      -q --ignore=lib/tests/test_market_data_binance.py
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 300
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network or market data during deterministic AlphaForge implementation.
+  - id: DCMD-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-no-binance
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior allowed.
+  - id: DCMD-no-xgboost-training
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|fit\(|import xgboost
+    reason: No model training in deterministic scaffold plan.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - diff
+  - source
+  - wiring
+  - command
+  - test_output
+  - schema_validation
+  - report
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-master.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

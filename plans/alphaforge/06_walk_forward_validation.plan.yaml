@@ -1,0 +1,1769 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-06
+  title: AlphaForge 06 — Walk-Forward Validation Skeleton Implementation
+  description: 'Implement alphaforge/src/alphaforge/validation/walk_forward.py — the walk-forward validation skeleton. WalkForwardValidator
+    class splits LabeledDataset into chronological folds per validation_contract.md. Produces ValidationReport structure with
+    OOS summary, cost stress (fee multiplier, slippage, funding DEFERRED), regime breakdown (4 regimes), and symbol stability
+    (40%/60% limits). NO model training inside folds — all metrics are NOT_EVALUATED placeholders. No fake data. No profitability
+    claims. TDD with negative structural tests (chronological ordering, 6-fold enforcement, purge window correctness, no-shuffle
+    enforcement).
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - alphaforge/docs/ai_summary.md
+  - alphaforge/docs/ai_summary__v7_alphaforge_xgb.md
+  - alphaforge/docs/data_contract.md
+  - alphaforge/docs/feature_contract.md
+  - alphaforge/docs/label_contract.md
+  - alphaforge/docs/validation_contract.md
+  - alphaforge/src/alphaforge/validation/**
+  - alphaforge/src/alphaforge/validation/__init__.py
+  - alphaforge/src/alphaforge/validation/contracts.py
+  - alphaforge/src/alphaforge/validation/walk_forward.py
+  - alphaforge/tests/conftest.py
+  - alphaforge/tests/test_walk_forward_validator.py
+  - contracts/schemas/alphaforge/label_dataset_spec.schema.json
+  - contracts/schemas/alphaforge/validation_report.schema.json
+  - integration/tests/test_alphaforge_validation.py
+  - plans/alphaforge/06_walk_forward_validation.plan.yaml
+  - reports/accp/**
+  - v7/docs/pipeline/evaluation.md
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/src/alphaforge/validation/walk_forward.py
+  - alphaforge/tests/**
+  - artifacts/**
+  - data/**
+  - datasets/**
+  - integration/tests/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/contracts/**
+  - simulation/engine/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+- id: WS-06-FOLD-PLAN
+  title: Design WalkForwardValidator — split policy, chronological folds, 6-fold minimum
+  objective: Design WalkForwardValidator — split policy, chronological folds, 6-fold minimum
+  implementation:
+    instructions:
+    - '[must] [action] Read alphaforge/docs/validation_contract.md — absorb the full split policy (train 60% / val 20% / OOS
+      20%), purge window table, embargo policy, and mode-specific fold configuration.'
+    - '[must] [action] Read v7/docs/pipeline/evaluation.md G2: WALK_FORWARD_OOS — confirm the 6-fold canonical minimum and
+      its V7 gate mapping.'
+    - '[must] [action] Read contracts/schemas/alphaforge/validation_report.schema.json — extract all required fields for the
+      ValidationReport structure.'
+    - '[must] [action] Design the WalkForwardValidator split policy: input is datetime-sorted LabeledDataset list; output
+      is List[Fold] where each Fold has train_indices, val_indices, oos_indices (integer positions into sorted dataset).'
+    - '[must] [action] Design the Fold dataclass: fold_index (int), train_start/end (datetime), val_start/end (datetime),
+      oos_start/end (datetime), purge_before_val (int bars), purge_before_oos (int bars), embargo_applied (bool).'
+    - '[must] [action] Document the chronological invariant: dataset is sorted by (feature_timestamp, symbol). Folds progress
+      forward in time. OOS of fold N is chronologically before train of fold N+1 (with purge gap).'
+    - '[must] [action] Define the 6-fold minimum enforcement: if less than 6 folds can be constructed from available data,
+      raise ValidationError with message stating the minimum, the available bar count, and the shortest mode that would fit.'
+    - '[must] [action] Design WalkForwardConfig dataclass: mode (Mode enum), min_folds (int, default 6), train_ratio (float,
+      default 0.6), val_ratio (float, default 0.2), oos_ratio (float, default 0.2), purge_bars (int, mode-dependent), embargo_bars
+      (int, mode-dependent), window_type (ANCHORED or ROLLING).'
+    - '[must] [action] Define the ValidationReport dataclass structure (contract placeholder): config, folds (List[FoldResult]),
+      oos_summary (OOSSummary), cost_stress (CostStressResult), regime_breakdown (RegimeBreakdown), symbol_stability (SymbolStability),
+      overfit_risk_flags (List[OverfitFlag]), mht_controls (MHTControls), verdict (ValidationVerdict enum), report_id (str),
+      generated_at (str).'
+    - '[must] [action] Define FoldResult dataclass: fold_index, train_metrics (NOT_EVALUATED), val_metrics (NOT_EVALUATED),
+      oos_metrics (NOT_EVALUATED), regime_breakdown (NOT_EVALUATED), cost_stress (NOT_EVALUATED), sample_counts (train/val/oos
+      row counts).'
+    - '[must] [action] Design OOSSummary, CostStressResult, RegimeBreakdown, SymbolStability, MHTControls dataclasses — all
+      with NOT_EVALUATED constants. Structure mirrors validation_contract.md requirements.'
+    - '[must] [action] Verify that NO fake numeric values are defined — every metric field uses NOT_EVALUATED sentinel (a
+      dedicated singleton or constant). No 0.0, no 1.0, no default.'
+    - '[must] [action] Do NOT implement any code in walk_forward.py in this workspace. Only define contracts/dataclasses in
+      contracts.py.'
+    allowedFiles:
+    - alphaforge/docs/validation_contract.md
+    - alphaforge/docs/ai_summary.md
+    - alphaforge/docs/ai_summary__v7_alphaforge_xgb.md
+    - alphaforge/docs/data_contract.md
+    - alphaforge/docs/label_contract.md
+    - alphaforge/docs/feature_contract.md
+    - contracts/schemas/alphaforge/validation_report.schema.json
+    - contracts/schemas/alphaforge/label_dataset_spec.schema.json
+    - v7/docs/pipeline/evaluation.md
+    - plans/alphaforge/06_walk_forward_validation.plan.yaml
+    - alphaforge/src/alphaforge/validation/__init__.py
+    - alphaforge/src/alphaforge/validation/contracts.py
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/validation/walk_forward.py
+    - alphaforge/tests/**
+    - integration/tests/**
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-06-FOLD-01
+    description: 'WalkForwardConfig dataclass defined in contracts.py with all fields: mode, min_folds (default 6), train_ratio
+      (0.6), val_ratio (0.2), oos_ratio (0.2), purge_bars, embargo_bars, window_type'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-02
+    description: Fold dataclass defined with fold_index, train/val/oos datetime boundaries, purge_before_val, purge_before_oos,
+      embargo_applied fields
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-03
+    description: FoldResult dataclass defined with fold_index, train/val/oos_metrics (all NOT_EVALUATED), sample_counts dict
+      (train/val/oos row counts)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-04
+    description: 'ValidationReport dataclass defined with all required fields: config, folds, oos_summary, cost_stress, regime_breakdown,
+      symbol_stability, overfit_risk_flags, mht_controls, verdict, report_id, generated_at'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-05
+    description: OOSSummary dataclass defines fields for OOS Sharpe, win rate, expectancy, max drawdown, profit factor, trades
+      count, stability — all typed as Optional[float] defaulting to NOT_EVALUATED
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-06
+    description: CostStressResult dataclass includes fee stress (baseline, 1.5x, 2x, 3x), slippage stress, spread stress,
+      combined stress, break_even_cost, funding_deferred_block — all NOT_EVALUATED
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-07
+    description: 'RegimeBreakdown dataclass uses V7 canonical regime names: TREND_UP, TREND_DOWN, RANGE, TRANSITION — no AlphaForge-invented
+      regime names'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-08
+    description: SymbolStability dataclass defines max_single_symbol_concentration (40%), max_cluster_concentration (60%),
+      cross_symbol_variance, min_symbols_tested — all metrics NOT_EVALUATED
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-09
+    description: MHTControls dataclass includes tested_hypothesis_count, correction_method, corrected_significance, false_discovery_control,
+      deflated_sharpe, pbo_risk, trial_count_disclosure, rejected_candidate_count, data_snooping_risk_flag — all NOT_EVALUATED
+      or NONE_APPLIED
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-10
+    description: NOT_EVALUATED sentinel is a dedicated singleton or constant (not None, not 0.0, not '') — visually distinguishable
+      from computed values in debug output
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-11
+    description: contracts.py does not import from walk_forward.py, xgboost, sklearn, tensorflow, torch, or any ML training
+      library
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FOLD-12
+    description: 'ValidationVerdict enum includes all seven verdicts from validation_contract.md: PASS, PASS_WITH_LIMITATIONS,
+      FAIL_OVERFIT, FAIL_COST, FAIL_REGIME, FAIL_OOS, INCONCLUSIVE'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-06-FOLD-PLAN'
+    usageProofs:
+    - id: USE-WS-06-FOLD-PLAN
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-06-FOLD-PLAN
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-06-PURGE-EMBARGO
+  title: Implement purge window and embargo policy — mode-specific bar gaps between folds
+  objective: Implement purge window and embargo policy — mode-specific bar gaps between folds
+  implementation:
+    instructions:
+    - '[must] [action] Implement mode-specific purge window constants in contracts.py: SCALP = 100 bars, AGGRESSIVE_SCALP
+      = 200 bars, SWING = 20 bars. Source: validation_contract.md purge windows table.'
+    - '[must] [action] Implement purge_gap function: given two datetime boundaries (end_of_fold_N_train, start_of_fold_N_val),
+      compute the gap in bars. Raise ValidationError if gap < required purge_bars for the mode.'
+    - '[must] [action] Implement embargo enforcement: for each fold, after computing train/val/oos boundaries, verify that
+      no training sample falls within embargo_bars of any test (val or oos) sample. Record embargo_applied in Fold.'
+    - '[must] [action] Implement embargo_distance function: given two sets of indices (train_indices, test_indices), compute
+      the minimum bar distance between any train sample and any test sample. If min distance < embargo_bars, raise ValidationError.'
+    - '[must] [action] Purge and embargo must be computed in bar units (not time units). The bar count is the count of distinct
+      timestamps between two points in the sorted dataset.'
+    - '[must] [action] Define a PurgePolicy dataclass holding purge_bars, embargo_bars, and mode. Provide a validate_purge(fold,
+      dataset) method that confirms purge gap is satisfied.'
+    - '[must] [action] Do NOT implement model training. Do NOT import xgboost, sklearn, or any ML library.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/validation/**
+    forbiddenFiles:
+    - alphaforge/tests/**
+    - integration/tests/**
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-06-PURGE-01
+    description: 'Mode-specific purge constants: SCALP=100, AGGRESSIVE_SCALP=200, SWING=20 bars'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-PURGE-02
+    description: purge_gap function computes bar distance between fold boundaries; raises ValidationError if below mode threshold
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-PURGE-03
+    description: embargo_distance function computes minimum bar distance between train and test sets; raises ValidationError
+      if < embargo_bars
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-PURGE-04
+    description: Purge and embargo distances are computed in bar units (distinct timestamp count), not wall-clock time
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-PURGE-05
+    description: PurgePolicy dataclass bundles mode, purge_bars, embargo_bars; validate_purge() method confirms gap
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-PURGE-06
+    description: Every Fold dataclass records purge_before_val, purge_before_oos, and embargo_applied boolean
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-PURGE-07
+    description: No xgboost, sklearn, tensorflow, torch, or any ML library import in purge/embargo code
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-06-PURGE-EMBARGO'
+    usageProofs:
+    - id: USE-WS-06-PURGE-EMBARGO
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-06-PURGE-EMBARGO
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-06-FIXTURE-RULES
+  title: Define mode-specific fold configurations — window sizes, anchored vs rolling
+  objective: Define mode-specific fold configurations — window sizes, anchored vs rolling
+  implementation:
+    instructions:
+    - '[must] [action] Define mode-specific fold configuration constants: SCALP train_window ~5000 bars / test_window ~1000
+      bars, AGGRESSIVE_SCALP ~5000/1000, SWING ~2000/500. These are configurable defaults, not hard-coded into fold logic.'
+    - '[must] [action] SCALP and AGGRESSIVE_SCALP must use ROLLING windows (train window slides forward by test_window + purge
+      each fold). SWING may use ANCHORED (train expands forward) or ROLLING — configurable.'
+    - '[must] [action] Implement a DEFAULT_FOLD_CONFIGS dict mapping Mode -> WalkForwardConfig with sensible defaults. The
+      config can be overridden per instantiation.'
+    - '[must] [action] Implement window sizing logic: given a sorted dataset of N rows and a WalkForwardConfig, compute how
+      many folds can be constructed. If < min_folds (6), raise ValidationError with message: ''Dataset of {N} rows ({total_bars}
+      bars) cannot satisfy {min_folds}-fold minimum for mode {mode}. Minimum bars needed: {required_bars}.'''
+    - '[must] [action] For rolling windows: train window advances by (test_window + purge_bars) each fold. For anchored windows:
+      train_start is fixed, train_end expands to include all previous folds'' train data.'
+    - '[must] [action] Window sizes are expressed in bars (number of distinct timestamps), not calendar time. Convert bar
+      counts to row counts based on dataset density in the compute_folds method.'
+    - '[must] [action] Implement a ValidationError exception class in contracts.py with fields: message, mode, required_folds,
+      available_bars, required_bars, suggestion (human-readable fix guidance).'
+    - '[must] [action] Do NOT implement model training. Do NOT import xgboost, sklearn, or any ML library.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/validation/**
+    forbiddenFiles:
+    - alphaforge/tests/**
+    - integration/tests/**
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-06-FIXTURE-01
+    description: DEFAULT_FOLD_CONFIGS dict maps SCALP, AGGRESSIVE_SCALP, SWING to WalkForwardConfig with correct window sizes
+      (5000/1000, 5000/1000, 2000/500)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FIXTURE-02
+    description: SCALP and AGGRESSIVE_SCALP configs specify ROLLING window type
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FIXTURE-03
+    description: SWING config may be ANCHORED or ROLLING — configurable via window_type field
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FIXTURE-04
+    description: compute_folds() raises ValidationError when dataset cannot satisfy 6-fold minimum — error message includes
+      mode, required folds, available bars, required bars
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-FIXTURE-05
+    description: ValidationError dataclass carries message, mode, required_folds, available_bars, required_bars, suggestion
+      fields
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-FIXTURE-06
+    description: Rolling windows advance by (test_window + purge_bars) per fold; anchored windows keep fixed train_start with
+      expanding train_end
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-FIXTURE-07
+    description: All window sizes expressed in bars (distinct timestamp count), not calendar time
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-FIXTURE-08
+    description: No xgboost, sklearn, tensorflow, torch, or any ML library import in fixture/config code
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-06-FIXTURE-RULES'
+    usageProofs:
+    - id: USE-WS-06-FIXTURE-RULES
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-06-FIXTURE-RULES
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-06-SKELETON
+  title: Implement WalkForwardValidator skeleton and ValidationReport assembly
+  objective: Implement WalkForwardValidator skeleton and ValidationReport assembly
+  implementation:
+    instructions:
+    - '[must] [action] Implement WalkForwardValidator class in walk_forward.py. Constructor takes WalkForwardConfig and a
+      PurgePolicy.'
+    - '[must] [action] Implement split(dataset: List[LabeledDataset]) -> List[Fold]. Dataset must be sorted by (feature_timestamp,
+      symbol). Raise ValidationError if unsorted.'
+    - '[must] [action] split() logic: verify chronological ordering of dataset. Partition into folds per config (train_ratio/val_ratio/oos_ratio).
+      For each fold, extract datetime boundaries, compute purge gaps, verify embargo, construct Fold with indices.'
+    - '[must] [action] Implement assemble_validation_report(dataset: List[LabeledDataset], config: WalkForwardConfig) -> ValidationReport.
+      This is the main entry point: splits dataset, constructs folds, assembles the report skeleton.'
+    - '[must] [action] assemble_validation_report() must produce a ValidationReport with: (a) config = the WalkForwardConfig
+      used; (b) folds = List[FoldResult] with per-fold sample_counts (train/val/oos row counts) populated from actual data
+      — ALL metrics NOT_EVALUATED; (c) oos_summary = OOSSummary instance with all fields NOT_EVALUATED; (d) cost_stress =
+      CostStressResult with fee/slippage/spread fields NOT_EVALUATED and funding_deferred_block populated (text explaining
+      funding is DEFERRED); (e) regime_breakdown = RegimeBreakdown with TREND_UP/TREND_DOWN/RANGE/TRANSITION all NOT_EVALUATED;
+      (f) symbol_stability = SymbolStability with 40%/60% limits recorded as constants and all metrics NOT_EVALUATED; (g)
+      overfit_risk_flags = empty list (no model, no overfit); (h) mht_controls = MHTControls with tested_hypothesis_count=NOT_EVALUATED,
+      correction_method=''NONE_APPLIED'', data_snooping_risk_flag=''HIGH''; (i) verdict = INCONCLUSIVE.'
+    - '[must] [action] funding_deferred_block must be a string field in CostStressResult containing: ''Funding model is DEFERRED.
+      Live/perpetual promotion is blocked until funding cost model is implemented. See simulation/docs/cost_model.md.'''
+    - '[must] [action] Implement sample count population: for each fold, count rows actually assigned to train/val/oos. These
+      are the ONLY real numbers in the report — they are structural, not metrics.'
+    - '[must] [action] Implement report_id generation: deterministic hash based on config and dataset length (not content
+      — content will be hashed when metrics are real). Format: ''VR-{mode}-{timestamp}-{dataset_hash_8chars}''.'
+    - '[must] [action] The generated_at field must be ISO 8601 UTC timestamp at report assembly time.'
+    - '[must] [action] Do NOT compute Sharpe, win rate, expectancy, drawdown, profit factor, or any performance metric. Do
+      NOT import xgboost, sklearn, numpy (except for datetime sorting/hashing), scipy, or any numeric computation library
+      beyond stdlib datetime and hashlib.'
+    - '[must] [action] Every method that would compute a metric must return NOT_EVALUATED. The NOT_EVALUATED sentinel must
+      compare equal to itself but not to any numeric value.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/validation/__init__.py
+    - alphaforge/src/alphaforge/validation/contracts.py
+    - alphaforge/src/alphaforge/validation/walk_forward.py
+    forbiddenFiles:
+    - alphaforge/tests/**
+    - integration/tests/**
+    dependencies:
+    - WS-06-FOLD-PLAN
+    - WS-06-PURGE-EMBARGO
+    - WS-06-FIXTURE-RULES
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-06-SKEL-01
+    description: WalkForwardValidator.split() accepts datetime-sorted LabeledDataset list, returns List[Fold] with correct
+      index boundaries
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-02
+    description: split() raises ValidationError if dataset is not chronologically sorted by (feature_timestamp, symbol)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-03
+    description: assemble_validation_report() returns ValidationReport with config, folds, oos_summary, cost_stress, regime_breakdown,
+      symbol_stability, overfit_risk_flags, mht_controls, verdict
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-04
+    description: Every per-fold metric field (train_metrics, val_metrics, oos_metrics, regime_breakdown, cost_stress in FoldResult)
+      is NOT_EVALUATED — no real or fake numbers
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-05
+    description: Every OOSSummary field (sharpe, win_rate, expectancy, max_drawdown, profit_factor, trades_count, stability)
+      is NOT_EVALUATED
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-06
+    description: CostStressResult has fee/slippage/spread stress levels all NOT_EVALUATED and funding_deferred_block populated
+      with DEFERRED explanation text
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-07
+    description: RegimeBreakdown uses V7 canonical regime names (TREND_UP/TREND_DOWN/RANGE/TRANSITION) — all metrics per regime
+      are NOT_EVALUATED
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-08
+    description: SymbolStability records 40%/60% concentration limits as constants; all metrics fields are NOT_EVALUATED
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-09
+    description: MHTControls has tested_hypothesis_count=NOT_EVALUATED, correction_method='NONE_APPLIED', data_snooping_risk_flag='HIGH'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-10
+    description: Verdict is INCONCLUSIVE — no real metrics, no basis for any other verdict
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-11
+    description: FoldResult.sample_counts (train/val/oos row counts) are populated with actual integer counts from the split
+      — structural, not metric
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-12
+    description: report_id follows deterministic format 'VR-{mode}-{timestamp}-{dataset_hash_8chars}'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-SKEL-13
+    description: No import of xgboost, sklearn, numpy (beyond hashing), scipy, tensorflow, torch, or any ML/numeric library
+      in walk_forward.py
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-SKEL-14
+    description: NOT_EVALUATED sentinel is imported and used consistently — never replaced with 0.0, None, or empty string
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-06-SKELETON'
+    usageProofs:
+    - id: USE-WS-06-SKELETON
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-06-SKELETON
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-06-NO-FAKE-TESTS
+  title: Implement negative tests — chronological split, 6-fold enforcement, purge correctness, no-shuffle, no-fake-metrics
+  objective: Implement negative tests — chronological split, 6-fold enforcement, purge correctness, no-shuffle, no-fake-metrics
+  implementation:
+    instructions:
+    - '[must] [action] Update or create alphaforge/tests/conftest.py with validation fixtures: (a) chrono_dataset — 200-row
+      LabeledDataset list sorted by feature_timestamp across 1200 bars, 3 symbols (BTCUSDT, ETHUSDT, SOLUSDT), SWING mode;
+      (b) unsorted_dataset — same data but shuffled; (c) short_dataset — 30 rows, too few bars for 6 SWING folds; (d) leaky_dataset
+      — feature_timestamp == label_timestamp for some rows.'
+    - '[must] [action] Create alphaforge/tests/test_walk_forward_validator.py with chronological split tests. Test: test_split_returns_6_folds
+      — verify split() on 200-row SWING dataset returns >= 6 folds.'
+    - '[must] [action] Test: test_chronological_order_enforced — verify split() raises ValidationError on unsorted dataset.'
+    - '[must] [action] Test: test_oos_after_train_val — for every fold, verify all OOS timestamps are strictly after all train
+      and val timestamps.'
+    - '[must] [action] Test: test_folds_are_chronological — fold 0 covers earliest data; fold N covers later data than fold
+      N-1. No fold overlaps chronologically.'
+    - '[must] [action] Test: test_6_fold_minimum_enforced — construct a short dataset that can only produce 4 folds. Verify
+      ValidationError is raised.'
+    - '[must] [action] Test: test_6_fold_minimum_satisfied — construct a dataset that produces exactly 6 folds. Verify no
+      error.'
+    - '[must] [action] Test: test_6_fold_minimum_applies_to_all_modes — verify SCALP, AGGRESSIVE_SCALP, and SWING all require
+      >= 6 folds. Test each mode with a dataset that would only support 5 folds.'
+    - '[must] [action] Test: test_purge_window_scalp — SCALP mode: verify purge gap between val end and oos start is >= 100
+      bars.'
+    - '[must] [action] Test: test_purge_window_aggressive_scalp — AGGRESSIVE_SCALP mode: verify purge gap >= 200 bars.'
+    - '[must] [action] Test: test_purge_window_swing — SWING mode: verify purge gap >= 20 bars.'
+    - '[must] [action] Test: test_embargo_enforcement — construct a dataset where train and test are too close (within embargo_bars).
+      Verify ValidationError is raised.'
+    - '[must] [action] Test: test_no_shuffle — construct a shuffled dataset, call split(), verify chronological ordering is
+      enforced (not silently accepted).'
+    - '[must] [action] Test: test_all_metrics_not_evaluated — call assemble_validation_report(), iterate every metric field
+      in the report (OOS summary, cost stress, regime breakdown, symbol stability, MHT controls, per-fold metrics), verify
+      every single metric field is NOT_EVALUATED.'
+    - '[must] [action] Test: test_no_fake_sharpe — verify OOSSummary.sharpe is NOT_EVALUATED, not 0.0, not None, not a float.'
+    - '[must] [action] Test: test_no_fake_win_rate — verify OOSSummary.win_rate is NOT_EVALUATED.'
+    - '[must] [action] Test: test_sample_counts_populated — verify every FoldResult has train_count, val_count, oos_count
+      as positive integers.'
+    - '[must] [action] Test: test_verdict_is_inconclusive — assemble_validation_report() returns verdict INCONCLUSIVE.'
+    - '[must] [action] Test: test_funding_deferred_block_present — verify cost_stress.funding_deferred_block is a non-empty
+      string containing ''DEFERRED''.'
+    - '[must] [action] Test: test_report_id_format — verify report_id matches regex VR-{mode}-\d{{4}}-\d{{2}}-\d{{2}}T.*-[a-f0-9]{{8}}.'
+    - '[must] [action] Test: test_regime_names_are_v7_canonical — verify RegimeBreakdown keys are exactly TREND_UP, TREND_DOWN,
+      RANGE, TRANSITION (not HIGH_VOL_UP, etc.).'
+    - '[must] [action] Test: test_no_xgboost_import — grep walk_forward.py and contracts.py for ''xgboost'', ''sklearn'',
+      ''tensorflow'', ''torch'', ''fit(''. Verify zero matches.'
+    - '[must] [action] Create integration/tests/test_alphaforge_validation.py with end-to-end test: create fixture dataset
+      -> WalkForwardValidator -> assemble_validation_report() -> verify structure. Confirm no exceptions, all metrics NOT_EVALUATED,
+      6+ folds, chronological ordering.'
+    - '[must] [action] Run CMD-test-validation. All tests must pass with exit code 0. No skipped tests.'
+    - '[must] [action] Run CMD-discover-git-status. Confirm only allowed files modified.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/tests/test_walk_forward_validator.py
+    - alphaforge/tests/conftest.py
+    - integration/tests/test_alphaforge_validation.py
+    forbiddenFiles:
+    - lib/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    dependencies:
+    - WS-06-SKELETON
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-06-TEST-01
+    description: split() on 200-row chronologically sorted SWING dataset returns >= 6 folds
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-02
+    description: split() raises ValidationError on unsorted (shuffled) dataset
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-03
+    description: Every fold's OOS timestamps are strictly chronologically after all train and val timestamps
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-04
+    description: 'Folds are chronological: fold 0 < fold 1 < ... < fold N; no time overlap between folds'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-05
+    description: '6-fold minimum enforced: dataset that can only produce 4 folds raises ValidationError'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-06
+    description: 6-fold minimum applies to ALL modes (SCALP, AGGRESSIVE_SCALP, SWING) — each tested with insufficient data
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-07
+    description: 'Purge window for SCALP: gap between val end and oos start >= 100 bars'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-08
+    description: 'Purge window for AGGRESSIVE_SCALP: gap >= 200 bars'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-09
+    description: 'Purge window for SWING: gap >= 20 bars'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-10
+    description: Embargo violation (train sample within embargo_bars of test) raises ValidationError
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-11
+    description: ALL metric fields in assembled ValidationReport are NOT_EVALUATED — iterative field inspection test passes
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-12
+    description: OOSSummary.sharpe is NOT_EVALUATED (not 0.0, not None, not a float)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-13
+    description: OOSSummary.win_rate is NOT_EVALUATED (not 0.0, not 0.5, not None)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-14
+    description: FoldResult.sample_counts have positive integer train/val/oos counts per fold
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-15
+    description: ValidationReport.verdict is INCONCLUSIVE
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-16
+    description: cost_stress.funding_deferred_block is a non-empty string containing 'DEFERRED'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-17
+    description: report_id matches expected format VR-{mode}-{timestamp}-{8-char-hash}
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-18
+    description: RegimeBreakdown uses V7 canonical names (TREND_UP/TREND_DOWN/RANGE/TRANSITION), not AlphaForge-invented regime
+      names
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-06-TEST-19
+    description: Zero xgboost, sklearn, tensorflow, torch, or fit() imports in walk_forward.py or contracts.py
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - source
+  - id: AC-06-TEST-20
+    description: CMD-test-validation exits 0 with all tests passing and no skips
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-validation
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-06-TEST-21
+    description: 'Integration test: full pipeline from fixture dataset through WalkForwardValidator to assembled ValidationReport
+      succeeds with correct structure'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-test-integration-alphaforge
+    requiredEvidence:
+    - source
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-06-NO-FAKE-TESTS'
+    usageProofs:
+    - id: USE-WS-06-NO-FAKE-TESTS
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-06-NO-FAKE-TESTS
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-06-REPORT
+  title: Run tests, emit ACCP report, validate forbidden files and no-training constraints
+  objective: Run tests, emit ACCP report, validate forbidden files and no-training constraints
+  implementation:
+    instructions:
+    - '[must] [action] Run CMD-final-validation (pytest across lib, integration, simulation, alphaforge). Confirm exit 0.'
+    - '[must] [action] Run CMD-discover-git-status. Confirm only allowed files are modified (alphaforge/src/alphaforge/validation/**,
+      alphaforge/tests/test_walk_forward_validator.py, alphaforge/tests/conftest.py, integration/tests/test_alphaforge_validation.py,
+      reports/accp/**).'
+    - '[must] [action] Run forbidden file scan: confirm no changes to lib/, simulation/engine/, runtime/, interface/, data/,
+      datasets/, models/, artifacts/, .github/.'
+    - '[must] [action] Run no-xgboost scan: grep for ''xgboost'', ''XGBClassifier'', ''XGBRegressor'', ''sklearn'', ''tensorflow'',
+      ''torch'', ''fit('' across all new/modified Python files. Confirm zero matches.'
+    - '[must] [action] Run no-fake-metrics scan: grep for NOT_EVALUATED across all report assembly code. Confirm NOT_EVALUATED
+      is consistently used — no 0.0, no 1.0, no synthetic values in metric fields.'
+    - '[must] [action] Run no-shuffle scan: grep for ''shuffle'', ''random'', ''permutation'', ''seed'' in walk_forward.py.
+      Confirm no randomization code exists.'
+    - '[must] [action] Run no-profitability scan: grep for ''profitability'', ''profit'', ''edge confirmed'', ''alpha works''
+      across all new/modified Python files. Confirm zero matches.'
+    - '[must] [action] Run import boundary check: confirm alphaforge/src/alphaforge/validation/ does not import from v7/,
+      simulation/engine/, runtime/, or interface/.'
+    - '[must] [action] Run chronological ordering scan: verify that dataset processing in walk_forward.py sorts or validates
+      chronological order — no random access that could reorder.'
+    - '[must] [action] Write ACCP-YAML 2.0.0 report to reports/accp/walk_forward_validation.accp.yaml with keys: result, scope_confirmation,
+      files_changed, decisions_locked, remaining_holds, safe_next_step, commands_run, evidence.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/tests/test_walk_forward_validator.py
+    - alphaforge/tests/conftest.py
+    - integration/tests/test_alphaforge_validation.py
+    - reports/accp/**
+    forbiddenFiles:
+    - lib/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    dependencies:
+    - WS-06-NO-FAKE-TESTS
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-06-REPORT-01
+    description: CMD-final-validation exits 0 with all tests passing
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-final-validation
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-06-REPORT-02
+    description: CMD-discover-git-status shows only allowed files modified
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-06-REPORT-03
+    description: 'Forbidden file scan: zero modifications to lib/, simulation/engine/, runtime/, interface/, data/, datasets/,
+      models/, artifacts/, .github/'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-06-REPORT-04
+    description: No xgboost, sklearn, tensorflow, torch, or fit() calls in any new or modified Python file
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-06-REPORT-05
+    description: All metric fields use NOT_EVALUATED sentinel — zero synthetic/fake numeric values in any metric field
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-06-REPORT-06
+    description: No shuffle, random, permutation, or seed code in walk_forward.py
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-06-REPORT-07
+    description: No profitability claims in any new or modified Python file
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-06-REPORT-08
+    description: 'Import boundaries: alphaforge/src/alphaforge/validation/ does not import from v7/, simulation/engine/, runtime/,
+      or interface/'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-06-REPORT-09
+    description: ACCP report written to reports/accp/walk_forward_validation.accp.yaml with all required keys present (result,
+      scope_confirmation, files_changed, decisions_locked, remaining_holds, safe_next_step, commands_run, evidence)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-06-REPORT'
+    usageProofs:
+    - id: USE-WS-06-REPORT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-06-REPORT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+commands:
+  exactAllowedCommands:
+  - id: CMD-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-integration-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_*.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-contract-registry-schema
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py
+      -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-import-boundaries
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py
+      simulation/tests/test_import_boundary.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-validation
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_walk_forward_validator.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-final-validation
+    kind: final_validation
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/
+      -q --ignore=lib/tests/test_market_data_binance.py
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 300
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network or market data during deterministic validation skeleton implementation.
+  - id: DCMD-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-no-binance
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior allowed.
+  - id: DCMD-no-xgboost-training
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|sklearn\.ensemble|sklearn\.linear_model|fit\(|import xgboost|import sklearn|import
+      tensorflow|import torch
+    reason: No model training in validation skeleton plan. All metrics are NOT_EVALUATED.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - diff
+  - source
+  - wiring
+  - command
+  - test_output
+  - schema_validation
+  - report
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-06.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

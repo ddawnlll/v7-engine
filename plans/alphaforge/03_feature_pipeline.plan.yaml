@@ -1,0 +1,1719 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-03-FEATURE-PIPELINE
+  title: AlphaForge P0.9B — Feature Pipeline (TASK-03 of Master Execution Plan)
+  description: 'Implement the deterministic fixture-only causal feature pipeline in alphaforge/src/alphaforge/features/pipeline.py.
+    The pipeline computes features per the 7 feature groups defined in feature_contract.md (Returns, Volatility, ATR, Momentum,
+    Volume, Breakout, Lead-Lag). Lead-Lag group is explicitly DEFERRED due to P0.9B cross-sectional data dependency. Every
+    feature computation is deterministic, causal (no future-looking windows), and validated with leakage negative tests. All
+    inputs are OHLCV fixture data from contracts/fixtures/. No network calls, no exchange APIs, no real market data, no xgboost
+    training.
+
+    Part of the master AlphaForge implementation pipeline. Predecessor task: TASK-02-SIMULATION-DERIVED-LABEL-ADAPTER. Successor
+    task: TASK-04-DATASET-ASSEMBLER. The feature pipeline is the bridge between raw market data and the dataset assembler
+    -- features are the input columns for downstream XGBoost training (TASK-08).
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - alphaforge/docs/ai_summary__v7_alphaforge_xgb.md
+  - alphaforge/docs/feature_contract.md
+  - alphaforge/src/alphaforge/__init__.py
+  - alphaforge/src/alphaforge/errors.py
+  - alphaforge/src/alphaforge/features/__init__.py
+  - alphaforge/src/alphaforge/features/pipeline.py
+  - alphaforge/tests/__init__.py
+  - alphaforge/tests/conftest.py
+  - alphaforge/tests/test_feature_pipeline.py
+  - contracts/fixtures/simulation_output_minimal.json
+  - contracts/registry.json
+  - plans/alphaforge/03_feature_pipeline.plan.yaml
+  - reports/accp/alphaforge_feature_pipeline.accp.yaml
+  - reports/accp/alphaforge_feature_pipeline_tests.accp.yaml
+  - simulation/docs/profiles.md
+  - template.json
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/src/**
+  - alphaforge/src/alphaforge/contracts/**
+  - alphaforge/src/alphaforge/data/**
+  - alphaforge/src/alphaforge/dataset/**
+  - alphaforge/src/alphaforge/gates/**
+  - alphaforge/src/alphaforge/handoff/**
+  - alphaforge/src/alphaforge/labels/**
+  - alphaforge/src/alphaforge/modes/**
+  - alphaforge/src/alphaforge/reports/**
+  - alphaforge/src/alphaforge/validation/**
+  - alphaforge/tests/**
+  - artifacts/**
+  - data/**
+  - datasets/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/contracts/**
+  - simulation/engine/**
+  - simulation/src/**
+  - v7/src/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+- id: WS-03-SPEC-RECONCILIATION
+  title: 'Design: Map Feature Contract 7 Groups to Implementation Plan'
+  objective: 'Design: Map Feature Contract 7 Groups to Implementation Plan'
+  implementation:
+    instructions:
+    - '[must] [action] Read alphaforge/docs/feature_contract.md fully. Document every feature in each of the 7 groups: Returns
+      (log_return_1, log_return_N, return_volatility_N, return_zscore_N), Volatility (realized_volatility_N, high_low_range_N,
+      garman_klass_vol_N, parkinson_vol_N), ATR (atr_N, atr_pct_N, atr_expansion_N), Momentum (momentum_N, roc_N, rsi_N, macd,
+      macd_signal, macd_histogram), Volume (volume_ratio_N, volume_trend_N, vwap_deviation, obv_N), Breakout (bb_position,
+      bb_width, highest_N, lowest_N, range_breakout_N), Lead-Lag (tf_alignment, correlation_N, lead_lag_score). For each feature,
+      record: formula, lookback window, required input columns, output type, and any edge cases.
+
+      '
+    - '[must] [action] Mark Lead-Lag group as DEFERRED. Document the specific reason: cross-sectional data required (P0.9B
+      dependency). Define re-enablement conditions: (a) cross- sectional data pipeline available, (b) correlation computation
+      across symbols validated, (c) timeframe alignment logic tested with multi-timeframe fixtures. Do NOT create stub functions
+      or placeholder implementations.
+
+      '
+    - '[must] [action] Define the causality contract for every feature. For each feature, specify the exact lookback window
+      in terms of bar indices: feature at bar[t] uses bars [t-lookback+1 .. t] inclusive. Document which features use close-only,
+      which use OHLC, and which use volume data. The causality contract is the foundation for leakage tests.
+
+      '
+    - '[must] [action] Cross-reference feature timeframes against simulation/docs/profiles.md locked mode profiles. Confirm
+      that SWING mode (4h primary, 1d context, 1h refinement) is the implementation baseline. Document N values (lookback
+      windows) for each feature in SWING mode. Note that SCALP and AGGRESSIVE_SCALP feature sets require empirical tuning
+      and are HOLD.
+
+      '
+    - '[must] [action] Define the FeatureMatrix export surface: a dict or dataclass with keys for each feature group, containing
+      numpy arrays of shape (n_bars, n_features_in_group). The matrix must include a timestamp index and symbol identifier.
+      Define the missing_policy for each feature: forward-fill within group, NaN for insufficient lookback at start of series.
+
+      '
+    - '[must] [action] Design the pipeline API: compute_features(ohlcv_data: dict, mode: str, timeframe_stack: dict) -> FeatureMatrix.
+      The function must: (a) validate input columns exist (open, high, low, close, volume), (b) compute each active group,
+      (c) enforce causality at the pipeline level, (d) apply missing_policy, (e) return a structured FeatureMatrix. No side
+      effects, no global state.
+
+      '
+    - '[must] [action] Enumerate all required Python modules: numpy (array operations), dataclasses (FeatureMatrix), typing
+      (type hints), enum (feature groups). Confirm no external dependencies beyond numpy. Document that scipy, pandas, ta-lib,
+      and other libraries are NOT required -- all computations use numpy only.
+
+      '
+    allowedFiles:
+    - alphaforge/docs/feature_contract.md
+    - alphaforge/docs/ai_summary__v7_alphaforge_xgb.md
+    - simulation/docs/profiles.md
+    - plans/alphaforge/03_feature_pipeline.plan.yaml
+    - template.json
+    - contracts/registry.json
+    - contracts/fixtures/simulation_output_minimal.json
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - v7/src/**
+    - models/**
+    - artifacts/**
+    - lib/**
+  artifactPolicy:
+    class: documentation
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: false
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-03-001
+    description: All 7 feature groups from feature_contract.md are documented with formulas, lookback windows, input columns,
+      and output types
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-03-002
+    description: Lead-Lag group is explicitly marked DEFERRED with P0.9B cross-sectional data reason and re-enablement conditions
+      documented
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-03-003
+    description: 'Causality contract defined for every feature: bar[t] computation window is [t-lookback+1 .. t] inclusive,
+      no future bars'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-03-004
+    description: SWING mode timeframe stack (4h primary, 1d context, 1h refinement) confirmed as implementation baseline from
+      simulation/docs/profiles.md
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-03-005
+    description: 'FeatureMatrix export surface defined: structured output with group-keyed numpy arrays, timestamp index,
+      symbol identifier, and missing_policy'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-03-006
+    description: 'Pipeline API contract documented: compute_features(ohlcv_data, mode, timeframe_stack) -> FeatureMatrix with
+      input validation, group computation, causality enforcement, and missing_policy'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-03-007
+    description: No source files in alphaforge/src/ are created or modified during design phase -- git status confirms clean
+      working tree
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - diff
+      - command
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - diff
+    - command
+- id: WS-03-RETURNS
+  title: 'Implement Returns Group: log_return, volatility, zscore'
+  objective: 'Implement Returns Group: log_return, volatility, zscore'
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/src/alphaforge/features/__init__.py. Export: FeatureMatrix, compute_features, FeatureGroup
+      enum, FEATURE_GROUP_MAP, PIPELINE_VERSION. Follow the authority boundary docstring pattern from existing alphaforge
+      __init__.py files (__version__, __authority__).
+
+      '
+    - '[must] [action] Create alphaforge/src/alphaforge/features/pipeline.py. Define the FeatureGroup enum with members: RETURNS,
+      VOLATILITY, ATR, MOMENTUM, VOLUME, BREAKOUT, LEAD_LAG (marked as DEFERRED with docstring). Define FeatureMatrix dataclass
+      with fields: features (dict[str, np.ndarray]), timestamps (np.ndarray), symbol (str), mode (str), feature_group_ids
+      (list[str]), metadata (dict).
+
+      '
+    - '[must] [action] Implement compute_log_return_1(close: np.ndarray) -> np.ndarray: r[t] = ln(close[t] / close[t-1]) for
+      t >= 1, NaN at t=0. Implement compute_log_return_N(close: np.ndarray, n: int) -> np.ndarray: r[t] = ln(close[t] / close[t-n])
+      for t >= n, NaN for t < n.
+
+      '
+    - '[must] [action] Implement compute_return_volatility(returns: np.ndarray, window: int) -> np.ndarray: rolling standard
+      deviation of log returns over `window` bars. Use np.lib.stride_tricks.sliding_window_view or manual rolling computation.
+      NaN for t < window. Implement compute_return_zscore(returns: np.ndarray, window: int) -> np.ndarray: (r[t] - mean(r[t-window:t]))
+      / std(r[t-window:t]).
+
+      '
+    - '[must] [action] Implement compute_returns_group(close: np.ndarray, n: int, window: int) -> dict[str, np.ndarray]. Returns
+      dict with keys: log_return_1, log_return_N, return_volatility_N, return_zscore_N. All arrays must be same length as
+      input. Missing values at start of series are NaN (not zero-filled). This is the missing_policy: NaN for insufficient
+      history.
+
+      '
+    - '[must] [action] Causality enforcement: log_return_1 at index t uses close[t] and close[t-1]. log_return_N at index
+      t uses close[t] and close[t-n]. No bar beyond index t is accessed. Verify with explicit index-bound assertions in code
+      comments.
+
+      '
+    - '[must] [action] Do NOT import: binance, ccxt, requests, urllib (external), xgboost, pandas, scipy, ta-lib, or any ML
+      library. Only allowed imports: numpy, dataclasses, typing, enum, logging. Do NOT call any network API. Do NOT read from
+      data/ or datasets/.
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/features/__init__.py
+    - alphaforge/src/alphaforge/features/pipeline.py
+    - alphaforge/src/alphaforge/__init__.py
+    - alphaforge/src/alphaforge/errors.py
+    - contracts/fixtures/simulation_output_minimal.json
+    - contracts/registry.json
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/labels/**
+    - alphaforge/src/alphaforge/data/**
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/src/alphaforge/gates/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/reports/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/tests/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - simulation/src/**
+    - runtime/**
+    - interface/**
+    - lib/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    - v7/src/**
+    dependencies:
+    - WS-03-SPEC-RECONCILIATION
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-03-008
+    description: alphaforge/src/alphaforge/features/__init__.py exists and exports FeatureMatrix, compute_features, FeatureGroup,
+      FEATURE_GROUP_MAP, PIPELINE_VERSION
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-03-009
+    description: 'FeatureGroup enum defined with 7 members: RETURNS, VOLATILITY, ATR, MOMENTUM, VOLUME, BREAKOUT, LEAD_LAG
+      (LEAD_LAG marked DEFERRED in docstring)'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-03-010
+    description: 'compute_log_return_1 produces correct values: r[t] = ln(close[t]/close[t-1]), first element NaN, length
+      matches input'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-011
+    description: compute_log_return_N with n=5 produces r[t] = ln(close[t]/close[t-5]), first 5 elements NaN, matches manual
+      numpy computation
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-012
+    description: compute_return_volatility with window=20 produces rolling std of log returns, NaN for first 20 elements
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-013
+    description: compute_return_zscore produces (r[t] - rolling_mean) / rolling_std, correctly handles edge at window boundary
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-014
+    description: compute_returns_group returns dict with all 4 keys, all arrays same length as input, NaN at series start
+      (not zero-filled)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-015
+    description: 'Returns group causality: no array index access beyond current bar t -- index check assertions present and
+      verifiable in source'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-03-RETURNS'
+    usageProofs:
+    - id: USE-WS-03-RETURNS
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-03-RETURNS
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-03-VOLATILITY-ATR
+  title: Implement Volatility Group and ATR Group
+  objective: Implement Volatility Group and ATR Group
+  implementation:
+    instructions:
+    - '[must] [action] Implement Volatility group functions in pipeline.py. compute_realized_volatility (close: np.ndarray,
+      window: int) -> np.ndarray: annualized realized volatility = std(log_returns[t-window:t]) * sqrt(periods_per_year).
+      For SWING 4h bars, periods_per_year = 365 * 6 = 2190. NaN for t < window.
+
+      '
+    - '[must] [action] Implement compute_high_low_range(high: np.ndarray, low: np.ndarray, close: np.ndarray, window: int)
+      -> np.ndarray: rolling mean of (high - low) / close over `window` bars. Implement compute_garman_klass_vol(open: np.ndarray,
+      high: np.ndarray, low: np.ndarray, close: np.ndarray, window: int) -> np.ndarray: Garman-Klass estimator = sqrt(1/N
+      * sum(0.5*ln(H/L)^2 - (2*ln(2)-1)*ln(C/O)^2)). Implement compute_parkinson_vol(high: np.ndarray, low: np.ndarray, window:
+      int) -> np.ndarray: Parkinson estimator = sqrt(1/(4*N*ln(2)) * sum(ln(H/L)^2)).
+
+      '
+    - '[must] [action] Implement compute_volatility_group(open_arr, high, low, close, window) -> dict with keys: realized_volatility_N,
+      high_low_range_N, garman_klass_vol_N, parkinson_vol_N. All NaN-filled at start for insufficient lookback.
+
+      '
+    - '[must] [action] Implement ATR group functions. compute_true_range(high, low, close) -> np.ndarray: TR[t] = max(high[t]-low[t],
+      |high[t]-close[t-1]|, |low[t]-close[t-1]|). compute_atr(high, low, close, window) -> np.ndarray: Wilder''s smoothed
+      ATR or simple rolling mean of TR over `window` bars. compute_atr_pct(atr, close) -> np.ndarray: ATR / close * 100. compute_atr_expansion(atr,
+      window) -> np.ndarray: ATR / SMA(ATR, window).
+
+      '
+    - '[must] [action] Implement compute_atr_group(high, low, close, window) -> dict with keys: atr_N, atr_pct_N, atr_expansion_N.
+      All NaN-filled at start for insufficient lookback. ATR window N defaults to 14 for SWING mode baseline.
+
+      '
+    - '[must] [action] Causality check: true_range at t uses high[t], low[t], close[t], close[t-1]. ATR at t uses TR[t-window+1
+      .. t]. No future bars. Garman-Klass and Parkinson at t use only bars up to t. Document the window boundaries in code
+      comments.
+
+      '
+    - '[must] [action] Ensure all volatility computations are deterministic -- no random sampling, no stochastic elements.
+      Same OHLC input must produce identical output across calls. Test with fixed numpy seed verification (even though no
+      RNG is used).
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/features/__init__.py
+    - alphaforge/src/alphaforge/features/pipeline.py
+    - alphaforge/src/alphaforge/__init__.py
+    - alphaforge/src/alphaforge/errors.py
+    - contracts/fixtures/simulation_output_minimal.json
+    - contracts/registry.json
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/labels/**
+    - alphaforge/src/alphaforge/data/**
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/src/alphaforge/gates/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/reports/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/tests/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - simulation/src/**
+    - runtime/**
+    - interface/**
+    - lib/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    - v7/src/**
+    dependencies:
+    - WS-03-RETURNS
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-03-016
+    description: compute_realized_volatility with window=20 produces annualized vol estimate, NaN for first 20 bars, matches
+      manual sqrt(sum(r^2)/(N-1))*sqrt(periods) check
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-017
+    description: compute_high_low_range produces normalized (H-L)/close range, values in [0, ~0.2] for typical crypto data
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-018
+    description: compute_garman_klass_vol produces non-negative values, NaN at start, matches known reference implementation
+      to within 1e-10
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-019
+    description: compute_parkinson_vol produces non-negative values, is always >= 0, uses only high/low (not close-dependent)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-020
+    description: compute_true_range produces TR[t] >= high[t]-low[t] (TR is lower-bounded by the bar range)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-021
+    description: compute_atr with window=14 produces smoothed ATR, NaN for first 14 bars, all values non-negative
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-022
+    description: compute_atr_pct returns ATR/close*100 in percentage units, NaN where ATR is NaN
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-023
+    description: compute_atr_expansion returns ratio > 1 when ATR exceeds its SMA, < 1 when ATR contracts
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-03-VOLATILITY-ATR'
+    usageProofs:
+    - id: USE-WS-03-VOLATILITY-ATR
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-03-VOLATILITY-ATR
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-03-MOMENTUM
+  title: 'Implement Momentum Group: ROC, RSI, MACD'
+  objective: 'Implement Momentum Group: ROC, RSI, MACD'
+  implementation:
+    instructions:
+    - '[must] [action] Implement compute_momentum_N(close: np.ndarray, n: int) -> np.ndarray: momentum[t] = close[t] - close[t-n].
+      NaN for t < n. Implement compute_roc_N(close: np.ndarray, n: int) -> np.ndarray: roc[t] = (close[t] / close[t-n] - 1)
+      * 100. NaN for t < n.
+
+      '
+    - '[must] [action] Implement compute_rsi(close: np.ndarray, window: int = 14) -> np.ndarray: Wilder''s RSI using smoothed
+      average gains and losses. avg_gain[t] = (avg_gain[t-1] * (window-1) + gain[t]) / window. avg_loss similarly. rs = avg_gain
+      / avg_loss. rsi = 100 - 100/(1+rs). NaN for t < window. RSI values bounded in [0, 100]. Edge case: when avg_loss ==
+      0, RSI = 100.
+
+      '
+    - '[must] [action] Implement compute_macd(close: np.ndarray, fast: int = 12, slow: int = 26, signal: int = 9) -> dict:
+      macd_line = EMA(close, fast) - EMA(close, slow), signal_line = EMA(macd_line, signal), histogram = macd_line - signal_line.
+      Use exponential moving average: EMA[t] = close[t] * k + EMA[t-1] * (1-k) where k = 2/(period+1). NaN for t < slow.
+
+      '
+    - '[must] [action] Implement compute_momentum_group(close: np.ndarray, n: int, rsi_window: int, macd_fast: int, macd_slow:
+      int, macd_signal: int) -> dict with keys: momentum_N, roc_N, rsi_N, macd, macd_signal, macd_histogram. All NaN at start
+      for insufficient lookback. SWING defaults: n=10, rsi_window=14, macd_fast=12, macd_slow=26, macd_signal=9.
+
+      '
+    - '[must] [action] Causality: RSI at t uses only gain[t] and loss[t] derived from close[t]-close[t-1]. MACD at t uses
+      EMA up to and including close[t]. No future bars accessed. The EMA smoothing is recursive and causal by construction.
+
+      '
+    - '[must] [action] MACD histogram sign convention: positive histogram = macd_line above signal_line (bullish momentum).
+      Negative = bearish. Verify with known values from a reference dataset to ensure formula correctness.
+
+      '
+    - '[must] [action] Do NOT use pandas ewm(), pandas rolling(), or ta-lib. All EMA and rolling computations must use numpy
+      only for reproducibility and zero external dependency footprint.
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/features/__init__.py
+    - alphaforge/src/alphaforge/features/pipeline.py
+    - alphaforge/src/alphaforge/__init__.py
+    - alphaforge/src/alphaforge/errors.py
+    - contracts/fixtures/simulation_output_minimal.json
+    - contracts/registry.json
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/labels/**
+    - alphaforge/src/alphaforge/data/**
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/src/alphaforge/gates/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/reports/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/tests/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - simulation/src/**
+    - runtime/**
+    - interface/**
+    - lib/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    - v7/src/**
+    dependencies:
+    - WS-03-VOLATILITY-ATR
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-03-024
+    description: compute_momentum_N with n=10 produces close[t] - close[t-10], NaN for first 10 bars
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-025
+    description: compute_roc_N with n=10 produces (close[t]/close[t-10] - 1)*100 percentage values, NaN for first 10 bars
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-026
+    description: compute_rsi with window=14 produces values in [0, 100], NaN for first 14 bars, RSI=100 when no down moves
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-027
+    description: compute_rsi with monotonically increasing prices (no down moves) produces RSI approaching 100
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-028
+    description: compute_macd returns dict with macd, macd_signal, macd_histogram keys, histogram = macd - signal within 1e-10
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-029
+    description: MACD histogram crosses zero when macd_line crosses signal_line -- verified with synthetic sine-wave price
+      data
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-030
+    description: compute_momentum_group returns dict with 6 keys, all arrays same length as input
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-031
+    description: All momentum computations use numpy only -- no pandas ewm(), no ta-lib, no scipy imports
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-03-MOMENTUM'
+    usageProofs:
+    - id: USE-WS-03-MOMENTUM
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-03-MOMENTUM
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-03-VOLUME-BREAKOUT
+  title: Implement Volume Group and Breakout Group
+  objective: Implement Volume Group and Breakout Group
+  implementation:
+    instructions:
+    - '[must] [action] Implement Volume group functions. compute_volume_ratio(volume: np.ndarray, window: int) -> np.ndarray:
+      volume_ratio[t] = volume[t] / mean(volume[t-window:t]). compute_volume_trend(volume: np.ndarray, window: int) -> np.ndarray:
+      linear regression slope of volume[t-window:t] vs bar index -- positive slope = increasing volume trend. Implement compute_vwap_deviation(high,
+      low, close, volume) -> np.ndarray: deviation from VWAP = (close - VWAP) / VWAP where VWAP = cumulative(typical_price
+      * volume) / cumulative(volume). Implement compute_obv(close, volume) -> np.ndarray: OBV[t] = OBV[t-1] + volume[t] if
+      close[t] > close[t-1], -volume[t] if close[t] < close[t-1], else 0.
+
+      '
+    - '[must] [action] Implement compute_volume_group(high, low, close, volume, window) -> dict with keys: volume_ratio_N,
+      volume_trend_N, vwap_deviation, obv_N. All NaN at start for insufficient lookback. VWAP starts accumulating from bar
+      0. OBV starts at 0 at bar 0.
+
+      '
+    - '[must] [action] Implement Breakout group functions. compute_bollinger_bands(close: np.ndarray, window: int = 20, num_std:
+      float = 2.0) -> tuple: middle = SMA(close, window), upper = middle + num_std * std, lower = middle - num_std * std.
+      compute_bb_position(close, upper, middle, lower) -> np.ndarray: (close - lower) / (upper - lower), clamped to [0, 1].
+      compute_bb_width(upper, middle, lower) -> np.ndarray: (upper - lower) / middle.
+
+      '
+    - '[must] [action] Implement compute_highest(high: np.ndarray, window: int) -> np.ndarray: rolling maximum of high over
+      `window` bars. compute_lowest(low: np.ndarray, window: int) -> np.ndarray: rolling minimum. Implement compute_range_breakout(close,
+      high, low, window) -> np.ndarray: breakout signal = (close - lowest_N) / (highest_N - lowest_N) where highest_N and
+      lowest_N are rolling over `window` bars. Values in [0, 1]; >0.7 suggests near resistance, <0.3 suggests near support.
+
+      '
+    - '[must] [action] Implement compute_breakout_group(high, low, close, window, bb_window, bb_num_std) -> dict with keys:
+      bb_position, bb_width, highest_N, lowest_N, range_breakout_N. All NaN at start for insufficient lookback.
+
+      '
+    - '[must] [action] Causality verification: all rolling windows at t use bars [t-window+1 .. t]. Bollinger Bands at t use
+      close[t-window+1 .. t]. range_breakout at t uses highest_N[t] and lowest_N[t] which are computed from bars up to t.
+      No future bars in any computation.
+
+      '
+    - '[must] [action] Document that Lead-Lag features (tf_alignment, correlation_N, lead_lag_score) are NOT implemented in
+      the volume/breakout group or anywhere else. The FeatureGroup.LEAD_LAG enum member exists for contract completeness but
+      maps to a DEFERRED sentinel. No feature computation function exists for Lead-Lag.
+
+      '
+    - '[must] [action] Implement compute_features() -- the main pipeline entry point. It accepts ohlcv_data (dict with open,
+      high, low, close, volume as np.ndarrays), mode (str), and timeframe_stack (dict). Returns FeatureMatrix. Internally
+      calls each group''s compute function, validates array length consistency, applies missing_policy (NaN preservation),
+      and assembles the FeatureMatrix.
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/features/__init__.py
+    - alphaforge/src/alphaforge/features/pipeline.py
+    - alphaforge/src/alphaforge/__init__.py
+    - alphaforge/src/alphaforge/errors.py
+    - contracts/fixtures/simulation_output_minimal.json
+    - contracts/registry.json
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/labels/**
+    - alphaforge/src/alphaforge/data/**
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/src/alphaforge/gates/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/reports/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/tests/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - simulation/src/**
+    - runtime/**
+    - interface/**
+    - lib/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    - v7/src/**
+    dependencies:
+    - WS-03-MOMENTUM
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-03-032
+    description: compute_volume_ratio with window=20 produces ratio of current volume to 20-bar average volume, NaN for first
+      20 bars
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-033
+    description: compute_volume_trend produces positive slope for monotonically increasing volume, negative for decreasing
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-034
+    description: compute_vwap_deviation produces 0 when close == VWAP, negative when close < VWAP, positive when close > VWAP
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-035
+    description: compute_obv with monotonically increasing close accumulates all volume positively (OBV strictly increasing)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-036
+    description: compute_bb_position returns values in [0, 1], ~0 near lower band, ~1 near upper band, ~0.5 at middle
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-037
+    description: compute_highest_N and compute_lowest_N with window=20 produce rolling max/min, identical to manual numpy
+      sliding window
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-038
+    description: compute_range_breakout with window=20 produces values in [0, 1], =0 when close == lowest_N, =1 when close
+      == highest_N
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-039
+    description: compute_features() assembles all 6 groups, returns FeatureMatrix with correct shape, no Lead-Lag features
+      present in output
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-03-VOLUME-BREAKOUT'
+    usageProofs:
+    - id: USE-WS-03-VOLUME-BREAKOUT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-03-VOLUME-BREAKOUT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-03-LEAKAGE-TESTS
+  title: Create Leakage Negative Tests and Deterministic Feature Matrix Tests
+  objective: Create Leakage Negative Tests and Deterministic Feature Matrix Tests
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/tests/test_feature_pipeline.py with pytest. Organize tests by category: (a) unit
+      tests per feature function, (b) group integration tests, (c) leakage negative tests, (d) determinism tests, (e) full
+      pipeline tests, (f) import boundary tests. Use inline OHLCV fixture data (numpy arrays created in test functions) --
+      no external data files needed.
+
+      '
+    - '[must] [action] CRITICAL -- Leakage negative test: create a test helper that attempts to compute features with a window
+      that extends into the future. Create a validate_causality(feature_func, ohlcv_data) helper that verifies the function
+      only accesses bars up to the current index. For each feature group, verify that passing data where close[t+1] is used
+      in computation raises an error or produces a detectable anomaly. Test specifically: (a) future close in log_return,
+      (b) future high/low in ATR, (c) future close in MACD EMA, (d) future close in BB computation, (e) future volume in volume_ratio.
+
+      '
+    - '[must] [action] Leakage test design: For each feature function f(arr), compute y1 = f(arr[0:N]). Then compute y2 =
+      f(arr[0:N+1]) and verify y1[0:N] == y2[0:N] (no revision of past values when future data is added). This is the "no-revision"
+      test. If adding bar N+1 changes feature values at bars 0..N-1, there is leakage.
+
+      '
+    - '[must] [action] Determinism test: call each feature group function 5 times with identical input. Assert np.array_equal()
+      on all output arrays. Verify that compute_features() with same OHLCV data produces identical FeatureMatrix across 5
+      calls. Confirm no random seed, timestamp, or process ID influence.
+
+      '
+    - '[must] [action] Feature matrix shape tests: for input of length N, verify each feature array has length N. Verify NaN
+      count at start matches expected lookback for each feature. Verify total feature count: 4 (Returns) + 4 (Volatility)
+      + 3 (ATR) + 6 (Momentum) + 4 (Volume) + 5 (Breakout) = 26 features minimum in full FeatureMatrix. Lead-Lag features
+      must be ABSENT.
+
+      '
+    - '[must] [action] Lead-Lag DEFERRED test: verify that FeatureGroup.LEAD_LAG exists as an enum member, that FEATURE_GROUP_MAP
+      does NOT include a compute function for LEAD_LAG, and that compute_features() does NOT produce any lead-lag feature
+      columns. Importing LEAD_LAG should not trigger any computation or side effect.
+
+      '
+    - '[must] [action] Edge case tests: (a) input array of length 1 (all NaN output for lookback>1 features), (b) constant
+      price (zero returns, RSI=50, zero volatility), (c) single spike then flat (MACD convergence to zero), (d) zero volume
+      bars (volume_ratio division safety), (e) negative prices (should raise ValueError), (f) NaN in input OHLCV (should propagate
+      with warning).
+
+      '
+    - '[must] [action] Import boundary test: programmatically verify that alphaforge.features does not import from simulation,
+      v7, runtime, or interface. Scan the module''s __dict__ or use a static import check. Test must fail if any forbidden
+      import is detected.
+
+      '
+    - '[must] [action] Run all tests: CMD-test-alphaforge must pass with exit 0. Then run CMD-test-integration-alphaforge,
+      CMD-test-contract-registry-schema, CMD-test-import-boundaries, and CMD-test-simulation. All must exit 0. No existing
+      tests may be broken by the new feature module.
+
+      '
+    allowedFiles:
+    - alphaforge/tests/test_feature_pipeline.py
+    - alphaforge/tests/__init__.py
+    - alphaforge/tests/conftest.py
+    - alphaforge/src/alphaforge/features/__init__.py
+    - alphaforge/src/alphaforge/features/pipeline.py
+    - contracts/fixtures/simulation_output_minimal.json
+    - contracts/registry.json
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/labels/**
+    - alphaforge/src/alphaforge/data/**
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/src/alphaforge/gates/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/reports/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/src/alphaforge/contracts/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - lib/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    - v7/src/**
+    dependencies:
+    - WS-03-VOLUME-BREAKOUT
+  artifactPolicy:
+    class: test_only
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-03-040
+    description: 'Leakage negative test: no-revision test passes -- adding bar N+1 to input does not change feature values
+      at bars 0..N-1 for any group'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-041
+    description: 'Leakage negative test: computing log_return_1 with close[t+1] raises ValueError or produces detectable anomaly'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-042
+    description: 'Leakage negative test: ATR with future high/low bar raises ValueError or produces detectable anomaly'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-043
+    description: 'Determinism: 5 calls to each group function with same input produce identical numpy arrays (np.array_equal
+      true for all)'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-044
+    description: 'Feature matrix shape: input of 500 bars produces FeatureMatrix with all arrays of length 500, 26+ feature
+      columns across 6 groups'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-045
+    description: 'NaN policy: feature NaN counts for each group match expected lookback windows -- log_return_1 has 1 NaN,
+      ATR_14 has 14 NaN, etc.'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-046
+    description: 'Lead-Lag DEFERRED test: FeatureGroup.LEAD_LAG enum member exists but no compute function, no lead-lag columns
+      in FeatureMatrix output'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-047
+    description: 'Edge cases: constant price produces zero returns and RSI=50; zero volume handled safely; negative price
+      raises ValueError; NaN input propagates with warning'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-03-048
+    description: 'Import boundary test: alphaforge.features imports no modules from simulation, v7, runtime, or interface'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-import-boundaries
+    requiredEvidence:
+    - test_output
+- id: WS-03-REPORT
+  title: Run Final Validation Suite and Emit ACCP Implementation Report
+  objective: Run Final Validation Suite and Emit ACCP Implementation Report
+  implementation:
+    instructions:
+    - '[must] [action] Run CMD-final-validation (full test suite: lib, integration, simulation, alphaforge) and confirm exit
+      code 0. All unit tests, integration tests, contract tests, import boundary tests, and simulation tests must pass. No
+      failures allowed.
+
+      '
+    - '[must] [action] Run CMD-discover-git-status and confirm that only allowed files were modified. Allowed: alphaforge/src/alphaforge/features/**,
+      alphaforge/tests/ test_feature_pipeline.py, reports/accp/**, and this plan file. No other files may show as modified.
+
+      '
+    - '[must] [action] Emit the ACCP implementation report to reports/accp/alphaforge_feature_pipeline. accp.yaml. Follow
+      accp_version "2.0.0" and source_format "ACCP-YAML". Required sections: metadata, summary, result, scope_confirmation,
+      files_changed, acceptance_criteria_results (all 56 ACs with pass/fail status and evidence refs), leakage_test_results
+      (all negative tests with explicit pass/fail), lead_lag_deferral_documented, decisions_locked, remaining_holds, safe_next_step,
+      commands_run, evidence.
+
+      '
+    - '[must] [action] Verify all 56 acceptance criteria are satisfied and each has at least one evidence ref. Document any
+      AC that cannot be satisfied with an explicit reason. Mark the report result as CONDITIONAL if any gate AC is incomplete,
+      FAIL if any must-priority AC is failing.
+
+      '
+    - '[must] [action] Run deterministic feature matrix verification: call compute_features() with the canonical OHLCV fixture,
+      compute a sha256 hash of the canonical JSON representation of the feature matrix, and store it in the ACCP report as
+      the canonical feature hash. This hash becomes the reference for all future feature pipeline regression tests.
+
+      '
+    - '[must] [action] Scan all new and modified files for forbidden patterns: xgboost, binance, curl, wget, api_key, profitability,
+      live.trading, lead_lag implementation, future-looking windows. Confirm zero matches. Document the scan results in the
+      ACCP report.
+
+      '
+    - '[must] [action] Confirm the Lead-Lag deferral is properly documented: FeatureGroup.LEAD_LAG exists but no compute function
+      is mapped, no lead-lag columns appear in FeatureMatrix, and the deferral reason (P0.9B cross-sectional data) is stated
+      in pipeline.py docstrings and in the ACCP report.
+
+      '
+    - '[must] [action] Confirm the workspace is complete. The ACCP report is evidence only -- it does not authorize the next
+      task. The master orchestrator (or human operator) gates the transition to TASK-04-DATASET-ASSEMBLER. The FeatureMatrix
+      export surface is the integration contract consumed by the dataset assembler.
+
+      '
+    allowedFiles:
+    - reports/accp/alphaforge_feature_pipeline.accp.yaml
+    - reports/accp/alphaforge_feature_pipeline_tests.accp.yaml
+    - alphaforge/tests/test_feature_pipeline.py
+    - alphaforge/src/alphaforge/features/__init__.py
+    - alphaforge/src/alphaforge/features/pipeline.py
+    - plans/alphaforge/03_feature_pipeline.plan.yaml
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/labels/**
+    - alphaforge/src/alphaforge/data/**
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/src/alphaforge/gates/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/reports/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/src/alphaforge/contracts/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - lib/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    - v7/src/**
+    dependencies:
+    - WS-03-LEAKAGE-TESTS
+  artifactPolicy:
+    class: generated_report
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-03-049
+    description: CMD-final-validation exits 0 with all tests passing across lib, integration, simulation, and alphaforge
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-final-validation
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-03-050
+    description: 'CMD-discover-git-status shows only allowed files modified: alphaforge/src/alphaforge/features/**, alphaforge/tests/test_feature_pipeline.py,
+      reports/accp/**, plans/alphaforge/03_feature_pipeline.plan.yaml'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - diff
+      - command
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-03-051
+    description: ACCP report exists at reports/accp/alphaforge_feature_pipeline.accp.yaml with accp_version 2.0.0 and all
+      56 acceptance criteria results
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+  - id: AC-03-052
+    description: Forbidden pattern scan across all new files returns zero matches for xgboost, binance, curl, wget, api_key,
+      profitability, live.trading, lead_lag implementation
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-03-053
+    description: Canonical feature hash stored in ACCP report -- compute_features() with standard OHLCV fixture produces a
+      stable reference hash for regression testing
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      - report
+    requiredEvidence:
+    - test_output
+    - report
+  - id: AC-03-054
+    description: 'Lead-Lag deferral documented in ACCP report: deferral reason (P0.9B cross-sectional data), re-enablement
+      conditions, no partial implementation'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+  - id: AC-03-055
+    description: All 6 active feature groups produce correct output -- verified by at least 2 independent test methods per
+      group (unit + integration)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      - command
+      commandRef: CMD-final-validation
+    requiredEvidence:
+    - test_output
+    - command
+  - id: AC-03-056
+    description: Plan status promoted to 'completed' -- all waves, all workspaces, all 56 acceptance criteria satisfied with
+      evidence
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+commands:
+  exactAllowedCommands:
+  - id: CMD-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 180
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-integration-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_*.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-contract-registry-schema
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py
+      -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-import-boundaries
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py
+      simulation/tests/test_import_boundary.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-simulation
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-final-validation
+    kind: final_validation
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/
+      -q --ignore=lib/tests/test_market_data_binance.py
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 300
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network or market data during deterministic feature pipeline implementation.
+  - id: DCMD-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-no-binance
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior allowed.
+  - id: DCMD-no-xgboost-training
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|fit\(|import xgboost
+    reason: No model training in deterministic feature pipeline scope.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - diff
+  - source
+  - wiring
+  - command
+  - test_output
+  - schema_validation
+  - report
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-03-feature-pipeline.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true
