@@ -12,6 +12,7 @@
     "mode_reports",
     "promoted_candidates",
     "rejected_candidates",
+    "multiple_hypothesis_control",
     "global_limitations",
     "v7_handoff_packages"
   ],
@@ -73,6 +74,31 @@
         }
       },
       "description": "Candidates rejected with reasons."
+    },
+    "multiple_hypothesis_control": {
+      "type": "object",
+      "description": "Aggregate MHT/data-snooping controls across all modes. BLOCKING: NONE_APPLIED or NOT_RUN prevent strong edge/profitability claims at the aggregate report level.",
+      "required": [
+        "aggregate_mht_status",
+        "aggregate_tested_hypothesis_count",
+        "aggregate_tested_feature_count",
+        "aggregate_trial_count",
+        "correction_method"
+      ],
+      "properties": {
+        "aggregate_mht_status": {
+          "type": "string",
+          "enum": ["APPLIED_AND_PASSED", "APPLIED_WITH_WARNINGS", "NOT_RUN", "NONE_APPLIED"],
+          "description": "Aggregate MHT status across modes. NOT_RUN/NONE_APPLIED blocks strong claims."
+        },
+        "aggregate_tested_hypothesis_count": { "type": "integer", "minimum": 0 },
+        "aggregate_tested_feature_count": { "type": "integer", "minimum": 0 },
+        "aggregate_trial_count": { "type": "integer", "minimum": 0 },
+        "correction_method": { "type": "string", "description": "MHT correction method applied at aggregate level." },
+        "false_discovery_control": { "type": "string" },
+        "deflated_sharpe_or_pbo_assessment": { "type": "string" },
+        "mht_block_reason": { "type": "string" }
+      }
     },
     "global_limitations": {
       "type": "array",

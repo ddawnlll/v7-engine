@@ -19,6 +19,7 @@
     "cost_stress",
     "no_trade_comparison",
     "regime_breakdown",
+    "multiple_hypothesis_control",
     "verdict",
     "blocked_scopes",
     "limitations"
@@ -190,10 +191,38 @@
         "summary": { "type": "string" }
       }
     },
+    "multiple_hypothesis_control": {
+      "type": "object",
+      "description": "Multiple hypothesis testing and data snooping controls. BLOCKING: NONE_APPLIED or NOT_RUN prevent strong edge/profitability claims.",
+      "required": [
+        "mht_status",
+        "tested_hypothesis_count",
+        "tested_feature_count",
+        "tested_thesis_count",
+        "correction_method",
+        "trial_count_disclosure"
+      ],
+      "properties": {
+        "mht_status": {
+          "type": "string",
+          "enum": ["APPLIED_AND_PASSED", "APPLIED_WITH_WARNINGS", "NOT_RUN", "NONE_APPLIED"],
+          "description": "MHT control status. NOT_RUN or NONE_APPLIED: edge/profitability claims are blocked."
+        },
+        "tested_hypothesis_count": { "type": "integer", "minimum": 0 },
+        "tested_feature_count": { "type": "integer", "minimum": 0 },
+        "tested_thesis_count": { "type": "integer", "minimum": 0 },
+        "correction_method": { "type": "string", "description": "MHT correction method: Bonferroni, Holm-Bonferroni, Benjamini-Hochberg, DeflatedSharpeRatio, PBO, FWER_Control, or NONE." },
+        "false_discovery_control": { "type": "string" },
+        "deflated_sharpe_or_pbo_assessment": { "type": "string" },
+        "trial_count_disclosure": { "type": "integer", "minimum": 0, "description": "Total trials evaluated. Must be honest even if MHT not applied." },
+        "rejected_candidate_count": { "type": "integer", "minimum": 0 },
+        "mht_block_reason": { "type": "string" }
+      }
+    },
     "verdict": {
       "type": "string",
-      "enum": ["REJECT", "CONTINUE_RESEARCH", "CANDIDATE_FOR_V7_GATES", "BASELINE_VALID", "BASELINE_WEAK"],
-      "description": "Overall verdict for this mode's research."
+      "enum": ["REJECT", "CONTINUE_RESEARCH", "CANDIDATE_FOR_V7_GATES", "BASELINE_VALID", "BASELINE_WEAK", "BLOCKED_FOR_MHT"],
+      "description": "Overall verdict for this mode's research. BLOCKED_FOR_MHT when MHT not applied."
     },
     "blocked_scopes": {
       "type": "array",

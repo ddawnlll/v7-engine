@@ -146,8 +146,8 @@ That means:
 First recommended scopes:
 
 - `SWING`: `primary_interval` `4h`, `context_intervals` `1d`, `refinement_intervals` `1h`, `label_horizon_family` swing horizon
-- `SCALP`: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`, `label_horizon_family` scalp horizon
-- `AGGRESSIVE_SCALP`: `primary_interval` `1m` or `3m`, `context_intervals` `5m` + `15m`, `refinement_intervals` `1m/3m` micro context where applicable, `label_horizon_family` immediate continuation / very short horizon
+- `SCALP`: `primary_interval` `1h`, `context_intervals` `4h`, `refinement_intervals` `15m`, `label_horizon_family` scalp horizon
+- `AGGRESSIVE_SCALP`: `primary_interval` `15m`, `context_intervals` `1h`, `refinement_intervals` `5m`, `label_horizon_family` aggressive scalp horizon
 
 The runtime `scope_router` chooses the scope before model inference. If `requested_trade_mode` and `model_scope` are incompatible, runtime/result handling must reject the request/result or downgrade to safe no-trade behavior as a visible `scope_mismatch`.
 

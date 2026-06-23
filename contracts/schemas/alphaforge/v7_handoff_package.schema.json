@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://v7-engine/contracts/schemas/alphaforge/v7_handoff_package.schema.json",
   "title": "V7HandoffPackage",
-  "description": "The delivery artifact from AlphaForge to V7 acceptance gates. Bundles all evidence V7 needs to evaluate an alpha candidate. Owned by AlphaForge; accepted/rejected by V7. Gate IDs reference v7/docs/pipeline/evaluation.md as canonical source of truth. P0.8E: corrected gate mapping to match V7 canonical G0-G10 names.",
+  "description": "The delivery artifact from AlphaForge to V7 acceptance gates. Bundles all evidence V7 needs to evaluate an alpha candidate. Owned by AlphaForge; accepted/rejected by V7. Gate IDs reference v7/docs/pipeline/evaluation.md as canonical source of truth. P0.8E: corrected gate mapping to match V7 canonical G0-G10 names. NO_TRADE is a metric/comparator family, not a promotion gate.",
   "type": "object",
   "required": [
     "schema_version",
@@ -30,7 +30,7 @@
     "calibration_candidate_id": { "type": "string", "description": "CalibrationCandidate reference." },
     "v7_gate_mapping": {
       "type": "object",
-      "description": "Mapping of AlphaForge evidence to V7 canonical promotion gates. Gate IDs match v7/docs/pipeline/evaluation.md exactly. P0.8E corrected from invented gate names to canonical V7 gate IDs.",
+      "description": "Mapping of AlphaForge evidence to V7 canonical promotion gates. Gate IDs match v7/docs/pipeline/evaluation.md exactly. P0.8E corrected from invented gate names to canonical V7 gate IDs. Mirrors v7/docs/pipeline/evaluation.md. NO_TRADE is a metric/comparator family, not a promotion gate.",
       "required": [
         "G0_doc_ready",
         "G1_research_backtest",
@@ -47,6 +47,7 @@
       "properties": {
         "G0_doc_ready": {
           "type": "object",
+          "description": "DOC_READY: Mode has complete docs, contracts, labels, model outputs, and risk rules.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G0: DOC_READY" },
@@ -55,6 +56,7 @@
         },
         "G1_research_backtest": {
           "type": "object",
+          "description": "RESEARCH_BACKTEST: Initial research backtest with cost-honest labels and no-trade quality.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G1: RESEARCH_BACKTEST" },
@@ -63,6 +65,7 @@
         },
         "G2_walk_forward_oos": {
           "type": "object",
+          "description": "WALK_FORWARD_OOS: Walk-forward out-of-sample evidence across minimum 6 folds.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G2: WALK_FORWARD_OOS" },
@@ -71,6 +74,7 @@
         },
         "G3_cost_stress": {
           "type": "object",
+          "description": "COST_STRESS: Fee, slippage, spread, and funding stress where applicable.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G3: COST_STRESS" },
@@ -79,6 +83,7 @@
         },
         "G4_regime_breakdown": {
           "type": "object",
+          "description": "REGIME_BREAKDOWN: Performance evaluated per TREND_UP, TREND_DOWN, RANGE, TRANSITION.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G4: REGIME_BREAKDOWN" },
@@ -87,6 +92,7 @@
         },
         "G5_symbol_stability": {
           "type": "object",
+          "description": "SYMBOL_STABILITY: No single symbol >40% of total edge; no cluster >60%.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G5: SYMBOL_STABILITY" },
@@ -95,6 +101,7 @@
         },
         "G6_calibration_reliability": {
           "type": "object",
+          "description": "CALIBRATION_RELIABILITY: Probability and expected-R surfaces calibrated enough for policy gates.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G6: CALIBRATION_RELIABILITY" },
@@ -103,6 +110,7 @@
         },
         "G7_shadow": {
           "type": "object",
+          "description": "SHADOW: Live-market observation without order placement.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G7: SHADOW (infrastructure not yet built)" },
@@ -111,6 +119,7 @@
         },
         "G8_paper": {
           "type": "object",
+          "description": "PAPER: Paper trading with runtime lifecycle and outcome reconciliation.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G8: PAPER (infrastructure not yet built)" },
@@ -119,6 +128,7 @@
         },
         "G9_tiny_live": {
           "type": "object",
+          "description": "TINY_LIVE: Small real-capital live validation with strict kill switches.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G9: TINY_LIVE (infrastructure not yet built)" },
@@ -127,6 +137,7 @@
         },
         "G10_live": {
           "type": "object",
+          "description": "LIVE: Production-eligible mode after independent promotion.",
           "required": ["evidence_ref", "status"],
           "properties": {
             "evidence_ref": { "type": "string", "description": "AlphaForge evidence ref for G10: LIVE (infrastructure not yet built)" },
