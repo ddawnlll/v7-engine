@@ -28,13 +28,26 @@ For each dimension, provide a score (0-10) and 2-3 sentences of evidence.
 9. **Phase plan clarity** — Are phases well-scoped? Are evidence gates explicit? Is rollback specified?
 10. **Citation quality** — Are sources peer-reviewed where possible? Are URLs provided? Are trust ratings explained?
 
-### Docs to Review
+### Recommended External Reviewer Flow
+
+For efficient review, read in this order:
+
+1. `policycritic/docs/executive_one_pager.md` — 3-minute summary, authority boundary, what changed
+2. `policycritic/docs/reviewer_guide.md` — PR review instructions, verification commands
+3. `policycritic/docs/problem_statement.md` — What problem, scope, success criteria
+4. `policycritic/docs/diagrams.md` — Visual architecture (5 Mermaid diagrams)
+5. `policycritic/docs/implementation_file_map.md` — What files exist, PR sequence, readiness checklist
+6. `policycritic/docs/business/profitability_calculation.md` — Scenario-based value with sensitivity
+7. `policycritic/docs/quality/self_scorecard.md` — Self-assessment with red-team critique
+8. `policycritic/docs/quality/partner_feedback_traceability.md` — How partner concerns were addressed
+
+### Docs to Sample-Review
 
 Start with these entry points:
-1. `policycritic/docs/README.md`
-2. `policycritic/docs/ai_summary.md`
-3. `policycritic/docs/problem_statement.md`
-4. `policycritic/docs/folder_tree.md`
+1. `policycritic/docs/README.md` — Full navigation
+2. `policycritic/docs/ai_summary.md` — Agent context
+3. `policycritic/docs/problem_statement.md` — Problem definition
+4. `policycritic/docs/folder_tree.md` — Structure
 
 Then review one doc from each section as a sample:
 5. `policycritic/docs/phase_plans/phase_3_offline_training_and_evaluation.md`

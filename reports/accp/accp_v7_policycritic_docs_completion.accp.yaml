@@ -203,6 +203,20 @@ final_partner_grade_hardening:
     objections_raised: 13
     appropriately_addressed: 11
     inherent_limitations_by_design: 2
+
+# --- FINAL REVIEW POLISH (2026-06-23) ---
+final_review_polish:
+  purpose: "improve reviewer experience and merge confidence"
+  runtime_behavior_changed: false
+  production_code_changed: false
+  docs_added:
+    - executive_one_pager.md (3-minute summary for stakeholders)
+    - diagrams.md (5 Mermaid diagrams: authority, data flow, phases, shadow lifecycle, business loop)
+    - decision_records.md (8 ADRs: advisory-only, RL-not-main, shadow-first, NO_TRADE-baseline, profitability-evidence, IQL-future, XGBoost-primary, funding-deferred)
+    - reviewer_guide.md (reading order, verification commands, merge checklist)
+  docs_updated:
+    - policycritic/docs/README.md (quick navigation for reviewers)
+    - quality/independent_ai_review_packet.md (recommended external reviewer flow)
   no_trade_logic_changes: true
   no_test_logic_changes: true
   source_inventory_created: true

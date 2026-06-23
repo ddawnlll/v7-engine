@@ -13,6 +13,19 @@ All content in this folder is **documentation and design only**. No runtime beha
 
 This folder is a **supplementary, expanded package** complementing the existing `v7/docs/policy_critic/` doc tree. The canonical authority remains `v7/docs/policy_critic/ai_summary.md` and `v7/docs/policy_critic/design.md`. When these docs conflict with the canonical docs, the canonical docs win.
 
+## Quick Navigation for Reviewers
+
+| Need | Read |
+|------|------|
+| **3-minute summary** | [executive_one_pager.md](executive_one_pager.md) |
+| **Visual architecture** | [diagrams.md](diagrams.md) (5 Mermaid diagrams) |
+| **Key decisions** | [decision_records.md](decision_records.md) (8 ADRs) |
+| **How to review this PR** | [reviewer_guide.md](reviewer_guide.md) |
+| **What problem we're solving** | [problem_statement.md](problem_statement.md) |
+| **What files exist / are planned** | [implementation_file_map.md](implementation_file_map.md) |
+| **Business case** | [business/profitability_calculation.md](business/profitability_calculation.md) |
+| **Self-assessment** | [quality/self_scorecard.md](quality/self_scorecard.md) |
+
 ## What Is the Policy Critic?
 
 The Policy Critic is a planned **advisory safety layer** for V7. It sits between the hard gate (AlphaForge evidence) and the final operational gate (runtime execution eligibility). Its job:

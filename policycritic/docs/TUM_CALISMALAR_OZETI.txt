@@ -1,0 +1,247 @@
+================================================================================
+V7 POLICY CRITIC — TÜM ÇALIŞMALARIN ÖZETİ
+================================================================================
+Tarih: 2026-06-23
+Repo: ~/src/v7-engine
+Branch: pr/v7-policycritic-docs
+Model: DeepSeek V4 Pro (Claude Code Fable 5)
+Effort: Ultracode
+================================================================================
+
+ÜÇ AŞAMALI ÇALIŞMA:
+
+AŞAMA 1: Eski repodan taşıma (commit f40c1c4)
+- ~/src/trading-bot-pr/policycritic/docs/ kaynak olarak kullanıldı
+- Tüm repo iddiaları v7-engine'e karşı doğrulandı
+- Doğrulanamayanlar "old_repo_context_unverified" işaretlendi
+- 10 dosya oluşturuldu
+
+AŞAMA 2: Partner-grade pakete yükseltme (commit baca785)
+- 36 yeni dosya eklendi (phase plans, research, business, quality)
+- 5 mevcut dosya güncellendi (README, ai_summary, vs.)
+- Self-score: 8.1/10
+
+AŞAMA 3: Final hardening (commit d39b396)
+- 8 dosya güçlendirildi, 2 yeni dosya
+- Self-score: 8.1 → 8.7/10
+- Tüm kategoriler ≥ 8.5/10
+- Red-team critique (13 itiraz)
+- 62 maddelik kabul rubriği
+
+================================================================================
+TOPLAM DOSYA SAYISI: 47+
+================================================================================
+
+📁 policycritic/docs/ (ana dizin — 12 dosya)
+├── README.md                              ← Klasör genel bakış, tüm alt dizinlere navigasyon
+├── ai_summary.md                          ← Agent context, otorite sınırları, hold'lar
+├── folder_tree.md                         ← Mevcut + gelecek dosya ağacı, docs-vs-runtime sınırı
+├── implementation_file_map.md             ← 12-PR sequence, 48-item checklist, 6 harita
+├── problem_statement.md                   ← Problem tanımı, kapsam, başarı kriterleri, kill criteria
+├── policy_critic_design.md                ← Mimari, otorite hiyerarşisi, veri akışı
+├── rl_intro_for_v7.md                     ← RL eğitim dökümanı
+├── pipeline.md                            ← 4 aşamalı pipeline (V1→V4)
+├── authority_and_boundaries.md            ← Veto zinciri, gate hiyerarşisi, governance
+├── replay_buffer_design.md                ← Tuple spec, depolama tasarımı
+├── rollout_plan.md                        ← Aşamalı dağıtım planı
+└── source_inventory.md                    ← Kaynakça, trust rating'ler, Tavily log
+
+📁 policycritic/docs/phase_plans/ (7 dosya)
+├── README.md                              ← Faz özeti ve okuma sırası
+├── phase_0_research_and_design.md         ← MEVCUT AŞAMA: docs, araştırma, design lock
+├── phase_1_observability_and_schema.md    ← Kontrat, şema, audit trail
+├── phase_2_shadow_replay_buffer.md        ← Replay buffer emitter + storage
+├── phase_3_offline_training_and_evaluation.md ← Supervised + OPE/FQE + IQL training
+├── phase_4_shadow_critic_runtime.md       ← Shadow-only critic in scan loop
+├── phase_5_guarded_influence.md           ← Advisory influence with hard gate limits
+└── phase_6_business_validation.md         ← Profitability evidence, live readiness
+
+📁 policycritic/docs/research/ (16 dosya)
+├── README.md                              ← Araştırma indeksi, trust rating açıklaması
+├── rl_basics.md                           ← MDP, Bellman, Q-learning, policy gradient
+├── offline_rl.md                          ← Offline RL problemi, distribution shift
+├── implicit_q_learning_iql.md             ← IQL derinlemesine (expectile regression, AWR)
+├── conservative_q_learning_cql.md         ← CQL derinlemesine (conservative penalty, lower bound)
+├── decision_transformer.md                ← DT ve neden V7 için REJECT edildi
+├── distributional_rl_quantile_q.md        ← QR-DQN, IQN, risk-aware gating
+├── conformal_calibration.md               ← Conformal prediction, exchangeability ihlali
+├── ope_and_fqe.md                         ← Off-policy evaluation, FQE, importance sampling
+├── backtest_overfitting_dsr_pbo.md        ← DSR, PBO, CSCV, walk-forward
+├── safe_rl_and_shielding.md               ← Alshiekh et al. 2018, kalkanlı RL
+├── reward_hacking.md                      ← Spec gaming, trading failure modes
+├── financial_ml_validation.md             ← WF-CV, purging, embargo, meta-labeling
+├── gbdt_vs_deep_rl_for_tabular_finance.md ← Trees vs NN (Grinsztajn 2022)
+└── trading_rl_failure_modes.md            ← OOD, regime shift, look-ahead, survivorship
+
+📁 policycritic/docs/business/ (6 dosya)
+├── README.md                              ← Business bölüm overview
+├── business_plan.md                       ← Stratejik tez, milestone yatırım, kill conditions
+├── profitability_calculation.md           ← 15 bölüm: EV model, 5 senaryo, sensitivity matrix
+├── unit_economics.md                      ← Per-signal, per-trade, per-verdict ekonomi
+├── risk_register.md                       ← 25 risk (probability × impact × detection × kill)
+└── go_to_market_internal_strategy.md      ← İç dağıtım, stakeholder map, operasyonel hazırlık
+
+📁 policycritic/docs/quality/ (6 dosya)
+├── README.md                              ← Quality bölüm overview
+├── self_scorecard.md                      ← Tables A-C, red-team critique (13 itiraz), 8.7/10
+├── independent_ai_review_packet.md        ← Harici AI inceleme paketi (ChatGPT için hazır)
+├── acceptance_rubric.md                   ← 62 maddelik kabul kriteri
+├── partner_feedback_traceability.md       ← 12 partner geri bildirimi → dosya eşleştirme
+└── (ACCP_TASK_SUMMARY.txt)                ← Önceki aşama özeti (Türkçe)
+
+📁 reports/accp/ (1 dosya güncellendi)
+└── accp_v7_policycritic_docs_completion.accp.yaml ← ACCP-YAML v2.0.0 final raporu
+
+================================================================================
+DEĞİŞTİRİLEN REPO ENTRY POINT'LERI (3)
+================================================================================
+1. README.md                         ← policycritic/ repo yapısına eklendi
+2. ai_summary.md                     ← Policy Critic alt sistem haritasına eklendi
+3. v7/docs/policy_critic/ai_summary.md ← Supplementary docs referansı eklendi
+
+================================================================================
+TAVILY MCP ARAŞTIRMALARI (13 arama, hepsi başarılı)
+================================================================================
+1.  "Implicit Q-Learning offline reinforcement learning paper"
+2.  "Conservative Q-Learning CQL offline RL Kumar Levine NeurIPS 2020"
+3.  "Deflated Sharpe Ratio backtest overfitting Lopez de Prado PBO CSCV"
+4.  "safe reinforcement learning shielding Alshiekh survey Garcia Fernandez"
+5.  "distributional reinforcement learning quantile regression QR-DQN IQN Dabney"
+6.  "off-policy evaluation FQE fitted Q-evaluation offline RL benchmark Fu 2021"
+7.  "tree-based models GBDT outperform deep learning tabular data finance Grinsztajn"
+8.  "reinforcement learning basics MDP Bellman equation Q-learning policy gradient"
+9.  "conformal prediction calibration machine learning time series exchangeability"
+10. "reinforcement learning trading failure modes overfitting look-ahead survivorship"
+11. "financial machine learning validation walk-forward cross-validation purging"
+12. "decision transformer offline reinforcement learning sequence modeling Chen 2021"
+13. "offline reinforcement learning business applications finance trading"
+
+================================================================================
+DOĞRULANAN v7-engine REPO GERÇEKLERİ
+================================================================================
+VAR OLAN (verified):
+✅ runtime/db/repos/shadow_policy_repo.py       ← ShadowPolicyRepository
+✅ runtime/db/repos/policy_dataset_repo.py      ← PolicyDatasetRepository
+✅ runtime/runtime/scan_runtime.py              ← Scan loop
+✅ runtime/runtime/execution_orchestrator.py    ← Operational hard gate
+✅ simulation/engine/engine.py                  ← Economic truth (simulate)
+✅ simulation/engine/costs.py                   ← Cost model (fee+slippage, funding DEFERRED)
+✅ contracts/registry.json                      ← 15 cross-domain kontrat
+✅ v7/docs/policy_critic/ai_summary.md          ← Kanonik critic design
+✅ v7/docs/policy_critic/design.md              ← Full design (IQL+distributional+conformal)
+✅ v7/docs/policy_critic/codebase_maps/         ← 4 codebase map
+✅ v7/docs/policy_critic/research/              ← 4 research dosyası
+✅ alphaforge/docs/ai_summary__v7_alphaforge_xgb.md ← AlphaForge XGBoost design
+
+YOK (old_repo_context_unverified):
+❌ runtime/contracts/policy_contract.py
+❌ runtime/services/policy/policy_engine.py
+❌ runtime/services/policy/rule_based_policy_engine.py
+❌ runtime/services/policy/rl_policy_stub.py
+❌ docs/v7/architecture_review.md
+❌ docs/v6/ai_summary.md
+❌ "CatBoost primary backend" iddiası (AlphaForge design XGBoost)
+
+================================================================================
+TEMEL TASARIM KARARLARI
+================================================================================
+1.  Policy Critic ADVISORY ONLY — asla karar verici değil
+2.  Hard gate'ler veto hakkını korur
+3.  Critic trade açamaz, kapatamaz, gate bypass yapamaz
+4.  IQL (primary) + CQL (cross-check) for V3
+5.  Distributional Q-head (16-32 quantile) + conformal calibration
+6.  XGBoost-first model sınıfı (AlphaForge design)
+7.  Shadow mode → herhangi bir live etkiden önce
+8.  Her sürüm geçişi kanıt gerektirir (DSR, PBO, FQE, WF, human approval)
+9.  NO_TRADE first-class action (sıfır maliyetli baseline)
+10. Funding DEFERRED — critic spot-only valid
+11. No hidden veto — her karar runtime_interpretation'da
+12. V7 final trade kararlarının sahibi
+13. Truth hierarchy: simulation > realized > contract > runtime > model
+14. Simulation engine TEK ekonomik truth kaynağı
+
+================================================================================
+KALİTE SKORU (self-assessment)
+================================================================================
+Kategori                             | Önceki | Son   | Delta
+-------------------------------------|--------|-------|------
+Repo integration                     | 9.0    | 9.0   | —
+Technical correctness                | 8.0    | 8.5   | +0.5
+Research depth                       | 8.0    | 8.5   | +0.5
+Implementation readiness             | 7.0    | 8.5   | +1.5
+Business usefulness                  | 8.0    | 8.7   | +0.7
+Risk realism                         | 9.0    | 9.0   | —
+Profitability modeling               | 7.0    | 8.7   | +1.7
+Authority boundary clarity           | 9.0    | 9.0   | —
+Phase plan clarity                   | 8.0    | 8.7   | +0.7
+Citation quality                     | 8.0    | 8.5   | +0.5
+Reviewability                        | —      | 8.5   | Yeni
+Partner feedback coverage            | —      | 9.0   | Yeni
+─────────────────────────────────────────────────────────
+ORTALAMA                             | 8.1    | 8.7   | +0.6
+
+BAĞIMSIZ AI DEĞERLENDİRMESİ: BEKLİYOR
+(quality/independent_ai_review_packet.md ChatGPT için hazır)
+Geçiş eşiği: 8.0/10
+
+================================================================================
+RED-TEAM CRITIQUE (13 itiraz)
+================================================================================
+1.  Docs are too broad — Partially valid, folder_tree.md yapı gösteriyor
+2.  Implementation not actionable — Valid (by design), Phase 0 docs-only
+3.  Profitability is speculative — Valid (honest limitation), shadow data gerekli
+4.  Research is shallow — Addressed, her doc ≥100 satır + equations
+5.  Authority boundary could creep — Valid concern, governance firewall var
+6.  RL could overfit — Valid, DSR/PBO mandatory
+7.  Business plan not measurable — Addressed, milestone table eklendi
+8.  Phase gates are vague — Addressed, quantitative exit criteria eklendi
+9.  Scores are inflated — Possible, independent AI review zorunlu
+10. Sources insufficient — Addressed, 13 Tavily search + ≥2 source/doc
+11. No independent review — Valid (pending), review packet hazır
+12. No real data — Valid (by design), Phase 0 = docs only
+13. Overlap with v7/docs/policy_critic/ — Valid, README'de açıklandı
+
+================================================================================
+KABUL RUBRİĞİ (62 madde)
+================================================================================
+Partner acceptance:    18 madde ✅
+Technical acceptance:  10 madde ✅
+Business acceptance:   10 madde ✅
+Research acceptance:    8 madde ✅
+Implementation readiness: 10 madde ✅
+PR readiness:           6 madde (2 pending: branch check + commit)
+
+================================================================================
+COMMIT'LER
+================================================================================
+f40c1c4 — "Add V7 Policy Critic research docs (ported from trading-bot-pr)"
+baca785 — "Expand V7 Policy Critic docs into research and business plan"
+d39b396 — "Finalize partner-grade V7 Policy Critic docs"
+
+================================================================================
+PUSH SONUCU
+================================================================================
+Branch 'pr/v7-policycritic-docs' → origin'a başarıyla push edildi.
+PR: https://github.com/ddawnlll/v7-engine/pull/new/pr/v7-policycritic-docs
+
+================================================================================
+PR TITLE
+================================================================================
+docs: Finalize partner-grade V7 Policy Critic research and business plan
+
+================================================================================
+DEĞİŞMEYENLER (sıfır değişiklik)
+================================================================================
+❌ Hiçbir Python dosyası (.py)
+❌ Hiçbir TypeScript/React dosyası (.ts, .tsx)
+❌ Hiçbir kontrat dosyası (contracts/)
+❌ Hiçbir config dosyası
+❌ Hiçbir test dosyası
+❌ Hiçbir runtime dosyası (runtime/**/*.py)
+❌ Hiçbir frontend dosyası (interface/)
+❌ Hiçbir engine logic
+❌ Hiçbir policy gate implementasyonu
+❌ Hiçbir action enum
+❌ Hiçbir trade logic
+❌ .claude/ (commit edilmedi)
+================================================================================
