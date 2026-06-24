@@ -1,6 +1,6 @@
 """Test registry contains AlphaForge contracts and compatibility mapping."""
 
-from alphaforge.src.alphaforge.registry import (
+from alphaforge.registry import (
     load_registry, get_alphaforge_contracts, get_alphaforge_contract_names,
     get_contract_by_name, alphaforge_schemas_in_registry, alphaforge_consumers,
     load_compatibility,

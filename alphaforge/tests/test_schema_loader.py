@@ -1,6 +1,6 @@
 """Test all expected AlphaForge schemas load, including AlphaForgeLabel."""
 
-from alphaforge.src.alphaforge.schema_loader import (
+from alphaforge.schema_loader import (
     load_schema, load_all_alphaforge_schemas, list_schema_files,
     validate_schema_is_loadable, has_jsonschema,
 )

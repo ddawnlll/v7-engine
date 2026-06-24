@@ -1,0 +1,259 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: "ACCP-ALPHAFORGE-02-LABEL-ADAPTER"
+  plan_ref: "plans/alphaforge/02_label_adapter.plan.yaml"
+  planId: "ALPHAFORGE-02-LABEL-ADAPTER"
+  title: "AlphaForge P0.9B — Label Adapter (TASK-02) Implementation Report"
+  created_at: "2026-06-24T00:00:00Z"
+  executor: "ClaudeCode"
+  completion_authority: "PraxisTruthKernel"
+  agent_self_report_is_claim_only: true
+
+result: PASS
+scope_confirmation:
+  workspaces_completed:
+    - "WS-02-MAPPING-DESIGN"
+    - "WS-02-IMPLEMENT"
+    - "WS-02-NO-TRADE-TESTS"
+    - "WS-02-SCHEMA-TESTS"
+    - "WS-02-REPORT"
+  design_locked: true
+  implementation_wired: true
+  tests_executed: true
+  report_generated: true
+
+files_changed:
+  created:
+    - "alphaforge/src/alphaforge/labels/__init__.py"
+    - "alphaforge/src/alphaforge/labels/adapter.py"
+    - "alphaforge/tests/test_label_adapter_no_trade.py"
+    - "alphaforge/tests/test_label_adapter_schema.py"
+  modified:
+    - "contracts/schemas/alphaforge_label.schema.json"
+    - "contracts/fixtures/alphaforge_label_minimal.json"
+  schema_changes_summary:
+    label_validity_enum_updated: "Changed from ['COMPLETE','UNRESOLVED','INVALIDATED'] to ['valid','invalid','ambiguous_excluded'] per plan design."
+    resolution_status_added: "Added as required field and property with propagated simulation values."
+    cost_fields_renamed: "Renamed long_fee_cost_r → fee_cost_r_long (etc.) per simulation_to_alphaforge.json mapping convention."
+    new_fields_added: "exit_reason, fee_cost_r_long, slippage_cost_r_long, total_cost_r_long, fee_cost_r_short, slippage_cost_r_short, total_cost_r_short, cost_impact_long, cost_impact_short."
+  fixture_changes_summary:
+    label_validity_updated: "COMPLETE → valid"
+    cost_fields_renamed: "Aligned with schema renaming"
+
+decisions_locked:
+  - "LabelAdapter class signature: adapt_simulation_output(sim_output: dict) → dict, classify_no_trade_quality(no_trade_outcome: dict) → str"
+  - "NO_TRADE quality classifier thresholds: CORRECT=0.3, SIGNIFICANT=0.5, AMBIGUITY_MARGIN=0.2"
+  - "label_validity values: valid, invalid, ambiguous_excluded — derived from resolution_status + is_ambiguous"
+  - "Cost-consumed-edge detection: gross>0 AND net<0 → cost_edge_warning=True"
+  - "funding_status always DEFERRED"
+  - "label_interpretation_version fixed at '1.0.0'"
+  - "All field mappings per contracts/mappings/simulation_to_alphaforge.json"
+  - "SimulationOutput consumed as-is (deep-copied, not mutated)"
+  - "Deterministic output: same input always produces identical output"
+
+remaining_holds:
+  - id: "HOLD-FUNDING-DEFERRED"
+    description: "Funding cost model not yet implemented. Labels are valid for SPOT-equivalent analysis only."
+    release_condition: "Simulation funding model implementation and cost_model_version > 1.0.0"
+    impact: "All labels carry funding_status='DEFERRED'"
+  - id: "HOLD-COST-MODEL-PINNING"
+    description: "Cost model version propagated from lineage.cost_model_version. No independent cost model validation."
+    release_condition: "Cost model stress tests across all three modes"
+    impact: "Cost-aware labels may not reflect live market conditions"
+  - id: "HOLD-INTEGRATION-TEST-DISCOVERY"
+    description: "Pre-existing integration test collection failures in Python 3.14 (module resolution via 'tests.' prefix). Does not block label adapter functionality."
+    release_condition: "Fix PYTHONPATH / test discovery for integration tests"
+    impact: "Full suite with directory scanning does not collect all tests; individual file invocation works correctly"
+
+safe_next_step: "Proceed to TASK-03-FEATURE-PIPELINE. LabelAdapter is wired, tested (85 tests pass), and deterministic. Integration contract is available for downstream consumers."
+
+commands_run:
+  - id: "CMD-test-alphaforge"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_label_adapter_no_trade.py alphaforge/tests/test_label_adapter_schema.py -q"
+    exit_code: 0
+    result: "85 passed"
+  - id: "CMD-test-contract-registry-schema"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+    exit_code: 0
+    result: "20 passed"
+  - id: "CMD-test-import-boundaries"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py -q"
+    exit_code: 0
+    result: "5 passed, 2 skipped"
+  - id: "CMD-test-simulation"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q"
+    exit_code: 0
+    result: "5 passed"
+  - id: "CMD-import-verification"
+    command: "python3 -c 'from alphaforge.labels import LabelAdapter, adapt_simulation_output, classify_no_trade_quality'"
+    exit_code: 0
+    result: "Import OK"
+  - id: "CMD-deterministic-verification"
+    command: "Two invocations of adapt_simulation_output with identical SimulationOutput fixture"
+    exit_code: 0
+    result: "Deep-equal dict output; JSON serialization identical"
+  - id: "CMD-discover-git-status"
+    command: "git status --porcelain"
+    exit_code: 0
+    result: "Only allowed files created/modified"
+
+evidence:
+  test_output:
+    label_adapter_tests: "85 passed, 0 failed"
+    contract_registry: "20 passed"
+    import_boundaries: "5 passed, 2 skipped"
+    simulation: "5 passed"
+    total_new_tests: 85
+    total_passing: 115
+  source:
+    adapter_module: "alphaforge/src/alphaforge/labels/adapter.py"
+    init_module: "alphaforge/src/alphaforge/labels/__init__.py"
+    tests_no_trade: "alphaforge/tests/test_label_adapter_no_trade.py"
+    tests_schema: "alphaforge/tests/test_label_adapter_schema.py"
+  wiring:
+    exports_verified:
+      - "LabelAdapter class"
+      - "adapt_simulation_output function"
+      - "classify_no_trade_quality function"
+    import_boundary_clean: "No imports from simulation/, v7/, runtime/, or interface/"
+    stdlib_only_imports: "copy, enum, typing — no external pip dependencies added"
+  schema_validation:
+    output_validates_against_schema: true
+    minimal_fixture_validates: true
+  deterministic_output:
+    same_input_same_output: true
+    json_identical: true
+    variants_tested: 7
+
+acceptance_criteria_coverage:
+  - id: "AC-02-001"
+    status: PASS
+    evidence: "All 15+ fields documented in label_contract.md, cross-referenced against simulation_to_alphaforge.json. See adapter.py field mapping."
+  - id: "AC-02-002"
+    status: PASS
+    evidence: "LabelAdapter class with adapt_simulation_output(sim_output: dict) → dict and classify_no_trade_quality(no_trade_outcome: dict) → str implemented with type annotations."
+  - id: "AC-02-003"
+    status: PASS
+    evidence: "NO_TRADE quality classifier with all 4 categories and threshold values. Tests verify each category produces correct string."
+  - id: "AC-02-004"
+    status: PASS
+    evidence: "Cost-aware field mapping: gross_R, fee_cost_r, slippage_cost_r, total_cost_r for LONG and SHORT sides. Cost-consumed-edge flag logic implemented."
+  - id: "AC-02-005"
+    status: PASS
+    evidence: "label_validity filtering with enum values valid/invalid/ambiguous_excluded, derived from resolution_status + is_ambiguous."
+  - id: "AC-02-006"
+    status: PASS
+    evidence: "No network access, no exchange API, no Binance import, no xgboost. Imports: copy, enum, typing (stdlib only)."
+  - id: "AC-02-007"
+    status: PASS
+    evidence: "Domain boundary confirmed: alphaforge.labels does not import from simulation/, v7/, runtime/, or interface/."
+  - id: "AC-02-008"
+    status: PASS
+    evidence: "WS-02-MAPPING-DESIGN is design-only. No source files were modified during this phase."
+  - id: "AC-02-009"
+    status: PASS
+    evidence: "__init__.py exports LabelAdapter, adapt_simulation_output, classify_no_trade_quality."
+  - id: "AC-02-010"
+    status: PASS
+    evidence: "TestCostAwareFields verifies all 15+ fields mapped with correct types."
+  - id: "AC-02-011"
+    status: PASS
+    evidence: "TestClassifyNoTradeQuality — 14 tests covering all 4 categories and edge cases."
+  - id: "AC-02-012"
+    status: PASS
+    evidence: "TestCostAwareFields verifies long_R_gross, short_R_gross, fee_cost_r, slippage_cost_r, total_cost_r for both sides."
+  - id: "AC-02-013"
+    status: PASS
+    evidence: "test_cost_consumed_edge_detected_long/short verify cost_edge_warning=True when gross>0 and net<0."
+  - id: "AC-02-014"
+    status: PASS
+    evidence: "TestLabelValidity verifies COMPLETE→valid, UNRESOLVED→invalid, INVALIDATED→invalid."
+  - id: "AC-02-015"
+    status: PASS
+    evidence: "TestDeterministicOutput verifies bit-for-bit identical output across 7 fixture variants."
+  - id: "AC-02-016"
+    status: PASS
+    evidence: "Import boundary verified: no simulation/, v7/, runtime/, or interface/ imports in adapter.py."
+  - id: "AC-02-017"
+    status: PASS
+    evidence: "test_correct_no_trade_when_correct_skip_and_low_scores returns CORRECT_NO_TRADE."
+  - id: "AC-02-018"
+    status: PASS
+    evidence: "test_saved_loss_when_saved_high_and_missed_low returns SAVED_LOSS."
+  - id: "AC-02-019"
+    status: PASS
+    evidence: "test_missed_opportunity_when_missed_high_and_saved_low returns MISSED_OPPORTUNITY."
+  - id: "AC-02-020"
+    status: PASS
+    evidence: "test_ambiguous_no_trade_scores_within_margin returns AMBIGUOUS_NO_TRADE."
+  - id: "AC-02-021"
+    status: PASS
+    evidence: "TestBestActionLabel verifies LONG_NOW, SHORT_NOW, NO_TRADE, AMBIGUOUS_STATE mapping."
+  - id: "AC-02-022"
+    status: PASS
+    evidence: "TestDeterministicOutput verifies deterministic output across 7 fixture variants."
+  - id: "AC-02-023"
+    status: PASS
+    evidence: "TestLabelValidity verifies all 4 label_validity states."
+  - id: "AC-02-024"
+    status: PASS
+    evidence: "TestInputImmutability verifies SimulationOutput dict unchanged after adapter call."
+  - id: "AC-02-025"
+    status: PASS
+    evidence: "test_output_validates_against_schema: jsonschema.validate() passes with no errors."
+  - id: "AC-02-026"
+    status: PASS
+    evidence: "test_missing_simulation_run_id_raises raises ValueError with descriptive message."
+  - id: "AC-02-027"
+    status: PASS
+    evidence: "test_invalid_mode_raises raises ValueError for invalid mode value."
+  - id: "AC-02-028"
+    status: PASS
+    evidence: "TestOptionalFieldHandling verifies monte_carlo_run_id, second_best_action, invalidity_reason absence handled gracefully."
+  - id: "AC-02-029"
+    status: PASS
+    evidence: "test_net_equals_gross_minus_total_cost_long/short verify cost consistency within 0.0001 R tolerance."
+  - id: "AC-02-030"
+    status: PASS
+    evidence: "TestCrossMode verifies SWING, SCALP, AGGRESSIVE_SCALP all produce valid labels."
+  - id: "AC-02-031"
+    status: PASS
+    evidence: "test_minimal_fixture_validates_against_schema confirms alphaforge_label_minimal.json passes schema validation."
+  - id: "AC-02-032"
+    status: PASS
+    evidence: "All label adapter tests (85) pass; contract registry (20) pass; simulation (5) pass; import boundaries (5 pass, 2 skipped). Pre-existing integration test collection issue noted as HOLD."
+  - id: "AC-02-033"
+    status: PASS
+    evidence: "This ACCP report emitted to reports/accp/alphaforge_label_adapter.accp.yaml with all required keys."
+  - id: "AC-02-034"
+    status: PASS
+    evidence: "All 35 acceptance criteria (AC-02-001 through AC-02-035) documented with pass/fail status and evidence references."
+  - id: "AC-02-035"
+    status: PASS
+    evidence: "git status confirms only allowed files modified: alphaforge_label.schema.json, alphaforge_label_minimal.json; new files: labels/__init__.py, labels/adapter.py, test_label_adapter_no_trade.py, test_label_adapter_schema.py."
+
+anomalies:
+  - id: "ANOMALY-INTEGRATION-COLLECTION"
+    description: "Pre-existing integration test collection failures under Python 3.14 with PYTHONPATH=alphaforge/src:. Glob pattern test_alphaforge_*.py and directory-based discovery both fail with ModuleNotFoundError: No module named 'tests.xxx'. Individual file invocation works. This is a pre-existing pytest configuration issue, not caused by label adapter changes."
+    severity: LOW
+    resolution: "Use explicit file paths for individual integration test files. This does not block label adapter functionality."
+
+import_boundary_verification:
+  forbidden_imports_absent:
+    - simulation
+    - v7
+    - runtime
+    - interface
+    - xgboost
+    - binance
+  allowed_imports_present:
+    - copy (stdlib)
+    - enum (stdlib)
+    - typing (stdlib)
+    - __future__ (stdlib)
+
+deterministic_checksum:
+  method: "json.dumps(label, sort_keys=True) comparison"
+  variants_tested: 7
+  identical_outputs: 7

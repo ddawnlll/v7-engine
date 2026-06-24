@@ -1,0 +1,144 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-PLANSPEC-V0-1-MINOR-TEXT-REPAIR
+  report_type: MINOR_REPAIR
+  report_family: coordination
+  generated_at: "2026-06-24T18:15:42Z"
+  generated_by: ClaudeCode
+  model: DeepSeek-V4-Pro
+  effort: max
+  reasoning_mode: xhigh
+  parent_task_id: ACCP-MINOR-REPAIR-ALPHAFORGE-PLANSPEC-V0_1-TEXT-REFERENCES
+  prior_audit_report: reports/accp/alphaforge_planspec_v0_1_pre_execution_reaudit.accp.yaml
+
+summary:
+  previous_score: "8.3/10"
+  previous_decision: MINOR_REPAIR_REQUIRED
+  previous_critical_findings: 0
+  previous_major_findings: 3
+  previous_hard_fails: 0
+  repair_strategy: text_level_reference_correction
+  repair_method: >
+    Replace-all 'template.json' with 'template.yaml' in 3 affected PlanSpec files
+    (8 instances). Replace stale '5.0.0-alpha2' with '0.1.0' (1 instance).
+    No structural changes. No schema changes. No acceptance criteria semantics changed.
+  implementation_started: false
+  execution_started: false
+  template_yaml_modified: false
+  template_json_created: false
+
+repairs_applied:
+  - file: plans/alphaforge/master.plan.yaml
+    replacements:
+      - from: template.json
+        to: template.yaml
+        instances: 4
+        locations:
+          - "line 68: task instruction — validate subplan against (schema file)"
+          - "line 86: acceptance criteria description"
+          - "line 166: task instruction — validate subplan against (schema file)"
+          - "line 348: task instruction — validate subplan against (schema file)"
+  - file: plans/alphaforge/00_baseline_verify.plan.yaml
+    replacements:
+      - from: template.json
+        to: template.yaml
+        instances: 2
+        locations:
+          - "line 67: task instruction — validate this subplan against (schema file)"
+          - "line 159: acceptance criteria description"
+      - from: "5.0.0-alpha2"
+        to: "0.1.0"
+        instances: 1
+        location: "line 67: instruction text planSpecVersion reference"
+  - file: plans/alphaforge/03_feature_pipeline.plan.yaml
+    replacements:
+      - from: template.json
+        to: template.yaml
+        instances: 2
+        locations:
+          - "line 47: workspace allowedFiles — schema authority file"
+          - "line 132: workspace allowedFiles — schema authority file"
+
+files_modified:
+  - plans/alphaforge/master.plan.yaml
+  - plans/alphaforge/00_baseline_verify.plan.yaml
+  - plans/alphaforge/03_feature_pipeline.plan.yaml
+files_not_modified:
+  - template.yaml
+  - plans/alphaforge/01_data_manifest.plan.yaml
+  - plans/alphaforge/02_label_adapter.plan.yaml
+  - plans/alphaforge/04_dataset_assembler.plan.yaml
+  - plans/alphaforge/05_non_ml_research_report.plan.yaml
+  - plans/alphaforge/06_walk_forward_validation.plan.yaml
+  - plans/alphaforge/07_v7_handoff_dry_run.plan.yaml
+  - plans/alphaforge/08_ml_pilot_gate.plan.yaml
+  - plans/alphaforge/09_final_validation.plan.yaml
+  - alphaforge/src/**
+  - alphaforge/tests/**
+  - contracts/**
+  - integration/tests/**
+  - simulation/**
+  - v7/**
+
+validation:
+  schema_validation:
+    status: PASS
+    validator: Draft202012Validator
+    schema_file: template.yaml
+    plans_validated: 11
+    plans_passed: 11
+    plans_failed: 0
+    exit_code: 0
+    output_excerpt: "PASS: 11/11 PlanSpec files validate against template.yaml"
+  stale_reference_scan:
+    status: PASS
+    template_json_in_affected_files: 0
+    v5_alpha2_in_00_baseline: 0
+
+command_evidence:
+  - id: POST-REPAIR-schema-validation
+    command: "python3 Draft202012Validator against template.yaml, 11 plan files"
+    exit_code: 0
+    result: PASS
+  - id: POST-REPAIR-no-template-json-refs
+    command: "python3 scan for template.json in 3 affected files"
+    exit_code: 0
+    result: PASS
+  - id: POST-REPAIR-no-v5-ref
+    command: "python3 scan for 5.0.0-alpha2 in 00_baseline_verify.plan.yaml"
+    exit_code: 0
+    result: PASS
+
+remaining_holds:
+  - id: user_review_required
+    reason: "PlanSpec bundle repaired. Must be re-audited before execution."
+    release_condition: "Re-run pre-execution audit, achieve ≥8.5, operator approves"
+  - id: no_real_profitability_evidence
+    reason: "No empirical profitability data."
+  - id: no_real_market_data
+    reason: "All data is fixture-derived."
+  - id: no_model_training
+    reason: "XGBoost not imported. No ML model trained."
+  - id: funding_deferred
+    reason: "Funding cost model not implemented."
+
+estimated_post_repair_score: "≥8.5"
+expected_remaining_major_findings: 0
+expected_execution_decision: READY_FOR_EXECUTION
+
+final_status:
+  status: PASS
+  repair_complete: true
+  all_plans_schema_valid: true
+  all_stale_references_cleaned: true
+  template_yaml_modified: false
+  template_json_created: false
+  files_modified_count: 3
+  replacements_applied_count: 9
+  prior_score: "8.3/10"
+  estimated_new_score: "≥8.5"
+  safe_next_step: >
+    Re-run pre-execution audit (ACCP-REAUDIT-ALPHAFORGE-PLANSPEC-V0_1-BUNDLE-BEFORE-EXECUTION).
+    All 3 major findings resolved. Schema validation 11/11 PASS. Expected: READY_FOR_EXECUTION
+    at ≥8.5 with zero critical and zero major findings. Do NOT execute until re-audit confirms.

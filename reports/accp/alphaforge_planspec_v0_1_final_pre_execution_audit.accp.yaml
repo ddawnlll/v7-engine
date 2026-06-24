@@ -1,0 +1,200 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-PLANSPEC-V0-1-FINAL-PRE-EXECUTION-AUDIT
+  report_type: FINAL_PRE_EXECUTION_AUDIT
+  generated_at: "2026-06-24T18:15:42Z"
+  task_id: ACCP-FINAL-REAUDIT-ALPHAFORGE-PLANSPEC-V0_1-BEFORE-EXECUTION
+  priority: P0
+  execution_mode:
+    repository_mode: read_only
+    implementation_allowed: false
+    execution_allowed: false
+    plan_changes_allowed: false
+    source_code_changes_allowed: false
+    schema_changes_allowed: false
+    report_creation_allowed: true
+
+latest_repair_evidence:
+  - reports/accp/alphaforge_planspec_v0_1_minor_text_repair.accp.yaml
+historical_chain:
+  - audit: reports/accp/alphaforge_planspec_bundle_pre_execution_audit.accp.yaml
+    score: "5.83/10"
+    status: FAIL
+    errors: 292
+  - repair: reports/accp/alphaforge_planspec_v0_1_repair.accp.yaml
+    score_estimate: "≥7.5"
+    errors_after: 0
+  - reaudit: reports/accp/alphaforge_planspec_v0_1_pre_execution_reaudit.accp.yaml
+    score: "8.3/10"
+    status: MINOR_REPAIR_REQUIRED
+    major_findings: 3
+  - repair: reports/accp/alphaforge_planspec_v0_1_minor_text_repair.accp.yaml
+    status: PASS
+    replacements: 9
+  - FINAL: this report
+
+schema_validation:
+  status: PASS
+  validator_used: Draft202012Validator
+  schema_file: template.yaml
+  schema_version: "PlanSpec v0.1.0"
+  template_json_exists: false
+  template_yaml_exists: true
+  template_yaml_modified: false
+  plan_files_validated:
+    - path: plans/alphaforge/00_baseline_verify.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/01_data_manifest.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/02_label_adapter.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/03_feature_pipeline.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/04_dataset_assembler.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/05_non_ml_research_report.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/06_walk_forward_validation.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/07_v7_handoff_dry_run.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/08_ml_pilot_gate.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/09_final_validation.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/master.plan.yaml
+      verdict: PASS
+
+command_evidence:
+  - id: schema-validation
+    exit_code: 0
+    result: PASS
+    detail: "11/11 PASS Draft202012Validator against template.yaml"
+  - id: stale-reference-scan
+    exit_code: 0
+    result: PASS
+    detail: "0 template.json refs in affected files; 0 stale 5.0.0-alpha2 refs"
+  - id: no-template-json
+    exit_code: 0
+    result: PASS
+    detail: "template.json absent"
+  - id: master-subplan-reference-check
+    exit_code: 0
+    result: PASS
+    detail: "master references all 10 subplans"
+  - id: version-profile-v5-check
+    exit_code: 0
+    result: PASS
+    detail: "11/11 planSpecVersion=0.1.0, profile=praxis-v0.1, no v5 root fields"
+  - id: repair-policy-check
+    exit_code: 0
+    result: PASS
+    detail: "canModifyPlan=false, canModifyAcceptanceCriteria=false in all 11 plans"
+  - id: final-validation-features
+    exit_code: 0
+    result: PASS
+    detail: "09_final: test_execution + forbidden_diff + no_profitability + no_training scans"
+
+bundle_summary:
+  plan_count: 11
+  plan_type: "1 master + 10 subplans"
+  total_tasks: 54
+  total_acceptance_criteria: 435
+  total_exact_allowed_commands: 78
+  total_hard_denied_commands: 44
+  planSpecVersion: "0.1.0 (all 11)"
+  profile: "praxis-v0.1 (all 11)"
+  schema_authority: template.yaml
+  template_json_absent: true
+  template_yaml_present: true
+  template_yaml_unmodified: true
+  no_v5_root_fields: true
+  no_stale_references: true
+  canModifyPlan: "false (all 11)"
+  canModifyAcceptanceCriteria: "false (all 11)"
+  networkAllowed_true_anywhere: false
+  accp_separation: strict
+  repair_enabled: "true (implementation), false (validation 00,09)"
+  maxRepairLoops: "3 (implementation), 0 (validation)"
+
+scorecard:
+  schema_validity:
+    score: 9.5
+    weight: 1.5
+  authority_alignment:
+    score: 9.0
+    weight: 1.0
+  execution_readiness:
+    score: 9.0
+    weight: 1.5
+  coverage_depth:
+    score: 9.0
+    weight: 1.5
+  test_and_evidence_quality:
+    score: 8.5
+    weight: 1.5
+  risk_control:
+    score: 9.5
+    weight: 1.0
+  maintainability:
+    score: 9.0
+    weight: 1.0
+  execution_stop_safety:
+    score: 9.0
+    weight: 1.0
+  weighted_total: 9.05
+  max_possible: 10.0
+
+score_progression:
+  - stage: "Prior audit (v5 phantom schema)"
+    score: "5.83/10"
+  - stage: "After structural v0.1 repair"
+    score: "8.3/10"
+    delta: "+2.47"
+  - stage: "After minor text repair (FINAL)"
+    score: "9.05/10"
+    delta: "+0.75"
+
+findings:
+  critical: []
+  major: []
+  minor:
+    - id: MIN-01
+      finding: "Uniform command sets across implementation plans"
+      detail: "All implementation subplans share identical allowed/denied commands. Plan-specific tailoring would increase robustness."
+    - id: MIN-02
+      finding: "Network protection via layered mechanisms rather than standalone scan"
+      detail: "Final validation catches network concerns through hardDeniedCommands + networkAllowed:false + forbidden diff scan — sufficient but implicit."
+  advisory:
+    - id: ADV-01
+      finding: "Bundle structurally complete, 435 deterministic ACs across 54 tasks"
+    - id: ADV-02
+      finding: "All 8 remaining holds are substantive (real data, model training, profitability) — none are structural"
+
+hard_fail_conditions:
+  total: 8
+  triggered: 0
+  all_clear: true
+
+execution_decision:
+  verdict: READY_FOR_EXECUTION
+  reason:
+    - "Score 9.05/10 ≥ 8.5 READY threshold"
+    - "Zero critical findings"
+    - "Zero major findings"
+    - "Zero hard fail conditions triggered"
+    - "11/11 schema PASS against template.yaml"
+    - "0 stale template.json/v5 references"
+    - "template.json absent, template.yaml present and unmodified"
+    - "All 3 prior major text-artifact findings resolved through complete audit chain"
+
+final_status:
+  status: PASS
+  score: "9.05/10"
+  blocks_execution: false
+  safe_next_step: >
+    READY_FOR_EXECUTION. Begin with master orchestrator (plans/alphaforge/master.plan.yaml)
+    WAVE-00 baseline verification (read-only). If WAVE-00 passes, proceed to WAVE-01
+    implementation. Respect repair policy: maxRepairLoops=3, canModifyPlan=false,
+    canModifyAcceptanceCriteria=false. All 8 holds remain unreleased.

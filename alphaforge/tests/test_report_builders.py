@@ -1,6 +1,6 @@
 """Test report builders: deterministic, non-profit, no fake evidence."""
 
-from alphaforge.src.alphaforge.reports import (
+from alphaforge.reports import (
     build_minimal_validation_report,
     build_minimal_mode_research_report,
     build_minimal_handoff_package,

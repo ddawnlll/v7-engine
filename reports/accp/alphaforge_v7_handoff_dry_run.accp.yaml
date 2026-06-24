@@ -1,0 +1,145 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: "ALPHAFORGE-07-HANDOFF-DRY-RUN-ACCP"
+  plan_id: "ALPHAFORGE-07"
+  task_ids:
+    - "WS-07-INPUT-CONTRACT"
+    - "WS-07-GATE-MAPPING"
+    - "WS-07-DRY-RUN-BUILDER"
+    - "WS-07-NO-PROMOTION"
+    - "WS-07-SCHEMA-TESTS"
+    - "WS-07-REPORT"
+  title: "AlphaForge V7 Handoff Dry Run — Implementation Completion Report"
+  description: "Implements the full V7 handoff dry run pipeline: input contract validation, canonical V7 gate mapping, P0.9A builder integration, promotion guard (never PROMOTION_CANDIDATE/SHADOW_READY from dry run), and all 12 handoff rejection rules from handoff_to_v7.md."
+  created_at: "2026-06-24T00:00:00Z"
+  executor: "ClaudeCode"
+  completion_authority: "PraxisTruthKernel"
+  report_is_evidence_only: true
+
+summary:
+  verdict: "PASS"
+  total_unit_tests: 41
+  passed_unit_tests: 41
+  failed_unit_tests: 0
+  total_integration_tests: 8
+  passed_integration_tests: 8
+  failed_integration_tests: 0
+  total_contract_tests: 20
+  passed_contract_tests: 20
+  total_boundary_tests: 7
+  passed_boundary_tests: 7
+  skipped_boundary_tests: 2
+  total_simulation_tests: 5
+  passed_simulation_tests: 5
+  summary_text: >
+    All 6 workspaces implemented. 49 dry run + integration tests pass,
+    plus 20 contract/schema parity, 7 import boundary, and 5 simulation
+    tests (all pre-existing suites unaffected). No profitability claims.
+    Canonical G0-G10 gate IDs only. No promotion candidate or shadow-ready
+    from dry run. Output always validates against v7_handoff_package.schema.json.
+    12 rejection rules evaluated per handoff_to_v7.md. Pre-existing test
+    import errors in alphaforge/tests/ (package-vs-file shadowing) are
+    unrelated to this implementation.
+
+result: "PASS"
+
+scope_confirmation:
+  dry_run_pipeline:
+    implemented:
+      - "DryRunInput frozen dataclass with 7 fields (mode, mode_research_report, validation_report, handoff_package_id, alpha_candidate_id, model_artifact_id, calibration_candidate_id)"
+      - "MODE_RESEARCH_REPORT_REQUIRED_FIELDS frozenset (18 fields from mode_research_report.schema.json)"
+      - "VALIDATION_REPORT_REQUIRED_FIELDS frozenset (13 fields from validation_report.schema.json)"
+      - "INPUT_CONTRACT_MAP — ModeResearchReport field to V7HandoffPackage field mapping"
+      - "VALIDATION_REPORT_INPUT_MAP — ValidationReport field to V7HandoffPackage field mapping"
+      - "validate_input_reports() — structural completeness check for both report skeletons"
+      - "validate_gate_mapping() — canonical V7 gate validation (11 gates, evidence_ref+status per gate, PASS|PENDING|NOT_EVALUATED enum)"
+      - "run_handoff_dry_run() — main entry point, full pipeline assembly via P0.9A build_v7_handoff_package()"
+      - "_guard_promotion_status() — hard assertion: never PROMOTION_CANDIDATE or SHADOW_READY from dry run"
+      - "_evaluate_rejection_rules() — all 12 V7 handoff rejection rules from handoff_to_v7.md"
+      - "RejectionRulesResult dataclass with passed/failed/blocked lists and is_rejected bool"
+      - "Output validated against v7_handoff_package.schema.json via alphaforge.contracts.validator"
+      - "run_all_dry_runs() — convenience builder for all three modes"
+    error_classes:
+      - "InputContractError — missing required fields in ModeResearchReport/ValidationReport"
+      - "GateMappingError — enhanced with message-only constructor for rich error messages"
+      - "PromotionGuardError — references V7 final authority (AlphaForge RECOMMENDS. V7 DECIDES.)"
+    test_coverage:
+      - "TestGateMappingValidation: 8 tests (valid mapping, missing, unknown, missing evidence_ref, missing status, invalid status, empty dict, handoff_to_v7.md reference)"
+      - "TestDryRunBuilder: 9 tests (SWING/SCALP/AGGRESSIVE_SCALP output, all NOT_EVALUATED, REVIEW_REQUIRED, blocked_scopes, missing fields, 12 rules)"
+      - "TestPromotionGuard: 5 tests (PROMOTION_CANDIDATE raises, SHADOW_READY raises, REVIEW_REQUIRED passes, guard before builder, V7 authority reference)"
+      - "TestRejectionRules: 12 tests (Rules 1,5,6,7,8,9,10,12 individually + all-pass + multiple failures)"
+      - "TestInputContractValidation: 4 tests"
+      - "TestSchemaValidation: 1 test (schema validation)"
+      - "TestGateNamesAreCanonical: 2 tests"
+      - "Integration tests: 8 tests (schema validation, P0.9A builder call, gate names, old gate names absent, all modes, gate structure enforcement, no promotion, NO_TRADE not a gate)"
+  not_implemented:
+    - "G7 (SHADOW), G8 (PAPER), G9 (TINY_LIVE), G10 (LIVE): infrastructure not yet built — always NOT_EVALUATED in dry run"
+    - "Real promotion (SHADOW_READY, PROMOTION_CANDIDATE): requires walk-forward validation, shadow trading, live data — not possible from dry run"
+    - "Actual V7 gate evaluation: V7 owns final acceptance — AlphaForge only assembles evidence"
+
+files_changed:
+  created:
+    - "alphaforge/src/alphaforge/handoff/dry_run.py"
+    - "alphaforge/tests/test_dry_run.py"
+    - "integration/tests/test_alphaforge_handoff_dry_run.py"
+  modified:
+    - "alphaforge/src/alphaforge/errors.py"
+    - "alphaforge/src/alphaforge/handoff/__init__.py"
+
+decisions_locked:
+  - "Canonical V7 gate IDs: G0_doc_ready through G10_live (from constants.py CANONICAL_V7_GATES)"
+  - "Dry run can never produce PROMOTION_CANDIDATE or SHADOW_READY — only REVIEW_REQUIRED"
+  - "All gate statuses in dry run are NOT_EVALUATED — no gate is 'passed' without real evidence"
+  - "12 V7 handoff rejection rules from handoff_to_v7.md are evaluated before handoff"
+  - "All dry run output validates against v7_handoff_package.schema.json before return"
+  - "P0.9A builder (build_v7_handoff_package) is the single source of assembly logic — dry run wraps, does not duplicate"
+  - "V7 final authority preserved: AlphaForge RECOMMENDS. V7 DECIDES."
+
+remaining_holds:
+  - "G7-G10 gates require infrastructure not yet built (P0.9A+ dependency)"
+  - "Funding DEFERRED blocks perpetual/live handoff (dry run waives this)"
+  - "Actual V7 gate evaluation waits for real validation, shadow, and live data"
+  - "Pre-existing test import errors in alphaforge/tests/ (package shadows single-file modules) are unrelated"
+  - "No profitability claims — dry run assembles evidence structure, not economic proof"
+
+safe_next_step:
+  - "V7 side: implement gate evaluation logic that consumes V7HandoffPackage"
+  - "AlphaForge side: implement ModeResearchReport builder to produce real reports (not minimal fixtures)"
+  - "Infrastructure: build shadow trading capability (P0.9A+)"
+  - "Calibration: implement real calibration candidate generation"
+
+commands_run:
+  - command_id: "CMD-test-alphaforge-dry-run"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_dry_run.py -q"
+    exit_code: 0
+    evidence: "41 passed"
+  - command_id: "CMD-test-integration-alphaforge-dry-run"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_handoff_dry_run.py -q"
+    exit_code: 0
+    evidence: "8 passed"
+  - command_id: "CMD-test-contract-registry-schema"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+    exit_code: 0
+    evidence: "20 passed"
+  - command_id: "CMD-test-import-boundaries"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+    exit_code: 0
+    evidence: "7 passed, 2 skipped"
+  - command_id: "CMD-test-simulation"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q"
+    exit_code: 0
+    evidence: "5 passed"
+  - command_id: "CMD-discover-git-status"
+    command: "git status --porcelain"
+    exit_code: 0
+    evidence: "Working tree contains only files from this implementation session"
+
+evidence: >
+  All 49 new tests pass (41 unit, 8 integration) across 6 test classes and 1 integration
+  file. Pre-existing test suites unaffected: 20 contract/schema parity, 7 import boundary
+  (2 skipped), 5 simulation — all pass. No network calls, no xgboost, no live exchange
+  references, no profitability claims. All gate IDs are canonical V7 names from
+  constants.py. All output validates against v7_handoff_package.schema.json.
+  Dry run is REVIEW_REQUIRED only — never PROMOTION_CANDIDATE or SHADOW_READY.
+  All 12 handoff rejection rules are evaluated and reported in rejection_rules_applied.

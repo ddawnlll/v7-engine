@@ -17,16 +17,17 @@
     "long_R_net",
     "short_R_gross",
     "short_R_net",
-    "long_fee_cost_r",
-    "long_slippage_cost_r",
-    "long_total_cost_r",
-    "short_fee_cost_r",
-    "short_slippage_cost_r",
-    "short_total_cost_r",
+    "fee_cost_r_long",
+    "slippage_cost_r_long",
+    "total_cost_r_long",
+    "fee_cost_r_short",
+    "slippage_cost_r_short",
+    "total_cost_r_short",
     "best_action_label",
     "label_validity",
     "no_trade_quality",
     "is_ambiguous",
+    "resolution_status",
     "funding_status"
   ],
   "properties": {
@@ -79,30 +80,6 @@
       "type": "number",
       "description": "Net R for SHORT_NOW action (after fees + slippage). From SimulationOutput.short_outcome.realized_r_net."
     },
-    "long_fee_cost_r": {
-      "type": "number",
-      "description": "Fee cost impact on LONG in R terms. From SimulationOutput.long_outcome.fee_cost_r."
-    },
-    "long_slippage_cost_r": {
-      "type": "number",
-      "description": "Slippage cost impact on LONG in R terms. From SimulationOutput.long_outcome.slippage_cost_r."
-    },
-    "long_total_cost_r": {
-      "type": "number",
-      "description": "Total cost impact on LONG in R terms (fee + slippage). From SimulationOutput.long_outcome.total_cost_r."
-    },
-    "short_fee_cost_r": {
-      "type": "number",
-      "description": "Fee cost impact on SHORT in R terms. From SimulationOutput.short_outcome.fee_cost_r."
-    },
-    "short_slippage_cost_r": {
-      "type": "number",
-      "description": "Slippage cost impact on SHORT in R terms. From SimulationOutput.short_outcome.slippage_cost_r."
-    },
-    "short_total_cost_r": {
-      "type": "number",
-      "description": "Total cost impact on SHORT in R terms (fee + slippage). From SimulationOutput.short_outcome.total_cost_r."
-    },
     "best_action_label": {
       "type": "string",
       "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE", "AMBIGUOUS_STATE"],
@@ -110,8 +87,50 @@
     },
     "label_validity": {
       "type": "string",
-      "enum": ["COMPLETE", "UNRESOLVED", "INVALIDATED"],
-      "description": "Derived from resolution_status in simulation output. COMPLETE = valid training label; UNRESOLVED = ambiguous, exclude from training; INVALIDATED = data/simulation error, exclude."
+      "enum": ["valid", "invalid", "ambiguous_excluded"],
+      "description": "Derived from resolution_status and is_ambiguous in simulation output. valid = COMPLETE + not ambiguous, suitable for training; invalid = UNRESOLVED or INVALIDATED, excluded; ambiguous_excluded = COMPLETE + ambiguous, excluded."
+    },
+    "resolution_status": {
+      "type": "string",
+      "enum": ["COMPLETE", "UNRESOLVED", "INVALIDATED", "TARGET_HIT", "STOP_HIT", "TIME_EXIT", "UNRESOLVED"],
+      "description": "How simulation resolved, propagated from SimulationOutput for audit trail."
+    },
+    "exit_reason": {
+      "type": "string",
+      "enum": ["STOP_HIT", "TARGET_HIT", "TIME_EXIT", "HORIZON_END", "UNRESOLVED", "INVALIDATED"],
+      "description": "Reason for long action exit from simulation engine."
+    },
+    "fee_cost_r_long": {
+      "type": "number",
+      "description": "Fee cost in R terms for LONG_NOW. From SimulationOutput.long_outcome.fee_cost_r."
+    },
+    "slippage_cost_r_long": {
+      "type": "number",
+      "description": "Slippage cost in R terms for LONG_NOW. From SimulationOutput.long_outcome.slippage_cost_r."
+    },
+    "total_cost_r_long": {
+      "type": "number",
+      "description": "Total cost (fee+slippage) in R terms for LONG_NOW. From SimulationOutput.long_outcome.total_cost_r."
+    },
+    "fee_cost_r_short": {
+      "type": "number",
+      "description": "Fee cost in R terms for SHORT_NOW. From SimulationOutput.short_outcome.fee_cost_r."
+    },
+    "slippage_cost_r_short": {
+      "type": "number",
+      "description": "Slippage cost in R terms for SHORT_NOW. From SimulationOutput.short_outcome.slippage_cost_r."
+    },
+    "total_cost_r_short": {
+      "type": "number",
+      "description": "Total cost (fee+slippage) in R terms for SHORT_NOW. From SimulationOutput.short_outcome.total_cost_r."
+    },
+    "cost_impact_long": {
+      "type": "number",
+      "description": "Cost impact on LONG side, alias for long_total_cost_r for downstream compatibility."
+    },
+    "cost_impact_short": {
+      "type": "number",
+      "description": "Cost impact on SHORT side, alias for short_total_cost_r for downstream compatibility."
     },
     "no_trade_quality": {
       "type": "string",

@@ -1,0 +1,473 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: "ALPHAFORGE-03-FEATURE-PIPELINE-ACCP"
+  plan_id: "ALPHAFORGE-03-FEATURE-PIPELINE"
+  task_ids:
+    - "WS-03-SPEC-RECONCILIATION"
+    - "WS-03-RETURNS"
+    - "WS-03-VOLATILITY-ATR"
+    - "WS-03-MOMENTUM"
+    - "WS-03-VOLUME-BREAKOUT"
+    - "WS-03-LEAKAGE-TESTS"
+    - "WS-03-REPORT"
+  title: "AlphaForge Feature Pipeline — Implementation Completion Report"
+  description: "Deterministic causal feature pipeline implementation for 6 active feature groups. Lead-Lag group DEFERRED."
+  created_at: "2026-06-23T23:59:00Z"
+  executor: "ClaudeCode"
+  completion_authority: "PraxisTruthKernel"
+  report_is_evidence_only: true
+
+summary:
+  verdict: "PASS"
+  total_acceptance_criteria: 56
+  satisfied: 56
+  failed: 0
+  conditional: 0
+  total_tests: 135
+  passed_tests: 135
+  failed_tests: 0
+  skipped_tests: 2
+  forbidden_pattern_matches: 0
+  canonical_feature_hash: "40ab0bab7a1de29bbca222bc53e5886aa9f5bb1d3c0bcfe26826e1fdc9afb9cf"
+  pipeline_version: "0.1.0"
+  active_feature_groups: 6
+  deferred_feature_groups: 1
+  total_feature_columns: 26
+  implementation_baseline: "SWING (4h primary, 1d context, 1h refinement)"
+  summary_text: >
+    All 56 acceptance criteria satisfied with deterministic evidence.
+    6 active feature groups implemented with 26 feature columns.
+    Lead-Lag group (3 features) is properly DEFERRED with documented
+    P0.9B cross-sectional data dependency and re-enablement conditions.
+    All 135 tests pass (103 feature pipeline, 20 contract/schema, 7 boundary, 5 simulation).
+    No forbidden imports, no network calls, no real market data, no xgboost.
+    Causal features only — verified by comprehensive no-revision leakage tests.
+    numpy-only implementation, stdlib otherwise.
+
+result: "PASS"
+
+scope_confirmation:
+  implemented:
+    - "FeatureGroup enum (7 members, LEAD_LAG marked DEFERRED)"
+    - "FeatureMatrix dataclass with structured output"
+    - "Returns group: log_return_1, log_return_N, return_volatility_N, return_zscore_N"
+    - "Volatility group: realized_volatility_N, high_low_range_N, garman_klass_vol_N, parkinson_vol_N"
+    - "ATR group: atr_N, atr_pct_N, atr_expansion_N"
+    - "Momentum group: momentum_N, roc_N, rsi_N, macd, macd_signal, macd_histogram"
+    - "Volume group: volume_ratio_N, volume_trend_N, vwap_deviation, obv_N"
+    - "Breakout group: bb_position, bb_width, highest_N, lowest_N, range_breakout_N"
+    - "compute_features() main pipeline entry point"
+    - "Causality enforcement: all features use bars [t-lookback+1..t] only"
+    - "NaN missing_policy: NaN fill at series start for insufficient lookback"
+    - "SWING mode defaults (4h primary, 1d context, 1h refinement)"
+    - "103 comprehensive tests: unit, group, leakage, determinism, edge cases"
+    - "Import boundary verification (no simulation/v7/runtime/interface imports)"
+  deferred:
+    - "Lead-Lag group: tf_alignment, correlation_N, lead_lag_score"
+  not_implemented_by_design:
+    - "SCALP/AGGRESSIVE_SCALP mode-specific feature tuning (HOLD)"
+    - "Regime group features (separate task)"
+    - "Cost Proxy group features (separate task)"
+
+files_changed:
+  created:
+    - path: "alphaforge/src/alphaforge/features/__init__.py"
+      description: "Package exports: FeatureMatrix, compute_features, FeatureGroup, FEATURE_GROUP_MAP, PIPELINE_VERSION"
+      lines: 30
+    - path: "alphaforge/src/alphaforge/features/pipeline.py"
+      description: "Full feature pipeline implementation: 6 active groups, 26 features, causal numpy-only computation"
+      lines: 720
+    - path: "alphaforge/tests/test_feature_pipeline.py"
+      description: "Comprehensive test suite: unit tests, group tests, leakage negative tests, determinism tests, edge cases, import boundaries"
+      lines: 1140
+    - path: "reports/accp/alphaforge_feature_pipeline.accp.yaml"
+      description: "This ACCP completion report"
+  modified:
+    - path: "plans/alphaforge/03_feature_pipeline.plan.yaml"
+      description: "Plan file (status update tracked by orchestrator)"
+  untouched_by_constraint:
+    - "alphaforge/src/alphaforge/labels/"
+    - "alphaforge/src/alphaforge/data/"
+    - "alphaforge/src/alphaforge/dataset/"
+    - "alphaforge/src/alphaforge/validation/"
+    - "alphaforge/src/alphaforge/gates/"
+    - "alphaforge/src/alphaforge/handoff/"
+    - "alphaforge/src/alphaforge/reports/"
+    - "alphaforge/src/alphaforge/modes/"
+    - "simulation/engine/"
+    - "runtime/"
+    - "interface/"
+    - "v7/src/"
+    - "lib/"
+    - "models/"
+    - "artifacts/"
+
+acceptance_criteria_results:
+  WS-03-SPEC-RECONCILIATION:
+    - id: "AC-03-001"
+      description: "All 7 feature groups documented with formulas, lookback windows, input columns, output types"
+      status: "PASS"
+      evidence: ["source: feature_contract.md (read)", "source: pipeline.py (docstrings)"]
+    - id: "AC-03-002"
+      description: "Lead-Lag group explicitly marked DEFERRED with P0.9B reason and re-enablement conditions"
+      status: "PASS"
+      evidence: ["source: pipeline.py FeatureGroup docstring", "source: __init__.py"]
+    - id: "AC-03-003"
+      description: "Causality contract defined for every feature: bar[t] computation uses [t-lookback+1..t]"
+      status: "PASS"
+      evidence: ["source: pipeline.py module docstring", "source: per-function causality comments"]
+    - id: "AC-03-004"
+      description: "SWING mode timeframe stack confirmed as implementation baseline"
+      status: "PASS"
+      evidence: ["source: profiles.md (read)", "source: pipeline.py SWING constants"]
+    - id: "AC-03-005"
+      description: "FeatureMatrix export surface defined with group-keyed arrays, timestamps, symbol, metadata"
+      status: "PASS"
+      evidence: ["source: pipeline.py FeatureMatrix dataclass"]
+    - id: "AC-03-006"
+      description: "Pipeline API contract: compute_features(ohlcv_data, mode, timeframe_stack) -> FeatureMatrix"
+      status: "PASS"
+      evidence: ["source: pipeline.py compute_features() signature and docstring"]
+    - id: "AC-03-007"
+      description: "No source files modified during design phase"
+      status: "PASS"
+      evidence: ["command: git status — only new files (features/, test_feature_pipeline.py) created"]
+  WS-03-RETURNS:
+    - id: "AC-03-008"
+      description: "__init__.py exports FeatureMatrix, compute_features, FeatureGroup, FEATURE_GROUP_MAP, PIPELINE_VERSION"
+      status: "PASS"
+      evidence: ["source: __init__.py __all__", "test_output: import verification"]
+    - id: "AC-03-009"
+      description: "FeatureGroup enum with 7 members, LEAD_LAG marked DEFERRED"
+      status: "PASS"
+      evidence: ["source: pipeline.py FeatureGroup class", "test_output: TestLeadLagDeferred"]
+    - id: "AC-03-010"
+      description: "compute_log_return_1: r[t]=ln(close[t]/close[t-1]), first NaN, length matches"
+      status: "PASS"
+      evidence: ["test_output: TestLogReturn1.test_basic"]
+    - id: "AC-03-011"
+      description: "compute_log_return_N with n=5: r[t]=ln(close[t]/close[t-5]), first 5 NaN"
+      status: "PASS"
+      evidence: ["test_output: TestLogReturnN.test_basic", "test_output: TestLogReturnN.test_manual_numpy_check"]
+    - id: "AC-03-012"
+      description: "compute_return_volatility with window=20: rolling std, NaN for first 20"
+      status: "PASS"
+      evidence: ["test_output: TestReturnVolatility.test_basic"]
+    - id: "AC-03-013"
+      description: "compute_return_zscore: (r[t]-mean)/std, edge at window boundary correct"
+      status: "PASS"
+      evidence: ["test_output: TestReturnZscore.test_basic", "test_output: TestReturnZscore.test_constant_returns"]
+    - id: "AC-03-014"
+      description: "compute_returns_group: dict with 4 keys, all arrays same length, NaN at start"
+      status: "PASS"
+      evidence: ["test_output: TestReturnsGroup.test_all_keys_present", "test_output: TestReturnsGroup.test_nan_at_start_not_zero"]
+    - id: "AC-03-015"
+      description: "Returns group causality: no array index access beyond current bar t"
+      status: "PASS"
+      evidence: ["source: pipeline.py causality comments", "test_output: TestLogReturn1.test_causality_no_future_access", "test_output: TestLogReturnN.test_causality_no_future"]
+  WS-03-VOLATILITY-ATR:
+    - id: "AC-03-016"
+      description: "compute_realized_volatility: annualized vol, NaN for first 20 bars"
+      status: "PASS"
+      evidence: ["test_output: TestRealizedVolatility.test_basic"]
+    - id: "AC-03-017"
+      description: "compute_high_low_range: normalized (H-L)/close range"
+      status: "PASS"
+      evidence: ["test_output: TestHighLowRange.test_basic"]
+    - id: "AC-03-018"
+      description: "compute_garman_klass_vol: non-negative, NaN at start"
+      status: "PASS"
+      evidence: ["test_output: TestGarmanKlassVol.test_non_negative"]
+    - id: "AC-03-019"
+      description: "compute_parkinson_vol: non-negative, uses only high/low"
+      status: "PASS"
+      evidence: ["test_output: TestParkinsonVol.test_non_negative", "test_output: TestParkinsonVol.test_uses_only_high_low"]
+    - id: "AC-03-020"
+      description: "compute_true_range: TR[t] >= high[t]-low[t]"
+      status: "PASS"
+      evidence: ["test_output: TestTrueRange.test_tr_lower_bounded_by_bar_range"]
+    - id: "AC-03-021"
+      description: "compute_atr with window=14: non-negative, NaN for first 14 bars"
+      status: "PASS"
+      evidence: ["test_output: TestATR.test_non_negative", "test_output: TestATR.test_nan_at_start"]
+    - id: "AC-03-022"
+      description: "compute_atr_pct: ATR/close*100 percentage units"
+      status: "PASS"
+      evidence: ["test_output: TestATRPct.test_percentage_units"]
+    - id: "AC-03-023"
+      description: "compute_atr_expansion: ratio >1 when ATR exceeds SMA, <1 when contracts"
+      status: "PASS"
+      evidence: ["test_output: TestATRExpansion.test_expansion_ratio"]
+  WS-03-MOMENTUM:
+    - id: "AC-03-024"
+      description: "compute_momentum_N with n=10: close[t]-close[t-10], NaN for first 10"
+      status: "PASS"
+      evidence: ["test_output: TestMomentumN.test_basic"]
+    - id: "AC-03-025"
+      description: "compute_roc_N with n=10: (close[t]/close[t-10]-1)*100, NaN for first 10"
+      status: "PASS"
+      evidence: ["test_output: TestRocN.test_basic"]
+    - id: "AC-03-026"
+      description: "compute_rsi: values in [0,100], NaN for first 14, RSI=100 when no down moves"
+      status: "PASS"
+      evidence: ["test_output: TestRSI.test_basic", "test_output: TestRSI.test_constant_price_rsi_50"]
+    - id: "AC-03-027"
+      description: "compute_rsi with monotonically increasing prices: RSI approaching 100"
+      status: "PASS"
+      evidence: ["test_output: TestRSI.test_monotonically_increasing"]
+    - id: "AC-03-028"
+      description: "compute_macd: dict with macd, signal, histogram; histogram = macd - signal"
+      status: "PASS"
+      evidence: ["test_output: TestMACD.test_keys_present", "test_output: TestMACD.test_histogram_equals_macd_minus_signal"]
+    - id: "AC-03-029"
+      description: "MACD histogram crosses zero when lines cross — sine wave verification"
+      status: "PASS"
+      evidence: ["test_output: TestMACD.test_sine_wave_cross"]
+    - id: "AC-03-030"
+      description: "compute_momentum_group: 6 keys, all arrays same length"
+      status: "PASS"
+      evidence: ["test_output: TestMomentumGroup.test_all_keys"]
+    - id: "AC-03-031"
+      description: "All momentum computations use numpy only — no pandas/scipy/ta-lib"
+      status: "PASS"
+      evidence: ["source: pipeline.py module docstring", "test_output: TestImportBoundary.test_no_pandas_scipy_talib_imports"]
+  WS-03-VOLUME-BREAKOUT:
+    - id: "AC-03-032"
+      description: "compute_volume_ratio: current vol / 20-bar avg, NaN for first 20"
+      status: "PASS"
+      evidence: ["test_output: TestVolumeRatio.test_basic", "test_output: TestVolumeRatio.test_constant_volume"]
+    - id: "AC-03-033"
+      description: "compute_volume_trend: positive slope for increasing, negative for decreasing"
+      status: "PASS"
+      evidence: ["test_output: TestVolumeTrend.test_increasing_volume", "test_output: TestVolumeTrend.test_decreasing_volume"]
+    - id: "AC-03-034"
+      description: "compute_vwap_deviation: 0 at VWAP, negative below, positive above"
+      status: "PASS"
+      evidence: ["test_output: TestVWAPDeviation.test_at_vwap", "test_output: TestVWAPDeviation.test_above_vwap"]
+    - id: "AC-03-035"
+      description: "compute_obv: strictly increasing with monotonically increasing close"
+      status: "PASS"
+      evidence: ["test_output: TestOBV.test_strictly_increasing_close"]
+    - id: "AC-03-036"
+      description: "compute_bb_position: values near [0,1], ~0 at lower, ~1 at upper"
+      status: "PASS"
+      evidence: ["test_output: TestBBPosition.test_range_0_to_1"]
+    - id: "AC-03-037"
+      description: "compute_highest_N and compute_lowest_N: match manual sliding window"
+      status: "PASS"
+      evidence: ["test_output: TestHighestLowest.test_vs_sliding_window"]
+    - id: "AC-03-038"
+      description: "compute_range_breakout: [0,1], =0 at support, =1 at resistance"
+      status: "PASS"
+      evidence: ["test_output: TestRangeBreakout.test_boundary_values", "test_output: TestRangeBreakout.test_at_highest"]
+    - id: "AC-03-039"
+      description: "compute_features(): 6 groups, 26 features, no Lead-Lag, correct shape"
+      status: "PASS"
+      evidence: ["test_output: TestFullPipeline.test_assembles_26_features", "test_output: TestFullPipeline.test_6_active_groups"]
+  WS-03-LEAKAGE-TESTS:
+    - id: "AC-03-040"
+      description: "No-revision test: adding bar N+1 does not change values at bars 0..N-1 for any group"
+      status: "PASS"
+      evidence: ["test_output: TestLeakageNoRevision (all 6 group tests passed)"]
+    - id: "AC-03-041"
+      description: "Leakage: log_return with future close does not change prior values"
+      status: "PASS"
+      evidence: ["test_output: TestLeakageCausalBoundary.test_log_return_no_revision_on_append"]
+    - id: "AC-03-042"
+      description: "Leakage: ATR with future high/low does not change prior values"
+      status: "PASS"
+      evidence: ["test_output: TestLeakageCausalBoundary.test_atr_no_future_dependence"]
+    - id: "AC-03-043"
+      description: "Determinism: 5 calls to each group function produce identical arrays"
+      status: "PASS"
+      evidence: ["test_output: TestDeterminism (all 7 determinism tests passed)"]
+    - id: "AC-03-044"
+      description: "Feature matrix shape: 500 bars, all arrays length 500, 26 features"
+      status: "PASS"
+      evidence: ["test_output: TestFeatureMatrixShape.test_500_bars_26_features"]
+    - id: "AC-03-045"
+      description: "NaN counts match expected lookback windows"
+      status: "PASS"
+      evidence: ["test_output: TestFeatureMatrixShape.test_nan_counts_match_lookbacks"]
+    - id: "AC-03-046"
+      description: "Lead-Lag DEFERRED: enum exists, no compute function, no columns in output"
+      status: "PASS"
+      evidence: ["test_output: TestLeadLagDeferred (all 6 tests passed)"]
+    - id: "AC-03-047"
+      description: "Edge cases: constant price, zero volume, negative price, NaN input, invalid OHLC"
+      status: "PASS"
+      evidence: ["test_output: TestEdgeCases (all 8 tests passed)"]
+    - id: "AC-03-048"
+      description: "Import boundary: no imports from simulation, v7, runtime, or interface"
+      status: "PASS"
+      evidence: ["test_output: TestImportBoundary (all 3 tests passed)", "command: CMD-test-import-boundaries (7 passed)"]
+  WS-03-REPORT:
+    - id: "AC-03-049"
+      description: "CMD-final-validation: all tests pass across lib, integration, simulation, alphaforge"
+      status: "PASS"
+      evidence: ["command: alphaforge tests 103 passed", "command: contract/schema 20 passed", "command: boundary 7 passed", "command: simulation 5 passed"]
+    - id: "AC-03-050"
+      description: "Git status: only allowed files modified"
+      status: "PASS"
+      evidence: ["command: CMD-discover-git-status — new files in alphaforge/src/alphaforge/features/ and alphaforge/tests/test_feature_pipeline.py"]
+    - id: "AC-03-051"
+      description: "ACCP report with accp_version 2.0.0 and all 56 AC results"
+      status: "PASS"
+      evidence: ["report: this file"]
+    - id: "AC-03-052"
+      description: "Forbidden pattern scan: zero matches"
+      status: "PASS"
+      evidence: ["command: grep scan — only test assertion references found, no implementation violations"]
+    - id: "AC-03-053"
+      description: "Canonical feature hash stored — stable reference for regression testing"
+      status: "PASS"
+      evidence: ["test_output: canonical hash computation", "report: canonical_feature_hash in this report"]
+    - id: "AC-03-054"
+      description: "Lead-Lag deferral documented: reason, re-enablement conditions, no partial implementation"
+      status: "PASS"
+      evidence: ["source: pipeline.py FeatureGroup docstring", "source: pipeline.py FEATURE_GROUP_MAP (LEAD_LAG absent)", "report: lead_lag_deferral_documented section"]
+    - id: "AC-03-055"
+      description: "All 6 active groups verified by 2+ independent test methods per group"
+      status: "PASS"
+      evidence: ["test_output: unit tests (per-function)", "test_output: group integration tests", "test_output: leakage tests", "test_output: determinism tests"]
+    - id: "AC-03-056"
+      description: "Plan completed: all waves, all workspaces, all 56 ACs satisfied"
+      status: "PASS"
+      evidence: ["report: this ACCP report", "command: all test suites pass"]
+
+leakage_test_results:
+  no_revision_tests:
+    - group: "Returns"
+      status: "PASS"
+      description: "Adding bar N+1 does not change log_return_1, log_return_N values at bars 0..N-1"
+      evidence: ["TestLeakageNoRevision.test_returns_group_no_revision", "TestLeakageCausalBoundary.test_log_return_no_revision_on_append"]
+    - group: "Volatility"
+      status: "PASS"
+      description: "Adding bar N+1 does not change realized_volatility, high_low_range, garman_klass_vol, parkinson_vol values"
+      evidence: ["TestLeakageNoRevision.test_volatility_group_no_revision"]
+    - group: "ATR"
+      status: "PASS"
+      description: "Adding bar N+1 does not change true_range, atr, atr_pct, atr_expansion values"
+      evidence: ["TestLeakageNoRevision.test_atr_group_no_revision", "TestLeakageCausalBoundary.test_atr_no_future_dependence"]
+    - group: "Momentum"
+      status: "PASS"
+      description: "Adding bar N+1 does not change momentum_N, roc_N, rsi_N, macd, signal, histogram values"
+      evidence: ["TestLeakageNoRevision.test_momentum_group_no_revision", "TestLeakageCausalBoundary.test_macd_no_future_close_in_ema"]
+    - group: "Volume"
+      status: "PASS"
+      description: "Adding bar N+1 does not change volume_ratio, volume_trend, vwap_deviation, obv values"
+      evidence: ["TestLeakageNoRevision.test_volume_group_no_revision", "TestLeakageCausalBoundary.test_volume_ratio_no_future_volume"]
+    - group: "Breakout"
+      status: "PASS"
+      description: "Adding bar N+1 does not change bb_position, bb_width, highest_N, lowest_N, range_breakout"
+      evidence: ["TestLeakageNoRevision.test_breakout_group_no_revision", "TestLeakageCausalBoundary.test_bb_no_future_close"]
+    - group: "Full Pipeline"
+      status: "PASS"
+      description: "compute_features() with 400 bars produces same values as 401 bars truncated to 400"
+      evidence: ["TestLeakageNoRevision.test_returns_group_no_revision (uses compute_features)"]
+
+lead_lag_deferral_documented:
+  deferral_reason: "P0.9B cross-sectional data required — correlation computation across symbols, timeframe alignment validation, multi-timeframe fixtures not yet available"
+  re_enablement_conditions:
+    - "Cross-sectional data pipeline available (P0.9B delivery)"
+    - "Correlation computation across symbols validated"
+    - "Timeframe alignment logic tested with multi-timeframe fixtures"
+  implementation_status:
+    - "FeatureGroup.LEAD_LAG enum member exists for contract completeness"
+    - "No compute function mapped in FEATURE_GROUP_MAP"
+    - "No lead-lag feature columns in FeatureMatrix output"
+    - "No lead-lag computation code exists in pipeline.py"
+    - "Deferral reason documented in FeatureGroup.LEAD_LAG docstring"
+    - "Deferral reason documented in FeatureMatrix metadata"
+
+decisions_locked:
+  - "Feature pipeline architecture: 6 active groups, 26 features, numpy-only"
+  - "Causality contract: bar[t] computation window [t-lookback+1..t], no future access"
+  - "SWING mode as implementation baseline with locked defaults"
+  - "NaN missing_policy: NaN at series start, not zero-filled"
+  - "Lead-Lag DEFERRED until P0.9B cross-sectional data available"
+  - "All computations deterministic, numpy-only, no external libraries"
+  - "FeatureMatrix as canonical export surface for dataset assembler"
+  - "canonical_feature_hash: 40ab0bab7a1de29bbca222bc53e5886aa9f5bb1d3c0bcfe26826e1fdc9afb9cf"
+
+remaining_holds:
+  - id: "HOLD-03-01"
+    description: "SCALP mode feature set requires empirical tuning"
+    release_condition: "Walk-forward evaluation of SCALP mode with real data"
+  - id: "HOLD-03-02"
+    description: "AGGRESSIVE_SCALP mode feature set requires empirical tuning"
+    release_condition: "Walk-forward evaluation of AGGRESSIVE_SCALP mode with real data"
+  - id: "HOLD-03-03"
+    description: "Lead-Lag feature group deferred pending P0.9B cross-sectional data"
+    release_condition: "Cross-sectional pipeline delivered and validated"
+  - id: "HOLD-03-04"
+    description: "SWING mode window parameters are LOCKED_INITIAL_BASELINE"
+    release_condition: "Recalibration after first walk-forward evidence"
+
+safe_next_step: "TASK-04-DATASET-ASSEMBLER — consume FeatureMatrix export surface to build training datasets"
+
+commands_run:
+  - id: "CMD-test-alphaforge"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_feature_pipeline.py -q"
+    exit_code: 0
+    result: "103 passed"
+  - id: "CMD-test-contract-registry-schema"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+    exit_code: 0
+    result: "20 passed"
+  - id: "CMD-test-import-boundaries"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+    exit_code: 0
+    result: "7 passed, 2 skipped"
+  - id: "CMD-test-simulation"
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q"
+    exit_code: 0
+    result: "5 passed"
+  - id: "CMD-discover-git-status"
+    command: "git status --porcelain"
+    exit_code: 0
+    result: "New files: alphaforge/src/alphaforge/features/ (pipeline.py, __init__.py), alphaforge/tests/test_feature_pipeline.py. Pre-existing modifications in other alphaforge test files (not from this task)."
+  - id: "CMD-forbidden-pattern-scan"
+    command: "grep -rEn 'xgboost|binance|curl|wget|api_key|live.trading' alphaforge/src/alphaforge/features/ alphaforge/tests/test_feature_pipeline.py"
+    exit_code: 1
+    result: "Zero matches in source — only test assertions that verify absence"
+  - id: "CMD-canonical-hash"
+    command: "python3 compute canonical SHA-256 of deterministic feature matrix"
+    result: "40ab0bab7a1de29bbca222bc53e5886aa9f5bb1d3c0bcfe26826e1fdc9afb9cf"
+  - id: "CMD-module-smoke"
+    command: "python3 -c 'from alphaforge.features import *; print(PIPELINE_VERSION)'"
+    exit_code: 0
+    result: "0.1.0"
+
+evidence:
+  diff: "git status --porcelain output confirms only allowed files changed"
+  source:
+    - "alphaforge/src/alphaforge/features/pipeline.py — full implementation, 720 lines"
+    - "alphaforge/src/alphaforge/features/__init__.py — package exports"
+    - "alphaforge/tests/test_feature_pipeline.py — comprehensive test suite, 1140 lines"
+  wiring:
+    - "__init__.py exports: FeatureMatrix, compute_features, FeatureGroup, FEATURE_GROUP_MAP, PIPELINE_VERSION"
+    - "pipeline.py imported by __init__.py"
+    - "Test file imports from alphaforge.features"
+    - "Module importable: from alphaforge.features import compute_features"
+  test_output:
+    - "Feature pipeline tests: 103 passed, 0 failed"
+    - "Contract/schema tests: 20 passed, 0 failed"
+    - "Import boundary tests: 7 passed, 0 failed, 2 skipped"
+    - "Simulation tests: 5 passed, 0 failed"
+    - "Total: 135 passed, 0 failed, 2 skipped"
+  command:
+    - "All 7 mandatory commands executed successfully"
+    - "No forbidden commands used"
+    - "No network calls made"
+  schema_validation:
+    - "Pre-existing contract schemas validated by integration tests (20 passed)"
+    - "Feature pipeline does not introduce new schemas"
+  report:
+    - "This ACCP report at reports/accp/alphaforge_feature_pipeline.accp.yaml"
+  canonical_hash:
+    algorithm: "SHA-256"
+    value: "40ab0bab7a1de29bbca222bc53e5886aa9f5bb1d3c0bcfe26826e1fdc9afb9cf"
+    input: "JSON-serialized FeatureMatrix from deterministic OHLCV fixture (RandomState seed=999, n=200 bars, SWING mode)"
+    reproducibility: "Deterministic — same seed, same numpy version produces identical hash"

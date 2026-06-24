@@ -1,12 +1,12 @@
 """Test handoff builder: canonical gates, no old names, promotion blocking."""
 
 import pytest
-from alphaforge.src.alphaforge.handoff import (
+from alphaforge.handoff import (
     build_handoff_package, validate_gate_mapping,
     assert_no_old_gate_names, is_promotion_blocked,
 )
-from alphaforge.src.alphaforge.errors import GateMappingError, HandoffBlockedError
-from alphaforge.src.alphaforge.reports import CANONICAL_V7_GATES, FORBIDDEN_GATE_NAMES
+from alphaforge.errors import GateMappingError, HandoffBlockedError
+from alphaforge.reports import CANONICAL_V7_GATES, FORBIDDEN_GATE_NAMES
 
 
 def test_build_minimal_handoff_uses_canonical_gates():

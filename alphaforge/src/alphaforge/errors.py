@@ -96,13 +96,57 @@ class MHTBlockingError(ValidationError):
 
 
 class GateMappingError(AlphaForgeError):
-    """V7 gate mapping contains invalid or old gate names."""
+    """V7 gate mapping contains invalid, missing, or old gate names.
 
-    def __init__(self, invalid_gates: List[str], allowed_gates: List[str]):
-        self.invalid_gates = invalid_gates
-        self.allowed_gates = allowed_gates
+    Supports two construction paths:
+    - Legacy: (invalid_gates, allowed_gates) for backward compatibility
+    - Message: (message=...) for rich error messages with handoff_to_v7.md reference
+    """
+
+    def __init__(
+        self,
+        invalid_gates: Optional[List[str]] = None,
+        allowed_gates: Optional[List[str]] = None,
+        *,
+        message: Optional[str] = None,
+    ):
+        self.invalid_gates = invalid_gates or []
+        self.allowed_gates = allowed_gates or []
+        if message:
+            super().__init__(message)
+        else:
+            super().__init__(
+                f"Invalid gate names: {self.invalid_gates}. Allowed: {self.allowed_gates}"
+            )
+
+
+class InputContractError(AlphaForgeError):
+    """Input report contract violation — missing required fields or invalid structure."""
+
+    def __init__(self, report_type: str, missing_fields: List[str]):
+        self.report_type = report_type
+        self.missing_fields = missing_fields
         super().__init__(
-            f"Invalid gate names: {invalid_gates}. Allowed: {allowed_gates}"
+            f"Input contract violation in {report_type}: "
+            f"missing required fields: {missing_fields}"
+        )
+
+
+class PromotionGuardError(AlphaForgeError):
+    """Attempt to set a promotion status not allowed in the current context.
+
+    Always references V7 final authority: AlphaForge RECOMMENDS. V7 DECIDES.
+    """
+
+    def __init__(self, attempted_status: str, allowed_status: str = "REVIEW_REQUIRED"):
+        self.attempted_status = attempted_status
+        self.allowed_status = allowed_status
+        super().__init__(
+            f"Dry run cannot recommend {attempted_status}. "
+            f"Only {allowed_status} is allowed from dry run. "
+            f"Real promotion evidence requires walk-forward validation, shadow trading, and live data. "
+            f"See alphaforge/docs/handoff_to_v7.md. "
+            f"AlphaForge RECOMMENDS. V7 DECIDES."
         )
 
 
