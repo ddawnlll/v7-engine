@@ -282,6 +282,19 @@ def build_alphaforge_research_report(
         "created_at": _now_iso(),
         "mode_reports": mode_report_summaries,
         "promoted_candidates": [],
+        "multiple_hypothesis_control": {
+            "aggregate_mht_status": "NOT_RUN",
+            "aggregate_tested_hypothesis_count": 0,
+            "aggregate_tested_feature_count": 0,
+            "aggregate_trial_count": 0,
+            "correction_method": "NONE_APPLIED",
+            "false_discovery_control": "NOT_APPLIED",
+            "deflated_sharpe_or_pbo_assessment": "NOT_APPLIED",
+            "mht_block_reason": (
+                "Scaffold placeholder — no real empirical MHT performed. "
+                "Strong edge/profitability claims are BLOCKED."
+            ),
+        },
         "rejected_candidates": [
             {
                 "alpha_candidate_id": "ac-scaffold-001",

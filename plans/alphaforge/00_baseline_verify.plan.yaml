@@ -64,7 +64,7 @@ tasks:
   implementation:
     instructions:
     - '[must] [schema_validation] PHASE 0 — SELF-VALIDATION. Before executing any command, validate this subplan file (plans/alphaforge/00_baseline_verify.plan.yaml)
-      against template.json. Confirm all 15 required root keys are present, planSpecVersion is exactly "5.0.0-alpha2", kind
+      against template.yaml. Confirm all 15 required root keys are present, planSpecVersion is exactly "0.1.0", kind
       is "ImplementationPlan", and all nested required fields are satisfied. Record the validation outcome.
 
       '
@@ -156,7 +156,7 @@ tasks:
     deterministicEvidenceRequired: true
   acceptanceCriteria:
   - id: AC-00-01
-    description: Subplan 00_baseline_verify.plan.yaml self-validates against template.json with zero schema violations.
+    description: Subplan 00_baseline_verify.plan.yaml self-validates against template.yaml with zero schema violations.
     level: required
     humanApproved: true
     criteriaSource: imported_human

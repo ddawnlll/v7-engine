@@ -44,7 +44,7 @@ workspace:
   - reports/accp/alphaforge_feature_pipeline.accp.yaml
   - reports/accp/alphaforge_feature_pipeline_tests.accp.yaml
   - simulation/docs/profiles.md
-  - template.json
+  - template.yaml
   forbiddenFiles:
   - .github/**
   - alphaforge/src/**
@@ -129,7 +129,7 @@ tasks:
     - alphaforge/docs/ai_summary__v7_alphaforge_xgb.md
     - simulation/docs/profiles.md
     - plans/alphaforge/03_feature_pipeline.plan.yaml
-    - template.json
+    - template.yaml
     - contracts/registry.json
     - contracts/fixtures/simulation_output_minimal.json
     forbiddenFiles:

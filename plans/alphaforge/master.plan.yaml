@@ -65,7 +65,7 @@ tasks:
   objective: Execute Baseline Verification Subplan
   implementation:
     instructions:
-    - '[must] [action] Load and validate subplan plans/alphaforge/00_baseline_verify.plan.yaml against template.json.'
+    - '[must] [action] Load and validate subplan plans/alphaforge/00_baseline_verify.plan.yaml against template.yaml.'
     - '[must] [action] Execute all workspaces defined in the subplan in order.'
     - '[must] [action] Run CMD-discover-git-status and confirm clean working tree before proceeding.'
     - '[must] [action] Emit ACCP report reports/accp/alphaforge_baseline_verify.accp.yaml.'
@@ -83,7 +83,7 @@ tasks:
     deterministicEvidenceRequired: true
   acceptanceCriteria:
   - id: AC-MASTER-00-01
-    description: Subplan 00_baseline_verify.plan.yaml validates against template.json
+    description: Subplan 00_baseline_verify.plan.yaml validates against template.yaml
     level: required
     humanApproved: true
     criteriaSource: imported_human
@@ -163,7 +163,7 @@ tasks:
   objective: Execute Implementation Subplans In Order
   implementation:
     instructions:
-    - '[must] [action] For each subplan 01 through 08, in order: (a) validate subplan against template.json, (b) execute all
+    - '[must] [action] For each subplan 01 through 08, in order: (a) validate subplan against template.yaml, (b) execute all
       workspaces, (c) emit ACCP report, (d) run CMD-test-alphaforge, (e) confirm tests pass before next subplan.'
     - '[must] [action] If any subplan fails validation or tests, STOP. Do not proceed to next subplan. Emit repair packet.'
     - '[must] [action] No model training. No xgboost import. No fit() calls. Verify after each subplan.'
@@ -345,7 +345,7 @@ tasks:
   objective: Execute Final Validation Subplan
   implementation:
     instructions:
-    - '[must] [action] Load and validate subplan plans/alphaforge/09_final_validation.plan.yaml against template.json.'
+    - '[must] [action] Load and validate subplan plans/alphaforge/09_final_validation.plan.yaml against template.yaml.'
     - '[must] [action] Execute all workspaces defined in the subplan in order.'
     - '[must] [action] Run CMD-final-validation and confirm exit 0.'
     - '[must] [action] Run forbidden file scan — confirm no files in lib/, simulation/engine/, runtime/, interface/, data/,

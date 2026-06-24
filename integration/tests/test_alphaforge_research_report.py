@@ -162,15 +162,14 @@ def test_alphaforge_research_report_aggregate_validates():
     the gap and verifies that the builder correctly rejects incomplete
     payloads (it should NOT build without MHT control).
     """
-    # P0.8E gap: the builder rightfully rejects the aggregate because
-    # the schema now requires multiple_hypothesis_control
-    with pytest.raises(ReportBuildError) as exc_info:
-        build_alphaforge_research_report()
-
-    error_msg = str(exc_info.value)
-    assert "validation" in error_msg.lower() or "multiple" in error_msg.lower(), (
-        f"Expected ReportBuildError about missing validation, got: {error_msg}"
-    )
+    # P0.9B repair: builders.py now wires aggregate multiple_hypothesis_control.
+    report = build_alphaforge_research_report()
+    assert "multiple_hypothesis_control" in report
+    mht = report["multiple_hypothesis_control"]
+    assert mht["aggregate_mht_status"] == "NOT_RUN"
+    assert mht["aggregate_tested_hypothesis_count"] == 0
+    assert mht["correction_method"] == "NONE_APPLIED"
+    assert "mht_block_reason" in mht
 
 
 # ---------------------------------------------------------------------------

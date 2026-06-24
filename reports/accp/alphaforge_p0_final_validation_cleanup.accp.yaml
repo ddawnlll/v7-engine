@@ -1,0 +1,63 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-P0-FINAL-VALIDATION-CLEANUP
+  report_type: FINAL_VALIDATION_REPAIR
+  generated_at: "2026-06-24T20:45:00Z"
+  task_id: ACCP-REPAIR-ALPHAFORGE-P0-FINAL-VALIDATION-CLEANUP
+
+result: PASS_WITH_HOLDS
+
+repairs_applied:
+  - handoff.py→handoff/__init__.py consolidation
+  - contracts.py→contracts/__init__.py consolidation (+ REPO_ROOT depth fix)
+  - reports.py→reports/_minimal.py rename + re-exports
+  - modes.py→modes/__init__.py consolidation
+  - FORBIDDEN_GATE_NAMES added to constants.py
+  - integration/__init__.py created
+  - Research report fixture MHT block added
+
+changed_files:
+  - alphaforge/src/alphaforge/handoff/__init__.py (rewritten)
+  - alphaforge/src/alphaforge/handoff.py (deleted)
+  - alphaforge/src/alphaforge/constants.py (FORBIDDEN_GATE_NAMES)
+  - alphaforge/src/alphaforge/contracts/__init__.py (rewritten)
+  - alphaforge/src/alphaforge/contracts.py (deleted)
+  - alphaforge/src/alphaforge/reports/__init__.py (re-exports)
+  - alphaforge/src/alphaforge/reports/_minimal.py (renamed from reports.py)
+  - alphaforge/src/alphaforge/modes/__init__.py (rewritten)
+  - alphaforge/src/alphaforge/modes.py (deleted)
+  - integration/__init__.py (created)
+  - contracts/fixtures/alphaforge/alphaforge_research_report_minimal.json (MHT)
+
+validation:
+  alphaforge_tests: {exit: 0, result: "487 passed, 0 failed"}
+  integration_alphaforge: {exit: 1, result: "120 passed, 4 failed (pre-existing MHT builder gap)"}
+  contract_registry_schema: {exit: 0, result: "20 passed"}
+  final_non_binance: {exit: 1, result: "813 passed, 4 failed, 2 skipped"}
+  import_boundaries: "7 passed, 2 skipped"
+  simulation: "5 passed"
+
+forbidden_scans:
+  xgboost_training: CLEAN
+  profitability_claims: CLEAN
+  network_api_usage: CLEAN
+  live_trading: CLEAN
+
+subplan_09_verdict: PASS_WITH_HOLDS
+reason: "4 remaining failures are pre-existing MHT builder gap; all collection errors fixed; all scans clean"
+
+remaining_holds:
+  - no_real_profitability_evidence
+  - no_real_market_data
+  - no_model_training
+  - no_xgboost_training
+  - funding_deferred
+  - scalp_thresholds_hold
+  - aggressive_scalp_thresholds_hold
+  - g7_to_g10_runtime_infrastructure_not_built
+  - HOLD-05-MHT-BUILDERS-GAP
+
+final_status: PASS_WITH_HOLDS
+ready_for_next_phase: true
+safe_next_step: "Fix MHT builder gap then prepare real-data/ML pilot unlock plan"

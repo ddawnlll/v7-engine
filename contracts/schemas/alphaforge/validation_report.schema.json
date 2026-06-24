@@ -161,9 +161,11 @@
       "required": [
         "baseline_fee_pct",
         "baseline_slippage_pct",
+        "baseline_spread_pct",
         "fee_stress_edge_survives",
         "slippage_stress_edge_survives",
-        "combined_stress_edge_survives"
+        "combined_stress_edge_survives",
+        "funding_deferred_block"
       ],
       "properties": {
         "baseline_fee_pct": { "type": "number", "minimum": 0, "description": "Baseline fee percentage (taker rate)." },
@@ -238,7 +240,8 @@
         "tested_hypothesis_count",
         "correction_method",
         "trial_count_disclosure",
-        "rejected_candidate_count"
+        "rejected_candidate_count",
+        "data_snooping_risk_flag"
       ],
       "properties": {
         "mht_status": {
