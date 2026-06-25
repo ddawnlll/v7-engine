@@ -106,6 +106,33 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 **Status:** P0.9A (AlphaForge implementation scaffold) is now unblocked. P0.8E prerequisites satisfied.
 
+### TR-07 — V7 Policy Acceptance Engine (2026-06-26)
+
+**Issue:** #11 — Final hard-gate before audit. v7/ had ZERO Python files; built from scratch.
+
+**What changed:**
+- Created v7/ Python package: `__init__.py`, `builder.py`, `validator.py`, `router.py`, `policy.py`
+- Created `v7/gates/` package: `evaluator.py` with G0-G10 gate framework
+- Created `v7/tests/` with 93 unit+integration tests (all green)
+- SWING mode end-to-end: AnalysisRequest -> validate -> route -> policy -> DecisionEvent
+- Cost computation uses `simulation/engine/costs` (fee + slippage + funding_cost_r)
+- SCALP and AGGRESSIVE_SCALP correctly blocked by HOLD status
+- Contract schema validation for all three lifecycle objects
+
+**Lock status:**
+- SWING mode thresholds: LOCKED_INITIAL_BASELINE (unchanged)
+- SCALP: HOLD (unchanged)
+- AGGRESSIVE_SCALP: HOLD (unchanged)
+- v7 package version: 0.1.0
+
+**Remaining holds:**
+- SCALP empirical evidence (walk-forward OOS, fee/slippage stress, funding validation)
+- AGGRESSIVE_SCALP empirical evidence (cost-adjusted expectancy, latency, order-book)
+- Regime gate: placeholder (needs real detector)
+- G1-G5, G7-G8: placeholder gate implementations (need real evidence data)
+
+**Evidence:** 93/93 tests pass. ACCP report at `reports/accp/issue-11.yaml`.
+
 ### Implementation Sequence
 
 SWING is implemented first as the **control baseline** — it validates the entire architecture (contracts, simulation truth, labels, features, model training, calibration, policy, portfolio, risk, runtime integration) with the lowest risk. Once the architecture is proven via SWING, SCALP and AGGRESSIVE_SCALP research accelerates on a validated foundation.
