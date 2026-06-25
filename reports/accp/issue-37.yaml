@@ -1,0 +1,52 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+result: PASS
+scope_confirmation: |
+  Issue #37 Policy Critic RL HOLD resolution. Implemented three core modules:
+  - Replay buffer: (state, action, reward, next_state) tuple emitter from DecisionEvents
+  - Regret: regret_r using simulation/engine/costs.py with R_NET and SHAPED_REWARD bases
+  - Expected return: Per-direction expected_R (LONG vs SHORT), rule-based and simulation-mean
+
+files_changed:
+  - v7/policy_critic/__init__.py
+  - v7/policy_critic/replay_buffer.py
+  - v7/policy_critic/regret.py
+  - v7/policy_critic/expected_return.py
+  - v7/policy_critic/tests/__init__.py
+  - v7/policy_critic/tests/test_replay_buffer.py
+  - v7/policy_critic/tests/test_regret.py
+  - v7/policy_critic/tests/test_expected_return.py
+  - v7/docs/policy_critic/ai_summary.md
+
+decisions_locked:
+  - Action space: {LONG, SHORT, NO_TRADE} per DEC-002 — enforced in map_decision_to_critic_action
+  - Reward basis: SHAPED_REWARD default (action_utility + drawdown penalty); R_NET available for cross-check
+  - Mode-specific drawdown penalties: SWING=0.5, SCALP=1.0, AGGRESSIVE_SCALP=2.0
+  - NO_TRADE is first-class zero-cost baseline: r = saved_loss_r - 0.5 * missed_opportunity_r
+  - Replay buffer capacity: 100k (LOCKED_INITIAL_BASELINE — adjust after empirical sizing)
+  - State feature vector: extracted from AnalysisResult + kwargs (market/runtime context)
+  - Expected return v1 rule-based: E[R] = P(win)*target_R - P(lose)*stop_R - costs
+
+remaining_holds:
+  - HOLD #3: funding_cost_r DEFERRED (critic spot-only-valid, perp blocked)
+  - HOLD #5: bad_trade_probability, model_disagreement, recent_prediction_error (v2+)
+  - HOLD #7: Conformal exchangeability violation (time-aware variant needed)
+  - HOLD #8: Decision-event family contracts not registered
+  - HOLD #10: IQL expectile tau, conformal coverage numeric thresholds
+
+safe_next_step: |
+  Phase 1 complete. Next: implement conformal calibration methods
+  (v7/policy_critic/conformal/) for HOLD #7, then tau sensitivity
+  analysis for HOLD #10.
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest v7/policy_critic/tests/ -v"
+
+evidence:
+  - "64/64 tests pass (0 failures)"
+  - "Module coverage: replay_buffer (33 tests), regret (20 tests), expected_return (11 tests)"
+  - "Domain boundary: v7/policy_critic imports simulation/engine/costs (truth authority), no inverse imports"
+  - "Data flow: DecisionEvent -> map_decision_to_critic_action -> build_state_feature_vector -> build_replay_tuple -> ReplayBuffer"
+  - "Regret data flow: SimOutput -> compute_regret_from_simulation -> RegretResult (with drawdown breakdown)"
+  - "Expected return data flow: AnalysisResult + market data -> compute_rule_based_expected_r / compute_expected_r_from_simulation -> ExpectedReturn + compare_directions"
