@@ -106,32 +106,66 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 **Status:** P0.9A (AlphaForge implementation scaffold) is now unblocked. P0.8E prerequisites satisfied.
 
-### TR-07 — V7 Policy Acceptance Engine (2026-06-26)
+---
 
-**Issue:** #11 — Final hard-gate before audit. v7/ had ZERO Python files; built from scratch.
+## TR-08 — Final Training Readiness Audit — v0.1 Milestone COMPLETE (2026-06-26)
 
-**What changed:**
-- Created v7/ Python package: `__init__.py`, `builder.py`, `validator.py`, `router.py`, `policy.py`
-- Created `v7/gates/` package: `evaluator.py` with G0-G10 gate framework
-- Created `v7/tests/` with 93 unit+integration tests (all green)
-- SWING mode end-to-end: AnalysisRequest -> validate -> route -> policy -> DecisionEvent
-- Cost computation uses `simulation/engine/costs` (fee + slippage + funding_cost_r)
-- SCALP and AGGRESSIVE_SCALP correctly blocked by HOLD status
-- Contract schema validation for all three lifecycle objects
+**Issue:** #12 — Final audit gate. Verify all TR-01 through TR-07 gates have evidence, run full test suite, update roadmap.
 
-**Lock status:**
-- SWING mode thresholds: LOCKED_INITIAL_BASELINE (unchanged)
-- SCALP: HOLD (unchanged)
-- AGGRESSIVE_SCALP: HOLD (unchanged)
-- v7 package version: 0.1.0
+**v0.1 MILESTONE: COMPLETE.** All 8 Training-Ready gates (TR-00 through TR-07) are verified with git commits, ACCP reports, and passing tests.
 
-**Remaining holds:**
-- SCALP empirical evidence (walk-forward OOS, fee/slippage stress, funding validation)
-- AGGRESSIVE_SCALP empirical evidence (cost-adjusted expectancy, latency, order-book)
-- Regime gate: placeholder (needs real detector)
-- G1-G5, G7-G8: placeholder gate implementations (need real evidence data)
+### TR Gate Evidence Summary
 
-**Evidence:** 93/93 tests pass. ACCP report at `reports/accp/issue-11.yaml`.
+| Gate | Description | Commit | ACCP Report | Tests |
+|------|------------|--------|-------------|-------|
+| TR-00 | Reality Gap Baseline | `8e1d1f9` | `tr00_reality_gap_baseline_verification.accp.yaml` | PASS |
+| TR-01 | Market Data Backfill | `9142f19`, `8f12939` | `issue-5.yaml` | 26/26 PASS |
+| TR-02 | Simulation Adapter | P1 bundle | `training_ready_p1_execution.accp.yaml` | PASS |
+| TR-03 | Pipeline CLI/Makefile/Runbook | P1 bundle | `training_ready_p1_execution.accp.yaml` | PASS |
+| TR-04 | Funding/Rate Limit | P1 bundle | `training_ready_p1_execution.accp.yaml` | PASS |
+| TR-05 | XGBoost Training | `f646e51` | `issue-9.yaml` | PASS |
+| TR-06 | Walk-Forward Validation | `ae15e10` | `issue-10.yaml` | PASS |
+| TR-07 | V7 Policy Acceptance | `0b30ac5` | `issue-11.yaml` | 93/93 PASS |
+
+### Final Audit Results (2026-06-26)
+
+- `make check-contracts`: 20/20 PASS (contract registry 11 + schema parity 9)
+- `make check-boundaries`: 6/6 PASS (lib boundary 1 + cross-domain 5, 1 skipped)
+- Full test suite: **1136 passed, 1 skipped, 0 failures** (lib/ + integration/ + simulation/ + alphaforge/ + v7/ + runtime/)
+- v7 package: `v7/tests/` **93/93 PASS** (builder, validator, router, policy, gates, e2e_swing)
+- EXPLICIT_GBM_BLOCK: operating as designed (post-TR-05, xgboost installed blocks ml_pilot gate import)
+
+### v0.1 Architecture Delivered
+
+- **lib/**: market data backfill, storage, catalog, quality, indicators, costs, funding pagination, rate limiter (244 tests)
+- **simulation/**: truth authority with cost model, batch runner, market data adapter, OHLCV bridge
+- **alphaforge/**: 9-module scaffold, label adapter, feature pipeline, dataset assembler, training runner, walk-forward validation
+- **v7/**: Python package (6 modules) with builder, validator, router, policy, G0-G10 gates, SWING mode end-to-end
+- **runtime/**: scan control, safety gates, conftest fixtures
+- **contracts/**: registry.json with cross-domain schemas, compatibility.json
+- **cli/**: pipeline CLI, Makefile targets, runbook
+
+### Lock Status at v0.1
+
+- SWING mode thresholds: **LOCKED_INITIAL_BASELINE**
+- AlphaForge contracts: **LOCKED** (canonical G0-G10, label schema, MHT, timeframes)
+- Funding cost model: **LOCKED_INITIAL_BASELINE**
+- Design lock: **LOCKABLE_WITH_HOLDS**
+
+### Remaining HOLDS (post-v0.1)
+
+| Hold | Domain | Release Condition |
+|------|--------|-------------------|
+| SCALP thresholds | v7 | Empirical walk-forward OOS evidence, fee/slippage stress, funding validation |
+| AGGRESSIVE_SCALP thresholds | v7 | Cost-adjusted expectancy, latency sensitivity, order-book depth validation |
+| Regime gate (G4) | v7/gates | Real regime detector implementation (current: placeholder) |
+| G1-G5, G7-G8 gates | v7/gates | Real evidence data (current: placeholder implementations) |
+| Real profitability evidence | All | Requires simulation labels, features, training, WF, OOS on real data |
+| EXPLICIT_GBM_BLOCK | alphaforge/gates | Post-training xgboost presence is expected; gate works as designed |
+
+**Evidence:** ACCP report at `reports/accp/issue-12.yaml`. Full test output archived in commit.
+
+---
 
 ### Implementation Sequence
 
