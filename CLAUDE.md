@@ -52,6 +52,20 @@ Every task produces a machine-readable completion report:
 ### 4. Update relevant ai_summary.md if scope changed
 If a task materially changes a subsystem's architecture, decisions, or contract surface, the subsystem's `ai_summary.md` must reflect it. The ai_summary is NOT auto-generated — it must be manually patched to stay current.
 
+### 5. Sync worktrees to main (MANDATORY)
+When worktree-isolated agents complete work, their commits exist ONLY in the worktree branch — they are **not visible on main** until synced. After EVERY task that runs in a worktree:
+
+```bash
+# Run the auto-sync script to cherry-pick worktree commits into main:
+bash .claude/skills/sync-worktrees.sh
+
+# Verify sync worked:
+git log --oneline -5
+find v7 -name "*.py" ! -path "*__pycache__*" | wc -l  # should match expected
+```
+
+**Rule:** Never claim a task complete until `sync-worktrees.sh` has run and main branch contains the worktree's commits. If cherry-pick conflicts, fall back to direct file copy (the script handles this). If sync fails, mark the issue as HOLD.
+
 ---
 
 ## Design Lock Semantics
