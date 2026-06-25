@@ -92,6 +92,7 @@ class SimulationProfile:
     mae_penalty_weight: float = 1.0
     cost_penalty_weight: float = 1.0
     time_penalty_weight: float = 0.3
+    funding_rate: float = 0.0
 
 
 @dataclass
@@ -141,6 +142,7 @@ class ActionOutcome:
     realized_r_net: float = 0.0
     fee_cost_r: float = 0.0
     slippage_cost_r: float = 0.0
+    funding_cost_r: float = 0.0
     total_cost_r: float = 0.0
     exit_reason: str = ""
     exit_price: float = 0.0

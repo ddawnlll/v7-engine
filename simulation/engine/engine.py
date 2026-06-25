@@ -37,11 +37,13 @@ def _build_action_outcome(
     profile: SimulationProfile,
 ) -> ActionOutcome:
     """Build an ActionOutcome from an ExitResult + cost model."""
-    fcr, scr, tcr = total_cost_r(
+    fcr, scr, fund_r, tcr = total_cost_r(
         notional=notional,
         entry_price=entry_price,
         atr=atr,
         stop_multiplier=profile.stop_multiplier,
+        funding_rate=getattr(profile, "funding_rate", 0.0),
+        holding_bars=exit_result.hold_duration_bars,
     )
     realized_r_net = exit_result.realized_r_gross - tcr
 
@@ -65,6 +67,7 @@ def _build_action_outcome(
         realized_r_net=realized_r_net,
         fee_cost_r=fcr,
         slippage_cost_r=scr,
+        funding_cost_r=fund_r,
         total_cost_r=tcr,
         exit_reason=exit_result.exit_reason,
         exit_price=exit_result.exit_price,
@@ -244,6 +247,7 @@ def simulate(input: SimulationInput) -> SimulationOutput:
         cost_model_version=input.cost_model_version,
         fee_model_version="fee-1.0.0",
         slippage_model_version="slippage-1.0.0",
+        funding_model_version="funding-1.0.0",
         horizon_family=f"{profile.mode.value.lower()}_horizon",
         stop_family=profile.stop_method,
         target_family=profile.target_method,

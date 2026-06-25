@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/decision_event.schema.json",
+  "title": "DecisionEvent",
+  "description": "Runtime lifecycle event recording the outcome of an AnalysisResult decision — order placement, fill, rejection, position open/close, or error.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "analysis_result_id",
+    "decision",
+    "executed_at",
+    "venue",
+    "event_type",
+    "status"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Unique identifier for this lifecycle event."
+    },
+    "analysis_result_id": {
+      "type": "string",
+      "description": "The analysis_result_id of the AnalysisResult that produced the decision underlying this event."
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["ENTER_LONG", "ENTER_SHORT", "EXIT_LONG", "EXIT_SHORT", "HOLD"],
+      "description": "The trade decision from the AnalysisResult."
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Exchange or broker order identifier. Present for ORDER_PLACED / ORDER_FILLED / ORDER_REJECTED events."
+    },
+    "position_id": {
+      "type": "string",
+      "description": "Exchange or broker position identifier. Present for POSITION_OPENED / POSITION_CLOSED events."
+    },
+    "executed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the event occurred."
+    },
+    "venue": {
+      "type": "string",
+      "description": "Execution venue identifier, e.g. 'binance_futures', 'paper_trading'."
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "ORDER_PLACED",
+        "ORDER_FILLED",
+        "ORDER_REJECTED",
+        "POSITION_OPENED",
+        "POSITION_CLOSED",
+        "ERROR"
+      ],
+      "description": "The type of lifecycle event."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["SUCCESS", "PARTIAL", "FAILED", "PENDING"],
+      "description": "Outcome status of the event."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Arbitrary metadata attached to the event (venue-specific fields, error details, fill quantities, etc.).",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

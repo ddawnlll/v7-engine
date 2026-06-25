@@ -2,15 +2,17 @@
 Cost model for simulation engine.
 
 Implements the documented net R formula:
-  realized_r_net = realized_r_gross - fee_cost_r - slippage_cost_r
+  realized_r_net = realized_r_gross - fee_cost_r - slippage_cost_r - funding_cost_r
 
 Uses lib.costs primitives for fee and slippage estimation.
 
-Funding cost is DEFERRED — explicitly unsupported in this MVP.
+Funding cost is LOCKED_INITIAL_BASELINE — wired into total_cost_r()
+with an optional funding_rate parameter (default 0.0 for backward compat).
 """
 
 from lib.costs.fees import estimate_fee
 from lib.costs.slippage import get_slippage
+from simulation.engine.funding import funding_cost_r
 
 
 # Conservative defaults — taker fee both sides
@@ -78,13 +80,28 @@ def total_cost_r(
     stop_multiplier: float,
     taker_fee_bps: float = DEFAULT_TAKER_FEE_BPS,
     slippage_bps: float = DEFAULT_SLIPPAGE_BPS,
-) -> tuple[float, float, float]:
-    """Compute all costs in R terms.
+    funding_rate: float = 0.0,
+    holding_bars: int = 0,
+) -> tuple[float, float, float, float]:
+    """Compute all costs in R terms (fee + slippage + funding).
+
+    Args:
+        funding_rate: Per-bar funding rate (e.g. 0.0001 for 1 bp/bar).
+                      Positive means longs pay shorts. Default 0.0 for
+                      backward compatibility.
+        holding_bars: Number of bars the position is held. Default 0
+                      for backward compatibility.
 
     Returns:
-        (fee_cost_r, slippage_cost_r, total_cost_r)
+        (fee_cost_r, slippage_cost_r, funding_cost_r, total_cost_r)
     """
     risk = compute_entry_risk(atr, stop_multiplier)
     fcr = fee_cost_r(notional, risk, taker_fee_bps)
     scr = slippage_cost_r(notional, entry_price, risk, slippage_bps, atr)
-    return fcr, scr, fcr + scr
+
+    # Funding cost in quote currency -> R-multiples
+    funding_quote = funding_cost_r(notional, funding_rate, holding_bars)
+    funding_r = funding_quote / risk if risk > 0 else 0.0
+
+    tcr = fcr + scr + funding_r
+    return fcr, scr, funding_r, tcr

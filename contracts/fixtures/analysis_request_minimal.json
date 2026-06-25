@@ -1,0 +1,9 @@
+{
+  "request_id": "req_001",
+  "mode": "SWING",
+  "symbol": "BTCUSDT",
+  "timestamp": "2026-06-01T12:00:00Z",
+  "requested_trade_mode": "SWING",
+  "model_scope": "swing_v1",
+  "caller": "v7_runtime"
+}

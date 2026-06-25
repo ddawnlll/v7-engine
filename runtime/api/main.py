@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 from time import time
 
 from fastapi import FastAPI, Request
+from lib.config import config, validate_required_secrets
 from runtime.db.repos.runtime_profile_repo import RuntimeProfileRepository
 from runtime.db.session import (
     check_database_connection,
@@ -154,12 +155,16 @@ def create_app(
 ) -> FastAPI:
     """Create the runtime FastAPI application."""
     _load_environment()
+    validate_required_secrets()
     if database_url:
         configure_engine(database_url)
         initialize_schema()
-    logging.basicConfig(level=os.getenv("RUNTIME_LOG_LEVEL", "INFO"))
+    from runtime.logging_config import configure_logging, create_request_id_middleware
+
+    configure_logging()
     app = FastAPI(title="Trading Bot Runtime API", version="0.1.0", lifespan=lifespan)
     app.state.database_url_override = database_url
+    app.add_middleware(create_request_id_middleware())
     _install_request_logging(app)
     from runtime.api.routes.health import router as health_router
     from runtime.api.routes.analyzer import router as analyzer_router

@@ -247,6 +247,60 @@
       "consumers": [
         "v7"
       ]
+    },
+    {
+      "object_name": "AnalysisRequest",
+      "owner_domain": "v7",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/analysis_request.schema.json",
+      "fixture_file": "contracts/fixtures/analysis_request_minimal.json",
+      "description": "Request from V7 runtime to the policy engine for a trade analysis decision on a given symbol at a point in time",
+      "source_authority": [
+        "v7/docs/contracts/lifecycle_contracts.md"
+      ],
+      "producers": [
+        "v7"
+      ],
+      "consumers": [
+        "v7"
+      ]
+    },
+    {
+      "object_name": "AnalysisResult",
+      "owner_domain": "v7",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/analysis_result.schema.json",
+      "fixture_file": "contracts/fixtures/analysis_result_minimal.json",
+      "description": "Policy engine output containing a trade decision with confidence, price targets, and execution eligibility gates",
+      "source_authority": [
+        "v7/docs/contracts/lifecycle_contracts.md"
+      ],
+      "producers": [
+        "v7"
+      ],
+      "consumers": [
+        "v7",
+        "runtime"
+      ]
+    },
+    {
+      "object_name": "DecisionEvent",
+      "owner_domain": "v7",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/decision_event.schema.json",
+      "fixture_file": "contracts/fixtures/decision_event_minimal.json",
+      "description": "Runtime lifecycle event recording the outcome of an AnalysisResult decision — order placement, fill, rejection, position open/close, or error",
+      "source_authority": [
+        "v7/docs/contracts/lifecycle_contracts.md"
+      ],
+      "producers": [
+        "v7",
+        "runtime"
+      ],
+      "consumers": [
+        "v7",
+        "runtime"
+      ]
     }
   ]
 }

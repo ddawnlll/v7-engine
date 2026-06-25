@@ -1,0 +1,72 @@
+# =============================================================================
+# V7 Engine — .dockerignore (shared)
+# =============================================================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.eggs
+dist
+build
+*.egg
+
+# Virtual environments
+venv
+.venv
+env
+.env
+*.env.local
+
+# Node
+node_modules
+interface/node_modules
+interface/dist
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude
+
+# Reports
+reports/*.yaml
+reports/*.yml
+
+# Docker (prevent recursion)
+Dockerfile*
+docker-compose*
+.dockerignore
+docker/
+
+# Logs
+*.log
+logs/
+
+# Data (mounted as volume)
+data/
+
+# Tests and CI
+*.test.*
+*.spec.*
+.github/
+test.sh
+
+# Docs (not needed at runtime)
+docs/
+*.md
+!CLAUDE.md
