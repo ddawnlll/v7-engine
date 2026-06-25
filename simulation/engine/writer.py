@@ -152,6 +152,7 @@ class SimulationWriter:
             "realized_r_net",
             "fee_cost_r",
             "slippage_cost_r",
+            "funding_cost_r",
             "total_cost_r",
             "exit_reason",
             "exit_price",

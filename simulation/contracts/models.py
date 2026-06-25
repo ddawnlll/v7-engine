@@ -171,6 +171,7 @@ class SimulationLineage:
     cost_model_version: str = ""
     fee_model_version: str = ""
     slippage_model_version: str = ""
+    funding_model_version: str = ""
     horizon_family: str = ""
     stop_family: str = ""
     target_family: str = ""

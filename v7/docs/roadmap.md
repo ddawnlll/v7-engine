@@ -46,7 +46,7 @@ Documentation authority is largely complete for:
 - **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation. SCALP and AGGRESSIVE_SCALP thresholds are **HOLD** pending empirical evidence.
 - **P0.x — Policy Critic RL Research:** ✅ PASS. Full research + codebase mapping (V7 pipeline, AlphaForge, Simulation, Contracts/Runtime) + literature review (offline RL methods, critic/calibration, reward design, finance RL failure modes) + grounded RL architecture recommendation completed. **LOCK_CANDIDATE** — design documented in `v7/docs/policy_critic/`. Open HOLDs (replay buffer, regret_r, funding, per-direction expected_R, synthesized features, conformal exchangeability) must be resolved before lock.
 
-**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode (LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding DEFERRED, SCALP/AGGRESSIVE_SCALP HOLD, CI first green run hold).
+**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode (LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding LOCKED_INITIAL_BASELINE, SCALP/AGGRESSIVE_SCALP HOLD, CI first green run hold).
 
 That means the next work should be implementation-led, not more concept invention. **Implementation starts with SWING as the secondary baseline/control mode — the safest, most lockable starting point. Primary business/research priority is SCALP and AGGRESSIVE_SCALP (see Mode Priority Alignment below).**
 
@@ -374,7 +374,7 @@ Do not collapse these into one vague “publish” step.
 - AlphaForge contracts: LOCKED (canonical G0-G10, label schema, MHT, timeframes)
 - Implementation scaffold: LOCKED_INITIAL_BASELINE
 - NO_TRADE as metric/comparator (not promotion gate): LOCKED
-- Funding: DEFERRED (blocks perpetual/live claims)
+- Funding: LOCKED_INITIAL_BASELINE (funding_cost_r wired into total_cost_r and simulation engine; integration test passing)
 
 **Remaining holds:**
 - No real profitability evidence (HOLD — requires simulation labels, features, training, WF, OOS)
