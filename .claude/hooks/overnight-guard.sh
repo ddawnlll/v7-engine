@@ -9,13 +9,17 @@ COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
 FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""')
 CONTENT=$(echo "$INPUT" | jq -r '.tool_input.content // ""')
 
-# === BLOCK: Network/API calls (unless whitelisted) ===
-if echo "$COMMAND" | grep -qE '(curl|wget|httpx|requests\.(get|post)|urllib|http\.client)'; then
+# === BLOCK: Network/API calls (whitelist approach) ===
+if echo "$COMMAND" | grep -qE '(curl|wget|httpx|requests\.(get|post)|urllib|http\.client|nc |ncat |socat |aria2c|gcloud |aws |ssh |scp |rsync |pip install|npm install|yarn add)'; then
   if ! echo "$COMMAND" | grep -qE '(localhost|127\.0\.0\.1|github\.com/api|api\.github\.com)'; then
     echo "[OVERNIGHT-GUARD] BLOCKED: External network call: $COMMAND" >&2
-    echo '[OVERNIGHT-GUARD] Only localhost and GitHub API allowed during overnight runs' >&2
     exit 2
   fi
+fi
+# URL pattern block (catch Python/Node network calls with URLs)
+if echo "$COMMAND $CONTENT" | grep -qE '[a-z]+://[^/]' && ! echo "$COMMAND $CONTENT" | grep -qE '(file://|localhost|127\.0\.0\.1|github\.com/api)'; then
+  echo "[OVERNIGHT-GUARD] BLOCKED: URL pattern in command (potential network call)" >&2
+  exit 2
 fi
 
 # === BLOCK: Live trading / real money ===
@@ -26,14 +30,15 @@ fi
 
 # === BLOCK: Training outside Plan 05 ===
 if echo "$COMMAND $CONTENT" | grep -qE '(\.fit\(|\.train\(|XGBClassifier|XGBRegressor|xgboost\.train)'; then
-  if ! echo "$CONTEXT" | grep -q 'TR-05\|Plan 05\|plan_05'; then
+  if ! echo "$CONTENT" | grep -q 'TR-05\|Plan 05\|plan_05'; then
     echo "[OVERNIGHT-GUARD] BLOCKED: Model training outside TR-05 context" >&2
     exit 2
   fi
 fi
 
 # === BLOCK: Plans directory modification during implementation ===
-if echo "$FILE" | grep -q '^plans/' && echo "$TOOL" | grep -qE '(Write|Edit)'; then
+FILE_NORM=$(realpath -m "$FILE" 2>/dev/null || echo "$FILE")
+if echo "$FILE_NORM" | grep -qE '(^|/)plans/' && echo "$TOOL" | grep -qE '(Write|Edit)'; then
   echo "[OVERNIGHT-GUARD] BLOCKED: Cannot modify plans/ during implementation phase" >&2
   exit 2
 fi

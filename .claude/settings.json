@@ -1,12 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git log *)",
+      "Bash(git cherry-pick *)",
       "Bash(make *)",
       "Bash(python3 *)",
       "Bash(pytest *)",
-      "Bash(gh issue *)",
-      "Bash(gh pr *)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue list *)",
+      "Bash(gh issue close *)",
+      "Bash(gh issue reopen *)",
+      "Bash(gh issue edit *)",
       "Bash(find *)",
       "Bash(ls *)",
       "Bash(cat *)",
@@ -18,11 +26,40 @@
     "deny": [
       "Bash(curl *)",
       "Bash(wget *)",
+      "Bash(ssh *)",
+      "Bash(nc *)",
+      "Bash(ncat *)",
+      "Bash(socat *)",
+      "Bash(npm *)",
+      "Bash(pip install *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git fetch *)",
+      "Bash(git remote *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr merge *)",
       "Bash(*BINANCE_API_KEY*)",
       "Bash(*BINANCE_SECRET*)",
       "Bash(*create_order*)",
       "Bash(*market_order*)",
-      "Bash(*live_trading*)"
+      "Bash(*live_trading*)",
+      "Bash(*://*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Write|Edit",
+        "hooks": [
+          {"type": "command", "command": ".claude/hooks/overnight-guard.sh"}
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {"type": "command", "command": ".claude/hooks/pre-close-guard.sh"}
+        ]
+      }
     ]
   }
 }
