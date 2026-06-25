@@ -39,6 +39,7 @@ Thumbs.db
 
 # --- Data (large, generated, or sensitive) ---
 data/raw/*
+data/normalized/*
 data/processed/*
 data/cache/*
 data/results/*

@@ -9,8 +9,10 @@ safety checks and require --force to bypass.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Optional
 
 
 # ── Command handlers ──────────────────────────────────────────────
@@ -41,14 +43,46 @@ def cmd_backfill(args: argparse.Namespace) -> int:
         intervals = args.intervals or "default"
         start = args.start or "default"
         end = args.end or "default"
+        data_dir = args.data_dir or os.environ.get("V7_DATA_DIR") or "~/v7-data"
         _log(
             "backfill",
             f"--symbols {symbols} --intervals {intervals} "
-            f"--start {start} --end {end}",
+            f"--start {start} --end {end} --data-dir {data_dir}",
         )
         return 0
-    print("Not yet implemented — use --dry-run for now")
-    return 0
+
+    from alphaforge.data.backfill import (
+        AlphaForgeBackfillPipeline,
+        BackfillConfig,
+    )
+
+    symbols = _parse_comma_list(args.symbols)
+    intervals = _parse_comma_list(args.intervals)
+    start = _parse_date(args.start)
+    end = _parse_date(args.end)
+    data_dir = args.data_dir or os.environ.get("V7_DATA_DIR")
+
+    config = AlphaForgeBackfillPipeline.default_config(
+        start=start,
+        end=end,
+        symbols=symbols,
+        intervals=intervals,
+        data_dir=data_dir,
+    )
+    pipeline = AlphaForgeBackfillPipeline()
+    result = pipeline.run(config)
+
+    print(f"Backfill ok: {result.ok}")
+    print(f"Records: {result.stats.get('total_records', 0)}")
+    print(f"Errors: {len(result.stats.get('errors', []))}")
+    print(f"Integrity reports: {len(result.integrity_reports)}")
+    for report in result.integrity_reports:
+        status = "PASS" if report.ok else "FAIL"
+        print(f"  [{status}] {report.path}: {report.row_count} rows")
+        for warning in report.warnings:
+            print(f"      WARNING: {warning}")
+
+    return 0 if result.ok else 1
 
 
 def cmd_simulate(args: argparse.Namespace) -> int:
@@ -134,6 +168,20 @@ def _log(step: str, msg: str) -> None:
     print(f"[DRY RUN|{step}] {msg}")
 
 
+def _parse_comma_list(value: Optional[str]) -> Optional[list[str]]:
+    """Parse a comma-separated string into a list of stripped tokens."""
+    if not value:
+        return None
+    return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def _parse_date(value: Optional[str]) -> Optional[datetime]:
+    """Parse a YYYY-MM-DD date into a UTC datetime."""
+    if not value:
+        return None
+    return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     # Shared parent with the global --dry-run flag so every subcommand
     # accepts it after the subcommand name.
@@ -169,6 +217,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--intervals", default=None, help="Timeframe intervals (e.g. 4h, 1h)")
     p.add_argument("--start", default=None, help="Start date (YYYY-MM-DD)")
     p.add_argument("--end", default=None, help="End date (YYYY-MM-DD)")
+    p.add_argument(
+        "--data-dir",
+        default=None,
+        help="Output directory for market data (default: $V7_DATA_DIR or ~/v7-data)",
+    )
 
     p = sub.add_parser("simulate", parents=[_dry_run_parent], add_help=False,
                         help="Run simulation with cost model")
@@ -203,6 +256,7 @@ def _step_namespace(parent: argparse.Namespace, step: str) -> argparse.Namespace
         intervals=getattr(parent, "intervals", None),
         start=getattr(parent, "start", None),
         end=getattr(parent, "end", None),
+        data_dir=getattr(parent, "data_dir", None),
         mode=getattr(parent, "mode", None),
     )
 

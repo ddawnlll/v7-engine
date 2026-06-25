@@ -10,6 +10,13 @@ import from simulation/, v7/, runtime/, or interface/. It may import
 from alphaforge.contracts.loader and alphaforge.paths only.
 """
 
+from alphaforge.data.backfill import (
+    AlphaForgeBackfillPipeline,
+    BackfillConfig,
+    BackfillError,
+    BackfillResult,
+)
+from alphaforge.data.integrity import IntegrityReport, validate_kline_parquet
 from alphaforge.data.manifest import (
     DataManifest,
     ManifestValidationError,
@@ -19,9 +26,15 @@ from alphaforge.data.manifest import (
 )
 
 __all__ = [
+    "AlphaForgeBackfillPipeline",
+    "BackfillConfig",
+    "BackfillError",
+    "BackfillResult",
     "DataManifest",
-    "ManifestValidationError",
+    "IntegrityReport",
     "MANIFEST_VERSION",
+    "ManifestValidationError",
     "build_manifest",
+    "validate_kline_parquet",
     "validate_manifest",
 ]
