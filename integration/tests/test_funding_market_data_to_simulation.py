@@ -83,25 +83,26 @@ class TestFundingMarketDataToSimulation:
     def test_varying_funding_rates_through_pipeline(self):
         """Different funding rates are correctly propagated through pagination."""
         mock_client = Mock()
-        # Two chunks with different rates
-        chunk1 = _make_chunk(5, start_ts=TS_BASE, rate=0.0001)
-        chunk2_start = TS_BASE + 5 * FUNDING_INTERVAL_MS
+        # Two chunks with different rates; first chunk must be MAX_LIMIT size
+        # so pagination continues (fetch stops when len(raw) < MAX_LIMIT).
+        chunk1 = _make_chunk(MAX_LIMIT, start_ts=TS_BASE, rate=0.0001)
+        chunk2_start = TS_BASE + MAX_LIMIT * FUNDING_INTERVAL_MS
         chunk2 = _make_chunk(3, start_ts=chunk2_start, rate=0.0002)
         mock_client.get_funding_rate.side_effect = [chunk1, chunk2]
 
         svc = FundingService(mock_client)
         records = svc.fetch("BTCUSDT", start_time=TS_BASE)
 
-        assert len(records) == 8
+        assert len(records) == MAX_LIMIT + 3
 
         costs = [
             funding_cost_r(notional=100_000.0, funding_rate=r.funding_rate, holding_bars=1)
             for r in records
         ]
-        # First 5: 100k * 0.0001 * 1 = 10
-        assert costs[:5] == [10.0] * 5
+        # First MAX_LIMIT: 100k * 0.0001 * 1 = 10
+        assert costs[:MAX_LIMIT] == [10.0] * MAX_LIMIT
         # Last 3: 100k * 0.0002 * 1 = 20
-        assert costs[5:] == [20.0] * 3
+        assert costs[MAX_LIMIT:] == [20.0] * 3
 
     def test_empty_funding_to_cost(self):
         """Empty funding fetch results in zero total cost."""

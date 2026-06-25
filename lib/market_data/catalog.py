@@ -9,7 +9,7 @@ checksums for auditability.
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class DataCatalog:
             "end_ts": end_ts,
             "row_count": row_count,
             "checksum": checksum,
-            "ingested_at": datetime.utcnow().isoformat(),
+            "ingested_at": datetime.now(timezone.utc).isoformat(),
         }
         self._entries.append(entry)
         logger.info(
