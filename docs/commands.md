@@ -265,6 +265,34 @@ python3 -m cli pipeline            # execute full pipeline
 
 ---
 
+### `validate-storage`
+Validate market data storage integrity (Parquet + SHA-256 + catalog).
+
+**Options:**
+
+| Option        | Description                | Example                  |
+|---------------|----------------------------|--------------------------|
+| `--data-dir`  | Root data directory        | `--data-dir data`        |
+| `--file`      | Validate a single file     | `--file data/raw/...`    |
+| `--catalog-only` | Run only catalog query tests | `--catalog-only`      |
+| `--quiet`     | Only print errors          | `--quiet` or `-q`        |
+
+**Examples:**
+```bash
+# Full integrity scan
+PYTHONPATH=. python3 scripts/validate_storage_integrity.py
+
+# Single file
+PYTHONPATH=. python3 scripts/validate_storage_integrity.py --file data/raw/BTCUSDT/BTCUSDT_1h_1700000000000_1700086400000.parquet
+
+# Catalog queries only
+PYTHONPATH=. python3 scripts/validate_storage_integrity.py --catalog-only
+```
+
+Exit code 0 = all checks passed; exit code 1 = one or more checks failed.
+
+---
+
 ## Distinguishing Offline vs Online
 
 | Mode   | `--dry-run` | `.env` required | Network access | What happens                 |
