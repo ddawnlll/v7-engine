@@ -10,7 +10,7 @@ FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""')
 CONTENT=$(echo "$INPUT" | jq -r '.tool_input.content // ""')
 
 # === BLOCK: Network/API calls (whitelist approach) ===
-if echo "$COMMAND" | grep -qE '(curl|wget|httpx|requests\.(get|post)|urllib|http\.client|nc |ncat |socat |aria2c|gcloud |aws |ssh |scp |rsync |pip install|npm install|yarn add)'; then
+if echo "$COMMAND" | grep -qE '(curl|wget|httpx|requests\.(get|post)|urllib|http\.client|socket\.(connect|create_connection)|aiohttp\.(ClientSession|request)|nc |ncat |socat |aria2c|gcloud |aws |ssh |scp |rsync |pip install|npm install|yarn add|ftp |/dev/tcp)'; then
   if ! echo "$COMMAND" | grep -qE '(localhost|127\.0\.0\.1|github\.com/api|api\.github\.com)'; then
     echo "[OVERNIGHT-GUARD] BLOCKED: External network call: $COMMAND" >&2
     exit 2

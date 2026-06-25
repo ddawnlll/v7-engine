@@ -30,6 +30,7 @@
       "Bash(nc *)",
       "Bash(ncat *)",
       "Bash(socat *)",
+      "Bash(ftp *)",
       "Bash(npm *)",
       "Bash(pip install *)",
       "Bash(git push *)",
@@ -43,7 +44,12 @@
       "Bash(*create_order*)",
       "Bash(*market_order*)",
       "Bash(*live_trading*)",
-      "Bash(*://*)"
+      "Bash(*://*)",
+      "Bash(python3*urllib*)",
+      "Bash(python3*socket*)",
+      "Bash(python3*requests*)",
+      "Bash(python3*aiohttp*)",
+      "Bash(python3*httpx*)"
     ]
   },
   "hooks": {
