@@ -1,0 +1,53 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "issue-5"
+task_name: "TR-01 Market Data Backfill & Storage"
+github_issue: 5
+repo: ddawnlll/v7-engine
+domain: alphaforge
+commit_hash: "45ebf099172f33ea3cb87030fa59342e3cdaf463"
+completed_at: "2026-06-25T20:55:00Z"
+
+result: PASS
+result_detail: "Backfill pipeline complete with full test coverage. Conftest import fixed, alphaforge.data.backfill module created, 26 new tests pass, domain boundaries preserved."
+
+scope_confirmation: "Fixed conftest import path (added alphaforge/src to sys.path), created BackfillPipeline wrapping lib-level BackfillOrchestrator, added BackfillConfig validation, integrity checks, dry-run mode. All 513 alphaforge tests pass (0 failures)."
+
+files_changed:
+  - path: alphaforge/tests/conftest.py
+    change: "Added sys.path.insert for alphaforge/src to fix src-layout imports"
+  - path: alphaforge/src/alphaforge/data/__init__.py
+    change: "Export BackfillConfig, BackfillPipeline, BackfillResult, BackfillError, create_backfill_config, create_pipeline"
+  - path: alphaforge/src/alphaforge/data/backfill.py
+    change: "Created — BackfillConfig, BackfillPipeline, BackfillResult, create_backfill_config, create_pipeline, dry-run, integrity validation"
+  - path: alphaforge/tests/test_data_backfill.py
+    change: "Created — 26 tests covering config validation, dry-run, full pipeline, integrity, factory, domain boundaries"
+
+decisions_locked: []
+remaining_holds: []
+
+safe_next_step: "The pipeline is test-verified with mocked Binance dependencies. Next step: run with real Binance credentials to backfill live data, then wire into the TR-03 pipeline CLI (make backfill)."
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_data_backfill.py -v"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/test_market_data_backfill.py lib/tests/test_market_data_storage.py lib/tests/test_market_data_quality.py lib/tests/test_market_data_catalog.py lib/tests/test_market_data_checkpoint.py -v"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/test_mock_backfill_writes_outputs.py -v"
+  - "git add -A && git commit"
+
+evidence:
+  test_results:
+    alphaforge_tests_total: 513
+    alphaforge_tests_passed: 513
+    alphaforge_tests_failed: 0
+    backfill_tests: 26
+    backfill_tests_passed: 26
+    lib_market_data_tests: 59
+    lib_market_data_tests_passed: 59
+    integration_backfill_tests: 1
+    integration_backfill_tests_passed: 1
+    total_related_tests: 599
+    total_related_passed: 599
+  commit_hash: "45ebf099172f33ea3cb87030fa59342e3cdaf463"
+  branch: "main"
+  worktree: "wf_e16055a5-12d-1"
