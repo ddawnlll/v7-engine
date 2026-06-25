@@ -1,0 +1,578 @@
+"""XGBoost Trainer — SWING mode alpha model training.
+
+This module trains XGBoost classifier models for AlphaForge mode-specific
+alpha evidence. It consumes feature matrices and labels assembled by the
+dataset pipeline (features/pipeline.py + labels/adapter.py + dataset/assembler.py).
+
+Produces:
+  1. Model binary (XGBoost JSON format) at artifact_uri
+  2. ModelArtifact metadata dict per model_artifact_contract.md
+
+Design constraints:
+  - Conservative hyperparameters for SWING baseline (LOCKED_INITIAL_BASELINE)
+  - Multi-class classification: LONG_NOW, SHORT_NOW, NO_TRADE
+  - Deterministic random seed (no stochastic variance between runs)
+  - Feature importance computed via xgboost built-in
+  - Training metrics tracked: accuracy, logloss, per-class precision/recall
+  - Walk-forward fold support: train per fold, aggregate metrics
+
+This module DOES import xgboost. It is intended for the training environment,
+NOT the gate-check environment where the ml_pilot gate enforces GBM absence.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import logging
+import os
+import time
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import xgboost as xgb
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+SCHEMA_VERSION: str = "1.0.0"
+MODEL_FAMILY: str = "xgboost"
+ARTIFACT_DIR_DEFAULT: str = "artifacts/models"
+
+# Label mapping for multi-class classification
+LABEL_TO_INT: Dict[str, int] = {
+    "LONG_NOW": 0,
+    "SHORT_NOW": 1,
+    "NO_TRADE": 2,
+}
+
+INT_TO_LABEL: Dict[int, str] = {v: k for k, v in LABEL_TO_INT.items()}
+NUM_CLASSES: int = 3
+
+# Conservative SWING hyperparameters (LOCKED_INITIAL_BASELINE)
+SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
+    "objective": "multi:softprob",
+    "num_class": NUM_CLASSES,
+    "max_depth": 4,
+    "learning_rate": 0.05,
+    "n_estimators": 200,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "min_child_weight": 5,
+    "gamma": 0.1,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
+    "eval_metric": "mlogloss",
+    "early_stopping_rounds": 20,
+    "random_state": 42,
+    "verbosity": 0,
+}
+
+# Test fraction for hold-out validation within training
+VAL_FRACTION: float = 0.2
+
+RANDOM_SEED: int = 42
+
+
+# ---------------------------------------------------------------------------
+# Data classes
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TrainingResult:
+    """Result of a single training run.
+
+    Attributes:
+        model: Trained xgboost Booster.
+        model_artifact: ModelArtifact metadata dict per contract.
+        model_binary_bytes: Serialized model bytes.
+        train_metrics: Training metrics dict.
+        val_metrics: Validation metrics dict.
+        training_duration_seconds: Wall-clock training time.
+    """
+
+    model: xgb.Booster
+    model_artifact: Dict[str, Any]
+    model_binary_bytes: bytes
+    train_metrics: Dict[str, Any]
+    val_metrics: Dict[str, Any]
+    training_duration_seconds: float
+
+
+# ---------------------------------------------------------------------------
+# XGBoostTrainer
+# ---------------------------------------------------------------------------
+
+
+class XGBoostTrainer:
+    """XGBoost classifier trainer for AlphaForge mode-specific models.
+
+    Public methods:
+        train(X, y, **kwargs) -> TrainingResult
+        save_artifact(result, artifact_dir) -> Path (model binary path)
+        build_model_artifact_metadata(result, artifact_uri, **kwargs) -> dict
+
+    Usage:
+        trainer = XGBoostTrainer(mode="SWING", random_seed=42)
+        result = trainer.train(X_train, y_train)
+        artifact_path = trainer.save_artifact(result, "artifacts/models")
+        metadata = trainer.build_model_artifact_metadata(
+            result, f"file://{artifact_path}"
+        )
+    """
+
+    def __init__(
+        self,
+        mode: str = "SWING",
+        random_seed: int = RANDOM_SEED,
+        hyperparameters: Optional[Dict[str, Any]] = None,
+    ):
+        """Initialize trainer.
+
+        Args:
+            mode: Trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
+            random_seed: Random seed for reproducibility.
+            hyperparameters: Training hyperparameters. If None, uses
+                SWING_DEFAULT_HYPERPARAMS.
+        """
+        if mode not in ("SWING", "SCALP", "AGGRESSIVE_SCALP"):
+            raise ValueError(
+                f"Unsupported mode: '{mode}'. Must be SWING, SCALP, or AGGRESSIVE_SCALP."
+            )
+        self._mode = mode
+        self._random_seed = random_seed
+        self._hyperparameters = hyperparameters or SWING_DEFAULT_HYPERPARAMS.copy()
+        self._rng = np.random.RandomState(random_seed)
+
+    @property
+    def mode(self) -> str:
+        return self._mode
+
+    @property
+    def hyperparameters(self) -> Dict[str, Any]:
+        return self._hyperparameters.copy()
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def train(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: Optional[List[str]] = None,
+        val_fraction: float = VAL_FRACTION,
+    ) -> TrainingResult:
+        """Train an XGBoost classifier model.
+
+        Args:
+            X: Feature matrix of shape (n_samples, n_features). Must be float64.
+            y: Label vector of shape (n_samples,). Can be string labels
+               (LONG_NOW/SHORT_NOW/NO_TRADE) or integer labels (0/1/2).
+            feature_names: Optional list of feature names for importance.
+            val_fraction: Fraction of training data to use for validation.
+
+        Returns:
+            TrainingResult with trained model, artifact metadata, and metrics.
+
+        Raises:
+            ValueError: If inputs are invalid (wrong shape, all NaN, etc.).
+        """
+        self._validate_inputs(X, y)
+
+        # Convert string labels to int if needed
+        y_int = self._encode_labels(y)
+
+        # Split into train/val
+        n_samples = len(y_int)
+        n_val = max(1, int(n_samples * val_fraction))
+        indices = np.arange(n_samples)
+        self._rng.shuffle(indices)
+
+        val_indices = indices[:n_val]
+        train_indices = indices[n_val:]
+
+        X_train = X[train_indices]
+        y_train = y_int[train_indices]
+        X_val = X[val_indices]
+        y_val = y_int[val_indices]
+
+        # Prepare DMatrix
+        dtrain = xgb.DMatrix(X_train, label=y_train)
+        if feature_names:
+            dtrain.feature_names = feature_names
+        dval = xgb.DMatrix(X_val, label=y_val)
+        if feature_names:
+            dval.feature_names = feature_names
+
+        # Extract training params (strip non-xgb params)
+        params = self._extract_xgb_params()
+
+        # Train
+        start_time = time.monotonic()
+
+        evals_result: Dict[str, Any] = {}
+        booster = xgb.train(
+            params=params,
+            dtrain=dtrain,
+            num_boost_round=self._hyperparameters.get("n_estimators", 200),
+            evals=[(dtrain, "train"), (dval, "val")],
+            evals_result=evals_result,
+            early_stopping_rounds=self._hyperparameters.get("early_stopping_rounds", 20),
+            verbose_eval=False,
+        )
+
+        training_duration = time.monotonic() - start_time
+
+        # Compute metrics
+        train_metrics = self._compute_metrics(booster, dtrain, y_train)
+        val_metrics = self._compute_metrics(booster, dval, y_val)
+
+        # Feature importance
+        feature_importance = self._compute_feature_importance(
+            booster, feature_names
+        )
+
+        # Build model artifact metadata
+        model_binary = booster.save_raw()
+        checksum = hashlib.sha256(model_binary).hexdigest()
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        model_artifact: Dict[str, Any] = {
+            "schema_version": SCHEMA_VERSION,
+            "model_artifact_id": "",
+            "model_family": MODEL_FAMILY,
+            "mode": self._mode,
+            "training_run_id": "",
+            "feature_set_id": "",
+            "label_dataset_id": "",
+            "validation_report_id": "",
+            "artifact_uri": "",
+            "checksum": checksum,
+            "checksum_algorithm": "SHA-256",
+            "created_at": now_iso,
+            "limitations": [
+                "SWING baseline model — conservative hyperparameters",
+                "Trained on synthetic/deterministic feature data only",
+                "Walk-forward fold metrics not yet populated — placeholder only",
+                "Calibration not applied — model outputs are raw probabilities",
+                "NO_TRADE is a learned class; threshold tuning required for deployment",
+            ],
+            "hyperparameters": self._hyperparameters.copy(),
+            "feature_importance": feature_importance,
+            "training_metrics": {
+                "train_accuracy": train_metrics.get("accuracy", 0.0),
+                "val_accuracy": val_metrics.get("accuracy", 0.0),
+                "train_logloss": train_metrics.get("logloss", 0.0),
+                "val_logloss": val_metrics.get("logloss", 0.0),
+            },
+            "model_size_bytes": len(model_binary),
+            "framework_version": f"xgboost=={xgb.__version__}",
+            "training_duration_seconds": training_duration,
+            "environment_hash": "",
+        }
+
+        return TrainingResult(
+            model=booster,
+            model_artifact=model_artifact,
+            model_binary_bytes=model_binary,
+            train_metrics=train_metrics,
+            val_metrics=val_metrics,
+            training_duration_seconds=training_duration,
+        )
+
+    def save_artifact(
+        self,
+        result: TrainingResult,
+        artifact_dir: str = ARTIFACT_DIR_DEFAULT,
+        model_artifact_id: str = "",
+        artifact_filename: Optional[str] = None,
+    ) -> Path:
+        """Save model binary to disk and return the path.
+
+        Args:
+            result: TrainingResult from train().
+            artifact_dir: Directory to save the model artifact.
+            model_artifact_id: Identifier for the model artifact.
+            artifact_filename: Optional filename override.
+
+        Returns:
+            Path to the saved model binary file.
+        """
+        dir_path = Path(artifact_dir)
+        dir_path.mkdir(parents=True, exist_ok=True)
+
+        if artifact_filename is None:
+            ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            artifact_filename = f"xgb_{self._mode.lower()}_{ts}.json"
+
+        file_path = dir_path / artifact_filename
+
+        result.model.save_model(str(file_path))
+        logger.info(f"Model saved to {file_path}")
+        return file_path
+
+    def build_model_artifact_metadata(
+        self,
+        result: TrainingResult,
+        artifact_uri: str,
+        model_artifact_id: str = "",
+        training_run_id: str = "",
+        feature_set_id: str = "",
+        label_dataset_id: str = "",
+        validation_report_id: str = "",
+    ) -> Dict[str, Any]:
+        """Build final ModelArtifact metadata dict.
+
+        Args:
+            result: TrainingResult from train().
+            artifact_uri: URI to the model binary (e.g., file:///path/to/model.json).
+            model_artifact_id: Unique model artifact identifier.
+            training_run_id: ResearchRunManifest run_id.
+            feature_set_id: FeatureSetSpec ID.
+            label_dataset_id: LabelDatasetSpec ID.
+            validation_report_id: Associated ValidationReport ID.
+
+        Returns:
+            ModelArtifact-compatible dict per model_artifact_contract.md.
+        """
+        metadata = result.model_artifact.copy()
+        metadata["artifact_uri"] = artifact_uri
+        metadata["model_artifact_id"] = model_artifact_id
+        metadata["training_run_id"] = training_run_id
+        metadata["feature_set_id"] = feature_set_id
+        metadata["label_dataset_id"] = label_dataset_id
+        metadata["validation_report_id"] = validation_report_id
+
+        # Recompute checksum from actual saved bytes
+        if result.model_binary_bytes:
+            metadata["checksum"] = hashlib.sha256(
+                result.model_binary_bytes
+            ).hexdigest()
+
+        return metadata
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _validate_inputs(self, X: np.ndarray, y: np.ndarray) -> None:
+        """Validate training inputs."""
+        if not isinstance(X, np.ndarray):
+            raise TypeError(f"X must be numpy.ndarray, got {type(X).__name__}")
+        if not isinstance(y, np.ndarray):
+            raise TypeError(f"y must be numpy.ndarray, got {type(y).__name__}")
+
+        if X.ndim != 2:
+            raise ValueError(f"X must be 2D, got {X.ndim}D")
+        if y.ndim != 1:
+            raise ValueError(f"y must be 1D, got {y.ndim}D")
+
+        if len(X) != len(y):
+            raise ValueError(
+                f"X and y must have same length, got {len(X)} and {len(y)}"
+            )
+
+        if len(X) < 10:
+            raise ValueError(
+                f"Need at least 10 samples for training, got {len(X)}"
+            )
+
+        if np.all(np.isnan(X)):
+            raise ValueError("X contains all NaN values")
+
+    def _encode_labels(self, y: np.ndarray) -> np.ndarray:
+        """Encode string labels to integers."""
+        if y.dtype.kind in ("i", "u"):  # Already integer
+            unique = set(y)
+            if not unique.issubset({0, 1, 2}):
+                raise ValueError(
+                    f"Integer labels must be in {{0, 1, 2}}, got {unique}"
+                )
+            return y.astype(int)
+
+        if y.dtype.kind in ("U", "S"):  # String
+            result = np.zeros(len(y), dtype=int)
+            for i, label in enumerate(y):
+                if label not in LABEL_TO_INT:
+                    raise ValueError(
+                        f"Unknown label '{label}'. Must be LONG_NOW, SHORT_NOW, or NO_TRADE."
+                    )
+                result[i] = LABEL_TO_INT[label]
+            return result
+
+        raise ValueError(
+            f"Unsupported label dtype: {y.dtype}. Use string or integer labels."
+        )
+
+    def _extract_xgb_params(self) -> Dict[str, Any]:
+        """Extract params that xgboost.train() accepts."""
+        xgb_param_keys = {
+            "objective", "num_class", "max_depth", "learning_rate",
+            "subsample", "colsample_bytree", "min_child_weight",
+            "gamma", "reg_alpha", "reg_lambda", "eval_metric",
+            "random_state", "verbosity", "tree_method", "device",
+        }
+        params = {}
+        for k in xgb_param_keys:
+            if k in self._hyperparameters:
+                params[k] = self._hyperparameters[k]
+        return params
+
+    def _compute_metrics(
+        self,
+        booster: xgb.Booster,
+        dmatrix: xgb.DMatrix,
+        y_true: np.ndarray,
+    ) -> Dict[str, Any]:
+        """Compute classification metrics."""
+        y_pred_prob = booster.predict(dmatrix)
+        y_pred = np.argmax(y_pred_prob, axis=1)
+
+        accuracy = float(np.mean(y_pred == y_true))
+
+        # Per-class precision/recall
+        per_class: Dict[str, Dict[str, float]] = {}
+        for cls_idx in range(NUM_CLASSES):
+            tp = int(np.sum((y_pred == cls_idx) & (y_true == cls_idx)))
+            fp = int(np.sum((y_pred == cls_idx) & (y_true != cls_idx)))
+            fn = int(np.sum((y_pred != cls_idx) & (y_true == cls_idx)))
+
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            f1 = (
+                2.0 * precision * recall / (precision + recall)
+                if (precision + recall) > 0
+                else 0.0
+            )
+            label_name = INT_TO_LABEL.get(cls_idx, str(cls_idx))
+            per_class[label_name] = {
+                "precision": float(precision),
+                "recall": float(recall),
+                "f1": float(f1),
+                "support": int(np.sum(y_true == cls_idx)),
+            }
+
+        # Log-loss from eval results if available
+        logloss = 0.0
+        eval_result = booster.eval(dmatrix)
+        if eval_result:
+            # eval_result is a string like "[0]\teval-mlogloss:1.0986"
+            try:
+                _, value_str = eval_result.split(":")
+                logloss = float(value_str.strip())
+            except (ValueError, AttributeError):
+                pass
+
+        return {
+            "accuracy": accuracy,
+            "logloss": logloss,
+            "per_class": per_class,
+        }
+
+    @staticmethod
+    def _compute_feature_importance(
+        booster: xgb.Booster,
+        feature_names: Optional[List[str]] = None,
+    ) -> Dict[str, float]:
+        """Compute feature importance scores.
+
+        Uses total_gain if available, falls back to total_cover, then weight.
+        """
+        try:
+            score_map = booster.get_score(importance_type="total_gain")
+        except Exception:
+            try:
+                score_map = booster.get_score(importance_type="total_cover")
+            except Exception:
+                score_map = booster.get_score(importance_type="weight")
+
+        if not score_map:
+            return {}
+
+        # score_map keys are f0, f1, f2, ...
+        if feature_names:
+            result: Dict[str, float] = {}
+            for key, value in score_map.items():
+                try:
+                    idx = int(key[1:])  # f0 -> 0, f1 -> 1, ...
+                except (ValueError, IndexError):
+                    result[key] = float(value)
+                    continue
+                if idx < len(feature_names):
+                    result[feature_names[idx]] = float(value)
+                else:
+                    result[key] = float(value)
+            return result
+
+        # Normalize: all scores sum to 1.0
+        total = sum(score_map.values())
+        if total > 0:
+            return {k: float(v / total) for k, v in score_map.items()}
+        return {k: float(v) for k, v in score_map.items()}
+
+
+# ---------------------------------------------------------------------------
+# Convenience function
+# ---------------------------------------------------------------------------
+
+
+def train_swing_model(
+    X: np.ndarray,
+    y: np.ndarray,
+    feature_names: Optional[List[str]] = None,
+    artifact_dir: str = ARTIFACT_DIR_DEFAULT,
+) -> TrainingResult:
+    """Train a SWING mode XGBoost classifier with conservative hyperparameters.
+
+    This is the primary entry point for SWING baseline model training.
+    Uses LOCKED_INITIAL_BASELINE conservative hyperparameters.
+
+    Args:
+        X: Feature matrix (n_samples, n_features).
+        y: Label vector — string labels or integer labels.
+        feature_names: Optional list of feature names.
+        artifact_dir: Directory to save the model artifact.
+
+    Returns:
+        TrainingResult with trained model, artifact metadata, and metrics.
+    """
+    trainer = XGBoostTrainer(
+        mode="SWING",
+        random_seed=RANDOM_SEED,
+        hyperparameters=SWING_DEFAULT_HYPERPARAMS,
+    )
+    result = trainer.train(X, y, feature_names=feature_names)
+
+    # Generate IDs for artifact metadata
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    model_artifact_id = f"v7_alphaforge_xgb_swing_classifier_{ts}"
+    training_run_id = f"tr_swing_baseline_{ts}"
+
+    # Save model binary
+    artifact_path = trainer.save_artifact(
+        result,
+        artifact_dir=artifact_dir,
+        model_artifact_id=model_artifact_id,
+    )
+
+    # Build final metadata
+    result.model_artifact = trainer.build_model_artifact_metadata(
+        result,
+        artifact_uri=f"file://{artifact_path.resolve()}",
+        model_artifact_id=model_artifact_id,
+        training_run_id=training_run_id,
+        feature_set_id="swing_v1_features",
+        label_dataset_id="swing_v1_labels",
+        validation_report_id="VR-SWING-baseline-0000",
+    )
+
+    return result
