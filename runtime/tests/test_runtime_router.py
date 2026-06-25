@@ -19,42 +19,48 @@ import pytest
 
 
 # ---------------------------------------------------------------------------
+# Fake v6 types — defined at module level so the Enum class identity is stable
+# across fixture invocations (TradeModeRouter caches its import).
+# ---------------------------------------------------------------------------
+
+class FakeTradeMode(Enum):
+    SWING = "SWING"
+    SCALP = "SCALP"
+    AGGRESSIVE_SCALP = "AGGRESSIVE_SCALP"
+
+
+@dataclass(frozen=True)
+class FakeModelArtifact:
+    name: str = "test_model"
+    engine_name: str = "xgb_v1"
+    engine_version: str = "1.2.3"
+    trade_mode: str = "SWING"
+    accuracy: float = 0.85
+
+
+class FakeModelRegistry:
+    def __init__(self, champions=None, global_champion=None):
+        self._champions = champions or {}
+        self._global_champion = global_champion
+
+    def get_champion_for_trade_mode(self, mode: str, fallback: bool = False):
+        return self._champions.get(mode)
+
+    def get_champion(self):
+        return self._global_champion
+
+
+# ---------------------------------------------------------------------------
 # Mock v6 modules before importing runtime_router
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)
 def _mock_v6_modules():
     """Inject fake v6.contracts.enums and v6.registry.model_registry modules."""
-    # v6.contracts.enums
-    class FakeTradeMode(Enum):
-        SWING = "SWING"
-        SCALP = "SCALP"
-        AGGRESSIVE_SCALP = "AGGRESSIVE_SCALP"
-
     fake_enums = MagicMock()
     fake_enums.TradeMode = FakeTradeMode
     sys.modules["v6.contracts"] = MagicMock()
     sys.modules["v6.contracts.enums"] = fake_enums
-
-    # v6.registry.model_registry
-    @dataclass(frozen=True)
-    class FakeModelArtifact:
-        name: str = "test_model"
-        engine_name: str = "xgb_v1"
-        engine_version: str = "1.2.3"
-        trade_mode: str = "SWING"
-        accuracy: float = 0.85
-
-    class FakeModelRegistry:
-        def __init__(self, champions=None, global_champion=None):
-            self._champions = champions or {}
-            self._global_champion = global_champion
-
-        def get_champion_for_trade_mode(self, mode: str, fallback: bool = False):
-            return self._champions.get(mode)
-
-        def get_champion(self):
-            return self._global_champion
 
     fake_registry = MagicMock()
     fake_registry.ModelArtifact = FakeModelArtifact

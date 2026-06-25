@@ -321,7 +321,7 @@ class TestRunLifecycle:
                 "run-008", "COMPLETED", profile_id="paper-main"
             )
         assert result["active_status"] == "PAUSED"
-        assert result["desired_state"] == "RUNNING"  # unwinds to RUNNING after stop
+        assert result["desired_state"] == "PAUSED"  # preserved from current state when not STOPPED
 
     def test_finish_run_succeeded_goes_idle(
         self, scan_control_service: ScanControlService, mock_state_repo: MagicMock

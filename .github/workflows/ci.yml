@@ -34,3 +34,6 @@ jobs:
 
       - name: Run lib + integration + simulation tests
         run: PYTHONPATH=. python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q
+
+      - name: Run runtime tests
+        run: PYTHONPATH=. python -m pytest runtime/tests/ -q
