@@ -8,11 +8,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict, List
 
 import pandas as pd
 import pytest
+
+# Ensure alphaforge/src is on the Python path so "from alphaforge.dataset..."
+# resolves correctly under the src/ layout pattern.
+_src = Path(__file__).resolve().parent.parent / "src"
+if str(_src) not in sys.path:
+    sys.path.insert(0, str(_src))
 
 from alphaforge.dataset.assembler import DefaultAssembler
 from alphaforge.dataset.contracts import (

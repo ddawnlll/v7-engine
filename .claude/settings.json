@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(make *)",
+      "Bash(python3 *)",
+      "Bash(pytest *)",
+      "Bash(gh issue *)",
+      "Bash(gh pr *)",
+      "Bash(find *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(wc *)",
+      "Bash(echo *)",
+      "Bash(mkdir *)"
+    ],
+    "deny": [
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(*BINANCE_API_KEY*)",
+      "Bash(*BINANCE_SECRET*)",
+      "Bash(*create_order*)",
+      "Bash(*market_order*)",
+      "Bash(*live_trading*)"
+    ]
+  }
+}
