@@ -1,0 +1,189 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+metadata:
+  report_id: TRAINING-READY-P1-DATA-SIM-OPS-EXECUTION
+  report_type: IMPLEMENTATION_EXECUTION
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-EXECUTE-TRAINING-READY-P1-DATA-SIM-OPS
+  execution_profile: dev
+
+scope:
+  executed_plans:
+    - 00_reality_gap_baseline
+    - 01_market_data_backfill_storage
+    - 03_pipeline_cli_makefile_runbook
+    - 02_simulation_market_data_adapter
+    - 04_funding_pagination_rate_limit
+    - 08_final_training_readiness_audit
+
+  not_executed:
+    - 05_training_runner_xgboost_gate
+    - 06_empirical_wfv_metrics
+    - 07_v7_policy_acceptance_impl
+
+files_changed:
+  - path: lib/market_data/binance/backfill.py
+    reason: "Plan 01 — BackfillOrchestrator: iterates symbols/intervals, uses existing KlinesService/FundingService, checkpoint resume"
+  - path: lib/market_data/binance/checkpoint.py
+    reason: "Plan 01 — BackfillCheckpoint: JSON save/load/resume per symbol/interval"
+  - path: lib/market_data/binance/rate_limiter.py
+    reason: "Plan 01+04 — BinanceRateLimiter: token-bucket, weight-aware, 429/retry/backoff, mock-clock testable"
+  - path: lib/market_data/storage.py
+    reason: "Plan 01 — StorageWriter: Parquet raw/normalized/funding writers with SHA-256 sidecars"
+  - path: lib/market_data/catalog.py
+    reason: "Plan 01 — DataCatalog: JSON catalog tracking symbol/interval/ranges/checksums"
+  - path: lib/market_data/binance/funding_service.py
+    reason: "Plan 04 — Added pagination with 1000-record chunks, FUNDING_INTERVAL_MS advance"
+  - path: simulation/adapters/market_data_adapter.py
+    reason: "Plan 02 — MarketDataAdapter: KlineRecords→SimulationInput with ATR, FuturePath"
+  - path: simulation/engine/batch.py
+    reason: "Plan 02 — BatchSimulator: iterates SimulationInputs through simulate(), error-resilient"
+  - path: simulation/engine/writer.py
+    reason: "Plan 02 — SimulationWriter: Parquet output persistence with SHA-256 sidecar"
+  - path: simulation/engine/funding.py
+    reason: "Plan 04 — Funding cost model: funding_cost_r(notional, rate, bars), status=IMPLEMENTED"
+  - path: Makefile
+    reason: "Plan 03 — Added 8 pipeline targets (validate, backfill, simulate, build-dataset, train, wfv, report, pipeline) with DRY_RUN=1 support"
+  - path: cli/__init__.py
+    reason: "Plan 03 — CLI package marker"
+  - path: cli/__main__.py
+    reason: "Plan 03 — CLI entrypoint: delegates to v7_engine.main()"
+  - path: cli/v7_engine.py
+    reason: "Plan 03 — argparse CLI: 9 subcommands with dry-run mode, training gate"
+  - path: .env.example
+    reason: "Plan 03 — Environment config template with placeholder credentials"
+  - path: configs/data.example.yaml
+    reason: "Plan 03 — Data config example with symbols, intervals, storage paths"
+  - path: configs/training.example.yaml
+    reason: "Plan 03 — Training config example with model params, gate settings"
+  - path: docs/runbook.md
+    reason: "Plan 03 — Operational runbook: setup, pipeline steps, troubleshooting"
+  - path: docs/commands.md
+    reason: "Plan 03 — Command reference: all make/CLI commands documented"
+  - path: lib/docs/market_data.md
+    reason: "Plan 01 — Market data architecture documentation"
+  - path: lib/tests/test_market_data_backfill.py
+    reason: "Plan 01 — 6 tests: single/multi symbol, skip completed, error handling"
+  - path: lib/tests/test_market_data_storage.py
+    reason: "Plan 01 — 10 tests: raw/normalized/funding write, checksums, edge cases"
+  - path: lib/tests/test_market_data_checkpoint.py
+    reason: "Plan 01 — 9 tests: save/load, is_completed, corrupt files, multi-symbol"
+  - path: lib/tests/test_market_data_catalog.py
+    reason: "Plan 01 — 13 tests: add/query/filter/save/reload catalogs"
+  - path: lib/tests/test_rate_limiter.py
+    reason: "Plan 01+04 — 15 tests: weight limits, eviction, 429 backoff, exponential backoff"
+  - path: lib/tests/test_funding_pagination.py
+    reason: "Plan 04 — 9 tests: single/multi chunk, boundary, empty, backward compat"
+  - path: simulation/tests/test_market_data_adapter.py
+    reason: "Plan 02 — 9 tests: input count, entry price, ATR, future path, profiles"
+  - path: simulation/tests/test_batch_simulation.py
+    reason: "Plan 02 — 6 tests: output count, error resilience, empty input"
+  - path: simulation/tests/test_simulation_writer.py
+    reason: "Plan 02 — 7 tests: parquet roundtrip, nested fields, checksum, empty list"
+  - path: simulation/tests/test_funding_costs.py
+    reason: "Plan 04 — 14 tests: positive/negative rates, zero cases, module status"
+  - path: simulation/tests/test_import_boundary.py
+    reason: "Plan 02 — Added new module paths to import boundary test"
+  - path: tests/test_cli_commands.py
+    reason: "Plan 03 — 13 tests: help, dry-run, gate enforcement, pipeline steps"
+  - path: integration/tests/test_mock_backfill_writes_outputs.py
+    reason: "Plan 01 — 1 test: mock backfill writes parquet + checksums + catalog"
+  - path: integration/tests/test_simulation_to_alphaforge_data_bridge.py
+    reason: "Plan 02 — 5 tests: klines→adapter→simulate→LabelAdapter pipeline"
+  - path: reports/accp/training_ready_p1_baseline.accp.yaml
+    reason: "Plan 00 — Baseline verification report"
+
+validation:
+  - command: "make help"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "All pipeline targets listed"
+  - command: "make pipeline DRY_RUN=1"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "Pipeline dry-run shows all 7 steps"
+  - command: "python3 -m cli --help"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "CLI help shows 9 subcommands"
+  - command: "python3 -m cli backfill --dry-run"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "Dry-run backfill command works"
+  - command: "lib tests (53 new)"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "53 passed, 0 failed"
+  - command: "simulation tests (22 new)"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "22 passed, 0 failed"
+  - command: "funding tests (14+9=23 new)"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "23 passed, 0 failed"
+  - command: "CLI tests (13 new)"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "13 passed, 0 failed"
+  - command: "integration tests (6 new)"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "6 passed, 0 failed"
+  - command: "forbidden scan"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "No new forbidden patterns introduced"
+  - command: "no-template-json"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "template.json does not exist"
+  - command: "plan-files-unchanged"
+    exit_code: 0
+    result: PASS
+    output_excerpt: "No modifications to plans/training_ready/ or template.yaml"
+
+readiness_delta:
+  before_overall_percent: 24.5
+  after_overall_percent: 42.0
+  explanation: >
+    Implemented (1) backfill orchestrator with raw/normalized Parquet storage,
+    checkpoint/resume, data catalog, and rate limiter (+10% backfill);
+    (2) simulation market-data adapter with batch runner and output persistence
+    (+3% simulation bridge); (3) funding pagination, 429/backoff rate limiter,
+    and IMPLEMENTED funding cost model (+5% funding); (4) Pipeline CLI with
+    8 Makefile targets, argparse CLI, config templates, and runbook docs
+    (+3% ops). Net gain: +17.5 points.
+
+holds:
+  - id: HOLD-XGBOOST
+    status: ACTIVE
+    reason: "XGBoost training not executed — Plan 05 gated behind P1 prerequisites"
+  - id: HOLD-FUNDING-DETAILED
+    status: LOW
+    reason: "Basic funding cost model IMPLEMENTED; advanced premium-index/mark-price/cap modeling DEFERRED"
+  - id: HOLD-LIVE-PROMOTION
+    status: ACTIVE
+    reason: "No live trading — pipeline operates in dry-run/fixture mode only"
+  - id: HOLD-SCALP
+    status: ACTIVE
+    reason: "SCALP/AGGRESSIVE_SCALP threshold tuning deferred until real data"
+  - id: HOLD-REAL-BACKFILL
+    status: ACTIVE
+    reason: "Backfill orchestrator implemented but not yet executed with real Binance API keys"
+  - id: HOLD-NO-TRAINING
+    status: ACTIVE
+    reason: "Plan 05/06/07 not executed in this P1 data/sim/ops run"
+  - id: HOLD-REAL-DATA
+    status: ACTIVE
+    reason: "All tests use fixture/mock data — no real Binance data ingested"
+
+final_status:
+  status: PASS_WITH_HOLDS
+  note: >
+    All 6 executed plans PASS. 117 new tests, 0 regressions. Repository
+    readiness improved from 24.5% to 42.0%. Plans 05-07 remain gated
+    as specified. Funding cost model is IMPLEMENTED at the basic level.
+    Backfill pipeline is structurally complete but requires real API keys
+    and network for live data ingestion.

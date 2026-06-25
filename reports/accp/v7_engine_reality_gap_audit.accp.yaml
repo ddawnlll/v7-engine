@@ -1,0 +1,709 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+# =============================================================================
+# V7 Engine Reality Gap Audit
+# =============================================================================
+# Read-only audit. No code/docs/tests/plans modified.
+# Evidence: file inspection, grep scans, test execution, ACCP report cross-ref.
+# Network: none. Model: none.
+# =============================================================================
+
+metadata:
+  report_id: V7-ENGINE-REALITY-GAP-AUDIT
+  report_type: REPOSITORY_REALITY_GAP_AUDIT
+  generated_by: local_agent
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-ONEFILE-V7-ENGINE-REALITY-GAP-AUDIT
+  priority: P0
+  repository_mode: read_only
+  commits_examined:
+    - {hash: "0aa9d59", desc: "P0 AlphaForge deterministic pipeline closure report"}
+    - {hash: "98782d3", desc: "fix: resolve all pre-existing test failures"}
+    - {hash: "5f25575", desc: "AlphaForge PlanSpec v0.1.0 bundle execution"}
+  commands_run: 14
+  files_inspected: 60_plus
+
+# =============================================================================
+# Executive Summary
+# =============================================================================
+
+executive_summary:
+  scaffold_status: COMPLETE_DETERMINISTIC_SCAFFOLD
+  training_ready: false
+  real_data_ready: false
+  backfill_ready: false
+  simulation_ready: PARTIAL
+  operationally_runnable: false
+  docs_code_aligned: true
+  overall_readiness_percent: 24.5
+
+  verdict_narrative: >
+    The V7 Engine deterministic scaffold is complete, honest, and
+    well-tested: 818 tests pass, 0 fail, 1 skip (Binance excluded).
+    Every ACCP report explicitly states PASS_WITH_HOLDS and lists all
+    remaining prerequisites. No false profitability or live-readiness
+    claims were found. The repo is honest about what it is.
+
+    HOWEVER, the repository is NOT training-ready, NOT backfill-ready,
+    NOT pipeline-runnable, and NOT operationally commandable. The gap
+    between scaffold completion and production quant-pipeline readiness
+    is approximately 75 points wide.
+
+    Critical absences: (1) Binance backfill orchestrator with disk
+    storage, (2) simulation-to-market-data adapter, (3) XGBoost
+    training runner, (4) empirical WFV with real metrics, (5) CLI/
+    runbook/Makefile pipeline commands, and (6) V7 source code.
+
+  top_10_blockers:
+    - id: B01
+      blocker: "No Binance backfill orchestrator — no bulk historical data ingestion"
+      domain: lib
+      severity: CRITICAL
+    - id: B02
+      blocker: "No raw/normalized storage — all data cached in-memory, never persisted"
+      domain: lib
+      severity: CRITICAL
+    - id: B03
+      blocker: "No simulation-to-market-data adapter — cannot consume real OHLCV"
+      domain: simulation
+      severity: CRITICAL
+    - id: B04
+      blocker: "Funding cost model DEFERRED — blocks perpetual/live promotion"
+      domain: simulation
+      severity: HIGH
+    - id: B05
+      blocker: "No XGBoost/GBM training runner — zero model artifacts, zero fit() calls"
+      domain: alphaforge
+      severity: CRITICAL
+    - id: B06
+      blocker: "No empirical WFV — all metrics NOT_EVALUATED, only fold structure works"
+      domain: alphaforge
+      severity: CRITICAL
+    - id: B07
+      blocker: "No V7 source code — policy acceptance is docs-only, zero implementation"
+      domain: v7
+      severity: CRITICAL
+    - id: B08
+      blocker: "No pipeline CLI or runbook — no reproducible end-to-end command path"
+      domain: ops
+      severity: CRITICAL
+    - id: B09
+      blocker: "No .env.example / config surface — new developer cannot configure system"
+      domain: ops
+      severity: HIGH
+    - id: B10
+      blocker: "All simulation golden tests use hardcoded fixture candles, not real data"
+      domain: simulation
+      severity: HIGH
+
+  safe_next_action: >
+    Implement Binance backfill orchestrator (raw kline/funding ingestion
+    with pagination, resume, and disk storage), wire simulation to
+    consume normalized OHLCV, then train XGBoost only after all
+    prerequisites are satisfied. Do NOT claim training-ready until
+    empirical WFV metrics are produced from real data.
+
+# =============================================================================
+# Scorecard
+# =============================================================================
+
+scorecard:
+  scaffold_completion_percent: 92
+  training_readiness_percent: 0
+  real_data_readiness_percent: 25
+  backfill_readiness_percent: 30
+  simulation_truth_readiness_percent: 55
+  alphaforge_dataset_readiness_percent: 35
+  wfv_empirical_readiness_percent: 5
+  mht_overfit_readiness_percent: 5
+  v7_policy_readiness_percent: 0
+  ops_readiness_percent: 10
+  docs_code_alignment_percent: 95
+  overall_quant_pipeline_readiness_percent: 24.5
+  confidence: HIGH
+
+  weighted_calculation:
+    formula: "sum(score * weight) / 100"
+    weights:
+      backfill_readiness: 15
+      real_data_readiness: 10
+      simulation_truth_readiness: 20
+      alphaforge_dataset_readiness: 15
+      training_readiness: 15
+      wfv_empirical_readiness: 10
+      mht_overfit_readiness: 5
+      v7_policy_readiness: 5
+      ops_readiness: 5
+    computation: >
+      30*0.15 + 25*0.10 + 55*0.20 + 35*0.15 + 0*0.15
+      + 5*0.10 + 5*0.05 + 0*0.05 + 10*0.05 = 24.5
+
+# =============================================================================
+# Pipeline Chain Audit
+# =============================================================================
+
+pipeline_chain_audit:
+
+  lib_market_data_binance_backfill:
+    status: PARTIAL
+    percent_complete: 30
+    evidence:
+      - "lib/market_data/binance/client.py — real BinanceClient with retry/backoff, get_klines(), get_funding_rate()"
+      - "lib/market_data/binance/klines_service.py — real KlinesService with pagination (1000-candle chunk splitting), normalization to KlineRecord"
+      - "lib/market_data/binance/funding_service.py — real FundingService with normalization to FundingRecord"
+      - "lib/market_data/binance/market_data_service.py — real BinanceMarketDataService orchestration"
+      - "lib/market_data/contracts.py — real KlineRecord, MarketDataResult, DataQualityReport dataclasses"
+      - "lib/market_data/quality.py — real gap detection, duplicate detection, completeness checking"
+      - "lib/tests/test_market_data_contracts.py — PASS (contract validation)"
+      - "lib/tests/test_market_data_quality.py — PASS (quality logic)"
+      - "lib/tests/test_market_data_binance.py — exists but SKIPPED in full suite (requires network)"
+    missing:
+      - "No backfill orchestrator — no bulk download across symbols/timeframes/ranges"
+      - "No raw data storage — KlinesService cache is in-memory only, never persisted to disk"
+      - "No normalized data write path — no CSV/Parquet writer for normalized klines/funding"
+      - "No resume/checkpoint — failed backfill must restart from scratch"
+      - "No rate limiting — client has retry but no Binance-weight-aware rate limiter"
+      - "No funding pagination — FundingService.fetch() does not split long time ranges"
+      - "No make backfill command"
+
+  raw_normalized_market_data:
+    status: MISSING
+    percent_complete: 5
+    evidence:
+      - "lib/market_data/contracts.py — has KlineRecord and MarketDataResult shapes"
+      - "data/raw/.gitkeep — directory exists but is empty"
+      - "data/processed/.gitkeep — directory exists but is empty"
+      - "data/README.md — directory docs exist"
+    missing:
+      - "No raw kline writer (no parquet/csv/json serializer to data/raw/)"
+      - "No normalized kline writer (no normalized output to data/processed/)"
+      - "No raw/normalized funding writer"
+      - "No data versioning"
+      - "No data catalog"
+
+  simulation_economic_truth:
+    status: IMPLEMENTED_AND_TESTED
+    percent_complete: 75
+    evidence:
+      - "simulation/engine/engine.py — real comparative engine: LONG_NOW/SHORT_NOW/NO_TRADE, action selection, utility"
+      - "simulation/engine/exits.py — real stop/target/time-exit resolver, conservative stop-before-target rule"
+      - "simulation/engine/costs.py — real fee+slippage cost model in R terms, volatility-adjusted slippage"
+      - "simulation/contracts/models.py — real SimulationInput/SimulationOutput/Candle/FuturePath"
+      - "simulation/tests/golden/test_swing_golden.py — 3 golden tests confirm TARGET_HIT, STOP_HIT, TIME_EXIT"
+      - "Engine computes MFE, MAE, path quality, regret, ambiguity detection — all real logic"
+    missing:
+      - "Funding cost DEFERRED — simulation/engine/costs.py L9: explicitly unsupported in this MVP"
+      - "No simulation-to-market-data adapter — engine consumes SimulationInput not OHLCV"
+      - "No batch simulation runner"
+      - "No simulation output persistence (no CSV/Parquet writer)"
+      - "Golden tests use 3 hardcoded candle fixtures — prove logic, not real-data readiness"
+      - "No make simulate command"
+
+  simulation_outputs_labels:
+    status: IMPLEMENTED_AND_TESTED
+    percent_complete: 85
+    evidence:
+      - "alphaforge/src/alphaforge/labels/adapter.py — real LabelAdapter with 15+ field mapping, no_trade_quality classifier"
+      - "Deterministic: same SimulationOutput always produces identical AlphaForgeLabel"
+      - "Funding status propagated as DEFERRED (correct, honest)"
+      - "alphaforge/tests/test_label_adapter_schema.py — schema validation tests PASS"
+      - "alphaforge/tests/test_label_adapter_no_trade.py — no_trade classification tests PASS"
+      - "contracts/mappings/simulation_to_alphaforge.json — mapping contract exists"
+    missing:
+      - "Labels derived from fixture SimulationOutputs only — never from real simulation runs"
+      - "Funding status always DEFERRED — no live funding data path"
+      - "No label dataset writer for scale persistence"
+
+  alphaforge_dataset:
+    status: IMPLEMENTED_AND_TESTED_SCAFFOLD
+    percent_complete: 35
+    evidence:
+      - "alphaforge/src/alphaforge/dataset/assembler.py — real DefaultAssembler, inner-join, purge-window, checksums"
+      - "alphaforge/src/alphaforge/dataset/writer.py — real writer with SHA-256 checksums"
+      - "alphaforge/src/alphaforge/dataset/lineage.py — real lineage tracking"
+      - "alphaforge/src/alphaforge/features/pipeline.py — real FeatureMatrix, 6 active groups"
+      - "alphaforge/src/alphaforge/data/manifest.py — real DataManifest"
+      - "Tests pass for assembler, feature pipeline, data manifest"
+    missing:
+      - "Features from fixture data only — no real OHLCV feature computation"
+      - "Labels from fixture SimulationOutputs only — no real simulation labels"
+      - "No end-to-end: fixture → simulation → label → feature → dataset → train"
+      - "Lead-Lag feature group DEFERRED"
+      - "No make build-dataset command"
+
+  alphaforge_training:
+    status: MISSING
+    percent_complete: 0
+    evidence:
+      - "ML Pilot Gate actively BLOCKS GBM training — raises ImportError if xgboost importable"
+      - "ACCP report: XGBoost training not yet performed"
+      - "walk_forward.py L19: 'This module imports ZERO ML libraries'"
+      - "_minimal.py: 'All reports are schema-valid placeholders'"
+      - "builders.py: 'All values are dummy/example placeholders'"
+    missing:
+      - "No alphaforge/training/ directory"
+      - "No train_xgb.py or equivalent"
+      - "No XGBClassifier / XGBRegressor usage"
+      - "No model.fit() calls"
+      - "No model artifact writer"
+      - "No calibration module"
+      - "No model registry"
+      - "No prediction/inference runner"
+      - "No make train command"
+
+  walk_forward_validation:
+    status: SKELETON_ONLY
+    percent_complete: 5
+    evidence:
+      - "WalkForwardValidator with chronological fold split, purge/embargo, 6-fold minimum — REAL"
+      - "Fold split logic tested and working"
+      - "MHT framework SKELETON exists in contracts"
+    missing:
+      - "ALL metrics NOT_EVALUATED — oos_sharpe, oos_win_rate, oos_expectancy, oos_max_drawdown, etc."
+      - "No real model to evaluate — WFV is a splitter without trainer/evaluator"
+      - "No empirical fold results"
+      - "Verdict always INCONCLUSIVE"
+      - "No cost stress empirical results"
+      - "No regime breakdown empirical results"
+      - "No symbol stability empirical results"
+      - "No make wfv command"
+
+  v7_policy_acceptance:
+    status: MISSING
+    percent_complete: 0
+    evidence:
+      - "v7/ contains docs only — zero source code"
+      - "Comprehensive docs: pipeline, architecture, policy critic RL research"
+      - "v7/docs/pipeline/evaluation.md — G0-G10 gates documented"
+    missing:
+      - "No v7/src/ directory"
+      - "No policy acceptance module"
+      - "No gate evaluation logic"
+      - "No threshold acceptance/rejection"
+      - "No promotion decision engine"
+      - "No V7 tests"
+      - "Policy Critic RL documented but not implemented"
+
+# =============================================================================
+# Domain Audit
+# =============================================================================
+
+domain_audit:
+
+  lib:
+    percent_complete: 45
+    implemented:
+      - "BinanceClient with retry/backoff (real HTTP client)"
+      - "KlinesService with pagination and normalization"
+      - "FundingService with normalization"
+      - "BinanceMarketDataService top-level orchestration"
+      - "KlineRecord/MarketDataResult/DataQualityReport contracts"
+      - "Gap detection, duplicate detection, completeness checking"
+      - "lib/indicators/* — ATR, RSI, momentum, volatility, returns, rolling"
+      - "lib/costs/* — fee and slippage estimation"
+      - "lib/time/* — fold and interval utilities"
+    missing:
+      - "Backfill orchestrator (bulk download)"
+      - "Raw/normalized data persistence"
+      - "Rate limiting with Binance weight awareness"
+      - "Resume/checkpoint"
+      - "Funding pagination"
+      - "Data catalog"
+      - "make backfill command"
+    contradictions: []
+    evidence:
+      - "lib/market_data/binance/client.py — 126 lines, real HTTP"
+      - "lib/market_data/binance/klines_service.py — 130 lines, real pagination"
+      - "lib/market_data/quality.py — 78 lines, real quality"
+      - "lib/tests/ — 13 test files, all pass"
+      - "lib/indicators/ — 7 modules, all real"
+
+  simulation:
+    percent_complete: 55
+    implemented:
+      - "Comparative simulation engine (LONG_NOW/SHORT_NOW/NO_TRADE)"
+      - "Exit resolver with conservative stop-before-target"
+      - "Fee + slippage cost model in R terms"
+      - "MFE/MAE/path quality/utility computation"
+      - "Action selection with ambiguity detection"
+      - "SWING mode LOCKED_INITIAL_BASELINE"
+      - "3 golden tests (deterministic scenarios)"
+    missing:
+      - "Funding cost model (DEFERRED)"
+      - "Market-data-to-simulation adapter"
+      - "Batch simulation runner"
+      - "Simulation output persistence"
+      - "SCALP/AGGRESSIVE_SCALP empirical tuning"
+      - "Monte Carlo"
+      - "make simulate command"
+    contradictions: []
+    evidence:
+      - "simulation/engine/engine.py — 272 lines"
+      - "simulation/engine/exits.py — 212 lines"
+      - "simulation/engine/costs.py — 91 lines"
+      - "simulation/tests/golden/ — 3 deterministic tests"
+
+  alphaforge:
+    percent_complete: 40
+    implemented:
+      - "LabelAdapter (15+ field deterministic mapping)"
+      - "FeaturePipeline (6 active groups)"
+      - "DatasetAssembler (inner-join, purge-window, checksums)"
+      - "WalkForwardValidator (chronological fold split, purge/embargo, 6-fold minimum)"
+      - "ML Pilot Gate (9 prerequisite checks, GBM import guard)"
+      - "V7 Handoff Dry Run (10 gate IDs, 12 rejection rules)"
+      - "Research Report builders (explicitly scaffold placeholders)"
+      - "DataManifest with mode/timeframe profiles"
+    missing:
+      - "No training module (no XGBoost, no fit, no calibration)"
+      - "No empirical WFV results (all NOT_EVALUATED)"
+      - "No real market data consumption"
+      - "No real simulation output consumption"
+      - "Lead-Lag features DEFERRED"
+      - "SCALP/AGGRESSIVE_SCALP feature tuning HOLD"
+    contradictions: []
+    evidence:
+      - "alphaforge/src/alphaforge/ — 18 modules, scaffold infrastructure"
+      - "alphaforge/tests/ — 17 test files, 487 PASS, all fixture-based"
+      - "ml_pilot.py explicitly blocks GBM via importlib.util.find_spec"
+      - "All report builders self-identify as 'scaffold placeholder'"
+
+  v7:
+    percent_complete: 5
+    implemented:
+      - "Comprehensive docs (~40 files in v7/docs/)"
+      - "Pipeline docs across 12 topics"
+      - "Policy Critic RL research + codebase maps"
+      - "Architecture, profitability thesis, roadmap"
+      - "V7 executor support pack"
+    missing:
+      - "Zero source code — no v7/src/ directory"
+      - "No policy acceptance implementation"
+      - "No gate evaluation logic"
+      - "No threshold-based decisions"
+      - "No promotion/rejection engine"
+      - "No V7 tests"
+    contradictions:
+      - "v7/docs/roadmap.md and evaluation.md document G0-G10 gates extensively, but zero implementation exists"
+    evidence:
+      - "v7/ — docs only, confirmed by file tree scan"
+      - "v7/docs/ — 37 markdown + 2 yaml files, 0 Python files"
+
+  ops:
+    percent_complete: 10
+    implemented:
+      - "Makefile with: help, setup, install, test, check-*, clean, lint, typecheck"
+      - "scripts/setup.sh"
+      - "contracts/registry.json"
+      - ".github/workflows/ci.yml"
+      - "data/ directory structure"
+    missing:
+      - "No make backfill / simulate / build-dataset / train / wfv / report / pipeline"
+      - "No CLI entrypoints (zero argparse/click/typer usage)"
+      - "No runbook"
+      - "No .env.example"
+      - "No Binance API key config template"
+      - "No reproducible end-to-end command path"
+    contradictions: []
+    evidence:
+      - "Makefile — 72 lines, 12 targets, all infrastructure/test only"
+      - "CLI grep returned zero results"
+      - "No .env.example found"
+
+# =============================================================================
+# Docs/Code/Test Traceability
+# =============================================================================
+
+docs_code_test_traceability:
+  methodology: >
+    Compared docs claims against source files, test evidence, and ACCP reports.
+    Every claim of "complete" or "ready" cross-checked against file existence,
+    test output, and ACCP hold statements.
+
+  key_claims:
+    - claim: "P0 deterministic pipeline complete"
+      doc_source: "alphaforge_p0_deterministic_pipeline_closure.accp.yaml"
+      code_status: CONFIRMED
+      test_status: CONFIRMED — 818 pass
+      report_status: CONFIRMED — PASS_WITH_HOLDS
+      verdict: ACCURATE
+
+    - claim: "Deterministic scaffold — no real profitability evidence"
+      doc_source: "alphaforge/src/alphaforge/reports/_minimal.py"
+      code_status: CONFIRMED
+      test_status: CONFIRMED — fixture-only
+      report_status: CONFIRMED — INCONCLUSIVE
+      verdict: ACCURATE
+
+    - claim: "Funding cost model DEFERRED"
+      doc_source: "simulation/engine/costs.py L9"
+      code_status: CONFIRMED
+      test_status: N/A
+      report_status: CONFIRMED — HOLD-FUNDING
+      verdict: ACCURATE
+
+    - claim: "SCALP/AGGRESSIVE_SCALP HOLD"
+      doc_source: "alphaforge_final_validation.accp.yaml"
+      code_status: CONFIRMED
+      test_status: CONFIRMED
+      report_status: CONFIRMED
+      verdict: ACCURATE
+
+    - claim: "WFV 6-fold minimum enforced"
+      doc_source: "walk_forward.py"
+      code_status: CONFIRMED
+      test_status: CONFIRMED — structure validated
+      report_status: CONFIRMED — metrics NOT_EVALUATED
+      verdict: ACCURATE
+
+  stale_docs: []
+
+  false_ready_claims: []
+  false_ready_rationale: >
+    No false readiness claims found. Every ACCP report explicitly says
+    PASS_WITH_HOLDS. Code-level comments consistently mark placeholders.
+    The governance model (design lock semantics) is consistently applied.
+    The repository is honest about its current state.
+
+# =============================================================================
+# Command Surface Audit
+# =============================================================================
+
+command_surface_audit:
+  makefile:
+    exists: true
+    targets:
+      - help
+      - setup
+      - install
+      - test
+      - check-lib-boundaries
+      - check-boundaries
+      - check-contracts
+      - test-system
+      - test-all
+      - clean
+      - lint
+      - typecheck
+    missing_targets:
+      - backfill
+      - simulate
+      - build-dataset
+      - train
+      - wfv
+      - report
+      - pipeline
+
+  cli:
+    exists: false
+    entrypoints: []
+    missing: ["Zero argparse/click/typer/__main__ entrypoints anywhere in the repo"]
+
+  runbook:
+    exists: false
+    paths: []
+    missing: ["No operational runbook", "No step-by-step pipeline guide"]
+
+  config:
+    env_example_exists: false
+    config_files:
+      - "alphaforge/docs/configs/v7_alpha_defaults.json"
+      - "contracts/registry.json"
+      - "template.yaml"
+    missing: [".env.example", "Binance API key template", "Training config template"]
+
+# =============================================================================
+# Test Reality Audit
+# =============================================================================
+
+test_reality_audit:
+  full_suite:
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+    exit_code: 0
+    summary: "818 passed, 0 failed, 1 skipped"
+
+  contract_tests: {exit_code: 0, summary: "20 passed"}
+  boundary_tests: {exit_code: 0, summary: "7 passed"}
+
+  tests_prove:
+    - "Deterministic scaffold correctness"
+    - "Domain import boundaries enforced"
+    - "Contract registry consistency"
+    - "LabelAdapter deterministic mapping"
+    - "FeaturePipeline causal constraints"
+    - "DatasetAssembler join + purge-window"
+    - "WalkForwardValidator fold structure"
+    - "ML Pilot Gate 9 prerequisite checks"
+    - "Simulation engine LONG/SHORT/NO_TRADE logic"
+    - "Cost model fee + slippage in R terms"
+
+  tests_do_not_prove:
+    - "Training readiness"
+    - "Real data readiness"
+    - "Backfill completeness"
+    - "Pipeline integration"
+    - "Profitable edge"
+    - "WFV empirical performance"
+    - "V7 policy acceptance"
+
+  fixture_only_tests:
+    - "All AlphaForge tests use contract fixtures"
+    - "Simulation golden tests use hardcoded candles"
+    - "Integration tests use fixture schemas"
+    - "Zero tests use real market data"
+
+  missing_tests:
+    - "Binance backfill integration"
+    - "Raw/normalized storage read/write"
+    - "Simulation from real OHLCV"
+    - "XGBoost training"
+    - "Model artifact serialization"
+    - "Calibration"
+    - "WFV empirical evaluation"
+    - "V7 policy acceptance"
+    - "End-to-end pipeline"
+    - "CLI/command"
+
+# =============================================================================
+# Blocker Matrix
+# =============================================================================
+
+blocker_matrix:
+
+  p0_blockers:
+    - {id: B-P0-01, blocker: "No Binance backfill orchestrator", domain: lib, severity: CRITICAL,
+       evidence: "Services exist but no bulk download script, no disk storage, no CLI",
+       required_fix: "Implement backfill orchestrator with pagination, resume, Parquet storage, make backfill"}
+    - {id: B-P0-02, blocker: "No raw/normalized storage", domain: lib, severity: CRITICAL,
+       evidence: "KlinesService cache in-memory only; data/raw/ and data/processed/ are empty",
+       required_fix: "Implement Parquet writers with versioning"}
+    - {id: B-P0-03, blocker: "No simulation-to-market-data adapter", domain: simulation, severity: CRITICAL,
+       evidence: "simulate() takes SimulationInput not OHLCV — no adapter bridge",
+       required_fix: "Build adapter: OHLCV → SimulationInput → batch simulate → SimulationOutput"}
+    - {id: B-P0-04, blocker: "No XGBoost training runner", domain: alphaforge, severity: CRITICAL,
+       evidence: "No alphaforge/training/. ml_pilot.py blocks GBM. Zero fit()/predict().",
+       required_fix: "Implement training runner, artifact writer, calibration, make train"}
+    - {id: B-P0-05, blocker: "No empirical WFV metrics", domain: alphaforge, severity: CRITICAL,
+       evidence: "All metrics NOT_EVALUATED — no model to evaluate",
+       required_fix: "Wire trained models into WFV, produce real Sharpe/win_rate/expectancy"}
+    - {id: B-P0-06, blocker: "No operational CLI/runbook", domain: ops, severity: CRITICAL,
+       evidence: "Zero CLI entrypoints. No pipeline Makefile targets.",
+       required_fix: "Implement CLI, pipeline targets, .env.example, runbook"}
+    - {id: B-P0-07, blocker: "V7 has zero source code", domain: v7, severity: CRITICAL,
+       evidence: "v7/ is docs-only — no v7/src/",
+       required_fix: "Implement V7 policy acceptance, gate evaluation, promotion logic"}
+
+  p1_blockers:
+    - {id: B-P1-01, blocker: "Funding cost DEFERRED", domain: simulation, severity: HIGH,
+       evidence: "costs.py L9: explicitly unsupported",
+       required_fix: "Implement funding cost model"}
+    - {id: B-P1-02, blocker: "No simulation output persistence", domain: simulation, severity: HIGH,
+       evidence: "No Parquet writer for simulation outputs",
+       required_fix: "Implement simulation output writer with lineage"}
+    - {id: B-P1-03, blocker: "Funding pagination missing", domain: lib, severity: HIGH,
+       evidence: "FundingService does not split long ranges",
+       required_fix: "Add pagination like KlinesService"}
+    - {id: B-P1-04, blocker: "No rate limiting", domain: lib, severity: HIGH,
+       evidence: "BinanceClient has retry but no weight-aware rate limiter",
+       required_fix: "Implement Binance weight-aware rate limiter"}
+    - {id: B-P1-05, blocker: "SCALP/AGGRESSIVE_SCALP thresholds HOLD", domain: alphaforge, severity: HIGH,
+       evidence: "Requires empirical tuning with real data",
+       required_fix: "Collect empirical data, tune thresholds"}
+
+  p2_blockers:
+    - {id: B-P2-01, blocker: "Lead-Lag features DEFERRED", domain: alphaforge, severity: MEDIUM,
+       evidence: "Requires cross-sectional data pipeline",
+       required_fix: "Implement cross-sectional pipeline, enable lead-lag"}
+    - {id: B-P2-02, blocker: "In-memory cache unbounded", domain: lib, severity: MEDIUM,
+       evidence: "No TTL/eviction on KlinesService._cache",
+       required_fix: "Add TTL/LRU or remove in favor of disk persistence"}
+    - {id: B-P2-03, blocker: "No data catalog", domain: lib, severity: LOW,
+       evidence: "No mechanism to track which data was used for which experiment",
+       required_fix: "Implement lightweight data catalog with manifest hashes"}
+
+# =============================================================================
+# Eight-Hour Practical Plan
+# =============================================================================
+
+eight_hour_practical_plan:
+  objective: "Improve real readiness from 24.5% without false claims"
+  current_readiness_percent: 24.5
+  expected_after_8h_percent: 45
+  realistic_best_case_percent: 55
+
+  work_packages:
+    - {id: WP-01, title: "Binance Backfill Orchestrator + Storage", duration: "3h", domain: lib,
+       expected_files: ["lib/market_data/binance/backfill.py", "lib/market_data/storage.py"],
+       acceptance: "make backfill downloads BTCUSDT 4h klines to data/raw/",
+       readiness_gain: 10}
+    - {id: WP-02, title: "Simulation Market Data Adapter", duration: "1.5h", domain: simulation,
+       expected_files: ["simulation/adapters/market_data_adapter.py"],
+       acceptance: "OHLCV → SimulationInput → simulate() pipeline works",
+       readiness_gain: 8}
+    - {id: WP-03, title: "Pipeline CLI + Makefile Targets", duration: "1.5h", domain: ops,
+       expected_files: ["cli/__main__.py", "Makefile (updated)", ".env.example"],
+       acceptance: "make pipeline runs end-to-end",
+       readiness_gain: 5}
+    - {id: WP-04, title: "Simulation Output Persistence", duration: "1h", domain: simulation,
+       expected_files: ["simulation/engine/writer.py"],
+       acceptance: "Batch simulation writes Parquet with lineage",
+       readiness_gain: 3}
+    - {id: WP-05, title: "Funding Pagination + Rate Limiting", duration: "1h", domain: lib,
+       expected_files: ["funding_service.py (updated)", "rate_limiter.py"],
+       acceptance: "Pagination works; rate limiter prevents 429s",
+       readiness_gain: 4}
+
+  not_possible_today:
+    - {item: "XGBoost training", reason: "Requires real dataset from WP-01/WP-02 complete and validated"}
+    - {item: "Empirical WFV metrics", reason: "Requires trained model"}
+    - {item: "V7 policy acceptance", reason: "Requires upstream readiness + significant architecture"}
+    - {item: "SCALP threshold tuning", reason: "Requires real microstructure data over meaningful time"}
+    - {item: "Funding cost model", reason: "Requires research/design, not just implementation"}
+
+# =============================================================================
+# Recommended Next Plan Order
+# =============================================================================
+
+recommended_next_plan_order:
+  - {order: 1, plan_id: "P1-BACKFILL", title: "Binance Backfill + Storage", domain: lib,
+     reason: "Everything downstream depends on real data. Without backfill, simulation and training blocked.",
+     expected_readiness_gain: 10}
+  - {order: 2, plan_id: "P1-SIM-ADAPTER", title: "Simulation Adapter + Output Persistence", domain: simulation,
+     reason: "Bridge between real data and AlphaForge labels. Critical chokepoint.",
+     expected_readiness_gain: 11}
+  - {order: 3, plan_id: "P1-CLI-OPS", title: "Pipeline CLI + Makefile + Config", domain: ops,
+     reason: "Reproducible research surface. Without CLI, even backfill cannot run deterministically.",
+     expected_readiness_gain: 5}
+  - {order: 4, plan_id: "P1-FUNDING-RATE-LIMIT", title: "Funding Pagination + Rate Limiting", domain: lib,
+     reason: "Production-grade backfill. Funding pagination prerequisite for perpetual scope.",
+     expected_readiness_gain: 4}
+  - {order: 5, plan_id: "P1-TRAINING-RUNNER", title: "XGBoost Training Runner", domain: alphaforge,
+     reason: "After real data + real labels exist. First real model.",
+     expected_readiness_gain: 15}
+  - {order: 6, plan_id: "P1-WFV-EMPIRICAL", title: "Empirical WFV: Real Metrics", domain: alphaforge,
+     reason: "Once training works, produce real Sharpe/win_rate instead of NOT_EVALUATED.",
+     expected_readiness_gain: 10}
+  - {order: 7, plan_id: "P1-V7-IMPL", title: "V7 Policy Acceptance Implementation", domain: v7,
+     reason: "Once AlphaForge produces real models, V7 can implement gates.",
+     expected_readiness_gain: 5}
+
+# =============================================================================
+# Final Verdict
+# =============================================================================
+
+final_verdict:
+  scaffold_status: COMPLETE
+  training_ready: false
+  real_data_ready: false
+  backfill_ready: false
+  simulation_ready: PARTIAL
+  operationally_runnable: false
+  docs_code_aligned: true
+  overall_readiness_percent: 24.5
+  recommended_next_action: >
+    Implement Binance backfill orchestrator with raw/normalized Parquet
+    storage, wire simulation to consume normalized OHLCV, and create
+    operational CLI/Makefile pipeline commands. Do NOT claim
+    training-ready until empirical WFV metrics are produced from
+    real data with a trained model.

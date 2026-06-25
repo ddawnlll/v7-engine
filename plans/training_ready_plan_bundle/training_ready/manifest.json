@@ -1,0 +1,133 @@
+{
+  "bundle": {
+    "name": "training-ready-quant-pipeline",
+    "version": "0.1.0",
+    "generated_at": "2026-06-25T00:00:00Z",
+    "planSpecVersion": "0.1.0",
+    "source_audit": "reports/accp/v7_engine_reality_gap_audit.accp.yaml",
+    "baseline_readiness_percent": 24.5,
+    "target_readiness_percent": 55,
+    "plan_count": 10,
+    "domains": ["audit", "lib", "simulation", "ops", "alphaforge", "v7"]
+  },
+  "plans": [
+    {
+      "order": 0,
+      "id": "TR-MASTER-TRAINING-READY",
+      "file": "master.plan.yaml",
+      "title": "Master Orchestration Plan",
+      "domain": "all",
+      "autonomy": "implementation_allowed",
+      "gated": false
+    },
+    {
+      "order": 1,
+      "id": "TR-00-REALITY-GAP-BASELINE",
+      "file": "00_reality_gap_baseline.plan.yaml",
+      "title": "Reality Gap Baseline Verification",
+      "domain": "audit",
+      "autonomy": "analysis_only",
+      "gated": false
+    },
+    {
+      "order": 2,
+      "id": "TR-01-MARKET-DATA-BACKFILL-STORAGE",
+      "file": "01_market_data_backfill_storage.plan.yaml",
+      "title": "Market Data Backfill + Storage",
+      "domain": "lib",
+      "autonomy": "implementation_allowed",
+      "gated": false
+    },
+    {
+      "order": 3,
+      "id": "TR-02-SIMULATION-MARKET-DATA-ADAPTER",
+      "file": "02_simulation_market_data_adapter.plan.yaml",
+      "title": "Simulation Market Data Adapter",
+      "domain": "simulation",
+      "autonomy": "implementation_allowed",
+      "gated": false
+    },
+    {
+      "order": 4,
+      "id": "TR-03-PIPELINE-CLI-MAKEFILE-RUNBOOK",
+      "file": "03_pipeline_cli_makefile_runbook.plan.yaml",
+      "title": "Pipeline CLI + Makefile + Runbook",
+      "domain": "ops",
+      "autonomy": "implementation_allowed",
+      "gated": false
+    },
+    {
+      "order": 5,
+      "id": "TR-04-FUNDING-PAGINATION-RATE-LIMIT",
+      "file": "04_funding_pagination_rate_limit.plan.yaml",
+      "title": "Funding Pagination + Rate Limit",
+      "domain": "lib+simulation",
+      "autonomy": "implementation_allowed",
+      "gated": false
+    },
+    {
+      "order": 6,
+      "id": "TR-05-TRAINING-RUNNER-XGBOOST-GATE",
+      "file": "05_training_runner_xgboost_gate.plan.yaml",
+      "title": "XGBoost Training Runner",
+      "domain": "alphaforge",
+      "autonomy": "implementation_allowed",
+      "gated": true,
+      "gate_prerequisites": ["TR-01", "TR-02", "TR-03", "TR-04"]
+    },
+    {
+      "order": 7,
+      "id": "TR-06-EMPIRICAL-WFV-METRICS",
+      "file": "06_empirical_wfv_metrics.plan.yaml",
+      "title": "Empirical WFV with Real Metrics",
+      "domain": "alphaforge",
+      "autonomy": "implementation_allowed",
+      "gated": true,
+      "gate_prerequisites": ["TR-05"]
+    },
+    {
+      "order": 8,
+      "id": "TR-07-V7-POLICY-ACCEPTANCE-IMPL",
+      "file": "07_v7_policy_acceptance_impl.plan.yaml",
+      "title": "V7 Policy Acceptance Implementation",
+      "domain": "v7",
+      "autonomy": "implementation_allowed",
+      "gated": true,
+      "gate_prerequisites": ["TR-05", "TR-06"]
+    },
+    {
+      "order": 9,
+      "id": "TR-08-FINAL-TRAINING-READINESS-AUDIT",
+      "file": "08_final_training_readiness_audit.plan.yaml",
+      "title": "Final Training Readiness Audit",
+      "domain": "audit",
+      "autonomy": "analysis_only",
+      "gated": false
+    }
+  ],
+  "dependency_order": [
+    "00_reality_gap_baseline",
+    "01_market_data_backfill_storage",
+    "03_pipeline_cli_makefile_runbook",
+    "02_simulation_market_data_adapter",
+    "04_funding_pagination_rate_limit",
+    "05_training_runner_xgboost_gate",
+    "06_empirical_wfv_metrics",
+    "07_v7_policy_acceptance_impl",
+    "08_final_training_readiness_audit"
+  ],
+  "parallel_allowed": [["01", "03"]],
+  "hard_gates": {
+    "05": "Requires TR-01, TR-02, TR-03, TR-04 all PASS",
+    "06": "Requires TR-05 PASS",
+    "07": "Requires TR-05 and TR-06 both PASS"
+  },
+  "safety": {
+    "live_trading": "FORBIDDEN",
+    "profitability_claims": "FORBIDDEN",
+    "network_in_tests": "FORBIDDEN",
+    "training_before_gate": "BLOCKED",
+    "funding_model": "MAY_REMAIN_HOLD",
+    "scalp_thresholds": "HOLD_UNTIL_EMPIRICAL"
+  }
+}

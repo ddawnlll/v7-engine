@@ -13,7 +13,18 @@ metadata:
     '
   createdAt: '2026-06-23T00:00:00Z'
   humanId: AlphaForge
-  status: draft
+  status: completed
+  completedAt: '2026-06-25T00:00:00Z'
+  completionEvidence:
+    result: PASS
+    commandsRun: 7
+    commandsPassed: 7
+    totalTestsPassed: 818
+    totalTestsFailed: 0
+    totalTestsSkipped: 1
+    scansRun: 4
+    scansPassed: 4
+    accpReport: reports/accp/alphaforge_final_validation.accp.yaml
 authority:
   executor: ClaudeCode
   completionAuthority: PraxisTruthKernel

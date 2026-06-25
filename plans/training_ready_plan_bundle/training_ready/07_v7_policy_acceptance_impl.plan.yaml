@@ -1,0 +1,254 @@
+planSpecVersion: "0.1.0"
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: TR-07-V7-POLICY-ACCEPTANCE-IMPL
+  title: "Plan 07 — V7 Policy Acceptance Implementation"
+  description: "V7 source code: G0-G10 gate evaluator, promotion/rejection, threshold handling. Consume AlphaForge handoff. Domain: v7."
+  createdAt: "2026-06-25T00:00:00Z"
+  humanId: TrainingReady
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+    - v7/src/v7/__init__.py
+    - v7/src/v7/policy/__init__.py
+    - v7/src/v7/policy/gates.py
+    - v7/src/v7/policy/acceptance.py
+    - v7/src/v7/policy/thresholds.py
+    - v7/src/v7/policy/promotion.py
+    - v7/tests/test_policy_gates.py
+    - v7/tests/test_acceptance.py
+    - integration/tests/test_v7_accepts_alphaforge_handoff.py
+  forbiddenFiles:
+    - lib/market_data/binance/**
+    - simulation/engine/**
+    - alphaforge/src/alphaforge/training/**
+    - runtime/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+  - id: WS-TR07-01
+    title: Prerequisite Gate
+    objective: "Verify TR-05 and TR-06 PASS. V7 needs evidence."
+    implementation:
+      instructions:
+        - "[must] Read TR-05, TR-06 reports. If FAIL/HOLD, STOP. HARD GATE."
+    artifactPolicy:
+      class: documentation
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR07-01
+        description: "TR-05 and TR-06 passed before V7 implementation"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: manual_review
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [report]
+        requiredEvidence: [report]
+  - id: WS-TR07-02
+    title: Implement V7 Policy Acceptance Source
+    objective: "v7/src/v7/policy/ with gates.py, acceptance.py, thresholds.py, promotion.py."
+    implementation:
+      instructions:
+        - "[must] Create v7/src/v7/__init__.py with version marker."
+        - "[must] Create v7/src/v7/policy/gates.py: G0-G10 canonical gate evaluator."
+        - "[must] Create v7/src/v7/policy/acceptance.py: reads handoff, evaluates thresholds."
+        - "[must] Create v7/src/v7/policy/thresholds.py: mode-specific threshold definitions."
+        - "[must] Create v7/src/v7/policy/promotion.py: PASS/HOLD/FAIL per gate."
+        - "[must] No live trading. SCALP/AGGRESSIVE_SCALP HOLD until evidence."
+        - "[must] Tests with fixture handoff packages."
+      allowedFiles:
+        - v7/src/v7/__init__.py
+        - v7/src/v7/policy/__init__.py
+        - v7/src/v7/policy/gates.py
+        - v7/src/v7/policy/acceptance.py
+        - v7/src/v7/policy/thresholds.py
+        - v7/src/v7/policy/promotion.py
+    artifactPolicy:
+      class: runtime_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    integrationContract:
+      mode: consumer_or_export
+      reason: "V7 consumes AlphaForge handoff. Consumed by runtime."
+      exportSurfaces:
+        - id: EXP-TR07
+          path: v7/src/v7/policy/acceptance.py
+          requiredExports: [evaluate_handoff, PolicyDecision]
+    acceptanceCriteria:
+      - id: AC-TR07-02
+        description: "V7 policy modules exist and importable"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_exists
+          path: v7/src/v7/policy/gates.py
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+      - id: AC-TR07-03
+        description: "G0-G10 canonical gates only — old/wrong gates rejected"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-test-gates
+        requiredEvidence: [command, test_output]
+      - id: AC-TR07-04
+        description: "Acceptance engine produces PASS/HOLD/FAIL with reason codes"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-test-acceptance
+        requiredEvidence: [command, test_output]
+  - id: WS-TR07-03
+    title: Integration Test — V7 Accepts Handoff
+    objective: "Handoff fixture → V7 acceptance → valid policy decision."
+    implementation:
+      instructions:
+        - "[must] Create integration/tests/test_v7_accepts_alphaforge_handoff.py."
+        - "[must] Load fixture handoff. Run through V7. Verify decision structure."
+      allowedFiles: [integration/tests/test_v7_accepts_alphaforge_handoff.py]
+    artifactPolicy:
+      class: test_only
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR07-05
+        description: "Integration test: handoff → V7 decision with valid structure"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-test-integration
+        requiredEvidence: [command, test_output]
+commands:
+  exactAllowedCommands:
+    - id: CMD-test-gates
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:v7/src:. python3 -m pytest v7/tests/test_policy_gates.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-acceptance
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:v7/src:. python3 -m pytest v7/tests/test_acceptance.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-integration
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:v7/src:. python3 -m pytest integration/tests/test_v7_accepts_alphaforge_handoff.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: curl
+      pattern: "^curl\\s"
+      reason: "No network."
+    - command: profitability
+      pattern: "profitable|edge confirmed|live_ready|guaranteed"
+      reason: "V7 evaluates evidence, does not claim profitability."
+    - command: live trading
+      pattern: "create_order|market_order|live_order|execution"
+      reason: "V7 does policy acceptance, not execution."
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: [diff, source, command, test_output, report]
+  hashWhenAvailable: true
+gates:
+  sequence: [SchemaGate, LockGate, EvidenceGate, WiringGate, ExecGate, FinalGate]
+  verdicts: [PASS, HOLD, FAIL]
+  reasonCodes:
+    SchemaGate: [PLAN_SCHEMA_INVALID]
+    LockGate: [PLAN_NOT_LOCKED]
+    EvidenceGate: [REQUIRED_EVIDENCE_MISSING, PREREQUISITE_FAILED]
+    WiringGate: [ORPHAN_MODULE, FORBIDDEN_IMPORT_BOUNDARY]
+    ExecGate: [TEST_COMMAND_FAILED]
+    FinalGate: [FINAL_VALIDATION_FAILED, LIVE_PROMOTION_BLOCKED]
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: "PYTHONPATH=alphaforge/src:v7/src:. python3 -m pytest v7/tests/ integration/tests/test_v7_accepts_alphaforge_handoff.py -q"
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/training_ready/07_v7_policy_acceptance_impl.lock.json
+  hashes: [planHash, acceptanceCriteriaHash, artifactPolicyHash, commandPolicyHash, allowedFilesHash, forbiddenFilesHash]
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

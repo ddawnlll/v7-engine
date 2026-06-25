@@ -1,0 +1,236 @@
+planSpecVersion: "0.1.0"
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: TR-04-FUNDING-PAGINATION-RATE-LIMIT
+  title: "Plan 04 — Funding Pagination + Rate Limit + Cost Modeling"
+  description: >
+    Funding pagination over long ranges. Binance weight-aware rate limiter
+    with mock 429/retry/backoff. Funding-to-simulation cost adapter OR
+    explicit HOLD with documented blocker. Deterministic no-network tests.
+    Domain: lib + simulation.
+  createdAt: "2026-06-25T00:00:00Z"
+  humanId: TrainingReady
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+    - lib/market_data/binance/funding_service.py
+    - lib/market_data/binance/rate_limiter.py
+    - simulation/engine/funding.py
+    - simulation/tests/test_funding_costs.py
+    - lib/tests/test_funding_pagination.py
+    - lib/tests/test_rate_limiter.py
+  forbiddenFiles:
+    - alphaforge/src/**
+    - v7/src/**
+    - runtime/**
+    - models/**
+    - plans/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 2
+tasks:
+  - id: WS-TR04-01
+    title: Add Funding Pagination
+    objective: "Add time-range splitting to FundingService.fetch() — same pattern as KlinesService pagination."
+    implementation:
+      instructions:
+        - "[must] Edit lib/market_data/binance/funding_service.py — add pagination loop for long ranges."
+        - "[must] Split into 1000-record chunks. Advance by funding interval (8h). Backward-compatible."
+        - "[must] Write normalized funding records to data/normalized/ via StorageWriter."
+        - "[must] Tests in lib/tests/test_funding_pagination.py with mock client."
+      allowedFiles: [lib/market_data/binance/funding_service.py, lib/tests/test_funding_pagination.py]
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR04-01
+        description: "FundingService paginates long ranges correctly"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-funding-pagination}
+        requiredEvidence: [command, test_output]
+      - id: AC-TR04-02
+        description: "Paginated funding produces correct total count across chunks"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-funding-pagination}
+        requiredEvidence: [command, test_output]
+  - id: WS-TR04-02
+    title: Rate Limiter with 429/Retry/Backoff
+    objective: "Token-bucket rate limiter with mock 429/retry/backoff. Binance request-weight accounting."
+    implementation:
+      instructions:
+        - "[must] Create lib/market_data/binance/rate_limiter.py if not created by Plan 01."
+        - "[must] Token bucket with configurable max_weight_per_minute (default 1200)."
+        - "[must] Weight-aware: klines weight 1-10, funding weight 1."
+        - "[must] Mock 429 response triggers retry with exponential backoff."
+        - "[must] Tests verify rate limiting, 429 handling, deterministic behavior."
+      allowedFiles: [lib/market_data/binance/rate_limiter.py, lib/tests/test_rate_limiter.py]
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR04-03
+        description: "Rate limiter enforces weight limits with mock clock"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-rate-limiter}
+        requiredEvidence: [command, test_output]
+      - id: AC-TR04-04
+        description: "Rate limiter handles mock 429 with exponential backoff"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-rate-limiter}
+        requiredEvidence: [command, test_output]
+  - id: WS-TR04-03
+    title: Funding Cost Model Adapter
+    objective: "Implement funding cost model or document as explicit HOLD with exact blocker and release condition."
+    implementation:
+      instructions:
+        - "[must] Create simulation/engine/funding.py."
+        - "[must] If implementable now: funding_cost_r(notional, funding_rate, holding_bars)."
+        - "[must] If blocked: document exact blocker, prerequisite, and release condition in docstring."
+        - "[must] Mark funding_status=DEFERRED in simulation outputs if not implemented."
+        - "[must] Final classification: IMPLEMENTED, PARTIAL, or HOLD_FUNDING. Never silently mark complete."
+        - "[must] Tests in simulation/tests/test_funding_costs.py."
+      allowedFiles: [simulation/engine/funding.py, simulation/tests/test_funding_costs.py]
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR04-05
+        description: "Funding module exists — implemented or documented HOLD"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: file_exists, path: simulation/engine/funding.py, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [source]}
+        requiredEvidence: [source]
+      - id: AC-TR04-06
+        description: "Funding classification is IMPLEMENTED, PARTIAL, or HOLD — never blank"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: file_contains, path: simulation/engine/funding.py, patterns: ["IMPLEMENTED", "PARTIAL", "HOLD", "DEFERRED"], deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [source]}
+        requiredEvidence: [source]
+      - id: AC-TR04-07
+        description: "Funding pagination + rate limit tests pass (no network)"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-funding}
+        requiredEvidence: [command, test_output]
+      - id: AC-TR04-08
+        description: "Funding status correctly reported in simulation outputs"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-funding}
+        requiredEvidence: [command, test_output]
+commands:
+  exactAllowedCommands:
+    - id: CMD-test-funding-pagination
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_funding_pagination.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-rate-limiter
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_rate_limiter.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-funding
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/test_funding_costs.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: curl
+      pattern: "^curl\\s"
+      reason: "No network."
+    - command: xgboost
+      pattern: "xgboost|XGBClassifier|\\.fit\\("
+      reason: "No model training in funding plan."
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: [diff, source, command, test_output, report]
+  hashWhenAvailable: true
+gates:
+  sequence: [SchemaGate, LockGate, EvidenceGate, WiringGate, ExecGate, FinalGate]
+  verdicts: [PASS, HOLD, FAIL]
+  reasonCodes:
+    SchemaGate: [PLAN_SCHEMA_INVALID]
+    LockGate: [PLAN_NOT_LOCKED]
+    EvidenceGate: [REQUIRED_EVIDENCE_MISSING, FUNDING_MODEL_DEFERRED]
+    WiringGate: [ORPHAN_MODULE]
+    ExecGate: [TEST_COMMAND_FAILED]
+    FinalGate: [FINAL_VALIDATION_FAILED, FUNDING_HOLD_ACTIVE]
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 2
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_funding_pagination.py lib/tests/test_rate_limiter.py simulation/tests/test_funding_costs.py -q"
+  repairPacketFormat: {json: true, markdown: true}
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/training_ready/04_funding_pagination_rate_limit.lock.json
+  hashes: [planHash, acceptanceCriteriaHash, artifactPolicyHash, commandPolicyHash, allowedFilesHash, forbiddenFilesHash]
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

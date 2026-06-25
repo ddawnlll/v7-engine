@@ -1,0 +1,77 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+metadata:
+  report_id: TRAINING-READY-P1-BASELINE
+  report_type: IMPLEMENTATION_PLAN_RESULT
+  plan_id: TR-00-REALITY-GAP-BASELINE
+  task_id: ACCP-EXECUTE-TRAINING-READY-P1-DATA-SIM-OPS
+  generated_at: "2026-06-25T00:00:00Z"
+  execution_profile: dev
+
+verification_results:
+  - id: AC-TR00-01
+    description: "Reality Gap Audit report exists and is valid ACCP-YAML 2.0.0"
+    status: PASS
+    evidence: "reports/accp/v7_engine_reality_gap_audit.accp.yaml — exists, accp_version: 2.0.0"
+
+  - id: AC-TR00-02
+    description: "Audit reports training_ready: false"
+    status: PASS
+    evidence: "v7_engine_reality_gap_audit.accp.yaml: training_ready: false"
+
+  - id: AC-TR00-03
+    description: "Audit reports overall readiness percent match"
+    status: PASS
+    evidence: "overall_quant_pipeline_readiness_percent: 24.5"
+
+  - id: AC-TR00-04
+    description: "AlphaForge final validation report confirms PASS_WITH_HOLDS"
+    status: PASS
+    evidence: "reports/accp/alphaforge_final_validation.accp.yaml — result: 'PASS', PASS_WITH_HOLDS"
+
+  - id: AC-TR00-05
+    description: "CMD-verify-scaffold passes full non-Binance test suite"
+    status: PASS
+    evidence: "818 passed, 0 failed, 1 skipped (Binance excluded)"
+
+baseline_snapshot:
+  audit_report: "reports/accp/v7_engine_reality_gap_audit.accp.yaml"
+  overall_readiness_percent: 24.5
+  scaffold_completion_percent: 92
+  training_ready: false
+  backfill_ready: false
+  simulation_ready: PARTIAL
+  operationally_runnable: false
+  docs_code_aligned: true
+
+  holds_confirmed:
+    - id: HOLD-XGBOOST
+      description: "XGBoost training not yet performed — ml_pilot.py blocks GBM"
+      status: ACTIVE
+    - id: HOLD-FUNDING
+      description: "Funding cost model DEFERRED — simulation/engine/costs.py L9"
+      status: ACTIVE
+    - id: HOLD-LIVE-PROMOTION
+      description: "Live promotion not allowed — no real data pipeline"
+      status: ACTIVE
+    - id: HOLD-SCALP
+      description: "SCALP/AGGRESSIVE_SCALP threshold tuning deferred"
+      status: ACTIVE
+
+  verified_artifacts:
+    - plans/training_ready_plan_bundle.repaired.zip — EXISTS
+    - plans/training_ready/00_reality_gap_baseline.plan.yaml — EXISTS
+    - plans/training_ready/01_market_data_backfill_storage.plan.yaml — EXISTS
+    - plans/training_ready/02_simulation_market_data_adapter.plan.yaml — EXISTS
+    - plans/training_ready/03_pipeline_cli_makefile_runbook.plan.yaml — EXISTS
+    - plans/training_ready/04_funding_pagination_rate_limit.plan.yaml — EXISTS
+    - plans/training_ready/08_final_training_readiness_audit.plan.yaml — EXISTS
+
+  repair_report: "reports/accp/training_ready_plan_bundle_repair.accp.yaml — PASS, all 10 repairs applied"
+
+verdict:
+  status: PASS
+  baseline_verified: true
+  safe_to_proceed: true
+  note: "Baseline confirmed at 24.5%. All prerequisite plans exist. No stale prerequisites. Proceeding to implementation."

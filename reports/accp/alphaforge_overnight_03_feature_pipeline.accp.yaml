@@ -1,0 +1,18 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-OVERNIGHT-03-FEATURE-PIPELINE
+  report_type: SUBPLAN_EXECUTION
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-OVERNIGHT-AUTOPILOT-ALPHAFORGE-SEQUENTIAL-EXECUTION
+  plan_id: ALPHAFORGE-03-FEATURE-PIPELINE
+  priority: P1
+result: PASS
+scope_confirmation: "Plan 03 feature pipeline verified — 103/103 tests pass, FeatureGroup/FeatureMatrix imports clean, guards clean"
+targeted_tests:
+  - {command: "pytest alphaforge/tests/test_feature_pipeline.py", result: "103 passed", exit: 0}
+guard_scan: [{scan: "forbidden patterns", result: "CLEAN"}]
+files_changed: []
+failed_ACs: []
+remaining_holds: [funding_deferred, no_real_market_data, no_model_training]
+safe_next_step: "Proceed to plan 04"

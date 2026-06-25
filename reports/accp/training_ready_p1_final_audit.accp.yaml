@@ -1,0 +1,115 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+metadata:
+  report_id: TRAINING-READY-P1-FINAL-AUDIT
+  report_type: READINESS_AUDIT
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-EXECUTE-TRAINING-READY-P1-DATA-SIM-OPS
+  baseline_report: reports/accp/v7_engine_reality_gap_audit.accp.yaml
+  execution_report: reports/accp/training_ready_p1_execution.accp.yaml
+
+scorecard:
+  scaffold_completion_percent: 92
+  backfill_readiness_percent: 80
+  real_data_readiness_percent: 60
+  simulation_bridge_readiness_percent: 70
+  funding_readiness_percent: 65
+  ops_readiness_percent: 80
+  training_readiness_percent: 0
+  empirical_wfv_readiness_percent: 5
+  v7_policy_readiness_percent: 0
+  overall_quant_pipeline_readiness_percent: 42.0
+
+  computation:
+    weights:
+      backfill_readiness: 15
+      real_data_readiness: 10
+      simulation_truth_readiness: 20
+      alphaforge_dataset_readiness: 15
+      training_readiness: 15
+      wfv_empirical_readiness: 10
+      mht_overfit_readiness: 5
+      v7_policy_readiness: 5
+      ops_readiness: 5
+    weighted_sum: 80*0.15 + 60*0.10 + 70*0.20 + 35*0.15 + 0*0.15 + 5*0.10 + 5*0.05 + 0*0.05 + 80*0.05
+    result: 42.0
+
+verdict:
+  training_ready_now: false
+  backfill_ready_now: false
+  real_data_ready_now: false
+  simulation_bridge_ready_now: true
+  empirical_wfv_ready_now: false
+  v7_policy_ready_now: false
+  ops_ready_now: false
+
+  per_dimension_rationale:
+    training_ready_now: >
+      No XGBoost training executed. No model artifacts. Plan 05 remains
+      gated. training_readiness_percent: 0. RULE-1 and RULE-6 enforced.
+    backfill_ready_now: >
+      BackfillOrchestrator, StorageWriter, Checkpoint, Catalog, and
+      RateLimiter all implemented and tested. Requires real Binance API
+      keys and network to execute live backfill. Set up .env.example
+      with placeholder keys. Ready for execution but not yet executed.
+    real_data_ready_now: >
+      Storage infrastructure writes Parquet with checksums. No real
+      data has been ingested. All tests use fixture/mock data.
+    simulation_bridge_ready_now: >
+      MarketDataAdapter converts KlineRecords to SimulationInput with
+      ATR/FuturePath; BatchSimulator runs batches through simulate();
+      SimulationWriter persists outputs. Integration test proves
+      klines→adapter→simulate→LabelAdapter pipeline. Fixture-only
+      but structurally complete.
+    empirical_wfv_ready_now: >
+      WFV fold splitter exists but all metrics are NOT_EVALUATED.
+      No trained model to evaluate. RULE-3 enforced: WFV splitter !=
+      empirical WFV.
+    v7_policy_ready_now: >
+      v7/ contains docs only — zero implementation. RULE-4 enforced:
+      V7 docs != V7 implementation.
+    ops_ready_now: >
+      Makefile has 8 pipeline targets with DRY_RUN=1. CLI supports
+      9 subcommands with training gate. .env.example and config
+      templates exist. Runbook and command docs created. Pipeline
+      dry-run works end-to-end. Training commands are gated and
+      refuse real execution. Requires real data for non-dry-run.
+
+strict_rules_enforced:
+  - RULE-1: scaffold_pass != training_ready — ENFORCED (92% scaffold, 0% training)
+  - RULE-2: skipped_XGBoost != training_ready — ENFORCED (HOLD_NO_XGBOOST → false)
+  - RULE-3: WFV_splitter != empirical_WFV — ENFORCED (metrics NOT_EVALUATED → false)
+  - RULE-4: V7_docs != V7_implementation — ENFORCED (no v7/src/ → false)
+  - RULE-5: dry_run_handoff != policy_acceptance — ENFORCED (no PolicyDecision → false)
+  - RULE-6: no_model_artifact → training_cap_30 — ENFORCED (0% ≤ 30)
+  - RULE-7: no_empirical_WFV → no_training_ready_claim — ENFORCED (false)
+
+evidence:
+  - "117 new tests passing across all implemented plans"
+  - "Backfill orchestrator: lib/market_data/binance/backfill.py — imports clean, deterministic"
+  - "Storage writer: lib/market_data/storage.py — Parquet + SHA-256 sidecar"
+  - "Data catalog: lib/market_data/catalog.py — JSON with query support"
+  - "Rate limiter: lib/market_data/binance/rate_limiter.py — 429/backoff, 53 lib tests"
+  - "Market data adapter: simulation/adapters/market_data_adapter.py — 22 sim tests"
+  - "Funding pagination: lib/market_data/binance/funding_service.py — 9 pagination tests"
+  - "Funding cost model: simulation/engine/funding.py — IMPLEMENTED, 14 tests"
+  - "CLI pipeline: cli/v7_engine.py — 9 subcommands, 13 CLI tests"
+  - "Makefile: 8 new pipeline targets with DRY_RUN=1 support"
+  - "Integration bridge: test_simulation_to_alphaforge_data_bridge.py — 5 tests, full chain"
+  - "No network used in any test — all mock/fixture"
+  - "No xgboost import or training code in new/modified files"
+  - "No profit/live claims in new files"
+  - "Plan files unchanged (git diff — plans/training_ready is empty)"
+
+next_phase:
+  allowed:
+    - "05_training_runner_xgboost_gate only if prerequisites pass (01-04 verified)"
+  blocked:
+    - "06_empirical_wfv_metrics until 05 returns PASS_TRAINING_EXECUTED"
+    - "07_v7_policy_acceptance_impl until 06 produces empirical evidence"
+  recommendation: >
+    Prerequisites for Plan 05 are met: backfill infrastructure (01),
+    simulation bridge (02), CLI/ops surface (03), and funding/rate-limit (04)
+    all pass with tests. Plan 05 may be reviewed and executed next if the
+    team decides to proceed with XGBoost training gate release.

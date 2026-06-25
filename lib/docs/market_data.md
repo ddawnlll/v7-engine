@@ -14,6 +14,11 @@ Only the raw data fetching layer is shared. The *interpretation* of market data 
 | Market data service | `lib/market_data/binance/market_data_service.py` | Orchestration: multi-symbol, cache-aware, quality reports |
 | Standard schema | `lib/market_data/contracts.py` | KlineRecord, MarketDataResult, DataQualityReport |
 | Quality checks | `lib/market_data/quality.py` | Gap detection, duplicate detection, completeness |
+| Rate limiter | `lib/market_data/binance/rate_limiter.py` | Token-bucket rate limiter (Binance weight-aware) |
+| Checkpoint | `lib/market_data/binance/checkpoint.py` | JSON checkpoint save/resume for backfill |
+| Storage writer | `lib/market_data/storage.py` | Parquet writer with SHA-256 checksum sidecars |
+| Data catalog | `lib/market_data/catalog.py` | JSON catalog tracking ingested symbol/interval/ranges |
+| Backfill orchestrator | `lib/market_data/binance/backfill.py` | Ties all components into backfill workflow |
 
 ## Kline Schema
 
@@ -35,6 +40,34 @@ class KlineRecord:
     source: str
     is_closed: bool
 ```
+
+## Backfill Architecture
+
+```
+BackfillOrchestrator
+  ├── KlinesService        (fetch klines with pagination)
+  ├── FundingService       (fetch funding rates)
+  ├── BinanceRateLimiter   (weight-based rate limiting)
+  ├── BackfillCheckpoint   (resume interrupted backfills)
+  ├── StorageWriter        (write raw + normalized Parquet + .sha256)
+  └── DataCatalog          (track what's been ingested)
+```
+
+### File naming
+
+```
+data/raw/{SYMBOL}/{SYMBOL}_{interval}_{start_ms}_{end_ms}.parquet
+data/normalized/{SYMBOL}/{SYMBOL}_{interval}_{start_ms}_{end_ms}.parquet
+data/normalized/{SYMBOL}/funding_{SYMBOL}_{start_ms}_{end_ms}.parquet
+```
+
+Each Parquet has a `.sha256` sidecar for integrity verification.
+
+### Checkpoint resume
+
+The `BackfillCheckpoint` records completed (symbol, interval, time_range)
+combinations.  Before backfilling a range the orchestrator checks the
+checkpoint -- already-completed ranges are skipped.
 
 ## Consumption Pattern
 

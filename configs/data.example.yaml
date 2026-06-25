@@ -1,0 +1,30 @@
+# =============================================================================
+# V7 Engine — Data Configuration (example)
+# =============================================================================
+# Copy to configs/data.yaml and customise.
+#
+#   cp configs/data.example.yaml configs/data.yaml
+# =============================================================================
+
+# ── Default symbols ───────────────────────────────────────────────
+symbols:
+  - BTCUSDT
+  - ETHUSDT
+
+# ── Timeframe intervals ───────────────────────────────────────────
+intervals:
+  - 4h
+
+# ── Lookback configuration ────────────────────────────────────────
+lookback:
+  # Number of bars to fetch per interval
+  bars: 1000
+  # Fallback start date if bars-based range cannot be determined
+  start: "2024-01-01"
+
+# ── Data storage ──────────────────────────────────────────────────
+storage:
+  # Root directory for raw market data
+  root: "./data/market"
+  # Format: parquet | csv
+  format: parquet

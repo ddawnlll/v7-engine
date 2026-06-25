@@ -1,0 +1,406 @@
+planSpecVersion: "0.1.0"
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: TR-01-MARKET-DATA-BACKFILL-STORAGE
+  title: "Plan 01 — Market Data Backfill + Storage"
+  description: >
+    Implement Binance backfill orchestrator with raw/normalized kline
+    and funding data persistence to data/raw/ and data/normalized/.
+    Add pagination with resume/checkpoint, storage writer, and data
+    catalog. Expose testable Python module contract — CLI command surface
+    owned by Plan 03. Domain: lib. Does NOT own labels, training, V7
+    policy, or Makefile.
+  createdAt: "2026-06-25T00:00:00Z"
+  humanId: TrainingReady
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+    - lib/market_data/binance/backfill.py
+    - lib/market_data/binance/checkpoint.py
+    - lib/market_data/binance/rate_limiter.py
+    - lib/market_data/storage.py
+    - lib/market_data/catalog.py
+    - lib/tests/test_market_data_backfill.py
+    - lib/tests/test_market_data_storage.py
+    - lib/tests/test_market_data_checkpoint.py
+    - lib/tests/test_market_data_catalog.py
+    - lib/tests/test_rate_limiter.py
+    - integration/tests/test_mock_backfill_writes_outputs.py
+    - lib/docs/market_data.md
+    - data/raw/**
+    - data/normalized/**
+  forbiddenFiles:
+    - Makefile
+    - simulation/**
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - v7/**
+    - runtime/**
+    - interface/**
+    - models/**
+    - artifacts/**
+    - contracts/fixtures/**
+    - reports/accp/**
+    - plans/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+  - id: WS-TR01-01
+    title: Implement Binance Backfill Orchestrator
+    objective: >
+      Build a backfill orchestrator that iterates over symbols and
+      intervals, uses existing KlinesService/FundingService with
+      pagination, and supports resume from checkpoint. No real network
+      in tests — use mock BinanceClient responses.
+    implementation:
+      instructions:
+        - "[must] Create lib/market_data/binance/backfill.py with BackfillOrchestrator class."
+        - "[must] Accept symbol list, interval list, start/end timestamps, checkpoint path."
+        - "[must] Use existing KlinesService and FundingService — do NOT duplicate pagination."
+        - "[must] Checkpoint after each symbol/interval completion — write progress markers."
+        - "[must] Emit structured logging with symbol/interval/progress/counts."
+        - "[must] Handle BinanceClientError gracefully — log and continue."
+        - "[must] No network in tests — test with mock client returning fixture klines."
+      allowedFiles: [lib/market_data/binance/backfill.py, lib/market_data/binance/checkpoint.py]
+      expectedOutputs: [lib/market_data/binance/backfill.py, lib/market_data/binance/checkpoint.py]
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Consumed by Plan 03 CLI/Makefile. Exports BackfillOrchestrator."
+      exportSurfaces:
+        - id: EXP-TR01-backfill
+          path: lib/market_data/binance/backfill.py
+          requiredExports: [BackfillOrchestrator]
+      entrypoints:
+        - id: ENTRY-TR01-backfill
+          path: lib/market_data/binance/backfill.py
+          kind: library_module
+    acceptanceCriteria:
+      - id: AC-TR01-01
+        description: "BackfillOrchestrator exists and is importable"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: file_exists, path: lib/market_data/binance/backfill.py, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [source]}
+        requiredEvidence: [source]
+      - id: AC-TR01-02
+        description: "BackfillOrchestrator handles mock symbols/intervals without network"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-backfill}
+        requiredEvidence: [command, test_output]
+      - id: AC-TR01-03
+        description: "Checkpoint saves and resumes correctly across mock runs"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-checkpoint}
+        requiredEvidence: [command, test_output]
+      - id: AC-TR01-04
+        description: "Mock backfill writes raw klines to data/raw/{symbol}/"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-mock-backfill-output}
+        requiredEvidence: [command, test_output]
+      - id: AC-TR01-05
+        description: "Mock backfill writes normalized klines to data/normalized/{symbol}/"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-mock-backfill-output}
+        requiredEvidence: [command, test_output]
+  - id: WS-TR01-02
+    title: Implement Raw/Normalized Storage Writer
+    objective: >
+      Implement storage.py with Parquet writers for raw klines (→ data/raw/)
+      and normalized klines (→ data/normalized/). SHA-256 checksums.
+    implementation:
+      instructions:
+        - "[must] Create lib/market_data/storage.py with StorageWriter class."
+        - "[must] write_raw_klines() → data/raw/{symbol}/{symbol}_{interval}_{start}_{end}.parquet."
+        - "[must] write_normalized_klines() → data/normalized/{symbol}/{symbol}_{interval}_{start}_{end}.parquet."
+        - "[must] write_funding() → data/normalized/{symbol}/funding_{symbol}_{start}_{end}.parquet."
+        - "[must] SHA-256 checksum sidecar alongside each output file."
+        - "[must] Base paths configurable — no hardcoded absolute paths."
+        - "[must] Tests write to temp dirs — never pollute data/ during test."
+      allowedFiles: [lib/market_data/storage.py, lib/tests/test_market_data_storage.py]
+      expectedOutputs: [lib/market_data/storage.py]
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Consumed by BackfillOrchestrator and Plan 03 CLI."
+      exportSurfaces:
+        - id: EXP-TR01-storage
+          path: lib/market_data/storage.py
+          requiredExports: [StorageWriter]
+    acceptanceCriteria:
+      - id: AC-TR01-06
+        description: "StorageWriter exists with raw, normalized, and funding write methods"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: file_exists, path: lib/market_data/storage.py, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [source]}
+        requiredEvidence: [source]
+      - id: AC-TR01-07
+        description: "StorageWriter produces deterministic Parquet output with checksum sidecar"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-storage}
+        requiredEvidence: [command, test_output]
+      - id: AC-TR01-08
+        description: "Storage paths configurable — no hardcoded absolute paths"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: file_contains, path: lib/market_data/storage.py, patterns: ["base_dir", "data_dir", "config", "Path"], deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [source]}
+        requiredEvidence: [source]
+  - id: WS-TR01-03
+    title: Implement Data Catalog
+    objective: "Data catalog recording symbol, interval, timestamps, row_count, checksum, ingested_at. JSON on disk. Supports query."
+    implementation:
+      instructions:
+        - "[must] Create lib/market_data/catalog.py with DataCatalog class."
+        - "[must] Record symbol, interval, start_ts, end_ts, row_count, checksum, ingested_at."
+        - "[must] JSON catalog per data/ directory tree."
+        - "[must] Support query by symbol, interval, date range."
+        - "[must] Tests use temp dirs only."
+      allowedFiles: [lib/market_data/catalog.py, lib/tests/test_market_data_catalog.py]
+      expectedOutputs: [lib/market_data/catalog.py]
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR01-09
+        description: "DataCatalog records entries with checksums and supports query"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-catalog}
+        requiredEvidence: [command, test_output]
+  - id: WS-TR01-04
+    title: Implement Rate Limiter
+    objective: "Token-bucket rate limiter with Binance weight awareness. Mock-clock testable. No network."
+    implementation:
+      instructions:
+        - "[must] Create lib/market_data/binance/rate_limiter.py."
+        - "[must] Token bucket. Configurable max_weight_per_minute (default 1200)."
+        - "[must] Weight-aware: klines weight 1-10, funding weight 1."
+        - "[must] Tests verify rate limiting with mock clock."
+      allowedFiles: [lib/market_data/binance/rate_limiter.py, lib/tests/test_rate_limiter.py]
+      expectedOutputs: [lib/market_data/binance/rate_limiter.py]
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR01-10
+        description: "Rate limiter enforces weight limits with mock clock"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: false, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-rate-limiter}
+        requiredEvidence: [command, test_output]
+  - id: WS-TR01-05
+    title: Integration Test — Mock Backfill Writes Outputs
+    objective: "Full mock backfill pipeline: symbols → orchestrator → storage → catalog. Verify output files exist with correct shape."
+    implementation:
+      instructions:
+        - "[must] Create integration/tests/test_mock_backfill_writes_outputs.py."
+        - "[must] Mock BinanceClient → BackfillOrchestrator for 2 symbols × 1 interval."
+        - "[must] Verify raw/*.parquet written."
+        - "[must] Verify normalized/*.parquet written."
+        - "[must] Verify checksum sidecar written."
+        - "[must] Verify catalog updated."
+        - "[must] No real network, no Binance API."
+      allowedFiles: [integration/tests/test_mock_backfill_writes_outputs.py]
+      expectedOutputs: [integration/tests/test_mock_backfill_writes_outputs.py]
+    artifactPolicy:
+      class: test_only
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    integrationContract:
+      mode: required
+      reason: "Integration test proving backfill writes real output artifacts."
+      integrationPoints:
+        - id: IP-TR01
+          path: integration/tests/test_mock_backfill_writes_outputs.py
+    acceptanceCriteria:
+      - id: AC-TR01-11
+        description: "Mock backfill integration test: orchestrator → storage → catalog → outputs verified"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification: {type: test_output, deterministic: true, canSatisfyFinalGate: true, advisoryOnly: false, evidenceRefs: [command, test_output], commandRef: CMD-test-mock-backfill-output}
+        requiredEvidence: [command, test_output]
+commands:
+  exactAllowedCommands:
+    - id: CMD-test-backfill
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_market_data_backfill.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-checkpoint
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_market_data_checkpoint.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-storage
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_market_data_storage.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-catalog
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_market_data_catalog.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-rate-limiter
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_rate_limiter.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-mock-backfill-output
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_mock_backfill_writes_outputs.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-lib-all
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: curl
+      pattern: "^curl\\s"
+      reason: "No external network — all tests use mock clients."
+    - command: wget
+      pattern: "^wget\\s"
+      reason: "No external downloads."
+    - command: xgboost
+      pattern: "xgboost|XGBClassifier|XGBRegressor|\\.fit\\(|import xgboost"
+      reason: "No model training in backfill plan. Domain: lib."
+    - command: live trading
+      pattern: "create_order|market_order|live_order|binance.*api_key"
+      reason: "No live trading."
+    - command: cross-domain write
+      pattern: "Write.*simulation/|Write.*alphaforge/"
+      reason: "Domain boundary — lib does not own simulation or alphaforge."
+    - command: Makefile modification
+      pattern: "Write.*Makefile"
+      reason: "Makefile owned by Plan 03. Plan 01 exposes Python module contract only."
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: [diff, source, wiring, command, test_output, report]
+  hashWhenAvailable: true
+gates:
+  sequence: [SchemaGate, LockGate, EvidenceGate, WiringGate, ExecGate, FinalGate]
+  verdicts: [PASS, HOLD, FAIL]
+  reasonCodes:
+    SchemaGate: [PLAN_SCHEMA_INVALID]
+    LockGate: [PLAN_NOT_LOCKED]
+    EvidenceGate: [REQUIRED_EVIDENCE_MISSING, BACKFILL_OUTPUT_MISSING]
+    WiringGate: [ORPHAN_MODULE, EXPORT_SURFACE_MISSING, FORBIDDEN_IMPORT_BOUNDARY]
+    ExecGate: [TEST_COMMAND_FAILED, NO_TESTS_FOUND, NETWORK_USED_WHEN_FORBIDDEN]
+    FinalGate: [FINAL_VALIDATION_FAILED, REPORT_MISSING]
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_market_data_backfill.py lib/tests/test_market_data_storage.py lib/tests/test_market_data_catalog.py lib/tests/test_rate_limiter.py integration/tests/test_mock_backfill_writes_outputs.py -q"
+  repairPacketFormat: {json: true, markdown: true}
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/training_ready/01_market_data_backfill_storage.lock.json
+  hashes: [planHash, acceptanceCriteriaHash, artifactPolicyHash, commandPolicyHash, allowedFilesHash, forbiddenFilesHash]
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

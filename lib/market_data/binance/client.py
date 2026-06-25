@@ -19,8 +19,22 @@ _BASE_URL = "https://api.binance.com"
 
 
 class BinanceClientError(Exception):
-    """Raised on Binance API errors (non-2xx or parse failures)."""
-    pass
+    """Raised on Binance API errors (non-2xx or parse failures).
+
+    Attributes:
+        status_code: HTTP status code if available (e.g. 429 for rate limit).
+        response_body: Raw response text if available.
+    """
+
+    def __init__(
+        self,
+        message: str = "",
+        status_code: Optional[int] = None,
+        response_body: Optional[str] = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.response_body = response_body
 
 
 class BinanceClient:
@@ -114,6 +128,14 @@ class BinanceClient:
                 return resp.json()
             except requests.RequestException as e:
                 last_exc = e
+                status_code = None
+                response_body = None
+                if e.response is not None:
+                    status_code = e.response.status_code
+                    try:
+                        response_body = e.response.text
+                    except Exception:
+                        pass
                 logger.warning(
                     "Binance GET %s failed (attempt %d/%d): %s",
                     path, attempt + 1, self._max_retries, e,
@@ -122,4 +144,8 @@ class BinanceClient:
                     time.sleep(self._retry_delay * (2 ** attempt))
                 continue
 
-        raise BinanceClientError(f"Binance GET {path} failed: {last_exc}") from last_exc
+        raise BinanceClientError(
+            f"Binance GET {path} failed: {last_exc}",
+            status_code=status_code,
+            response_body=response_body,
+        ) from last_exc

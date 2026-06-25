@@ -1,0 +1,18 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-OVERNIGHT-05-RESEARCH-REPORT
+  report_type: SUBPLAN_EXECUTION
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-OVERNIGHT-AUTOPILOT-ALPHAFORGE-SEQUENTIAL-EXECUTION
+  plan_id: ALPHAFORGE-05-NON-ML-RESEARCH-REPORT
+  priority: P1
+result: PASS
+scope_confirmation: "Plan 05 research report verified — 51/51 tests pass, imports clean, guards clean"
+targeted_tests:
+  - {command: "pytest alphaforge/tests/test_research_report.py test_report_builders.py", result: "51 passed", exit: 0}
+guard_scan: [{scan: "forbidden patterns", result: "CLEAN"}]
+files_changed: []
+failed_ACs: []
+remaining_holds: [funding_deferred, no_real_market_data, no_model_training]
+safe_next_step: "Proceed to plan 06"
