@@ -1,0 +1,70 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report_id: "issue-11-v7-policy-acceptance"
+issue: "#11 TR-07 V7 Policy Acceptance"
+timestamp_utc: "2026-06-26T00:00:00Z"
+author: "Claude Code (dawn_ll)"
+
+result: PASS
+scope_confirmation:
+  - "Created v7/ Python package with 6 modules"
+  - "Implemented SWING mode end-to-end pipeline"
+  - "93 unit/integration tests — all green"
+  - "Validated against contract schemas (analysis_request, analysis_result, decision_event)"
+  - "Wired simulation/engine/costs for cost computation (funding_cost_r included)"
+  - "SCALP and AGGRESSIVE_SCALP correctly blocked by HOLD status"
+  - "G0-G10 gate framework with promote/hold semantics"
+
+files_changed:
+  created:
+    - v7/__init__.py
+    - v7/builder.py
+    - v7/validator.py
+    - v7/router.py
+    - v7/policy.py
+    - v7/gates/__init__.py
+    - v7/gates/evaluator.py
+    - v7/tests/__init__.py
+    - v7/tests/test_builder.py
+    - v7/tests/test_validator.py
+    - v7/tests/test_router.py
+    - v7/tests/test_policy.py
+    - v7/tests/test_gates.py
+    - v7/tests/test_e2e_swing.py
+    - reports/accp/issue-11.yaml
+
+decisions_locked:
+  - SWING mode min_confidence=0.55 (LOCKED_INITIAL_BASELINE)
+  - SWING mode min_expected_r=0.20 (LOCKED_INITIAL_BASELINE)
+  - SWING mode stop_multiplier=2.0, target_multiplier=2.5
+  - Policy gate order: confidence -> cost -> risk -> regime
+  - Mode lock: only LOCKED_INITIAL_BASELINE modes can pass policy
+  - G10 Live Readiness: NOT_APPLICABLE for baseline (paper/shadow only)
+
+remaining_holds:
+  - SCALP: HOLD — empirical evidence required (walk-forward OOS, fee/slippage stress, funding validation)
+  - AGGRESSIVE_SCALP: HOLD — empirical evidence required (cost-adjusted expectancy, latency impact, order-book analysis)
+  - Regime gate: placeholder (always passes) — needs real detector
+  - G1-G5, G7-G8 gates: placeholder implementations — need real evidence data
+  - G10: NOT_APPLICABLE until live deployment readiness
+
+safe_next_step:
+  - "Audit: verify all 93 tests pass in CI, review domain boundary compliance"
+  - "Close issue #11 with commit hash + ACCP report + test output"
+  - "Next: TR-08 (audit and live-readiness preparation)"
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest v7/tests/ -v"
+  - "PYTHONPATH=. python3 -c 'from simulation.engine.costs import total_cost_r; print(\"costs OK\")'"
+  - "PYTHONPATH=. python3 -c 'from v7.policy import evaluate_policy; print(\"policy OK\")'"
+
+evidence:
+  test_count: 93
+  test_passed: 93
+  test_failed: 0
+  contract_schema_validation: PASS
+  simulation_cost_wiring: PASS
+  swing_e2e_pipeline: PASS
+  scalp_hold_block: PASS
+  aggressive_scalp_hold_block: PASS
+  commit_hash: "733f6168c1d03f40fd7e9e1799ae3f35a94479a8"
