@@ -3,10 +3,10 @@
 Exports:
     FeatureMatrix  — structured container for feature arrays
     compute_features — main pipeline entry point
-    FeatureGroup    — enumeration of feature groups (LEAD_LAG implemented, wiring DEFERRED)
+    FeatureGroup    — enumeration of feature groups (LEAD_LAG DEFERRED)
     FEATURE_GROUP_MAP — mapping from FeatureGroup to compute function names
     PIPELINE_VERSION — semantic version of the pipeline implementation
-    compute_lead_lag_group — Lead-Lag cross-sectional group compute (HOLD-LEAD-LAG)
+    OrderBook group — microstructure-aware features (AGGRESSIVE_SCALP primary)
 """
 
 from alphaforge.features.pipeline import (
@@ -17,20 +17,23 @@ from alphaforge.features.pipeline import (
     compute_features,
 )
 
-# Lead-Lag cross-sectional features (implemented, wiring DEFERRED — P0.9B)
-from alphaforge.features.lead_lag import (
-    LL_CORRELATION_WINDOW,
-    LL_MAX_LAG,
-    LL_MIN_VALID,
-    LL_PERIODS_PER_YEAR,
-    LL_VOLATILITY_WINDOW,
-    compute_correlation_pairwise,
-    compute_lead_lag_group,
-    compute_lead_lag_score,
-    compute_tf_alignment,
+# OrderBook microstructure features (AGGRESSIVE_SCALP primary, all modes supported)
+from alphaforge.features.orderbook import (
+    AGGRESSIVE_AMIHUD_WINDOW,
+    AGGRESSIVE_IMBALANCE_WINDOW,
+    AGGRESSIVE_INTENSITY_WINDOW,
+    AGGRESSIVE_PERIODS_PER_YEAR,
+    AGGRESSIVE_SPREAD_WINDOW,
+    DEFAULT_AMIHUD_WINDOW,
+    DEFAULT_ORDERBOOK_WINDOW,
+    compute_amihud_illiquidity_numpy,
+    compute_orderbook_group,
+    compute_spread_pct,
+    compute_trade_intensity,
+    compute_volume_imbalance,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __authority__ = "alphaforge"
 __domain__ = "feature_pipeline"
 
@@ -40,14 +43,17 @@ __all__ = [
     "FeatureGroup",
     "FEATURE_GROUP_MAP",
     "PIPELINE_VERSION",
-    # Lead-Lag cross-sectional features (HOLD-LEAD-LAG)
-    "compute_lead_lag_group",
-    "compute_tf_alignment",
-    "compute_correlation_pairwise",
-    "compute_lead_lag_score",
-    "LL_CORRELATION_WINDOW",
-    "LL_MAX_LAG",
-    "LL_MIN_VALID",
-    "LL_PERIODS_PER_YEAR",
-    "LL_VOLATILITY_WINDOW",
+    # OrderBook group (microstructure proxies, AGGRESSIVE_SCALP primary)
+    "compute_orderbook_group",
+    "compute_spread_pct",
+    "compute_volume_imbalance",
+    "compute_trade_intensity",
+    "compute_amihud_illiquidity_numpy",
+    "DEFAULT_ORDERBOOK_WINDOW",
+    "DEFAULT_AMIHUD_WINDOW",
+    "AGGRESSIVE_SPREAD_WINDOW",
+    "AGGRESSIVE_IMBALANCE_WINDOW",
+    "AGGRESSIVE_INTENSITY_WINDOW",
+    "AGGRESSIVE_AMIHUD_WINDOW",
+    "AGGRESSIVE_PERIODS_PER_YEAR",
 ]

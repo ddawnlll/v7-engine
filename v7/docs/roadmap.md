@@ -43,10 +43,10 @@ Documentation authority is largely complete for:
 **P0.7A-C Lock Status (2026-06-18):**
 - **P0.7A — Simulation MVP:** ✅ PASS. Simulation truth authority has minimal viable implementation (contracts, engine, exits, costs, golden tests, import boundary). 222 tests pass. `SimulationProfile` fixture exists.
 - **P0.7B — CI Enforcement:** ✅ PASS (CI_FIRST_GREEN_RUN_HOLD). `.github/workflows/ci.yml` enforces contract checks, boundary checks, and full test suite on push/PR. First GitHub green run pending verification.
-- **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation. SCALP and AGGRESSIVE_SCALP thresholds are **LOCKED_INITIAL_BASELINE** (resolved via #14 — mode_windows.py). Recalibrate after first empirical evidence.
+- **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation. SCALP and AGGRESSIVE_SCALP thresholds are **HOLD** pending empirical evidence.
 - **P0.x — Policy Critic RL Research:** ✅ PASS. Full research + codebase mapping (V7 pipeline, AlphaForge, Simulation, Contracts/Runtime) + literature review (offline RL methods, critic/calibration, reward design, finance RL failure modes) + grounded RL architecture recommendation completed. **LOCK_CANDIDATE** — design documented in `v7/docs/policy_critic/`. Open HOLDs (replay buffer, regret_r, funding, per-direction expected_R, synthesized features, conformal exchangeability) must be resolved before lock.
 
-**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with all three modes as LOCKED_INITIAL_BASELINE. Remaining holds are explicitly scoped (funding LOCKED_INITIAL_BASELINE, CI first green run hold, empirical recalibration required for all mode windows).
+**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode (LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding LOCKED_INITIAL_BASELINE, SCALP/AGGRESSIVE_SCALP HOLD, CI first green run hold).
 
 That means the next work should be implementation-led, not more concept invention. **Implementation starts with SWING as the secondary baseline/control mode — the safest, most lockable starting point. Primary business/research priority is SCALP and AGGRESSIVE_SCALP (see Mode Priority Alignment below).**
 
@@ -60,8 +60,8 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 | Mode | Business Priority | Research Priority | Threshold Status | AlphaForge Report Type | Promotion Readiness |
 |------|------------------|-------------------|-----------------|----------------------|---------------------|
-| SCALP | **PRIMARY** | **PRIMARY** | LOCKED_INITIAL_BASELINE (#14) | Primary research report | Baseline ready; recalibration required after first evidence |
-| AGGRESSIVE_SCALP | **PRIMARY** | **PRIMARY** | LOCKED_INITIAL_BASELINE (#14) | Primary research report | Baseline ready; recalibration required after first evidence |
+| SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| AGGRESSIVE_SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
 | SWING | SECONDARY_BASELINE | SECONDARY_BASELINE | LOCKED_INITIAL_BASELINE | Secondary baseline report | Baseline ready; recalibration required after first evidence |
 
 ### Key Principles
@@ -70,7 +70,7 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 2. **SWING is the SECONDARY_BASELINE / CONTROL mode.** SWING was locked first because it is safer, lower-noise, and easier to baseline — not because it is the primary product. It serves as a control anchor: if SWING fails, something is fundamentally wrong. If SWING works, it validates the architecture but does not validate SCALP or AGGRESSIVE_SCALP.
 
-3. **SCALP/AGGRESSIVE_SCALP are now LOCKED_INITIAL_BASELINE** (resolved via #14 — per-mode feature window configuration in `alphaforge/src/alphaforge/features/mode_windows.py`). These are conservative safe defaults. Recalibration is required after first walk-forward evidence. Fee, slippage, latency, data quality, overfit, and funding risks still require empirical validation before promotion beyond INITIAL_BASELINE.
+3. **HOLD on SCALP/AGGRESSIVE_SCALP means "empirical research required" — not "low priority."** Fee, slippage, latency, data quality, overfit, and funding risks make these modes harder to lock without evidence. Their HOLD status reflects research difficulty, not business importance.
 
 4. **Promotion-readiness and research-priority are independent dimensions.** SWING is more promotion-ready (LOCKED_INITIAL_BASELINE). SCALP and AGGRESSIVE_SCALP have higher business/research priority but require empirical evidence before threshold lock.
 
@@ -164,37 +164,6 @@ The mode implementation order (SWING first) must not be confused with business/r
 | EXPLICIT_GBM_BLOCK | alphaforge/gates | Post-training xgboost presence is expected; gate works as designed |
 
 **Evidence:** ACCP report at `reports/accp/issue-12.yaml`. Full test output archived in commit.
-
----
-
-## #43 — OrderBook Analyzer — Microstructure Proxy Features (2026-06-26)
-
-**Issue:** #43 — Order book analyzer for AGGRESSIVE_SCALP microstructure features.
-
-**What changed:**
-- New `OrderBookFeatureGroup` in `alphaforge/src/alphaforge/features/orderbook.py`
-- 4 OHLCV-based microstructure proxy features: spread_pct_N, volume_imbalance_N, trade_intensity_N, amihud_illiquidity_N
-- amihud_illiquidity_N bridged from `lib/indicators/microstructure` (list↔numpy conversion)
-- FeatureGroup.ORDERBOOK added to enum + FEATURE_GROUP_MAP + compute_features() pipeline
-- Pipeline feature count: 26 → 30, active groups: 6 → 7
-- 35 new tests + 103 updated existing = 138 tests passing
-
-**Design constraints (v0.2):**
-- OHLCV proxies only — no real order book data
-- numpy only (except lib/indicators bridge for Amihud)
-- All features are causal and deterministic
-- Window defaults: 10 bars (spread/imbalance/intensity), 15 bars (Amihud)
-
-**Lock status:**
-- ORDERBOOK feature group architecture: **LOCKABLE_WITH_HOLDS**
-- Window defaults (10, 15): **LOCKED_INITIAL_BASELINE** (SWING-compatible; AGGRESSIVE_SCALP tuning HOLD)
-
-**Remaining holds:**
-- ILLIQ values not calibrated against realized price impact (HOLD — empirical evidence)
-- Volume imbalance proxy not validated against tick-level data (HOLD — real order book required)
-- AGGRESSIVE_SCALP threshold tuning (HOLD — ongoing)
-
-**Evidence:** Commit `e591d47`. ACCP report at `reports/accp/issue-43.yaml`. 138/138 tests pass.
 
 ---
 
@@ -470,42 +439,11 @@ Do not collapse these into one vague “publish” step.
 
 **Remaining holds:**
 - No real profitability evidence (HOLD — requires simulation labels, features, training, WF, OOS)
-- SCALP/AGGRESSIVE_SCALP thresholds: LOCKED_INITIAL_BASELINE (resolved #14 — mode_windows.py with conservative default windows; recalibrate after first walk-forward evidence)
+- SCALP/AGGRESSIVE_SCALP thresholds (HOLD — empirical backtest evidence required)
 - XGBoost training (DEFERRED to P0.9B/P0.9C)
 - Real data ingestion (DEFERRED to P0.9B)
 
 **Safe next step:** V7-P0.9B AlphaForge deterministic data-label-feature pipeline
-
----
-
-## Issue #15 — Lead-Lag Cross-Sectional Feature Group (2026-06-26)
-
-**What changed:**
-- Created `alphaforge/src/alphaforge/features/lead_lag.py` — 3 cross-sectional features:
-  - `tf_alignment`: volatility alignment score between primary and context symbol [-1, 1]
-  - `correlation_pairwise`: rolling pairwise correlation over lookback window [-1, 1]
-  - `lead_lag_score`: lead/lag detection via cross-correlation at multiple lag offsets [-1, 1]
-- Extended `FeatureGroup` enum: LEAD_LAG now mapped in FEATURE_GROUP_MAP
-- Updated `__init__.py` exports and `pipeline.py` metadata
-- 48 tests in `alphaforge/tests/test_lead_lag.py` (validation, unit, group, determinism, causality, cross-sectional contract, NaN handling, import boundaries)
-
-**Lock status:**
-- Lead-Lag features: HOLD-LEAD-LAG — implemented but NOT wired into `compute_features()` main pipeline
-- Wiring blocker: P0.9B cross-sectional data pipeline (must deliver aligned multi-symbol OHLCV)
-- Individual functions: callable directly with multi-symbol OHLCV data
-
-**Remaining holds:**
-- hold_id: "HOLD-LEAD-LAG"
-  domain: "alphaforge/features"
-  description: "Cross-sectional data pipeline (P0.9B) required to wire compute_lead_lag_group() into the main compute_features() pipeline"
-  release_conditions:
-    (a) Cross-sectional data pipeline available — delivers aligned multi-symbol OHLCV
-    (b) Correlation computation across symbols validated against benchmarks
-    (c) Timeframe alignment logic tested with multi-timeframe fixtures
-    (d) lead_lag_score validated against academic lead-lag detection methods
-    (e) FEATURE_GROUP_MAP[FeatureGroup.LEAD_LAG] wired into compute_features()
-
-**Safe next step:** Implement P0.9B cross-sectional data pipeline, then wire lead-lag features into the main feature pipeline.
 
 ---
 
