@@ -108,6 +108,26 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
+## P1.3 — Mode-Specific Label Semantics (ISSUE #103) DONE (2026-06-26)
+
+**What changed:** Created `v7/labels/` module with frozen `LabelSpec` dataclass encoding mode-specific label configuration per `v7/docs/pipeline/labels.md`.
+
+**Key deliverables:**
+- `v7/labels/contracts.py`: `LabelSpec` frozen dataclass with `mode`, `primary_interval`, `label_window_bars`, `min_edge_r`, `min_net_r_for_success`, `max_mae_r_for_success`, `min_mfe_r_for_good_exit`, `max_time_to_mfe_bars`, `allow_no_trade_on_ambiguity`, `no_trade_default`
+- Three mode specs: SWING (4h/24 bars/0.25 edge), SCALP (1h/48 bars/0.15 edge), AGGRESSIVE_SCALP (15m/96 bars/0.10 edge)
+- `validate_edge_threshold()` and `validate_label_window()` instance methods
+- `get_label_spec(mode)` fail-fast lookup helper
+- `v7/__init__.py` updated to document labels module
+- 17 tests pass (mode spec verification, edge/window validation, lookup, immutability, ordering)
+
+**Lock status:** LabelSpec contracts are **LOCKED_INITIAL_BASELINE**. The configuration values are ready for implementation; actual label generation from SimulationOutput is deferred until simulation truth layer matures.
+
+**Remaining holds:** SCALP/AGGRESSIVE_SCALP thresholds remain HOLD pending empirical evidence.
+
+**Evidence:** ACCP report at `reports/accp/issue-103.yaml`. 17/17 tests pass. `v7/tests/` 110/110 pass (no regressions).
+
+---
+
 ## TR-08 — Final Training Readiness Audit — v0.1 Milestone COMPLETE (2026-06-26)
 
 **Issue:** #12 — Final audit gate. Verify all TR-01 through TR-07 gates have evidence, run full test suite, update roadmap.

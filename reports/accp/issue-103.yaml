@@ -1,0 +1,59 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report_id: "issue-103-v7-label-semantics"
+issue: "#103 V7 Phase 3 — Mode-specific Label Semantics"
+timestamp_utc: "2026-06-26T00:00:00Z"
+author: "Claude Code (dawn_ll)"
+
+result: PASS
+scope_confirmation:
+  - "Created v7/labels/ module with __init__.py and contracts.py"
+  - "Defined frozen LabelSpec dataclass with mode-specific label configuration"
+  - "SWING: 4h primary, label_window=24 bars, min_edge_r=0.25"
+  - "SCALP: 1h primary, label_window=48 bars, min_edge_r=0.15"
+  - "AGGRESSIVE_SCALP: 15m primary, label_window=96 bars, min_edge_r=0.10"
+  - "Implemented validate_edge_threshold() and validate_label_window() validation"
+  - "get_label_spec() helper with KeyError on unknown mode"
+  - "Updated v7/__init__.py to expose labels module"
+  - "17 tests pass — all mode specs, edge validation, window validation, lookup, immutability, ordering"
+  - "Full v7 test suite: 110 tests pass (no regressions)"
+  - "Domain import boundary clean — v7/labels/ only imports stdlib"
+
+files_changed:
+  created:
+    - v7/labels/__init__.py
+    - v7/labels/contracts.py
+    - v7/tests/test_labels.py
+  modified:
+    - v7/__init__.py
+  created:
+    - reports/accp/issue-103.yaml
+
+decisions_locked:
+  - LabelSpec is frozen (immutable) — mode configs cannot be mutated at runtime
+  - Label window ordering: AGGRESSIVE_SCALP(96) > SCALP(48) > SWING(24) — faster modes need more bars
+  - Edge threshold ordering: AGGRESSIVE_SCALP(0.10) < SCALP(0.15) < SWING(0.25) — faster modes accept lower edges
+  - SCALP and AGGRESSIVE_SCALP allow no_trade_on_ambiguity; SWING does not
+  - AGGRESSIVE_SCALP defaults no_trade_default=True for micro-structure uncertainty
+
+remaining_holds:
+  - SCALP thresholds: HOLD — empirical evidence required (walk-forward OOS, fee/slippage stress)
+  - AGGRESSIVE_SCALP thresholds: HOLD — empirical evidence required (cost-adjusted expectancy, latency)
+  - Actual label generation from SimulationOutput: NOT YET IMPLEMENTED (this task defines the contracts only)
+  - Real label interpretation engine: deferred until simulation truth layer matures
+
+safe_next_step:
+  - "#104: V7 Phase 4 — Mode-specific feature specification (downstream consumer of label semantics)"
+
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest v7/tests/test_labels.py -q"
+  - "PYTHONPATH=v7/src:. python3 -m pytest v7/tests/ -q"
+  - "PYTHONPATH=v7/src:. python3 -m pytest lib/tests/test_import_boundary.py -q"
+
+evidence:
+  test_count: 17
+  test_passed: 17
+  test_failed: 0
+  v7_full_suite_passed: 110
+  label_specs_defined: 3
+  import_boundary_clean: PASS

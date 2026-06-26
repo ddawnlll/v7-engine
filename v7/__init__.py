@@ -14,6 +14,9 @@ Modes (priority order per v7/docs/v7_mode_centric_architecture.md):
 
 Architecture:
   AnalysisRequest -> builder -> router -> policy -> DecisionEvent
+
+Packages:
+  labels — mode-specific label semantics (v7/docs/pipeline/labels.md)
 """
 
 __version__ = "0.1.0"
