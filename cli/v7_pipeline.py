@@ -697,7 +697,7 @@ class PipelineRunner:
                 # Wire up services
                 bmd = BinanceMarketDataService()
                 klines = KlinesService(client=bmd._client)
-                storage = StorageWriter(base_dir=self._config.output_dir)
+                storage = StorageWriter()  # defaults to data/
                 catalog = DataCatalog()
                 rate_limiter = BinanceRateLimiter()
                 checkpoint = BackfillCheckpoint(
