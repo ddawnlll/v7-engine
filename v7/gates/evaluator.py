@@ -1,10 +1,24 @@
 """
-G0-G10 promotion gate evaluator.
+G0-G10 promotion gate evaluator — canonical gate set.
 
-Defines each gate's requirements, thresholds, and evaluation logic.
-The framework is generic — each gate can be implemented against any
-candidate evidence bundle (dict). Test-friendly design: gates are
-pure functions of (candidate, context) -> GateResult.
+Gate IDs and semantics are LOCKED per TR-07 plan and
+alphaforge/docs/handoff_to_v7.md (P0.8E canonical mapping):
+
+  G0  DOC_READY             Authority docs, schemas, data integrity
+  G1  RESEARCH_BACKTEST     Initial cost-honest backtest metrics
+  G2  WALK_FORWARD_OOS      6-fold walk-forward, expectancy R
+  G3  COST_STRESS           Fee×multiplier, slippage stress, funding
+  G4  REGIME_BREAKDOWN      Per-regime performance (no catastrophic collapse)
+  G5  SYMBOL_STABILITY      Per-symbol contribution ≤40%
+  G6  CALIBRATION_RELIABILITY  ECE, MCE within bounds
+  G7  SHADOW                Live-market observation, no orders
+  G8  PAPER                 Paper forward simulation, full trade lifecycle
+  G9  TINY_LIVE             Small real-capital, strict kill switches
+  G10 LIVE                  Production-eligible, all prior gates passed
+
+Non-canonical gate names (Data Quality, Label Quality, Feature Quality,
+Model Training, Structural Validity — from old AlphaForge mapping) are
+explicitly rejected. Only the canonical set above is valid.
 """
 
 from __future__ import annotations
@@ -25,16 +39,7 @@ class GateStatus(Enum):
 
 @dataclass(frozen=True)
 class GateResult:
-    """Single gate evaluation result.
-
-    Attributes:
-        gate_id: Gate identifier (G0-G10).
-        name: Human-readable gate name.
-        status: PASS, FAIL, NOT_APPLICABLE, or HOLD.
-        score: Numeric score (0.0-1.0) where applicable.
-        threshold: Minimum threshold for PASS.
-        detail: Human-readable detail about the result.
-    """
+    """Single gate evaluation result."""
 
     gate_id: str
     name: str
@@ -44,15 +49,16 @@ class GateResult:
     detail: str = ""
 
 
-# Type alias for gate evaluation functions
 GateFn = Callable[[dict[str, Any], dict[str, Any]], GateResult]
 
 
-def _gate_g0_structural(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G0: Structural validity — contracts and schemas must be valid.
+# ── Canonical gate implementations ────────────────────────────────────────────
 
-    Checks: request_id present, mode recognized, symbol non-empty,
-            model_scope non-empty.
+def _gate_g0_doc_ready(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G0 DOC_READY: Authority docs, contract schemas, data integrity.
+
+    Checks: request_id present, mode recognized (SWING/SCALP/AGGRESSIVE_SCALP),
+    symbol non-empty, model_scope non-empty.
     """
     errors: list[str] = []
     if not candidate.get("request_id"):
@@ -68,110 +74,37 @@ def _gate_g0_structural(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateR
     passed = len(errors) == 0
     return GateResult(
         gate_id="G0",
-        name="Structural Validity",
+        name="DOC_READY",
         status=GateStatus.PASS if passed else GateStatus.FAIL,
         score=1.0 if passed else 0.0,
         threshold=1.0,
-        detail="All structural fields valid" if passed else "; ".join(errors),
+        detail="All contract/structural fields valid" if passed else "; ".join(errors),
     )
 
 
-def _gate_g1_data_quality(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G1: Data quality — no data leakage, completeness acceptable.
+def _gate_g1_research_backtest(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G1 RESEARCH_BACKTEST: Initial cost-honest backtest metrics.
 
-    This is a placeholder gate. In production, it would verify:
-    - No future bars in feature windows
-    - Data completeness above minimum threshold
-    - No stale/gap-filled data
+    Placeholder — full implementation requires empirical backtest evidence
+    with realistic fee/slippage/funding costs applied.
     """
-    passed = ctx.get("g1_override", True)
+    passed = ctx.get("g1_research_backtest_pass", True)
     return GateResult(
         gate_id="G1",
-        name="Data Quality",
+        name="RESEARCH_BACKTEST",
         status=GateStatus.PASS if passed else GateStatus.FAIL,
         score=1.0 if passed else 0.0,
         threshold=0.9,
-        detail="Data quality checks passed (placeholder)" if passed
-        else "Data quality checks failed",
+        detail="Research backtest baseline (placeholder — empirical evidence required for lock)"
+        if passed
+        else "Research backtest failed",
     )
 
 
-def _gate_g2_label_quality(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G2: Label quality — simulation truth used, no unresolved rows.
+def _gate_g2_walk_forward_oos(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G2 WALK_FORWARD_OOS: Positive expectancy R across 6-fold walk-forward.
 
-    Placeholder gate. In production, verifies label_validity ratio,
-    unresolved/invalid row percentages, ambiguity ratio.
-    """
-    mode = candidate.get("mode", "SWING")
-    profile = get_mode_profile(mode)
-    min_edge = profile.get("min_action_edge_r", 0.35)
-    expected_r = ctx.get("expected_r_gross", 0.0)
-
-    passed = True  # Placeholder — always passes for baseline
-    return GateResult(
-        gate_id="G2",
-        name="Label Quality",
-        status=GateStatus.PASS if passed else GateStatus.FAIL,
-        score=1.0,
-        threshold=1.0,
-        detail=f"Label quality baseline (min_action_edge_r={min_edge}, expected_r={expected_r:.4f})",
-    )
-
-
-def _gate_g3_feature_quality(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G3: Feature quality — canonical-state only, no lookahead.
-
-    Placeholder gate.
-    """
-    return GateResult(
-        gate_id="G3",
-        name="Feature Quality",
-        status=GateStatus.PASS,
-        score=1.0,
-        threshold=0.9,
-        detail="Feature quality baseline (canonical state assumed valid)",
-    )
-
-
-def _gate_g4_model_training(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G4: Model training — training succeeded, no silent failures.
-
-    Placeholder gate. Checks for model_signature presence.
-    """
-    signature = ctx.get("model_signature", "")
-    passed = bool(signature)
-    return GateResult(
-        gate_id="G4",
-        name="Model Training",
-        status=GateStatus.PASS if passed else GateStatus.FAIL,
-        score=1.0 if passed else 0.0,
-        threshold=1.0,
-        detail=f"Model training baseline (signature={'present' if signature else 'missing'})",
-    )
-
-
-def _gate_g5_calibration(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G5: Calibration quality — ECE, MCE within bounds.
-
-    Placeholder gate. In production, checks Expected Calibration Error
-    and Maximum Calibration Error against thresholds.
-    """
-    ece = ctx.get("ece", 0.05)
-    passed = ece <= 0.10
-    return GateResult(
-        gate_id="G5",
-        name="Calibration Quality",
-        status=GateStatus.PASS if passed else GateStatus.FAIL,
-        score=1.0 - min(ece, 0.5),
-        threshold=0.90,
-        detail=f"Calibration: ECE={ece:.4f} (threshold 0.10)",
-    )
-
-
-def _gate_g6_walk_forward(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G6: Walk-forward OOS — positive expectancy R, acceptable drawdown.
-
-    Expectancy R is the primary success metric.
+    Expectancy R is the primary success metric (v7/docs/vision.md).
     """
     expectancy_r = ctx.get("expectancy_r", 0.0)
     mode = candidate.get("mode", "SWING")
@@ -180,8 +113,8 @@ def _gate_g6_walk_forward(candidate: dict[str, Any], ctx: dict[str, Any]) -> Gat
 
     passed = expectancy_r >= min_edge
     return GateResult(
-        gate_id="G6",
-        name="Walk-Forward OOS Expectancy",
+        gate_id="G2",
+        name="WALK_FORWARD_OOS",
         status=GateStatus.PASS if passed else GateStatus.FAIL,
         score=min(1.0, expectancy_r / max(min_edge, 0.01)),
         threshold=min_edge,
@@ -192,40 +125,11 @@ def _gate_g6_walk_forward(candidate: dict[str, Any], ctx: dict[str, Any]) -> Gat
     )
 
 
-def _gate_g7_regime_stability(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G7: Regime stability — performance across market regimes.
+def _gate_g3_cost_stress(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G3 COST_STRESS: Survives cost stress scenarios.
 
-    Placeholder gate.
-    """
-    return GateResult(
-        gate_id="G7",
-        name="Regime Stability",
-        status=GateStatus.PASS,
-        score=1.0,
-        threshold=0.7,
-        detail="Regime stability baseline (no regime breakdown data yet)",
-    )
-
-
-def _gate_g8_symbol_stability(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G8: Symbol stability — not carried by 1-2 symbols.
-
-    Placeholder gate.
-    """
-    return GateResult(
-        gate_id="G8",
-        name="Symbol Stability",
-        status=GateStatus.PASS,
-        score=1.0,
-        threshold=0.7,
-        detail="Symbol stability baseline (single-symbol only)",
-    )
-
-
-def _gate_g9_cost_stress(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G9: Cost stress — passes cost stress scenarios.
-
-    Checks: expected_r_net > 0 after costs.
+    Fee multiplier, slippage stress, and funding cost stress.
+    expected_r_net > 0 after all costs applied.
     """
     expected_r_net = ctx.get("expected_r_net", 0.0)
     mode = candidate.get("mode", "SWING")
@@ -234,8 +138,8 @@ def _gate_g9_cost_stress(candidate: dict[str, Any], ctx: dict[str, Any]) -> Gate
 
     passed = expected_r_net > 0
     return GateResult(
-        gate_id="G9",
-        name="Cost Stress",
+        gate_id="G3",
+        name="COST_STRESS",
         status=GateStatus.PASS if passed else GateStatus.FAIL,
         score=min(1.0, max(0.0, expected_r_net / max(min_expected_r, 0.01))),
         threshold=min_expected_r,
@@ -246,15 +150,113 @@ def _gate_g9_cost_stress(candidate: dict[str, Any], ctx: dict[str, Any]) -> Gate
     )
 
 
-def _gate_g10_live_readiness(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
-    """G10: Live readiness — monitoring, rollback, kill-switch in place.
+def _gate_g4_regime_breakdown(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G4 REGIME_BREAKDOWN: No single regime hides catastrophic loss.
+
+    Checks performance across TREND_UP, TREND_DOWN, RANGE, TRANSITION regimes.
+    Placeholder — requires regime-labeled evaluation data.
+    """
+    return GateResult(
+        gate_id="G4",
+        name="REGIME_BREAKDOWN",
+        status=GateStatus.PASS,
+        score=1.0,
+        threshold=0.7,
+        detail="Regime breakdown baseline (no regime-labelled data yet)",
+    )
+
+
+def _gate_g5_symbol_stability(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G5 SYMBOL_STABILITY: No single symbol >40% of total edge.
+
+    Per-symbol contribution must be balanced. Placeholder for single-symbol
+    or small-universe evaluation.
+    """
+    return GateResult(
+        gate_id="G5",
+        name="SYMBOL_STABILITY",
+        status=GateStatus.PASS,
+        score=1.0,
+        threshold=0.7,
+        detail="Symbol stability baseline (single-symbol or small universe)",
+    )
+
+
+def _gate_g6_calibration_reliability(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G6 CALIBRATION_RELIABILITY: ECE, MCE within acceptable bounds.
+
+    Expected Calibration Error and Maximum Calibration Error thresholds.
+    ece <= 0.10 for PASS.
+    """
+    ece = ctx.get("ece", 0.05)
+    passed = ece <= 0.10
+    return GateResult(
+        gate_id="G6",
+        name="CALIBRATION_RELIABILITY",
+        status=GateStatus.PASS if passed else GateStatus.FAIL,
+        score=1.0 - min(ece, 0.5),
+        threshold=0.90,
+        detail=f"Calibration: ECE={ece:.4f} (threshold 0.10)",
+    )
+
+
+def _gate_g7_shadow(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G7 SHADOW: Live-market observation without order placement.
+
+    Infrastructure placeholder — requires P0.9A+ infrastructure
+    (shadow observation pipeline, no order placement).
+    """
+    return GateResult(
+        gate_id="G7",
+        name="SHADOW",
+        status=GateStatus.NOT_APPLICABLE,
+        score=0.0,
+        threshold=1.0,
+        detail="Shadow mode not applicable — infrastructure not yet built (P0.9A+)",
+    )
+
+
+def _gate_g8_paper(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G8 PAPER: Paper forward simulation with full trade lifecycle.
+
+    Infrastructure placeholder — requires P0.9A+ runtime simulation
+    adapter with paper execution mode.
+    """
+    return GateResult(
+        gate_id="G8",
+        name="PAPER",
+        status=GateStatus.NOT_APPLICABLE,
+        score=0.0,
+        threshold=1.0,
+        detail="Paper trading not applicable — infrastructure not yet built (P0.9A+)",
+    )
+
+
+def _gate_g9_tiny_live(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G9 TINY_LIVE: Small real-capital validation with strict kill switches.
+
+    Infrastructure placeholder — requires far-future live execution
+    infrastructure with kill-switch integration.
+    """
+    return GateResult(
+        gate_id="G9",
+        name="TINY_LIVE",
+        status=GateStatus.NOT_APPLICABLE,
+        score=0.0,
+        threshold=1.0,
+        detail="Tiny-live not applicable — infrastructure not yet built (far future)",
+    )
+
+
+def _gate_g10_live(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
+    """G10 LIVE: Production-eligible — all prior gates passed.
 
     This gate is NOT_APPLICABLE for initial baseline — it gates
     live execution eligibility, not evaluation promotion.
     """
     return GateResult(
         gate_id="G10",
-        name="Live Readiness",
+        name="LIVE",
         status=GateStatus.NOT_APPLICABLE,
         score=0.0,
         threshold=1.0,
@@ -262,44 +264,88 @@ def _gate_g10_live_readiness(candidate: dict[str, Any], ctx: dict[str, Any]) -> 
     )
 
 
-# Canonical ordered gate definitions
+# ── Canonical G0-G10 gate definitions (LOCKED — do not reorder) ────────────────
+# Must match:
+#   - TR-07 plan gate list (plans/training_ready/07_v7_policy_acceptance_impl.plan.yaml)
+#   - alphaforge/docs/handoff_to_v7.md canonical G0-G10 mapping (P0.8E)
+#   - v7/docs/pipeline/evaluation.md
+CANONICAL_GATE_NAMES: dict[str, str] = {
+    "G0": "DOC_READY",
+    "G1": "RESEARCH_BACKTEST",
+    "G2": "WALK_FORWARD_OOS",
+    "G3": "COST_STRESS",
+    "G4": "REGIME_BREAKDOWN",
+    "G5": "SYMBOL_STABILITY",
+    "G6": "CALIBRATION_RELIABILITY",
+    "G7": "SHADOW",
+    "G8": "PAPER",
+    "G9": "TINY_LIVE",
+    "G10": "LIVE",
+}
+
 GATE_DEFINITIONS: list[tuple[str, str, GateFn]] = [
-    ("G0", "Structural Validity", _gate_g0_structural),
-    ("G1", "Data Quality", _gate_g1_data_quality),
-    ("G2", "Label Quality", _gate_g2_label_quality),
-    ("G3", "Feature Quality", _gate_g3_feature_quality),
-    ("G4", "Model Training", _gate_g4_model_training),
-    ("G5", "Calibration Quality", _gate_g5_calibration),
-    ("G6", "Walk-Forward OOS Expectancy", _gate_g6_walk_forward),
-    ("G7", "Regime Stability", _gate_g7_regime_stability),
-    ("G8", "Symbol Stability", _gate_g8_symbol_stability),
-    ("G9", "Cost Stress", _gate_g9_cost_stress),
-    ("G10", "Live Readiness", _gate_g10_live_readiness),
+    ("G0", "DOC_READY", _gate_g0_doc_ready),
+    ("G1", "RESEARCH_BACKTEST", _gate_g1_research_backtest),
+    ("G2", "WALK_FORWARD_OOS", _gate_g2_walk_forward_oos),
+    ("G3", "COST_STRESS", _gate_g3_cost_stress),
+    ("G4", "REGIME_BREAKDOWN", _gate_g4_regime_breakdown),
+    ("G5", "SYMBOL_STABILITY", _gate_g5_symbol_stability),
+    ("G6", "CALIBRATION_RELIABILITY", _gate_g6_calibration_reliability),
+    ("G7", "SHADOW", _gate_g7_shadow),
+    ("G8", "PAPER", _gate_g8_paper),
+    ("G9", "TINY_LIVE", _gate_g9_tiny_live),
+    ("G10", "LIVE", _gate_g10_live),
 ]
 
+
+# ── Non-canonical gate rejection ───────────────────────────────────────────────
+
+_FORBIDDEN_GATE_NAMES: frozenset[str] = frozenset({
+    "Structural Validity",
+    "Data Quality",
+    "Label Quality",
+    "Feature Quality",
+    "Model Training",
+    "Calibration Quality",
+    "Walk-Forward OOS Expectancy",
+    "Regime Stability",
+    "Symbol Stability",
+    "Cost Stress",
+    "Live Readiness",
+})
+
+
+def _reject_non_canonical(name: str) -> None:
+    """Raise ValueError for non-canonical gate names (P0.8E enforcement)."""
+    if name in CANONICAL_GATE_NAMES.values():
+        return
+    raise ValueError(
+        f"Non-canonical gate name '{name}'. "
+        f"Canonical set: {list(CANONICAL_GATE_NAMES.values())}. "
+        f"These old AlphaForge names were superseded in P0.8E."
+    )
+
+
+# ── Public API ─────────────────────────────────────────────────────────────────
 
 def evaluate_gate(
     gate_id: str,
     candidate: dict[str, Any],
     context: dict[str, Any] | None = None,
 ) -> GateResult:
-    """Evaluate a single named gate.
-
-    Args:
-        gate_id: Gate identifier (G0-G10).
-        candidate: The candidate dict (minimally: request_id, mode, symbol,
-                  model_scope).
-        context: Optional evaluation context (expectancy_r, expected_r_net,
-                 ece, model_signature, g1_override, etc.).
-
-    Returns:
-        GateResult with status and detail.
-
-    Raises:
-        ValueError: If gate_id is not recognized.
-    """
+    """Evaluate a single canonical gate (G0-G10)."""
     ctx = context or {}
-    for gid, name, fn in GATE_DEFINITIONS:
+    # Lookup by canonical gate ID ("G0") or canonical name ("DOC_READY")
+    if not gate_id.startswith("G"):
+        _reject_non_canonical(gate_id)
+        for gid, gname, _fn in GATE_DEFINITIONS:
+            if gname == gate_id:
+                gate_id = gid
+                break
+        else:
+            raise ValueError(f"Unknown gate '{gate_id}'")
+
+    for gid, _name, fn in GATE_DEFINITIONS:
         if gid == gate_id:
             return fn(candidate, ctx)
     raise ValueError(f"Unknown gate_id '{gate_id}'. Valid: G0-G10")
@@ -311,17 +357,7 @@ def evaluate_candidate(
     *,
     stop_on_fail: bool = False,
 ) -> dict[str, GateResult]:
-    """Evaluate a candidate through all applicable G0-G10 gates.
-
-    Args:
-        candidate: Candidate dict with at least request_id, mode, symbol,
-                  model_scope.
-        context: Optional evaluation context.
-        stop_on_fail: If True, stop evaluating after first FAIL (for CI).
-
-    Returns:
-        Dict mapping gate_id to GateResult.
-    """
+    """Evaluate a candidate through all applicable G0-G10 gates."""
     ctx = context or {}
     results: dict[str, GateResult] = {}
 
@@ -335,12 +371,7 @@ def evaluate_candidate(
 
 
 def get_promotion_summary(results: dict[str, GateResult]) -> dict[str, Any]:
-    """Summarize gate evaluation results for promotion decisions.
-
-    Returns:
-        Dict with passed (bool), passed_gates, failed_gates, na_gates,
-        overall_score, and recommendation.
-    """
+    """Summarize gate evaluation results for promotion decisions."""
     passed_gates = []
     failed_gates = []
     na_gates = []
