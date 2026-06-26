@@ -1,0 +1,52 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+# ---- Issue #111: Lib Phase 2 — funding-aware cost functions ----
+
+result: "PASS"
+
+scope_confirmation:
+  - "lib/costs/funding_impact.py created with funding_cost_r per mode"
+  - "lib/costs/combined.py created with combined_cost_r (fee + slippage + funding)"
+  - "lib/costs/__init__.py extended with new exports (funding_cost_r, funding_sensitivity, combined_cost_r)"
+  - "lib/tests/test_costs_funding.py: 19 tests — mode sensitivity, edge cases, sign semantics"
+  - "lib/tests/test_costs_combined.py: 10 tests — sum-of-parts, mode propagation, defaults"
+  - "All 60 cost tests pass (29 new + 31 existing)"
+
+files_changed:
+  - lib/costs/__init__.py              # extended exports
+  - lib/costs/combined.py              # new: combined_cost_r
+  - lib/costs/funding_impact.py        # new: funding_cost_r, funding_sensitivity
+  - lib/tests/test_costs_combined.py   # new: 10 tests
+  - lib/tests/test_costs_funding.py    # new: 19 tests
+
+decisions_locked:
+  funding_sensitivity:
+    status: "LOCKED_INITIAL_BASELINE"
+    values:
+      SWING: 1.0
+      SCALP: 0.3
+      AGGRESSIVE_SCALP: 0.0
+    note: "Derived from simulation/docs/cost_model.md holding durations"
+  funding_interval_default: "LOCKED_INITIAL_BASELINE (8h, Binance standard)"
+  combined_cost_formula: "LOCKED_INITIAL_BASELINE (total_cost_r + funding_cost_r)"
+
+remaining_holds:
+  - "Funding sensitivity values require empirical validation with real perpetual data"
+  - "Funding cost for perp symbols not yet integrated into simulation pipeline"
+  - "SCALP sensitivity (0.3) is a conservative estimate; backtest calibration needed"
+
+safe_next_step:
+  "Verify funding_cost_r against real Binance funding rate data in simulation/tests/"
+
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_costs_funding.py lib/tests/test_costs_combined.py -v"
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_costs.py lib/tests/test_costs_r.py lib/tests/test_costs_funding.py lib/tests/test_costs_combined.py -v"
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py -q"
+
+evidence:
+  - "29 new tests: 19 funding + 10 combined — all PASS"
+  - "31 existing cost tests — all PASS (no regression)"
+  - "1 import boundary test — PASS"
+  - "Commit: 5677f8f on worktree-wf_810acec5-3ca-1"
+  - "Total: 60 cost tests, 0 failures"
