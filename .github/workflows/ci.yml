@@ -33,7 +33,10 @@ jobs:
         run: make check-boundaries
 
       - name: Run lib + integration + simulation tests
-        run: PYTHONPATH=. python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q
+        run: PYTHONPATH=alphaforge/src:. python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q
 
       - name: Run runtime tests
         run: PYTHONPATH=. python -m pytest runtime/tests/ -q
+
+      - name: Run v7 tests
+        run: PYTHONPATH=. python -m pytest v7/tests/ -q

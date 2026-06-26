@@ -210,6 +210,13 @@ def build_state_feature_vector(*, analysis_result: dict[str, Any], **kwargs: Any
         state["gate_overall"] = eligibility.get("overall_eligible", False)
 
     # Merge any additional context passed as kwargs
+    _collisions = state.keys() & kwargs.keys()
+    if _collisions:
+        raise ValueError(
+            f"build_state_feature_vector: kwargs keys collide with existing state keys. "
+            f"Colliding keys: {sorted(_collisions)}. "
+            f"Use distinct keys for additional context to avoid silent overrides."
+        )
     state.update(kwargs)
 
     return state

@@ -145,6 +145,10 @@ def compute_regret_r(
     """
     lambda_dd = get_lambda_dd(mode)
 
+    # Normalize action names: policy.py uses ENTER_LONG/ENTER_SHORT,
+    # but regret internals use LONG/SHORT. Accept both forms.
+    _action = chosen_action.upper().replace("ENTER_", "") if chosen_action else "NO_TRADE"
+
     # Drawdown penalties
     dd_penalty_long = -lambda_dd * abs(long_mae_r)
     dd_penalty_short = -lambda_dd * abs(short_mae_r)
@@ -162,8 +166,8 @@ def compute_regret_r(
         long_r = long_action_utility + dd_penalty_long if long_action_utility else long_r_net + dd_penalty_long
         short_r = short_action_utility + dd_penalty_short if short_action_utility else short_r_net + dd_penalty_short
         chosen_r = chosen_action_utility + (
-            -lambda_dd * abs(long_mae_r) if chosen_action == "LONG"
-            else -lambda_dd * abs(short_mae_r) if chosen_action == "SHORT"
+            -lambda_dd * abs(long_mae_r) if _action == "LONG"
+            else -lambda_dd * abs(short_mae_r) if _action == "SHORT"
             else 0.0
         ) if chosen_action_utility else chosen_r_net
         best_r = max(long_r, short_r, no_trade_r)

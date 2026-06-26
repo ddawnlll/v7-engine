@@ -105,13 +105,50 @@ class TestBuildStateFeatureVector:
         assert state["volatility"] == 0.028
 
     def test_kwargs_override_conflict_preserved(self):
-        """kwargs should overwrite any key conflicts (caller controls)."""
+        """kwargs collision with existing state keys now raises ValueError."""
+        ar = self._minimal_analysis_result()
+        with pytest.raises(ValueError, match="collide"):
+            build_state_feature_vector(
+                analysis_result=ar,
+                confidence=0.99,  # collision
+            )
+
+    def test_kwargs_collision_with_gate_key_raises(self):
+        """kwargs that collide with a gate_* key also raise ValueError."""
+        ar = self._minimal_analysis_result()
+        with pytest.raises(ValueError, match="collide"):
+            build_state_feature_vector(
+                analysis_result=ar,
+                gate_confidence=False,  # collision with eligibility gate key
+            )
+
+    def test_kwargs_collision_lists_all_offending_keys(self):
+        """Multiple collisions should list all offending keys in the error."""
+        ar = self._minimal_analysis_result()
+        with pytest.raises(ValueError, match=r"collide.*(confidence|symbol|symbol.*confidence)"):
+            build_state_feature_vector(
+                analysis_result=ar,
+                confidence=0.99,
+                symbol="ETHUSDT",
+            )
+
+    def test_kwargs_no_collision_works(self):
+        """Distinct keys should still be merged without error."""
         ar = self._minimal_analysis_result()
         state = build_state_feature_vector(
             analysis_result=ar,
-            confidence=0.99,  # override
+            regime_label="bull",
+            atr=1800.0,
+            volatility=0.028,
+            spread_bps=2.0,
         )
-        assert state["confidence"] == 0.99
+        assert state["regime_label"] == "bull"
+        assert state["atr"] == 1800.0
+        assert state["volatility"] == 0.028
+        assert state["spread_bps"] == 2.0
+        # Base keys should remain untouched
+        assert state["confidence"] == 0.72
+        assert state["symbol"] == "BTCUSDT"
 
     def test_hold_decision_state(self):
         ar = self._minimal_analysis_result(decision="HOLD", confidence=0.40)

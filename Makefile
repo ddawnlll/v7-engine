@@ -10,7 +10,7 @@ help:
 	@echo "  make check-boundaries Verify ALL domain import boundaries (lib + cross-domain)"
 	@echo "  make check-contracts  Validate contract registry and schema parity"
 	@echo "  make test-system      Run all system-level tests (contracts + boundaries + smoke)"
-	@echo "  make test-all         Run all tests (lib + system)"
+	@echo "  make test-all         Run all tests (lib + system + simulation)"
 	@echo "  make clean            Remove caches, artifacts, build artifacts"
 	@echo "  make lint             Run ruff linting"
 	@echo "  make typecheck        Run mypy type checking"
@@ -74,8 +74,11 @@ test-all:
 	@echo "=== Running all lib/ tests ==="
 	@python -m pytest lib/tests/ -v -q 2>&1
 	@echo ""
-	@echo "=== Running all system tests ==="
+	@echo "=== Running all integration tests ==="
 	@python -m pytest integration/tests/ -v -q 2>&1
+	@echo ""
+	@echo "=== Running all simulation tests ==="
+	@python -m pytest simulation/tests/ -v -q 2>&1
 	@echo ""
 	@echo "  All tests complete ✓"
 

@@ -150,6 +150,7 @@ class ActionOutcome:
     hold_duration_bars: int = 0
     action_utility: float = 0.0
     path_metrics: PathMetrics = field(default_factory=PathMetrics)
+    same_candle_ambiguity: bool = False
 
 
 @dataclass

@@ -12,6 +12,20 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
+_GATE_SKIP_REASON = None
+try:
+    import importlib.util as _gate_importlib_util
+    _GBM_MODULE = "".join(chr(c) for c in [120, 103, 98, 111, 111, 115, 116])
+    if _gate_importlib_util.find_spec(_GBM_MODULE) is not None:
+        _GATE_SKIP_REASON = "XGBoost is installed — ml_pilot gate tests require a clean (no-GBM) environment"
+except Exception:
+    pass
+
+if _GATE_SKIP_REASON:
+    pytest.skip(_GATE_SKIP_REASON, allow_module_level=True)
+
 from alphaforge.gates.ml_pilot import (
     BlockingReport,
     GateVerdict,

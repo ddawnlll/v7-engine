@@ -75,6 +75,7 @@ def _build_action_outcome(
         hold_duration_bars=exit_result.hold_duration_bars,
         action_utility=utility,
         path_metrics=pm,
+        same_candle_ambiguity=exit_result.same_candle_ambiguity,
     )
 
 
@@ -95,16 +96,34 @@ def _build_no_trade_outcome(
         1.0, missed_opportunity_r / max(profile.target_multiplier, 0.01)
     )
 
-    # Classify no-trade quality
-    if best_r <= 0:
-        quality = "SAVED_LOSS" if saved_loss_r > 0 else "CORRECT_NO_TRADE"
+    # Classify no-trade quality per no_trade_quality.md:84-101
+    # Uses saved_loss_r and missed_opportunity_r (not best_r) for
+    # classification, matching the authoritative doc.
+    if saved_loss_r == 0.0 and missed_opportunity_r == 0.0:
+        # Neither direction lost money, neither produced a clear edge
+        quality = "CORRECT_NO_TRADE"
         was_correct = True
-    elif best_r > profile.min_action_edge_r:
+    elif saved_loss_r > 0.0 and missed_opportunity_r == 0.0:
+        quality = "SAVED_LOSS"
+        was_correct = True
+    elif missed_opportunity_r > 0.0 and saved_loss_r == 0.0:
         quality = "MISSED_OPPORTUNITY"
         was_correct = False
+    elif saved_loss_r > 0.0 and missed_opportunity_r > 0.0:
+        # Contradictory: one direction lost, the other won.
+        # Use ambiguity margin to decide — close scores → AMBIGUOUS.
+        if abs(saved_loss_r - missed_opportunity_r) < profile.ambiguity_margin_r:
+            quality = "AMBIGUOUS_NO_TRADE"
+            was_correct = False
+        elif saved_loss_r >= missed_opportunity_r:
+            quality = "SAVED_LOSS"
+            was_correct = True
+        else:
+            quality = "MISSED_OPPORTUNITY"
+            was_correct = False
     else:
-        quality = "AMBIGUOUS_NO_TRADE"
-        was_correct = False
+        quality = "CORRECT_NO_TRADE"
+        was_correct = True
 
     return NoTradeOutcome(
         saved_loss_r=saved_loss_r,

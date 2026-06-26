@@ -191,6 +191,46 @@ class TestComputeRegretR:
         with pytest.raises(Exception):
             result.regret_r = 1.0  # type: ignore
 
+    def test_enter_long_and_long_produce_identical_shaped_reward(self):
+        """ENTER_LONG (policy.py canonical) must match LONG for SHAPED_REWARD."""
+        kwargs = dict(
+            long_r_net=0.80,
+            short_r_net=0.60,
+            chosen_r_net=0.80,
+            long_mae_r=0.40,
+            short_mae_r=0.10,
+            mode="SWING",
+            basis=RegretBasis.SHAPED_REWARD,
+            long_action_utility=0.80,
+            short_action_utility=0.60,
+            chosen_action_utility=0.80,
+        )
+        result_long = compute_regret_r(chosen_action="LONG", **kwargs)
+        result_enter_long = compute_regret_r(chosen_action="ENTER_LONG", **kwargs)
+        assert result_long.regret_r == result_enter_long.regret_r
+        assert result_long.best_action == result_enter_long.best_action
+        assert result_long.drawdown_penalty_long == result_enter_long.drawdown_penalty_long
+
+    def test_enter_short_and_short_produce_identical_shaped_reward(self):
+        """ENTER_SHORT (policy.py canonical) must match SHORT for SHAPED_REWARD."""
+        kwargs = dict(
+            long_r_net=0.80,
+            short_r_net=0.60,
+            chosen_r_net=0.60,
+            long_mae_r=0.40,
+            short_mae_r=0.10,
+            mode="SWING",
+            basis=RegretBasis.SHAPED_REWARD,
+            long_action_utility=0.80,
+            short_action_utility=0.60,
+            chosen_action_utility=0.60,
+        )
+        result_short = compute_regret_r(chosen_action="SHORT", **kwargs)
+        result_enter_short = compute_regret_r(chosen_action="ENTER_SHORT", **kwargs)
+        assert result_short.regret_r == result_enter_short.regret_r
+        assert result_short.best_action == result_enter_short.best_action
+        assert result_short.drawdown_penalty_short == result_enter_short.drawdown_penalty_short
+
 
 class TestComputeRegretFromSimulation:
     """Test regret computation from SimulationOutput dict."""
