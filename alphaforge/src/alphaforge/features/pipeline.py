@@ -146,7 +146,10 @@ FEATURE_GROUP_MAP: Dict[FeatureGroup, str] = {
     FeatureGroup.VOLUME: "compute_volume_group",
     FeatureGroup.BREAKOUT: "compute_breakout_group",
     FeatureGroup.ORDERBOOK: "compute_orderbook_group",
-    # FeatureGroup.LEAD_LAG is DEFERRED — not mapped
+    # LEAD_LAG is mapped but DEFERRED — compute_features does not call it.
+    # Active filtering (lines 119, 1257) keeps LEAD_LAG out of computation
+    # until cross-sectional data support lands (P0.9B).
+    FeatureGroup.LEAD_LAG: "compute_lead_lag_group",
 }
 
 
@@ -1110,7 +1113,41 @@ _MODE_DEFAULTS = {
         "periods_per_year": SWING_PERIODS_PER_YEAR,
         "orderbook_window": DEFAULT_ORDERBOOK_WINDOW,
         "amihud_window": DEFAULT_AMIHUD_WINDOW,
-    }
+    },
+    "SCALP": {
+        "n_returns": 12,
+        "volatility_window": 24,
+        "atr_window": 14,
+        "momentum_n": 12,
+        "rsi_window": 14,
+        "macd_fast": 8,
+        "macd_slow": 17,
+        "macd_signal": 9,
+        "volume_window": 24,
+        "breakout_window": 24,
+        "bb_window": 20,
+        "bb_num_std": 2.0,
+        "periods_per_year": 8760,
+        "orderbook_window": DEFAULT_ORDERBOOK_WINDOW,
+        "amihud_window": DEFAULT_AMIHUD_WINDOW,
+    },
+    "AGGRESSIVE_SCALP": {
+        "n_returns": 16,
+        "volatility_window": 24,
+        "atr_window": 10,
+        "momentum_n": 16,
+        "rsi_window": 10,
+        "macd_fast": 6,
+        "macd_slow": 13,
+        "macd_signal": 5,
+        "volume_window": 24,
+        "breakout_window": 12,
+        "bb_window": 12,
+        "bb_num_std": 2.0,
+        "periods_per_year": 35040,
+        "orderbook_window": DEFAULT_ORDERBOOK_WINDOW,
+        "amihud_window": DEFAULT_AMIHUD_WINDOW,
+    },
 }
 
 # Supported modes for feature computation

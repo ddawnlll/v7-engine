@@ -8,6 +8,24 @@ from typing import Sequence
 import math
 
 
+def dollar_volume(prices: Sequence[float], volumes: Sequence[float]) -> list[float]:
+    """Dollar volume per bar: close_price * volume.
+
+    Args:
+        prices: Price series (e.g. close prices).
+        volumes: Volume series (same length).
+
+    Returns:
+        List of dollar-volume values, same length as inputs.
+    """
+    n = min(len(prices), len(volumes))
+    result: list[float] = [float("nan")] * max(len(prices), len(volumes))
+    for i in range(n):
+        if not (math.isnan(prices[i]) or math.isnan(volumes[i])):
+            result[i] = prices[i] * volumes[i]
+    return result
+
+
 def amihud_illiquidity(
     returns: Sequence[float],
     volumes: Sequence[float],

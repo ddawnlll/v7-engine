@@ -949,8 +949,9 @@ class TestLeadLagDeferred:
         assert FeatureGroup.LEAD_LAG.value == "lead_lag"
 
     def test_in_feature_group_map(self):
-        """FEATURE_GROUP_MAP includes ORDERBOOK; LEAD_LAG is DEFERRED — not mapped."""
-        assert FeatureGroup.LEAD_LAG not in FEATURE_GROUP_MAP
+        """FEATURE_GROUP_MAP includes ORDERBOOK and LEAD_LAG; LEAD_LAG is DEFERRED — not active."""
+        assert FeatureGroup.LEAD_LAG in FEATURE_GROUP_MAP
+        assert FEATURE_GROUP_MAP[FeatureGroup.LEAD_LAG] == "compute_lead_lag_group"
         assert FeatureGroup.ORDERBOOK in FEATURE_GROUP_MAP
         assert FEATURE_GROUP_MAP[FeatureGroup.ORDERBOOK] == "compute_orderbook_group"
 

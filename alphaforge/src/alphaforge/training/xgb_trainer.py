@@ -63,17 +63,28 @@ NUM_CLASSES: int = 3
 def _detect_gpu() -> dict[str, str]:
     """Detect available GPU backend for XGBoost.
 
-    Checks HIP (ROCm) first, then CUDA. Falls back to CPU (hist).
+    Checks build-time CUDA/HIP support AND runtime availability via
+    nvidia-smi. Falls back to CPU (hist) when the GPU is compiled in
+    but not actually available at runtime.
+
     Returns {"tree_method": ..., "device": ...} to merge into params.
     """
     try:
         info = xgb.build_info()
-        if info.get("USE_HIP"):
-            logger.info("XGBoost GPU: ROCm/HIP detected — using gpu_hist")
-            return {"tree_method": "gpu_hist", "device": "cuda"}
-        if info.get("USE_CUDA"):
-            logger.info("XGBoost GPU: CUDA detected — using gpu_hist")
-            return {"tree_method": "gpu_hist", "device": "cuda"}
+        has_cuda = info.get("USE_CUDA") or info.get("USE_HIP")
+        if has_cuda:
+            # Runtime validation: nvidia-smi confirms a usable GPU
+            import subprocess
+            r = subprocess.run(
+                ["nvidia-smi"], capture_output=True, text=True, timeout=5
+            )
+            if r.returncode == 0:
+                backend = "ROCm/HIP" if info.get("USE_HIP") else "CUDA"
+                logger.info("XGBoost GPU: %s detected — using gpu_hist", backend)
+                return {"tree_method": "gpu_hist", "device": "cuda"}
+            logger.info(
+                "XGBoost compiled with CUDA but no GPU available — using CPU hist"
+            )
     except Exception:
         pass
     logger.info("XGBoost GPU: none detected — using CPU hist")
