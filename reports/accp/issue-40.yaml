@@ -1,0 +1,58 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+timestamp: "2026-06-26T00:00:00Z"
+issue: "#40"
+title: "Regime-aware evaluation — per-regime performance metrics"
+
+result: "PASS"
+
+scope_confirmation:
+  - "RegimeEvaluator class in alphaforge/src/alphaforge/validation/regime_eval.py"
+  - "Groups WFV fold results by regime (TREND_UP/DOWN/RANGE/TRANSITION)"
+  - "Computes per-regime: expectancy_r, win_rate, trade_count"
+  - "Flags catastrophic loss in single regime pattern"
+  - "Flags edge-only-in-rare-regime pattern"
+  - "Produces regime_breakdown dict for ModeResearchReport"
+  - "44 tests in alphaforge/tests/test_regime_eval.py — all passing"
+  - "Exported via alphaforge/src/alphaforge/validation/__init__.py"
+
+files_changed:
+  - path: "alphaforge/src/alphaforge/validation/regime_eval.py"
+    change: "created"
+    lines: 280
+  - path: "alphaforge/tests/test_regime_eval.py"
+    change: "created"
+    lines: 470
+  - path: "alphaforge/src/alphaforge/validation/__init__.py"
+    change: "modified"
+    lines: "+2"
+
+decisions_locked:
+  - "RegimeEvaluator interface: fold_regime_map Dict[int, RegimeLabel] constructor"
+  - "Per-regime metric keys: expectancy_r, win_rate, trade_count, fold_count"
+  - "CATASTROPHIC_LOSS_EXPECTANCY_R_THRESHOLD: -0.5"
+  - "RARE_REGIME_FOLD_FRACTION: 0.15"
+  - "MIN_TOTAL_FOLDS_FOR_FLAGS: 4"
+  - "RegimeLabel enum used from validation.contracts (TREND_UP/DOWN/RANGE/TRANSITION)"
+  - "No ML imports (zero xgboost, sklearn, tensorflow, torch)"
+
+remaining_holds:
+  - "#78 regime detection — regime_eval depends on caller providing RegimeLabel assignments"
+  - "Thresholds are initial baselines, not empirically calibrated — recalibrate with real data"
+
+safe_next_step: "Close #40; integrate with #78 regime detection when ready"
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_regime_eval.py -v"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q --ignore=alphaforge/tests/test_ml_pilot_gate.py"
+
+evidence:
+  - type: "test_output"
+    description: "44/44 regime_eval tests passed"
+    detail: "All TestSafeMean (7), TestRegimeEvaluatorConstructor (4), TestEvaluateAggregation (5), TestEvaluateEdgeCases (7), TestCatastrophicLossDetection (7), TestEdgeInRareRegimeDetection (6), TestFlagIntegration (3), TestDeterminismAndStructure (4), TestNoMLImports (2)"
+  - type: "test_output"
+    description: "596/596 existing tests pass (excluding pre-existing ml_pilot_gate import guard)"
+  - type: "commit_hash"
+    value: "bb5dc46acf8be4bc12781e4f690f448f8c5f3f48"
+  - type: "zero_ml_imports"
+    description: "Verified no xgboost, sklearn, tensorflow, torch, or fit() in regime_eval.py"
