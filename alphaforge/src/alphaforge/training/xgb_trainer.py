@@ -55,6 +55,33 @@ LABEL_TO_INT: Dict[str, int] = {
 INT_TO_LABEL: Dict[int, str] = {v: k for k, v in LABEL_TO_INT.items()}
 NUM_CLASSES: int = 3
 
+# ---------------------------------------------------------------------------
+# GPU / ROCm detection
+# ---------------------------------------------------------------------------
+
+
+def _detect_gpu() -> dict[str, str]:
+    """Detect available GPU backend for XGBoost.
+
+    Checks HIP (ROCm) first, then CUDA. Falls back to CPU (hist).
+    Returns {"tree_method": ..., "device": ...} to merge into params.
+    """
+    try:
+        info = xgb.build_info()
+        if info.get("USE_HIP"):
+            logger.info("XGBoost GPU: ROCm/HIP detected — using gpu_hist")
+            return {"tree_method": "gpu_hist", "device": "cuda"}
+        if info.get("USE_CUDA"):
+            logger.info("XGBoost GPU: CUDA detected — using gpu_hist")
+            return {"tree_method": "gpu_hist", "device": "cuda"}
+    except Exception:
+        pass
+    logger.info("XGBoost GPU: none detected — using CPU hist")
+    return {"tree_method": "hist"}
+
+
+GPU_PARAMS: dict[str, str] = _detect_gpu()
+
 # Conservative SWING hyperparameters (LOCKED_INITIAL_BASELINE)
 SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "objective": "multi:softprob",
@@ -72,6 +99,7 @@ SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "early_stopping_rounds": 20,
     "random_state": 42,
     "verbosity": 0,
+    **GPU_PARAMS,
 }
 
 # Test fraction for hold-out validation within training
