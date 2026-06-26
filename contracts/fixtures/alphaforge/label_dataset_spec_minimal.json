@@ -1,0 +1,41 @@
+{
+  "label_dataset_spec_id": "minimal-fixture-v0.1",
+  "mode": "SWING",
+  "schema_version": "1.0.0",
+  "label_fields": [
+    "symbol",
+    "timestamp",
+    "label_interval",
+    "mode",
+    "gross_r_long",
+    "gross_r_short",
+    "gross_r_no_trade",
+    "net_r_long",
+    "net_r_short",
+    "net_r_no_trade",
+    "fee_cost_r",
+    "slippage_cost_r",
+    "funding_cost_r",
+    "no_trade_quality",
+    "resolution_status",
+    "label_interpretation_version",
+    "source_simulation_id",
+    "lineage"
+  ],
+  "required_fields": [
+    "symbol",
+    "timestamp",
+    "label_interval",
+    "mode",
+    "gross_r_long",
+    "gross_r_short",
+    "net_r_long",
+    "net_r_short",
+    "no_trade_quality"
+  ],
+  "no_trade_quality_thresholds": {
+    "EXCELLENT": 0.8,
+    "GOOD": 0.6,
+    "MARGINAL": 0.3
+  }
+}
