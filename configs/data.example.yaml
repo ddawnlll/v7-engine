@@ -6,12 +6,18 @@
 #   cp configs/data.example.yaml configs/data.yaml
 # =============================================================================
 
-# ── Default symbols (20 high-liquidity Binance USDT pairs) ───────
+# ── Symbol universe (60 Binance USDT perpetual pairs) ─────────────
+# Target: 60 symbols per v7 architecture ("up to 60 symbols").
+# Grouped in 3 tiers for progressive scaling:
+#   T1-T2 (10): minimal smoke test
+#   + T3  (20): AlphaForge MVP first training
+#   + T4  (40): expanded empirical validation
+#   + T5  (60): full v7 target universe
 symbols:
-  # Layer 1 — Majors (BTC + ETH)
+  # Tier 1 — Majors (2)
   - BTCUSDT
   - ETHUSDT
-  # Layer 2 — Large Caps
+  # Tier 2 — Large Caps (8)
   - BNBUSDT
   - SOLUSDT
   - XRPUSDT
@@ -20,7 +26,7 @@ symbols:
   - AVAXUSDT
   - DOTUSDT
   - LINKUSDT
-  # Layer 3 — Mid Caps
+  # Tier 3 — Mid Caps (10)
   - MATICUSDT
   - UNIUSDT
   - ATOMUSDT
@@ -28,9 +34,51 @@ symbols:
   - APTUSDT
   - ARBUSDT
   - OPUSDT
-  - NEARUSDT
   - INJUSDT
   - RNDRUSDT
+  - FILUSDT
+  # Tier 4 — Liquid Alts (20)
+  - TIAUSDT
+  - SEIUSDT
+  - SUIUSDT
+  - WIFUSDT
+  - PEPEUSDT
+  - BONKUSDT
+  - FETUSDT
+  - WLDUSDT
+  - STRKUSDT
+  - JUPUSDT
+  - PYTHUSDT
+  - JTOUSDT
+  - RUNEUSDT
+  - AAVEUSDT
+  - CRVUSDT
+  - FTMUSDT
+  - ENAUSDT
+  - OMUSDT
+  - TAOUSDT
+  - KAITOUSDT
+  # Tier 5 — Volume Rotation (20)
+  - GALAUSDT
+  - SANDUSDT
+  - MANAUSDT
+  - AXSUSDT
+  - GRTUSDT
+  - LDOUSDT
+  - MKRUSDT
+  - ICPUSDT
+  - ETCUSDT
+  - NEARUSDT
+  - AEVOUSDT
+  - PENDLEUSDT
+  - EIGENUSDT
+  - ZKUSDT
+  - METISUSDT
+  - STXUSDT
+  - FLOWUSDT
+  - XLMUSDT
+  - ALGOUSDT
+  - EGLDUSDT
 
 # ── Timeframe intervals (all mode intervals) ──────────────────────
 intervals:
