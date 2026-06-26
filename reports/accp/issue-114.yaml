@@ -1,0 +1,49 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+result: PASS
+scope_confirmation: |
+  Issue #114 Lib Phase 1 — microstructure-aware indicators. Implemented:
+  - lib/indicators/spread.py: hl_spread, parkinson_spread, hl_spread_bps (bid-ask spread estimators from OHLCV)
+  - lib/indicators/volume_profile.py: vwap, compute_volume_profile, VolumeProfile (frozen dataclass with POC/VAH/VAL)
+  - lib/indicators/microstructure.py: amihud_illiquidity, roll_spread, dollar_volume (microstructure-aware indicators)
+  - Extended lib/indicators/__init__.py exports
+
+files_changed:
+  - lib/indicators/__init__.py
+  - lib/indicators/spread.py
+  - lib/indicators/volume_profile.py
+  - lib/indicators/microstructure.py
+  - lib/tests/test_indicators_spread.py
+  - lib/tests/test_indicators_microstructure.py
+
+decisions_locked:
+  - Parkinson spread proxy: structurally identical to parkinson_vol, reused as spread proxy interpretation (LOCKED_INITIAL_BASELINE)
+  - HL spread: (H-L)/close rolling mean, NaN-safe for invalid closes (LOCKED_INITIAL_BASELINE)
+  - VWAP: typical price (H+L+C)/3 as per-bar price, NaN-safe for zero-volume windows (LOCKED_INITIAL_BASELINE)
+  - VolumeProfile: frozen dataclass with POC, VAH (70% value area), VAL; handles zero-volume gracefully (LOCKED_INITIAL_BASELINE)
+  - Amihud illiquidity: mean(|r_t|/dollar_vol_t) per window, NaN-safe for missing returns (LOCKED_INITIAL_BASELINE)
+  - Roll spread: 2*sqrt(-cov(Δp_t, Δp_{t-1})), returns 0 for non-negative autocovariance (LOCKED_INITIAL_BASELINE)
+  - All new functions follow existing lib/indicators conventions: pure math, Sequence[float] in, list[float] out, NaN prefix for period-constrained indices
+
+remaining_holds:
+  - Numeric thresholds (default period=20) are LOCKED_INITIAL_BASELINE — recalibrate after empirical evidence
+  - Volume profile bin count default (10) is heuristic — tune per asset/mode
+  - Roll spread assumes no overnight gaps; log-return variant may be useful for longer timeframes
+
+safe_next_step: |
+  Phase 1 complete. Next: wire microstructure indicators into AlphaForge feature
+  pipeline (alphaforge/features/) or V7 policy critic state vector, as needed
+  by downstream issues.
+
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_indicators_spread.py lib/tests/test_indicators_microstructure.py -v"
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+
+evidence:
+  - "48/48 pass for new indicator tests (spread: 27, microstructure: 21)"
+  - "Full lib test suite: 275 passed, 0 failures, no regressions"
+  - "Domain boundary clean: lib/indicators/ imports nothing from v7/simulation/alphaforge/runtime"
+  - "Commit: 24c0be9 feat: #114 Lib Phase 1 — microstructure-aware indicators"
+  - "All functions type-annotated, match existing lib/indicators/ style"
+  - "VolumeProfile is a frozen dataclass with computed properties (poc_price, vah_price, val_price)"
