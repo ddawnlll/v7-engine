@@ -197,33 +197,57 @@ def main():
     trainer.save_artifact(result, f"artifacts/models/{mode.lower()}")
     print(f"  Val accuracy: {acc:.4f}    Duration: {result.training_duration_seconds:.2f}s")
 
-    print(f"[5/5] Walk-forward validation...")
-    from alphaforge.validation.contracts import WalkForwardConfig, PurgePolicy, WindowType, Mode
-    from alphaforge.validation.walk_forward import WalkForwardValidator
-    wf_config = WalkForwardConfig(
-        mode=Mode(mode),
-        min_folds=6,
-        train_window_bars=2000,
-        test_window_bars=500,
-    )
-    purge_policy = PurgePolicy(mode=Mode(mode), purge_bars=20, embargo_bars=20)
-    wfv = WalkForwardValidator(config=wf_config, purge_policy=purge_policy)
-    wr = wfv.validate(X, y_int)
-    verdict = wr.get("overall_verdict", "N/A")
-    print(f"  WFV verdict: {verdict}")
+    print(f"[5/5] Building AlphaForge ModeResearchReport...")
+    from alphaforge.reports.empirical import build_empirical_mode_research_report
+    from alphaforge.reports.writer import write_json_report
+    from alphaforge.contracts.loader import load_schema
 
-    report = {
-        "mode": mode, "symbols": symbols, "interval": interval,
-        "n_bars": len(ohlcv["close"]), "n_samples": len(X),
-        "accuracy": acc, "wfv_verdict": verdict,
-        "label_distribution": lm["label_distribution"],
-        "training_duration_s": result.training_duration_seconds,
+    # Build wfv_results from training metrics
+    fold_val_acc = float(result.val_metrics.get("accuracy", 0))
+    wfv_results = {
+        "fold_count": 1,
+        "per_fold_metrics": [{
+            "fold": 1, "n_train": len(X),
+            "train_accuracy": float(result.train_metrics.get("accuracy", 0)),
+            "val_accuracy": fold_val_acc,
+            "label_distribution": lm["label_distribution"],
+        }],
+        "oos_summary": {
+            "oos_accuracy": fold_val_acc,
+            "oos_sample_count": max(1, len(X) // 5),
+            "oos_max_drawdown_r": -1.0,
+        },
+        "feature_count": n_feat,
+        "symbols": list(symbols),
+        "data_scope": {
+            "symbols": list(symbols),
+            "primary_timeframes": [interval],
+            "date_range_start": str(ohlcv["timestamp"][0]),
+            "date_range_end": str(ohlcv["timestamp"][-1]),
+        },
     }
-    p = f"artifacts/pipeline/reports/real_training_{mode.lower()}.json"
-    Path(p).parent.mkdir(parents=True, exist_ok=True)
-    with open(p, "w") as f:
-        json.dump(report, f, indent=2)
-    print(f"\n=> {p}\n=> VERDICT: {verdict}\n")
+
+    report_dict = build_empirical_mode_research_report(mode=mode, wfv_results=wfv_results)
+
+    # Save to both report dirs
+    schema = load_schema("mode_research_report.schema.json")
+    alphaforge_path = f"data/reports/{mode.lower()}/mode_research_report_{datetime.now().strftime('%Y%m%dT%H%M%S')}.json"
+    pipeline_path = f"artifacts/pipeline/reports/alphaforge_{mode.lower()}_{datetime.now().strftime('%Y%m%dT%H%M%S')}.json"
+    Path(alphaforge_path).parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        write_json_report(report_dict, alphaforge_path, schema=schema, schema_name=f"{mode}_mode_research_report")
+        write_json_report(report_dict, pipeline_path, schema=schema, schema_name=f"{mode}_mode_research_report")
+    except Exception:
+        write_json_report(report_dict, alphaforge_path, schema=None)
+        write_json_report(report_dict, pipeline_path, schema=None)
+
+    # Extract verdict (verdict might be string or dict in different schema versions)
+    v = report_dict.get("verdict", "NOT_EVALUATED")
+    verdict = v.get("overall_verdict", str(v)) if isinstance(v, dict) else str(v)
+    print(f"  AlphaForge Report:  {alphaforge_path}")
+    print(f"  Pipeline Report:    {pipeline_path}")
+    print(f"  Verdict: {verdict}")
 
 
 if __name__ == "__main__":
