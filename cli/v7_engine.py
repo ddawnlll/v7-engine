@@ -138,6 +138,55 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_v02(args: argparse.Namespace) -> int:
+    """Run the v0.2 profitability evidence pipeline.
+
+    Delegates to cli.v7_pipeline.main() with argv reconstructed from args.
+    """
+    from cli.v7_pipeline import main as v02_main
+
+    # Build argv list from namespace to pass through to v7_pipeline CLI
+    argv: list[str] = []
+    argv.extend(["--mode", getattr(args, "mode", None) or "SWING"])
+
+    symbols = getattr(args, "symbols_v02", None)
+    if symbols:
+        argv.extend(["--symbols", symbols])
+    start = getattr(args, "start", None)
+    if start:
+        argv.extend(["--start", start])
+    end = getattr(args, "end", None)
+    if end:
+        argv.extend(["--end", end])
+    data_dir = getattr(args, "data_dir", None)
+    output_dir = getattr(args, "output_dir", None)
+    if output_dir:
+        argv.extend(["--output-dir", output_dir])
+    elif data_dir:
+        argv.extend(["--output-dir", data_dir])
+    seed = getattr(args, "seed", None)
+    if seed is not None:
+        argv.extend(["--seed", str(seed)])
+    n_bars = getattr(args, "n_bars", None)
+    if n_bars is not None:
+        argv.extend(["--n-bars", str(n_bars)])
+    steps = getattr(args, "steps_v02", None)
+    if steps:
+        argv.extend(["--steps", steps])
+    if getattr(args, "real", False):
+        argv.append("--real")
+    if getattr(args, "no_synthetic", False):
+        argv.append("--no-synthetic")
+    elif getattr(args, "synthetic", True):
+        argv.append("--synthetic")
+    if getattr(args, "force", False):
+        argv.append("--force")
+    if getattr(args, "dry_run", False):
+        argv.append("--dry-run")
+
+    return v02_main(argv)
+
+
 def cmd_pipeline(args: argparse.Namespace) -> int:
     """Run end-to-end pipeline: validate → backfill → simulate → build-dataset → train → wfv → report."""
     steps: list[tuple[str, Any]] = [
@@ -241,6 +290,25 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("report", parents=[_dry_run_parent], add_help=False,
                     help="Generate pipeline report")
 
+    p = sub.add_parser("v02", parents=[_dry_run_parent], add_help=False,
+                        help="Run v0.2 profitability evidence pipeline (backfill→labels→features→train→wfv→report)")
+    p.add_argument("--mode", default="SWING", help="Trading mode (SWING, SCALP, AGGRESSIVE_SCALP)")
+    p.add_argument("--symbols-v02", default=None, dest="symbols_v02",
+                    help="Symbols (comma-separated)")
+    p.add_argument("--start", default=None, help="Start date YYYY-MM-DD")
+    p.add_argument("--end", default=None, help="End date YYYY-MM-DD")
+    p.add_argument("--data-dir", default=None, help="Output directory for artifacts")
+    p.add_argument("--output-dir", default=None, help="Output directory for artifacts")
+    p.add_argument("--seed", type=int, default=None, help="Random seed")
+    p.add_argument("--n-bars", type=int, default=None, help="Bars per symbol for synthetic")
+    p.add_argument("--steps-v02", default=None, dest="steps_v02",
+                    help="Steps to run (comma-separated)")
+    p.add_argument("--real", action="store_true", help="Actually execute (not dry-run)")
+    p.add_argument("--synthetic", action="store_true", default=True,
+                    help="Use synthetic data (default)")
+    p.add_argument("--no-synthetic", action="store_true", help="Use real Binance data")
+    p.add_argument("--force", action="store_true", help="Skip safety gates")
+
     sub.add_parser("pipeline", parents=[_dry_run_parent], add_help=False,
                     help="Run end-to-end pipeline")
 
@@ -278,6 +346,7 @@ def main(argv: list[str] | None = None) -> int:
         "train": cmd_train,
         "wfv": cmd_wfv,
         "report": cmd_report,
+        "v02": cmd_v02,
         "pipeline": cmd_pipeline,
     }
 

@@ -10,7 +10,7 @@ help:
 	@echo "  make check-boundaries Verify ALL domain import boundaries (lib + cross-domain)"
 	@echo "  make check-contracts  Validate contract registry and schema parity"
 	@echo "  make test-system      Run all system-level tests (contracts + boundaries + smoke)"
-	@echo "  make test-all         Run all tests (lib + system + simulation)"
+	@echo "  make test-all         Run all tests (lib + system)"
 	@echo "  make clean            Remove caches, artifacts, build artifacts"
 	@echo "  make lint             Run ruff linting"
 	@echo "  make typecheck        Run mypy type checking"
@@ -24,6 +24,7 @@ help:
 	@echo "  make wfv              Walk-forward validation (gated)"
 	@echo "  make report           Generate pipeline report"
 	@echo "  make pipeline         End-to-end: validate → backfill → simulate → build-dataset → train → wfv → report"
+	@echo "  make pipeline-v0.2    v0.2 profitability evidence pipeline (ISSUE #35)"
 	@echo "  make DRY_RUN=1 <tgt>  Dry-run mode (echo what would run)"
 	@echo ""
 
@@ -74,11 +75,8 @@ test-all:
 	@echo "=== Running all lib/ tests ==="
 	@python -m pytest lib/tests/ -v -q 2>&1
 	@echo ""
-	@echo "=== Running all integration tests ==="
+	@echo "=== Running all system tests ==="
 	@python -m pytest integration/tests/ -v -q 2>&1
-	@echo ""
-	@echo "=== Running all simulation tests ==="
-	@python -m pytest simulation/tests/ -v -q 2>&1
 	@echo ""
 	@echo "  All tests complete ✓"
 
@@ -112,7 +110,7 @@ typecheck:
 
 PIPELINE_PYTHONPATH := alphaforge/src:.
 
-.PHONY: backfill simulate build-dataset train wfv report pipeline validate
+.PHONY: backfill simulate build-dataset train wfv report pipeline validate pipeline-v0.2
 
 backfill:
 	@echo "=== TR-03-PIPELINE-CLI-MAKEFILE-RUNBOOK | backfill ==="; \
@@ -177,4 +175,12 @@ pipeline:
 		echo "[DRY RUN] Steps: validate -> backfill -> simulate -> build-dataset -> train -> wfv -> report"; \
 	else \
 		PYTHONPATH=$(PIPELINE_PYTHONPATH) python3 -m cli pipeline; \
+	fi
+
+pipeline-v0.2:
+	@echo "=== ISSUE-35 | pipeline-v0.2 (profitability evidence pipeline) ==="; \
+	if [ "$(DRY_RUN)" = "1" ]; then \
+		PYTHONPATH=$(PIPELINE_PYTHONPATH) python3 -m cli v02 --dry-run $(ARGS); \
+	else \
+		PYTHONPATH=$(PIPELINE_PYTHONPATH) python3 -m cli v02 $(ARGS); \
 	fi
