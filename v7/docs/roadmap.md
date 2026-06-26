@@ -46,6 +46,10 @@ Documentation authority is largely complete for:
 - **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation. SCALP and AGGRESSIVE_SCALP thresholds are **HOLD** pending empirical evidence.
 - **P0.x — Policy Critic RL Research:** ✅ PASS. Full research + codebase mapping (V7 pipeline, AlphaForge, Simulation, Contracts/Runtime) + literature review (offline RL methods, critic/calibration, reward design, finance RL failure modes) + grounded RL architecture recommendation completed. **LOCK_CANDIDATE** — design documented in `v7/docs/policy_critic/`. Open HOLDs (replay buffer, regret_r, funding, per-direction expected_R, synthesized features, conformal exchangeability) must be resolved before lock.
 
+**P0.9A-D Phase 4 Status (2026-06-26):**
+- **P0.9A — #104 Mode-specific Feature Specification:** ✅ PASS. `v7/features/spec.py` — `FeatureSpec` frozen dataclass per mode with 6 feature groups (returns, volatility, atr, momentum, volume, breakout). SWING (4h/1d/1h), SCALP (1h/4h/15m), AGGRESSIVE_SCALP (15m/1h/5m) window parameters are **LOCKED_INITIAL_BASELINE**. 85 tests pass (structure, no-lookahead, immutability, registration, window sizing). Commit: d6be823. ACCP: `reports/accp/issue-104.yaml`.
+- **P0.9B — #103 Mode-specific Label Semantics:** ✅ PASS. `v7/labels/semantics.py` — mode-specific label definitions. Commit: (separate worktree).
+
 **Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode (LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding LOCKED_INITIAL_BASELINE, SCALP/AGGRESSIVE_SCALP HOLD, CI first green run hold).
 
 That means the next work should be implementation-led, not more concept invention. **Implementation starts with SWING as the secondary baseline/control mode — the safest, most lockable starting point. Primary business/research priority is SCALP and AGGRESSIVE_SCALP (see Mode Priority Alignment below).**
@@ -105,26 +109,6 @@ The mode implementation order (SWING first) must not be confused with business/r
 295 tests pass, 0 failures. `reports/p0_8e_alphaforge_profitability_contract_patch.accp.yaml`.
 
 **Status:** P0.9A (AlphaForge implementation scaffold) is now unblocked. P0.8E prerequisites satisfied.
-
----
-
-## P1.3 — Mode-Specific Label Semantics (ISSUE #103) DONE (2026-06-26)
-
-**What changed:** Created `v7/labels/` module with frozen `LabelSpec` dataclass encoding mode-specific label configuration per `v7/docs/pipeline/labels.md`.
-
-**Key deliverables:**
-- `v7/labels/contracts.py`: `LabelSpec` frozen dataclass with `mode`, `primary_interval`, `label_window_bars`, `min_edge_r`, `min_net_r_for_success`, `max_mae_r_for_success`, `min_mfe_r_for_good_exit`, `max_time_to_mfe_bars`, `allow_no_trade_on_ambiguity`, `no_trade_default`
-- Three mode specs: SWING (4h/24 bars/0.25 edge), SCALP (1h/48 bars/0.15 edge), AGGRESSIVE_SCALP (15m/96 bars/0.10 edge)
-- `validate_edge_threshold()` and `validate_label_window()` instance methods
-- `get_label_spec(mode)` fail-fast lookup helper
-- `v7/__init__.py` updated to document labels module
-- 17 tests pass (mode spec verification, edge/window validation, lookup, immutability, ordering)
-
-**Lock status:** LabelSpec contracts are **LOCKED_INITIAL_BASELINE**. The configuration values are ready for implementation; actual label generation from SimulationOutput is deferred until simulation truth layer matures.
-
-**Remaining holds:** SCALP/AGGRESSIVE_SCALP thresholds remain HOLD pending empirical evidence.
-
-**Evidence:** ACCP report at `reports/accp/issue-103.yaml`. 17/17 tests pass. `v7/tests/` 110/110 pass (no regressions).
 
 ---
 
