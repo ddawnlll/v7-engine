@@ -12,7 +12,8 @@ Design constraints:
 - deterministic: same input always produces identical output
 
 Implementation baseline: SWING mode (4h primary, 1d context, 1h refinement).
-SCALP and AGGRESSIVE_SCALP feature sets require empirical tuning (HOLD).
+SCALP and AGGRESSIVE_SCALP feature windows are LOCKED_INITIAL_BASELINE
+(recalibrate after first empirical evidence). See mode_windows.py.
 
 Causality contract:
   Every feature at index t accesses data only from indices [max(0, t - window + 1), t].
@@ -1084,7 +1085,16 @@ def compute_breakout_group(
 # Main Pipeline Entry Point
 # ===========================================================================
 
-# Mode-specific window defaults
+# Mode-specific window defaults.
+# SWING uses module-level constants (original baseline, unchanged).
+# SCALP and AGGRESSIVE_SCALP are populated from mode_windows.py
+# (LOCKED_INITIAL_BASELINE — recalibrate after first empirical evidence).
+try:
+    from alphaforge.features.mode_windows import SCALP_WINDOWS, AGGRESSIVE_SCALP_WINDOWS
+    _HAS_MODE_WINDOWS = True
+except ImportError:
+    _HAS_MODE_WINDOWS = False
+
 _MODE_DEFAULTS = {
     "SWING": {
         "n_returns": SWING_N_RETURNS,
@@ -1102,6 +1112,10 @@ _MODE_DEFAULTS = {
         "periods_per_year": SWING_PERIODS_PER_YEAR,
     }
 }
+
+if _HAS_MODE_WINDOWS:
+    _MODE_DEFAULTS["SCALP"] = SCALP_WINDOWS.to_dict()
+    _MODE_DEFAULTS["AGGRESSIVE_SCALP"] = AGGRESSIVE_SCALP_WINDOWS.to_dict()
 
 # Supported modes for feature computation
 _SUPPORTED_MODES = frozenset({"SWING", "SCALP", "AGGRESSIVE_SCALP"})
@@ -1122,7 +1136,7 @@ def compute_features(
             Values must be 1D numpy.ndarray of equal length.
         mode: Trading mode string ("SWING", "SCALP", "AGGRESSIVE_SCALP").
             SWING is the implementation baseline. SCALP/AGGRESSIVE_SCALP
-            require empirical tuning and are HOLD.
+            use LOCKED_INITIAL_BASELINE windows from mode_windows.py.
         timeframe_stack: Optional dict with keys primary, context, refinement.
             Informational only — does not affect computation.
 
