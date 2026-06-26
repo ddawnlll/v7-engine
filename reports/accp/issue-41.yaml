@@ -1,0 +1,43 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "issue-41"
+task_description: "Ablation framework — isolate feature/mode/symbol contributions"
+commit_hash: "e5353444c63bec7a1ab7e6d51423c94bae1693a2"
+result: "PASS"
+
+scope_confirmation:
+  - "Feature group ablation: remove one group, retrain, measure delta — IMPLEMENTED"
+  - "Mode comparison: train on SWING, test on SCALP data (cross-mode transfer) — IMPLEMENTED"
+  - "Symbol ablation: train on N-1 symbols, test on held-out — IMPLEMENTED"
+  - "Ablation is DESCRIPTIVE only — no profit/Sharpe/win-rate/expectancy claims — ENFORCED"
+  - "PYTHONPATH test passes: python -m pytest alphaforge/tests/test_ablation.py — 51/51 PASSED"
+
+files_changed:
+  - path: "alphaforge/src/alphaforge/validation/ablation.py"
+    status: "created"
+    purpose: "Ablation study framework — feature group, cross-mode, symbol ablation"
+  - path: "alphaforge/tests/test_ablation.py"
+    status: "created"
+    purpose: "51 tests covering all ablation types, input validation, descriptive-only enforcement"
+
+decisions_locked:
+  - "FEATURE_NAME_TO_GROUP mapping is authoritative — derived from feature pipeline"
+  - "ABLATION_HYPERPARAMS use tree_method=hist for CPU compatibility"
+  - "All result dataclasses are frozen (immutable)"
+  - "GroupAblationResult, CrossModeResult, SymbolAblationResult — all descriptive only"
+
+remaining_holds: []
+
+safe_next_step: "Integrate ablation studies into walk-forward validation pipeline or CI"
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_ablation.py -v"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_ablation.py -q"
+
+evidence:
+  - type: "test_output"
+    value: "51 passed, 0 failed"
+  - type: "commit"
+    value: "e5353444c63bec7a1ab7e6d51423c94bae1693a2"
+  - type: "verification"
+    value: "PYTHONPATH=. test pass confirmed; no profit/Sharpe/expectancy claims in any result field or limitation text"
