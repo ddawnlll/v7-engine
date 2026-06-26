@@ -12,8 +12,7 @@ Design constraints:
 - deterministic: same input always produces identical output
 
 Implementation baseline: SWING mode (4h primary, 1d context, 1h refinement).
-SCALP and AGGRESSIVE_SCALP feature windows are LOCKED_INITIAL_BASELINE
-(recalibrate after first empirical evidence). See mode_windows.py.
+SCALP and AGGRESSIVE_SCALP feature sets require empirical tuning (HOLD).
 
 Causality contract:
   Every feature at index t accesses data only from indices [max(0, t - window + 1), t].
@@ -65,12 +64,17 @@ MIN_BARS: int = 2
 class FeatureGroup(Enum):
     """Feature group enumeration.
 
-    LEAD_LAG is marked DEFERRED because it requires cross-sectional data
-    across symbols (P0.9B dependency). No compute function is mapped for it.
+    LEAD_LAG is IMPLEMENTED but its wiring into compute_features() is DEFERRED
+    (HOLD-LEAD-LAG) because it requires cross-sectional data across symbols
+    (P0.9B dependency). The compute function exists in lead_lag.py and can
+    be called directly with multi-symbol OHLCV data.
+
     Re-enablement conditions:
-      (a) cross-sectional data pipeline available
-      (b) correlation computation across symbols validated
+      (a) cross-sectional data pipeline available (P0.9B)
+      (b) correlation computation across symbols validated against benchmarks
       (c) timeframe alignment logic tested with multi-timeframe fixtures
+      (d) lead_lag_score validated against academic lead-lag detection methods
+      (e) FEATURE_GROUP_MAP[FeatureGroup.LEAD_LAG] wired into compute_features()
     """
     RETURNS = "returns"
     VOLATILITY = "volatility"
@@ -78,7 +82,7 @@ class FeatureGroup(Enum):
     MOMENTUM = "momentum"
     VOLUME = "volume"
     BREAKOUT = "breakout"
-    LEAD_LAG = "lead_lag"  # DEFERRED — P0.9B cross-sectional data required
+    LEAD_LAG = "lead_lag"  # HOLD-LEAD-LAG — implemented, wiring DEFERRED (P0.9B)
 
 
 # ---------------------------------------------------------------------------
@@ -139,7 +143,10 @@ FEATURE_GROUP_MAP: Dict[FeatureGroup, str] = {
     FeatureGroup.MOMENTUM: "compute_momentum_group",
     FeatureGroup.VOLUME: "compute_volume_group",
     FeatureGroup.BREAKOUT: "compute_breakout_group",
-    # FeatureGroup.LEAD_LAG is DEFERRED — not mapped
+    FeatureGroup.LEAD_LAG: "compute_lead_lag_group",
+    # LEAD_LAG is mapped but NOT wired in compute_features() —
+    # HOLD-LEAD-LAG: requires P0.9B cross-sectional data pipeline.
+    # Call compute_lead_lag_group() directly with multi-symbol OHLCV.
 }
 
 
@@ -1085,16 +1092,7 @@ def compute_breakout_group(
 # Main Pipeline Entry Point
 # ===========================================================================
 
-# Mode-specific window defaults.
-# SWING uses module-level constants (original baseline, unchanged).
-# SCALP and AGGRESSIVE_SCALP are populated from mode_windows.py
-# (LOCKED_INITIAL_BASELINE — recalibrate after first empirical evidence).
-try:
-    from alphaforge.features.mode_windows import SCALP_WINDOWS, AGGRESSIVE_SCALP_WINDOWS
-    _HAS_MODE_WINDOWS = True
-except ImportError:
-    _HAS_MODE_WINDOWS = False
-
+# Mode-specific window defaults
 _MODE_DEFAULTS = {
     "SWING": {
         "n_returns": SWING_N_RETURNS,
@@ -1112,10 +1110,6 @@ _MODE_DEFAULTS = {
         "periods_per_year": SWING_PERIODS_PER_YEAR,
     }
 }
-
-if _HAS_MODE_WINDOWS:
-    _MODE_DEFAULTS["SCALP"] = SCALP_WINDOWS.to_dict()
-    _MODE_DEFAULTS["AGGRESSIVE_SCALP"] = AGGRESSIVE_SCALP_WINDOWS.to_dict()
 
 # Supported modes for feature computation
 _SUPPORTED_MODES = frozenset({"SWING", "SCALP", "AGGRESSIVE_SCALP"})
@@ -1136,7 +1130,7 @@ def compute_features(
             Values must be 1D numpy.ndarray of equal length.
         mode: Trading mode string ("SWING", "SCALP", "AGGRESSIVE_SCALP").
             SWING is the implementation baseline. SCALP/AGGRESSIVE_SCALP
-            use LOCKED_INITIAL_BASELINE windows from mode_windows.py.
+            require empirical tuning and are HOLD.
         timeframe_stack: Optional dict with keys primary, context, refinement.
             Informational only — does not affect computation.
 
@@ -1259,8 +1253,8 @@ def compute_features(
             "n_bars": n_bars,
             "total_features": len(features),
             "window_defaults": defaults,
-            "lead_lag_status": "DEFERRED",
-            "lead_lag_reason": "P0.9B cross-sectional data dependency",
+            "lead_lag_status": "HOLD-LEAD-LAG",
+            "lead_lag_reason": "Implemented (lead_lag.py) but wiring DEFERRED — P0.9B cross-sectional data pipeline required",
             "active_groups": 6,
         },
     )

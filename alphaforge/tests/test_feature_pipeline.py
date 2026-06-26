@@ -941,16 +941,17 @@ class TestFeatureMatrixShape:
 # ===========================================================================
 
 class TestLeadLagDeferred:
-    """AC-03-046: Lead-Lag group is properly deferred."""
+    """AC-03-046: Lead-Lag group is implemented but wiring is deferred."""
 
     def test_enum_member_exists(self):
         """FeatureGroup.LEAD_LAG exists as an enum member."""
         assert FeatureGroup.LEAD_LAG is not None
         assert FeatureGroup.LEAD_LAG.value == "lead_lag"
 
-    def test_not_in_feature_group_map(self):
-        """FEATURE_GROUP_MAP does not include LEAD_LAG."""
-        assert FeatureGroup.LEAD_LAG not in FEATURE_GROUP_MAP
+    def test_in_feature_group_map(self):
+        """FEATURE_GROUP_MAP now includes LEAD_LAG (mapped to compute_lead_lag_group)."""
+        assert FeatureGroup.LEAD_LAG in FEATURE_GROUP_MAP
+        assert FEATURE_GROUP_MAP[FeatureGroup.LEAD_LAG] == "compute_lead_lag_group"
 
     def test_no_lead_lag_columns_in_output(self, ohlcv_500):
         """compute_features() produces NO lead-lag feature columns."""
@@ -972,8 +973,9 @@ class TestLeadLagDeferred:
 
     def test_lead_lag_status_in_metadata(self, ohlcv_100):
         result = compute_features(ohlcv_100, mode="SWING")
-        assert result.metadata["lead_lag_status"] == "DEFERRED"
+        assert result.metadata["lead_lag_status"] == "HOLD-LEAD-LAG"
         assert "P0.9B" in result.metadata["lead_lag_reason"]
+        assert "Implemented" in result.metadata["lead_lag_reason"]
 
 
 # ===========================================================================
