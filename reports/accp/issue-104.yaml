@@ -1,0 +1,30 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task: "#104 V7 Phase 4 — Mode-specific feature specification"
+result: "PASS"
+scope_confirmation:
+  - "v7/src/v7/features/__init__.py — module init with exports"
+  - "v7/src/v7/features/spec.py — FeatureSpec per mode with 6 feature groups"
+  - "v7/tests/test_features.py — 85 tests verifying structure, no-lookahead, immutability"
+files_changed:
+  - v7/features/__init__.py
+  - v7/features/spec.py
+  - v7/tests/test_features.py
+decisions_locked:
+  - "Feature groups: returns, volatility, atr, momentum, volume, breakout — LOCKED_INITIAL_BASELINE"
+  - "SWING timeframes: 4h primary, 1d context, 1h refinement — LOCKED_INITIAL_BASELINE"
+  - "SCALP timeframes: 1h primary, 4h context, 15m refinement — LOCKED_INITIAL_BASELINE"
+  - "AGGRESSIVE_SCALP timeframes: 15m primary, 1h context, 5m refinement — LOCKED_INITIAL_BASELINE"
+  - "Window parameter values per mode — LOCKED_INITIAL_BASELINE"
+remaining_holds:
+  - "SCALP and AGGRESSIVE_SCALP threshold status: HOLD (empirical evidence required)"
+  - "Feature computation logic (actual OHLCV transforms): deferred to later phase"
+  - "HTF context and refinement feature groups: not yet implemented (primary interval only)"
+safe_next_step: "Implement feature computation from canonical state using these specs"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest v7/tests/test_features.py -v"
+  - "PYTHONPATH=. python3 -m pytest v7/tests/ -v --ignore=v7/tests/test_features.py"
+evidence:
+  - "85/85 new feature spec tests pass"
+  - "93/93 existing v7 tests pass (no regressions)"
+  - "commit: 49acba5"
