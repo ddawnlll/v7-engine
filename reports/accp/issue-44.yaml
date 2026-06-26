@@ -1,0 +1,67 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+
+scope_confirmation:
+  issue: "#44"
+  title: "P0 — SCALP mode threshold empirical evidence and LOCK"
+  description: >
+    Implement SCALP-specific thresholds (min_expected_r=0.15,
+    max_drawdown_r=-2.0, min_win_rate=0.45, cost_stress_multiplier=2.5,
+    latency_max_ms=200, funding_sensitivity=HIGH) as
+    LOCKED_INITIAL_BASELINE, write 10+ tests, update roadmap.
+
+files_changed:
+  - v7/thresholds/__init__.py
+  - v7/thresholds/scalp.py
+  - v7/tests/test_thresholds_scalp.py
+  - v7/__init__.py
+  - v7/docs/roadmap.md
+  - CLAUDE.md
+
+decisions_locked:
+  - field: SCALP min_expected_r
+    value: 0.15
+    status: LOCKED_INITIAL_BASELINE
+  - field: SCALP max_drawdown_r
+    value: -2.0
+    status: LOCKED_INITIAL_BASELINE
+  - field: SCALP min_win_rate
+    value: 0.45
+    status: LOCKED_INITIAL_BASELINE
+  - field: SCALP cost_stress_multiplier
+    value: 2.5
+    status: LOCKED_INITIAL_BASELINE
+  - field: SCALP latency_max_ms
+    value: 200
+    status: LOCKED_INITIAL_BASELINE
+  - field: SCALP funding_sensitivity
+    value: HIGH
+    status: LOCKED_INITIAL_BASELINE
+
+remaining_holds:
+  - domain: v7
+    hold: AGGRESSIVE_SCALP thresholds
+    condition: >-
+      Cost-adjusted expectancy, latency sensitivity, order-book depth
+      validation required before LOCK.
+
+safe_next_step: >
+  Recalibrate SCALP thresholds after first empirical walk-forward
+  validation (OOS). Begin AGGRESSIVE_SCALP threshold empirical research.
+
+commands_run:
+  - PYTHONPATH=. python3 -m pytest v7/tests/test_thresholds_scalp.py -v
+  - PYTHONPATH=. python3 -m pytest v7/tests/ -v
+
+evidence:
+  - "28 of 28 scalp threshold tests pass"
+  - "121 of 121 v7 tests pass (all suites)"
+  - "Canonical SCALP_THRESHOLDS values verified: min_expected_r=0.15, max_drawdown_r=-2.0, min_win_rate=0.45, cost_stress_multiplier=2.5, latency_max_ms=200, funding_sensitivity=HIGH"
+  - "ScalpThresholds frozen dataclass with __post_init__ validation"
+  - "validate_scalp() function validates trade candidates against all thresholds"
+  - "FundingSensitivity enum (LOW/MEDIUM/HIGH/VERY_HIGH)"
+  - "to_dict() serialization for policy integration"
+  - "Derived properties: reward_risk_ratio, is_cost_sensitive, is_latency_sensitive"
+  - "SCALP vs SWING comparison tests confirm tighter scalping thresholds"
+  - "Immutability enforced via frozen dataclass"

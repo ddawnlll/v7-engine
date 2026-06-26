@@ -43,10 +43,11 @@ Documentation authority is largely complete for:
 **P0.7A-C Lock Status (2026-06-18):**
 - **P0.7A — Simulation MVP:** ✅ PASS. Simulation truth authority has minimal viable implementation (contracts, engine, exits, costs, golden tests, import boundary). 222 tests pass. `SimulationProfile` fixture exists.
 - **P0.7B — CI Enforcement:** ✅ PASS (CI_FIRST_GREEN_RUN_HOLD). `.github/workflows/ci.yml` enforces contract checks, boundary checks, and full test suite on push/PR. First GitHub green run pending verification.
-- **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation. SCALP and AGGRESSIVE_SCALP thresholds are **HOLD** pending empirical evidence.
+- **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation.
+- **P0.7D — SCALP Thresholds (#44):** ✅ PASS. SCALP promotion thresholds are **LOCKED_INITIAL_BASELINE** (min_expected_r=0.15, max_drawdown_r=-2.0, min_win_rate=0.45, cost_stress_multiplier=2.5, latency_max_ms=200, funding_sensitivity=HIGH). AGGRESSIVE_SCALP thresholds remain **HOLD** pending empirical evidence.
 - **P0.x — Policy Critic RL Research:** ✅ PASS. Full research + codebase mapping (V7 pipeline, AlphaForge, Simulation, Contracts/Runtime) + literature review (offline RL methods, critic/calibration, reward design, finance RL failure modes) + grounded RL architecture recommendation completed. **LOCK_CANDIDATE** — design documented in `v7/docs/policy_critic/`. Open HOLDs (replay buffer, regret_r, funding, per-direction expected_R, synthesized features, conformal exchangeability) must be resolved before lock.
 
-**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode (LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding LOCKED_INITIAL_BASELINE, SCALP/AGGRESSIVE_SCALP HOLD, CI first green run hold).
+**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode and SCALP as primary mode (both LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding LOCKED_INITIAL_BASELINE, AGGRESSIVE_SCALP HOLD, CI first green run hold).
 
 That means the next work should be implementation-led, not more concept invention. **Implementation starts with SWING as the secondary baseline/control mode — the safest, most lockable starting point. Primary business/research priority is SCALP and AGGRESSIVE_SCALP (see Mode Priority Alignment below).**
 
@@ -60,7 +61,7 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 | Mode | Business Priority | Research Priority | Threshold Status | AlphaForge Report Type | Promotion Readiness |
 |------|------------------|-------------------|-----------------|----------------------|---------------------|
-| SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| SCALP | **PRIMARY** | **PRIMARY** | LOCKED_INITIAL_BASELINE | Primary research report | Baseline ready; recalibration required after first evidence |
 | AGGRESSIVE_SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
 | SWING | SECONDARY_BASELINE | SECONDARY_BASELINE | LOCKED_INITIAL_BASELINE | Secondary baseline report | Baseline ready; recalibration required after first evidence |
 
@@ -156,7 +157,6 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 | Hold | Domain | Release Condition |
 |------|--------|-------------------|
-| SCALP thresholds | v7 | Empirical walk-forward OOS evidence, fee/slippage stress, funding validation |
 | AGGRESSIVE_SCALP thresholds | v7 | Cost-adjusted expectancy, latency sensitivity, order-book depth validation |
 | Regime gate (G4) | v7/gates | Real regime detector implementation (current: placeholder) |
 | G1-G5, G7-G8 gates | v7/gates | Real evidence data (current: placeholder implementations) |
@@ -461,7 +461,8 @@ Do not collapse these into one vague “publish” step.
 
 **Remaining holds:**
 - No real profitability evidence (HOLD — requires simulation labels, features, training, WF, OOS)
-- SCALP/AGGRESSIVE_SCALP thresholds (HOLD — empirical backtest evidence required)
+- SCALP thresholds (LOCKED_INITIAL_BASELINE — recalibrate after first empirical WFV)
+- AGGRESSIVE_SCALP thresholds (HOLD — empirical backtest evidence required)
 - XGBoost training (DEFERRED to P0.9B/P0.9C)
 - Real data ingestion (DEFERRED to P0.9B)
 

@@ -115,7 +115,7 @@ interface/        → operator UI; observes runtime API only
 
 | Mode | Business Priority | Research Priority | Threshold Status |
 |------|------------------|-------------------|-----------------|
-| SCALP | PRIMARY | PRIMARY | HOLD |
+| SCALP | PRIMARY | PRIMARY | LOCKED_INITIAL_BASELINE |
 | AGGRESSIVE_SCALP | PRIMARY | PRIMARY | HOLD |
 | SWING | SECONDARY_BASELINE | SECONDARY_BASELINE | LOCKED_INITIAL_BASELINE |
 
