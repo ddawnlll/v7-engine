@@ -167,6 +167,37 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
+## #43 — OrderBook Analyzer — Microstructure Proxy Features (2026-06-26)
+
+**Issue:** #43 — Order book analyzer for AGGRESSIVE_SCALP microstructure features.
+
+**What changed:**
+- New `OrderBookFeatureGroup` in `alphaforge/src/alphaforge/features/orderbook.py`
+- 4 OHLCV-based microstructure proxy features: spread_pct_N, volume_imbalance_N, trade_intensity_N, amihud_illiquidity_N
+- amihud_illiquidity_N bridged from `lib/indicators/microstructure` (list↔numpy conversion)
+- FeatureGroup.ORDERBOOK added to enum + FEATURE_GROUP_MAP + compute_features() pipeline
+- Pipeline feature count: 26 → 30, active groups: 6 → 7
+- 35 new tests + 103 updated existing = 138 tests passing
+
+**Design constraints (v0.2):**
+- OHLCV proxies only — no real order book data
+- numpy only (except lib/indicators bridge for Amihud)
+- All features are causal and deterministic
+- Window defaults: 10 bars (spread/imbalance/intensity), 15 bars (Amihud)
+
+**Lock status:**
+- ORDERBOOK feature group architecture: **LOCKABLE_WITH_HOLDS**
+- Window defaults (10, 15): **LOCKED_INITIAL_BASELINE** (SWING-compatible; AGGRESSIVE_SCALP tuning HOLD)
+
+**Remaining holds:**
+- ILLIQ values not calibrated against realized price impact (HOLD — empirical evidence)
+- Volume imbalance proxy not validated against tick-level data (HOLD — real order book required)
+- AGGRESSIVE_SCALP threshold tuning (HOLD — ongoing)
+
+**Evidence:** Commit `e591d47`. ACCP report at `reports/accp/issue-43.yaml`. 138/138 tests pass.
+
+---
+
 ### Implementation Sequence
 
 SWING is implemented first as the **control baseline** — it validates the entire architecture (contracts, simulation truth, labels, features, model training, calibration, policy, portfolio, risk, runtime integration) with the lowest risk. Once the architecture is proven via SWING, SCALP and AGGRESSIVE_SCALP research accelerates on a validated foundation.
