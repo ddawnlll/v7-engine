@@ -137,7 +137,7 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ### v0.1 Architecture Delivered
 
-- **lib/**: market data backfill, storage, catalog, quality, indicators, costs, funding pagination, rate limiter (244 tests)
+- **lib/**: market data backfill, storage, catalog, quality, indicators, costs, funding pagination, rate limiter (280 tests)
 - **simulation/**: truth authority with cost model, batch runner, market data adapter, OHLCV bridge
 - **alphaforge/**: 9-module scaffold, label adapter, feature pipeline, dataset assembler, training runner, walk-forward validation
 - **v7/**: Python package (6 modules) with builder, validator, router, policy, G0-G10 gates, SWING mode end-to-end
@@ -164,6 +164,28 @@ The mode implementation order (SWING first) must not be confused with business/r
 | EXPLICIT_GBM_BLOCK | alphaforge/gates | Post-training xgboost presence is expected; gate works as designed |
 
 **Evidence:** ACCP report at `reports/accp/issue-12.yaml`. Full test output archived in commit.
+
+---
+
+## Issue #114 — Lib Phase 1: Microstructure-Aware Indicators (2026-06-26)
+
+**What changed:**
+- `lib/indicators/spread.py` — `parkinson_spread`, `rolling_parkinson_spread`, `corwin_schultz_spread`
+- `lib/indicators/volume_profile.py` — `typical_price`, `vwap`, `rolling_vwap`
+- `lib/indicators/microstructure.py` — `amihud_illiquidity`, `roll_spread_estimator`
+- `lib/indicators/__init__.py` exports extended
+- 36 new tests (test_indicators_spread.py: 20, test_indicators_microstructure.py: 16)
+- Full lib suite: 280 tests pass (244 existing + 36 new)
+
+**Lock status:**
+- New indicators: **LOCKED_INITIAL_BASELINE** — pure math verified, no empirical calibration against real market data
+- Corwin-Schultz estimator: expected NaN behavior documented for variance-dominated periods
+
+**Remaining holds:**
+- No empirical spread benchmarks (requires tick-level data)
+- Wire into alphaforge feature pipeline (future phase)
+
+**ACCP report:** `reports/accp/issue-114.yaml`
 
 ---
 
@@ -444,37 +466,6 @@ Do not collapse these into one vague “publish” step.
 - Real data ingestion (DEFERRED to P0.9B)
 
 **Safe next step:** V7-P0.9B AlphaForge deterministic data-label-feature pipeline
-
----
-
-## V7-P0.9B — Feature Specification — mode-specific feature windows (2026-06-26)
-
-**Issue:** #104 — Mode-specific feature specification.
-
-**What changed:**
-- Created `v7/features/` package with `__init__.py` and `spec.py`
-- `FeatureSpec` dataclass per mode with 6 feature groups (returns, volatility, atr, momentum, volume, breakout)
-- Per-mode window parameters matching locked timeframe stacks per `v7/docs/pipeline/features.md` and `v7/router.py` profiles:
-  - SWING: primary 4h, returns medium=6 (1d), long=24 (4d), ATR multiplier 2.0, breakout confirmation 3
-  - SCALP: primary 1h, returns medium=4 (4h), long=24 (1d), ATR multiplier 1.5, breakout confirmation 2
-  - AGGRESSIVE_SCALP: primary 15m, returns medium=4 (1h), long=16 (4h), ATR multiplier 1.0, breakout confirmation 2
-- `check_no_lookahead()` guard: verifies all windows >= 1 and monotonic (short <= medium <= long)
-- 32 tests pass in `v7/tests/test_features.py`; full v7 suite 125/125 pass
-
-**Lock status:**
-- `v7/features/` package: **LOCKED_INITIAL_BASELINE** — implementation-ready spec; windows calibrated but may recalibrate after first empirical evidence
-- Feature intervals locked to existing router.py profiles (no drift)
-- Feature group names and 6-group structure: **LOCKED** for first phase
-
-**Remaining holds (unchanged):**
-- No real profitability evidence (HOLD — requires simulation labels, features, training, WF, OOS)
-- SCALP/AGGRESSIVE_SCALP thresholds (HOLD — empirical backtest evidence required)
-- XGBoost training (DEFERRED to P0.9B/P0.9C)
-- Real data ingestion (DEFERRED to P0.9B)
-
-**Safe next step:** Feature computation — implement canonical state to feature row transformation using these specs.
-
-**Evidence:** ACCP report at `reports/accp/issue-104.yaml`. 125/125 v7 tests pass (32 new + 93 existing).
 
 ---
 

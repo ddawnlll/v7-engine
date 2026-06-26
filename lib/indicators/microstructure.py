@@ -1,161 +1,119 @@
 """
-Microstructure-aware indicators.
+Microstructure indicators: Amihud illiquidity ratio and Roll spread.
 
-Amihud (2002) illiquidity and Roll (1984) spread estimator.
-
-Pure math — no state, no adapters, no business logic.
+Pure math -- no state, no adapters.
 """
 
-import math
 from typing import Sequence
+import math
 
 
 def amihud_illiquidity(
     returns: Sequence[float],
-    dollar_volumes: Sequence[float],
+    volumes: Sequence[float],
     period: int = 20,
 ) -> list[float]:
-    """Amihud (2002) illiquidity measure.
+    """Amihud (2002) illiquidity ratio.
 
-    For each window of ``period`` bars, computes:
+    Measures price impact per unit of volume:
 
-        ILLIQ = mean( |r_t| / dollar_volume_t )
+        ILLIQ_i = mean(|r_j| / V_j)  for j in window
 
-    where r_t is the return and dollar_volume_t = price_t * volume_t.
-
-    Higher values indicate lower liquidity (large price moves
-    relative to traded volume).
+    Higher values indicate lower liquidity (larger price impact).
 
     Args:
-        returns: Per-bar return series (e.g. simple or log returns).
-            First element may be NaN (price-change undefined).
-        dollar_volumes: Per-bar dollar volume (= close * volume).
-            Must be > 0 for valid estimates.
-        period: Rolling window (default 20).
+        returns: Return series (e.g. log or simple returns).
+        volumes: Volume series (same length).
+        period: Lookback window (default 20).
 
     Returns:
-        List of Amihud ILLIQ values (same length). First ``period-1``
-        values are NaN. Returns NaN for windows with no valid bars.
+        List of illiquidity estimates, same length as inputs.
+        First ``period - 1`` values are NaN.
+        Entries with zero total-volume over the window are NaN.
     """
     n = len(returns)
     result: list[float] = [float("nan")] * n
-
-    if n < period:
-        return result
-
     for i in range(period - 1, n):
-        sum_ratio = 0.0
+        total = 0.0
         count = 0
         for j in range(i - period + 1, i + 1):
-            dv = dollar_volumes[j] if j < len(dollar_volumes) else 0.0
-            if (
-                not math.isnan(returns[j])
-                and dv > 0
-            ):
-                sum_ratio += abs(returns[j]) / dv
+            r = returns[j]
+            v = volumes[j]
+            if v > 0 and not math.isnan(r):
+                total += abs(r) / v
                 count += 1
-
         if count > 0:
-            result[i] = sum_ratio / count
-        else:
-            result[i] = float("nan")
-
+            result[i] = total / count
+        # else remains NaN
     return result
 
 
-def roll_spread(
-    closes: Sequence[float],
+def roll_spread_estimator(
+    prices: Sequence[float],
     period: int = 20,
 ) -> list[float]:
-    """Roll (1984) effective bid-ask spread estimator.
+    """Roll (1984) bid-ask spread estimator from serial covariance.
 
-    Derived from the autocovariance of price changes under the
-    assumption that transaction prices bounce between bid and ask:
+    S = 2 * sqrt(max(0, -cov(delta_p_t, delta_p_{t-1})))
 
-        spread = 2 * sqrt( -cov(Δp_t, Δp_{t-1}) )
-
-    when the first-order return autocovariance is negative.
-    If it is positive (no bounce signal), returns 0.
+    where the covariance is computed over a rolling window of price
+    changes.  If the serial covariance is non-negative the spread is
+    set to 0 (the estimator's domain requires negative covariance).
 
     Args:
-        closes: Close price sequence.
-        period: Rolling window (default 20).
+        prices: Price series (length >= period + 1).
+        period: Lookback window for the covariance (default 20).
 
     Returns:
-        List of Roll spread estimates in the same units as closes
-        (same length). First ``period`` values are NaN (needs
-        at least period+2 bars for a 1st-order covariance).
-        Returns 0 for windows where autocovariance is >= 0.
+        List of spread estimates, same length as inputs.
+        First ``period`` values are NaN (need period+1 prices to
+        compute ``period`` price changes).
     """
-    n = len(closes)
+    n = len(prices)
+    if n < period + 1:
+        return [float("nan")] * n
+
+    # Compute price changes (deltas)
+    deltas: list[float] = [float("nan")] * n
+    for i in range(1, n):
+        if not math.isnan(prices[i]) and not math.isnan(prices[i - 1]):
+            deltas[i] = prices[i] - prices[i - 1]
+
     result: list[float] = [float("nan")] * n
 
-    # Need at least period+2 bars: period returns + 1 for lagged cov
-    if n < period + 2:
-        return result
-
-    # Compute price changes (Δp_t)
-    dp: list[float] = [float("nan")] * n
-    for i in range(1, n):
-        dp[i] = closes[i] - closes[i - 1]
-
-    # For each valid window end
-    for i in range(period + 1, n):
-        # Window of `period` returns ending at i:
-        # dp[i-period+1], ..., dp[i]
-        # Their lagged counterparts: dp[i-period], ..., dp[i-1]
-        sum_xy = 0.0
-        sum_x = 0.0
-        sum_y = 0.0
+    # Need `period` deltas for the first estimate at index `period`
+    for i in range(period, n):
+        start = i - period + 1
         count = 0
+        sum_d = 0.0
+        sum_d_lag = 0.0
 
-        for j in range(i - period + 1, i + 1):
-            x = dp[j - 1]  # lagged return (t-1)
-            y = dp[j]      # current return (t)
-            if not (math.isnan(x) or math.isnan(y)):
-                sum_xy += x * y
-                sum_x += x
-                sum_y += y
+        # First pass: means (only where both delta[j] and delta[j-1] are valid)
+        for j in range(start, i + 1):
+            if not math.isnan(deltas[j]) and not math.isnan(deltas[j - 1]):
+                sum_d += deltas[j]
+                sum_d_lag += deltas[j - 1]
                 count += 1
 
         if count < 2:
-            result[i] = float("nan")
             continue
 
-        # Sample covariance: cov(X,Y) = Σxy/n - (Σx/n)(Σy/n)
-        cov = (sum_xy / count) - (sum_x / count) * (sum_y / count)
+        mean_d = sum_d / count
+        mean_d_lag = sum_d_lag / count
 
-        if cov < 0:
-            result[i] = 2.0 * math.sqrt(-cov)
-        else:
-            result[i] = 0.0
+        # Second pass: covariance
+        cov = 0.0
+        valid = 0
+        for j in range(start, i + 1):
+            if not math.isnan(deltas[j]) and not math.isnan(deltas[j - 1]):
+                cov += (deltas[j] - mean_d) * (deltas[j - 1] - mean_d_lag)
+                valid += 1
 
-    return result
+        if valid >= 2:
+            cov /= valid
+            if cov < 0:
+                result[i] = 2.0 * math.sqrt(-cov)
+            else:
+                result[i] = 0.0
 
-
-def dollar_volume(
-    closes: Sequence[float],
-    volumes: Sequence[float],
-) -> list[float]:
-    """Compute per-bar dollar (quote-currency) volume.
-
-        dollar_vol_i = close_i * volume_i
-
-    Args:
-        closes: Close prices.
-        volumes: Base-asset volumes.
-
-    Returns:
-        List of dollar volumes (same length). Returns NaN for bars
-        where close <= 0.
-    """
-    n = len(closes)
-    result: list[float] = [0.0] * n
-    for i in range(n):
-        c = closes[i] if i < len(closes) else 0.0
-        v = volumes[i] if i < len(volumes) else 0.0
-        if c > 0:
-            result[i] = c * v
-        else:
-            result[i] = float("nan")
     return result

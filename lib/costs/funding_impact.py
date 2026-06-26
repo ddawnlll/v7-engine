@@ -1,115 +1,137 @@
 """
-Funding cost estimation for perpetual swap positions.
+Funding cost impact estimation for perpetual swap positions.
 
-Pure math — no state, no adapters, no business logic.
-Outputs R-normalized funding cost per trading mode, with
-mode-specific sensitivity factors derived from holding duration.
+Provides a per-mode ``funding_cost_r`` function that estimates funding
+cost in R-multiples for SWING, SCALP, and AGGRESSIVE_SCALP modes.
 
-Based on simulation/docs/cost_model.md section "Funding Cost Model".
+Funding is only applicable to perpetual (perpetual swap) positions.
+Spot trading is unaffected.
 
-Formula:
-    funding_cost_quote = direction_sign * funding_rate * notional * intervals_crossed
-    funding_cost_r = funding_cost_quote / (atr * stop_multiplier) * mode_sensitivity
+Formula (LOCK_CANDIDATE per simulation/docs/cost_model.md):
 
-Where:
-    intervals_crossed = holding_bars * bar_duration_hours / funding_interval_hours
-    direction_sign = +1 for LONG (pays when rate > 0), -1 for SHORT (receives when rate > 0)
+    funding_cost_r = direction_sign * num_intervals * funding_rate * notional
+                     / (atr * stop_multiplier)
 
-Mode sensitivities:
-    SWING:             1.0  (full — 120h holding, ~15 funding intervals)
-    SCALP:             0.3  (moderate — ~12h holding, 1-2 intervals)
-    AGGRESSIVE_SCALP:  0.0  (negligible — ~75min holding, unlikely to cross interval)
+    direction_sign = +1 for LONG, -1 for SHORT
+
+Reference
+---------
+simulation/docs/cost_model.md — Funding Cost Model for Perpetuals (LOCK_CANDIDATE)
 """
-
 from typing import Literal
 
-TradingMode = Literal["SWING", "SCALP", "AGGRESSIVE_SCALP"]
-PositionDirection = Literal["LONG", "SHORT"]
+Mode = Literal["SWING", "SCALP", "AGGRESSIVE_SCALP"]
 
-# Default funding interval in hours (Binance standard: 8 hours)
-_DEFAULT_FUNDING_INTERVAL_HOURS = 8.0
+# Default funding interval for most perpetual exchanges.
+FUNDING_INTERVAL_HOURS: float = 8.0
 
-# Mode-specific funding sensitivity multipliers.
-# Derived from cost_model.md holding durations and interval counts.
-_MODE_FUNDING_SENSITIVITY: dict[str, float] = {
-    "SWING": 1.0,
-    "SCALP": 0.3,
-    "AGGRESSIVE_SCALP": 0.0,
+# Per-interval funding rate default (0.01 %).
+_DEFAULT_FUNDING_RATE: float = 0.0001
+
+# Mode-specific max funding intervals crossed (from cost_model.md table).
+# These are conservative estimates used when holding_hours is not provided.
+_MODE_MAX_FUNDING_INTERVALS: dict[Mode, float] = {
+    "SWING": 15.0,              # 30 bars x 4h / 8h interval
+    "SCALP": 2.0,               # 12 bars x 1h / 8h interval  (rounds up)
+    "AGGRESSIVE_SCALP": 0.0,    # 5 bars x 15m / 8h interval -> negligible
 }
 
 
+def max_funding_intervals(
+    mode: Mode,
+    holding_hours: float | None = None,
+    funding_interval_hours: float = FUNDING_INTERVAL_HOURS,
+) -> float:
+    """Return the number of funding intervals a position could cross.
+
+    When ``holding_hours`` is provided the estimate is based on actual
+    holding time; otherwise the mode-specific conservative default is
+    used.
+
+    Parameters
+    ----------
+    mode : Mode
+        Trading mode (SWING / SCALP / AGGRESSIVE_SCALP).
+    holding_hours : float | None
+        Actual (or worst-case) holding time in hours.  When *None* the
+        mode-specific default is used.
+    funding_interval_hours : float
+        Funding settlement interval in hours (default 8h).
+
+    Returns
+    -------
+    float
+        Number of funding intervals crossed (may be fractional for pro-rata
+        overlap).  Returns 0.0 when ``holding_hours`` or
+        ``funding_interval_hours`` is non-positive.
+    """
+    if funding_interval_hours <= 0:
+        return 0.0
+
+    if holding_hours is not None:
+        if holding_hours <= 0:
+            return 0.0
+        return holding_hours / funding_interval_hours
+
+    return _MODE_MAX_FUNDING_INTERVALS[mode]
+
+
 def funding_cost_r(
-    mode: TradingMode,
     notional: float,
+    entry_price: float,
     atr: float,
     stop_multiplier: float,
-    funding_rate: float,
-    position_direction: PositionDirection,
-    holding_bars: int,
-    bar_duration_hours: float,
-    funding_interval_hours: float = _DEFAULT_FUNDING_INTERVAL_HOURS,
+    mode: Mode = "SWING",
+    funding_rate: float = _DEFAULT_FUNDING_RATE,
+    holding_hours: float | None = None,
+    direction: str = "LONG",
 ) -> float:
-    """Compute funding cost in R-multiples for a perpetual position.
+    """Estimate funding cost in R-multiples for a perpetual swap position.
 
-    Args:
-        mode: Trading mode — 'SWING', 'SCALP', or 'AGGRESSIVE_SCALP'.
-        notional: Position size in quote currency.
-        atr: Average True Range (price units).
-        stop_multiplier: Stop-loss multiplier (1R = atr * stop_multiplier).
-        funding_rate: Current funding rate (e.g. 0.0001 = 0.01% per 8h).
-        position_direction: 'LONG' or 'SHORT'.
-            LONG pays funding when rate > 0 (positive cost).
-            SHORT receives funding when rate > 0 (negative cost / rebate).
-        holding_bars: Number of bars the position is held.
-        bar_duration_hours: Duration of each bar in hours.
-        funding_interval_hours: Funding settlement interval (default 8h).
+    Parameters
+    ----------
+    notional : float
+        Position size in quote currency.
+    entry_price : float
+        Entry price (unused, maintained for API consistency).
+    atr : float
+        Average True Range in price units.
+    stop_multiplier : float
+        Stop-loss multiplier (1R = atr * stop_multiplier).
+    mode : Mode
+        Trading mode.
+    funding_rate : float
+        Per-interval funding rate as a decimal (default 0.0001 = 0.01 %).
+    holding_hours : float | None
+        Estimated holding time in hours.  When *None* the mode-specific
+        conservative default is used.
+    direction : str
+        ``"LONG"`` (pays funding when rate > 0) or ``"SHORT"`` (receives
+        funding when rate > 0).
 
-    Returns:
+    Returns
+    -------
+    float
         Funding cost expressed in R-multiples.
-        Negative values represent funding rebate (position receives).
-        Returns 0.0 if atr <= 0 or stop_multiplier <= 0.
 
-    Examples:
-        >>> funding_cost_r("SWING", 10000, 100, 2, 0.0001, "LONG", 30, 4)
-        # 15 intervals crossed, long pays: +1 * 0.0001 * 10000 * 15 / 200 = 0.075
-        0.075
-
-        >>> funding_cost_r("SCALP", 10000, 100, 2, 0.0001, "SHORT", 12, 1)
-        # 1.5 intervals, short receives, 0.3 sensitivity:
-        # -1 * 0.0001 * 10000 * 1.5 / 200 * 0.3 = -0.00225
-        -0.00225
-
-        >>> funding_cost_r("AGGRESSIVE_SCALP", 10000, 100, 2, 0.0001, "LONG", 5, 0.25)
-        # AGGRESSIVE_SCALP sensitivity is 0 → always 0
-        0.0
+        * Positive value = net cost (detracts from gross R).
+        * Negative value = net credit (adds to gross R).
+        * Returns 0.0 if ``atr <= 0`` or ``stop_multiplier <= 0``.
+        * Returns 0.0 for AGGRESSIVE_SCALP when no explicit
+          ``holding_hours`` is provided (funding impact is negligible per
+          cost_model.md).
     """
     if atr <= 0 or stop_multiplier <= 0:
         return 0.0
 
-    sensitivity = _MODE_FUNDING_SENSITIVITY.get(mode, 0.0)
-    if sensitivity == 0.0:
+    # AGGRESSIVE_SCALP: funding is negligible per cost_model.md table,
+    # unless the caller explicitly provides holding_hours.
+    if mode == "AGGRESSIVE_SCALP" and holding_hours is None:
         return 0.0
 
-    direction_sign = 1.0 if position_direction == "LONG" else -1.0
-
-    # Number of funding intervals crossed during the holding period
-    intervals_crossed = (holding_bars * bar_duration_hours) / funding_interval_hours
-
-    funding_cost_quote = direction_sign * funding_rate * notional * intervals_crossed
-    funding_cost_quote *= sensitivity
-
+    direction_sign = 1.0 if direction == "LONG" else -1.0
+    num_intervals = max_funding_intervals(mode, holding_hours)
     r_value = atr * stop_multiplier
-    return funding_cost_quote / r_value
 
-
-def funding_sensitivity(mode: TradingMode) -> float:
-    """Return the funding sensitivity multiplier for a given mode.
-
-    Args:
-        mode: Trading mode — 'SWING', 'SCALP', or 'AGGRESSIVE_SCALP'.
-
-    Returns:
-        Sensitivity multiplier (0.0 to 1.0).
-        Returns 0.0 for unknown modes.
-    """
-    return _MODE_FUNDING_SENSITIVITY.get(mode, 0.0)
+    raw_funding = direction_sign * num_intervals * funding_rate * notional
+    return raw_funding / r_value
