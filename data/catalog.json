@@ -593,6 +593,96 @@
       "row_count": 48050,
       "start_ts": 1609459200000,
       "symbol": "LINKUSDT"
+    },
+    {
+      "checksum": "a16a55e8c3bd2205270b157b01c3cc07b82dc3d6c717c02c832ce3c90c4221aa",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T16:00:00.477769+00:00",
+      "interval": "15m",
+      "row_count": 87136,
+      "start_ts": 1704067200000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "ea7700bdc5102bc381db9bdfffdb724e52b4bae3316ddc1a5355691db13d5368",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T16:00:35.650404+00:00",
+      "interval": "15m",
+      "row_count": 87137,
+      "start_ts": 1704067200000,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "61838ba214fad3f717dc015e9e0cc3378b857861545a28d679dfe740d394cb2a",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T16:01:05.975291+00:00",
+      "interval": "15m",
+      "row_count": 87137,
+      "start_ts": 1704067200000,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "3c9c01d0fb884a31da2b09a63886f1ffd572fd910d672c24b239d00bbb3c2028",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T16:01:33.443178+00:00",
+      "interval": "15m",
+      "row_count": 87137,
+      "start_ts": 1704067200000,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "499c3924ccc61d4566e0f10ab8a4f9c4269b316ddafb2c588f519245cdfe5942",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T16:02:01.263408+00:00",
+      "interval": "15m",
+      "row_count": 87137,
+      "start_ts": 1704067200000,
+      "symbol": "XRPUSDT"
+    },
+    {
+      "checksum": "b1041129c93e1eb99a395aac38ac8a12a8c8ff285d4232fb5cdcacffe281f4a9",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T16:02:29.960766+00:00",
+      "interval": "15m",
+      "row_count": 87137,
+      "start_ts": 1704067200000,
+      "symbol": "ADAUSDT"
+    },
+    {
+      "checksum": "76e19e35481069180ee62c53e6d0ea31ce91ee553de09778773bb198afd90585",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T16:02:58.474866+00:00",
+      "interval": "15m",
+      "row_count": 87137,
+      "start_ts": 1704067200000,
+      "symbol": "DOGEUSDT"
+    },
+    {
+      "checksum": "cabd432028afcaca8d89bb4ec376ca3fca1b66df2204269ebe94f9d77c56f3c8",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T16:03:26.156462+00:00",
+      "interval": "15m",
+      "row_count": 87137,
+      "start_ts": 1704067200000,
+      "symbol": "AVAXUSDT"
+    },
+    {
+      "checksum": "fc8d58f3ac89b3efe44b90f11459690a8b08ed92e78e7961d4a3edec4a5d3df4",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T16:03:54.931018+00:00",
+      "interval": "15m",
+      "row_count": 87137,
+      "start_ts": 1704067200000,
+      "symbol": "DOTUSDT"
+    },
+    {
+      "checksum": "67b93bae907b5e6d5d48a32434696b28901d0b2b16ab995fed8eb14abafcc8a0",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T16:04:22.894740+00:00",
+      "interval": "15m",
+      "row_count": 87137,
+      "start_ts": 1704067200000,
+      "symbol": "LINKUSDT"
     }
   ]
 }
