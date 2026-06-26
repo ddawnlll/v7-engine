@@ -1,22 +1,20 @@
 """
-V7 Labels — Mode-specific label semantics.
+V7 Label Module — Mode-Specific Label Semantics.
 
-Converts SimulationOutput into supervised targets (classification + regression)
-parameterized per trading mode (SWING | SCALP | AGGRESSIVE_SCALP).
+Labels consume simulation truth (SimulationOutput) and produce
+mode-specific supervised targets for classification and regression.
 
-Design authority: v7/docs/pipeline/labels.md
+Exports:
+    LabelSpec      — Frozen dataclass per mode.
+    LABEL_SPECS    — Registry dict mapping TradingMode -> LabelSpec.
+    TradingMode    — Re-exported from simulation.contracts.models.
 """
 
-from v7.labels.contracts import (
-    LabelSpec,
-    LABEL_SPECS,
-    get_label_spec,
-    SUPPORTED_MODES,
-)
+from v7.labels.contracts import LABEL_SPECS, LabelSpec
+from simulation.contracts.models import TradingMode
 
 __all__ = [
-    "LabelSpec",
     "LABEL_SPECS",
-    "get_label_spec",
-    "SUPPORTED_MODES",
+    "LabelSpec",
+    "TradingMode",
 ]

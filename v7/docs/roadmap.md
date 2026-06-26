@@ -158,7 +158,7 @@ The mode implementation order (SWING first) must not be confused with business/r
 |------|--------|-------------------|
 | SCALP thresholds | v7 | Empirical walk-forward OOS evidence, fee/slippage stress, funding validation |
 | AGGRESSIVE_SCALP thresholds | v7 | Cost-adjusted expectancy, latency sensitivity, order-book depth validation |
-| Regime gate (G4) | v7/gates | Real regime detector implementation (current: rule-based baseline implemented in alphaforge/features/regime.py per #78; supervised Phase 3 deferred) |
+| Regime gate (G4) | v7/gates | Real regime detector implementation (current: placeholder) |
 | G1-G5, G7-G8 gates | v7/gates | Real evidence data (current: placeholder implementations) |
 | Real profitability evidence | All | Requires simulation labels, features, training, WF, OOS on real data |
 | EXPLICIT_GBM_BLOCK | alphaforge/gates | Post-training xgboost presence is expected; gate works as designed |
@@ -444,6 +444,37 @@ Do not collapse these into one vague “publish” step.
 - Real data ingestion (DEFERRED to P0.9B)
 
 **Safe next step:** V7-P0.9B AlphaForge deterministic data-label-feature pipeline
+
+---
+
+## V7-P0.9B — Feature Specification — mode-specific feature windows (2026-06-26)
+
+**Issue:** #104 — Mode-specific feature specification.
+
+**What changed:**
+- Created `v7/features/` package with `__init__.py` and `spec.py`
+- `FeatureSpec` dataclass per mode with 6 feature groups (returns, volatility, atr, momentum, volume, breakout)
+- Per-mode window parameters matching locked timeframe stacks per `v7/docs/pipeline/features.md` and `v7/router.py` profiles:
+  - SWING: primary 4h, returns medium=6 (1d), long=24 (4d), ATR multiplier 2.0, breakout confirmation 3
+  - SCALP: primary 1h, returns medium=4 (4h), long=24 (1d), ATR multiplier 1.5, breakout confirmation 2
+  - AGGRESSIVE_SCALP: primary 15m, returns medium=4 (1h), long=16 (4h), ATR multiplier 1.0, breakout confirmation 2
+- `check_no_lookahead()` guard: verifies all windows >= 1 and monotonic (short <= medium <= long)
+- 32 tests pass in `v7/tests/test_features.py`; full v7 suite 125/125 pass
+
+**Lock status:**
+- `v7/features/` package: **LOCKED_INITIAL_BASELINE** — implementation-ready spec; windows calibrated but may recalibrate after first empirical evidence
+- Feature intervals locked to existing router.py profiles (no drift)
+- Feature group names and 6-group structure: **LOCKED** for first phase
+
+**Remaining holds (unchanged):**
+- No real profitability evidence (HOLD — requires simulation labels, features, training, WF, OOS)
+- SCALP/AGGRESSIVE_SCALP thresholds (HOLD — empirical backtest evidence required)
+- XGBoost training (DEFERRED to P0.9B/P0.9C)
+- Real data ingestion (DEFERRED to P0.9B)
+
+**Safe next step:** Feature computation — implement canonical state to feature row transformation using these specs.
+
+**Evidence:** ACCP report at `reports/accp/issue-104.yaml`. 125/125 v7 tests pass (32 new + 93 existing).
 
 ---
 

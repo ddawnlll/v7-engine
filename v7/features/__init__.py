@@ -1,18 +1,27 @@
 """
 V7 Feature Specification — mode-specific feature window parameters.
 
-Features are produced from canonical state only. The same feature row feeds both
-classification and regression heads across all modes.
+Domain authority:
+  - Defines FeatureSpec per mode (SWING, SCALP, AGGRESSIVE_SCALP)
+  - Does NOT compute features (that is the canonical-state pipeline)
+  - Feature windows match locked timeframe stacks per mode
+  - Features are shared across modes; labels are mode-specific
 
-Modes:
-  SWING:            primary 4h, context 1d, refinement 1h
-  SCALP:            primary 1h, context 4h, refinement 15m
-  AGGRESSIVE_SCALP: primary 15m, context 1h, refinement 5m
-
-Feature groups:
-  returns, volatility, atr, momentum, volume, breakout
+See v7/docs/pipeline/features.md for the full design doc.
 """
 
-from v7.features.spec import FeatureSpec, FeatureSpecPerMode, get_feature_spec
+from v7.features.spec import (
+    FeatureGroup,
+    FeatureSpec,
+    MODE_FEATURE_SPECS,
+    get_feature_spec,
+    list_modes,
+)
 
-__all__ = ["FeatureSpec", "FeatureSpecPerMode", "get_feature_spec"]
+__all__ = [
+    "FeatureGroup",
+    "FeatureSpec",
+    "MODE_FEATURE_SPECS",
+    "get_feature_spec",
+    "list_modes",
+]

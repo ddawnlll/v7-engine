@@ -1,112 +1,84 @@
 """
-LabelSpec — Mode-specific label configuration contracts.
+Mode-specific label semantics contracts.
 
-Defines the label window, primary interval, edge thresholds, and
-per-mode success criteria for converting SimulationOutput into
-supervised learning targets.
+Each trading mode defines a LabelSpec that governs how simulation
+outputs are converted into supervised targets — windows, edge
+thresholds, and success criteria are all mode-parameterised.
 
-Design authority: v7/docs/pipeline/labels.md
+Domain authority:
+  - Labels consume SimulationOutput (simulation owns economic truth).
+  - Labels produce mode-specific targets for AlphaForge model training.
+
+Per-mode defaults are LOCKED_INITIAL_BASELINE — safe starting points
+that will be recalibrated after first empirical evidence.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Final
+
+from simulation.contracts.models import TradingMode
 
 
 @dataclass(frozen=True)
 class LabelSpec:
-    """Mode-specific label generation configuration.
+    """Mode-specific label generation specification.
 
-    Each mode has its own label window, primary interval, edge threshold,
-    and success criteria reflecting the different time horizons and
-    noise characteristics of SWING (slower, wider), SCALP (faster, tighter),
-    and AGGRESSIVE_SCALP (very fast, micro-structure driven).
+    Attributes:
+        mode:           Trading mode this spec applies to.
+        primary_interval:   Candle interval used as the label resolution.
+        label_window:       Number of primary-interval bars the label
+                            evaluates across (lookahead window).
+        min_edge_r:         Minimum edge ratio (net R / gross R) required
+                            for a directional action to be considered viable.
+        min_net_r_for_success: Minimum net realized R for a trade to be
+                            labelled a success.
+        max_mae_r_for_success: Maximum adverse excursion (as a negative R)
+                            allowed while still being labelled a success.
+        ambiguity_margin_r: Gap in utility between best and second-best
+                            action below which the label is ambiguous.
     """
-
-    mode: str
+    mode: TradingMode
     primary_interval: str
-    label_window_bars: int
+    label_window: int
     min_edge_r: float
     min_net_r_for_success: float
     max_mae_r_for_success: float
-    min_mfe_r_for_good_exit: float
-    max_time_to_mfe_bars: int
-    allow_no_trade_on_ambiguity: bool
-    no_trade_default: bool
-
-    def validate_edge_threshold(self) -> bool:
-        """The min_edge_r must be strictly positive.
-
-        A non-positive edge threshold would admit negative-expectancy
-        trades, which defeats the purpose of a minimum edge gate.
-        """
-        return self.min_edge_r > 0.0
-
-    def validate_label_window(self) -> bool:
-        """The label window must be at least 1 bar.
-
-        A zero-bar window has no forward information for labelling.
-        """
-        return self.label_window_bars >= 1
+    ambiguity_margin_r: float
 
 
-SUPPORTED_MODES: Final = ("SWING", "SCALP", "AGGRESSIVE_SCALP")
+# ── Mode-Specific Label Specifications ──────────────────────────────────
+#
+# These are LOCKED_INITIAL_BASELINE per the project governance:
+# safe starting points that will be recalibrated when empirical
+# label-evaluation data becomes available.
 
-LABEL_SPECS: Final[Dict[str, LabelSpec]] = {
-    "SWING": LabelSpec(
-        mode="SWING",
+LABEL_SPECS: dict[TradingMode, LabelSpec] = {
+    TradingMode.SWING: LabelSpec(
+        mode=TradingMode.SWING,
         primary_interval="4h",
-        label_window_bars=24,        # 4 days at 4h
+        label_window=24,
         min_edge_r=0.25,
         min_net_r_for_success=0.75,
         max_mae_r_for_success=-0.60,
-        min_mfe_r_for_good_exit=1.0,
-        max_time_to_mfe_bars=48,
-        allow_no_trade_on_ambiguity=False,
-        no_trade_default=False,
+        ambiguity_margin_r=0.25,
     ),
-    "SCALP": LabelSpec(
-        mode="SCALP",
+    TradingMode.SCALP: LabelSpec(
+        mode=TradingMode.SCALP,
         primary_interval="1h",
-        label_window_bars=48,        # 2 days at 1h
+        label_window=48,
         min_edge_r=0.15,
         min_net_r_for_success=0.20,
         max_mae_r_for_success=-0.25,
-        min_mfe_r_for_good_exit=0.60,
-        max_time_to_mfe_bars=12,
-        allow_no_trade_on_ambiguity=True,
-        no_trade_default=False,
+        ambiguity_margin_r=0.10,
     ),
-    "AGGRESSIVE_SCALP": LabelSpec(
-        mode="AGGRESSIVE_SCALP",
+    TradingMode.AGGRESSIVE_SCALP: LabelSpec(
+        mode=TradingMode.AGGRESSIVE_SCALP,
         primary_interval="15m",
-        label_window_bars=96,        # 24 hours at 15m
+        label_window=96,
         min_edge_r=0.10,
         min_net_r_for_success=0.10,
         max_mae_r_for_success=-0.10,
-        min_mfe_r_for_good_exit=0.30,
-        max_time_to_mfe_bars=3,
-        allow_no_trade_on_ambiguity=True,
-        no_trade_default=True,
+        ambiguity_margin_r=0.05,
     ),
 }
-
-
-def get_label_spec(mode: str) -> LabelSpec:
-    """Return the LabelSpec for a given mode.
-
-    Args:
-        mode: One of "SWING", "SCALP", "AGGRESSIVE_SCALP".
-
-    Returns:
-        The frozen LabelSpec for the mode.
-
-    Raises:
-        KeyError: If the mode is not in SUPPORTED_MODES.
-    """
-    if mode not in LABEL_SPECS:
-        raise KeyError(
-            f"Unknown mode '{mode}'. Supported modes: {SUPPORTED_MODES}"
-        )
-    return LABEL_SPECS[mode]
