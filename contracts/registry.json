@@ -304,7 +304,7 @@
     },
     {
       "object_name": "PolicyCriticReview",
-      "owner_domain": "v7/policy_critic",
+      "owner_domain": "v7",
       "version": "1.0.0",
       "schema_file": "contracts/schemas/policy_critic_review.schema.json",
       "fixture_file": "contracts/fixtures/policy_critic_review_minimal.json",
@@ -316,8 +316,7 @@
         "v7/policy_critic"
       ],
       "consumers": [
-        "v7/evaluation",
-        "v7/monitoring"
+        "v7"
       ]
     }
   ]

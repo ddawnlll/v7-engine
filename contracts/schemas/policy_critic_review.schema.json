@@ -1,6 +1,7 @@
 {
   "title": "PolicyCriticReview",
   "description": "Policy Critic RL review output per decision event.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "required": [
     "review_id",
