@@ -89,11 +89,30 @@ intervals:
   - 1d
 
 # ── Lookback configuration ────────────────────────────────────────
+# Target: 18-24 months of data for 6-fold walk-forward validation.
+# SWING (4h) × 1000 bars ≈ 6 months; 6-fold WFV needs ~12+ months.
+# 2024-01-01 gives ~18 months as of mid-2026.
 lookback:
-  # Number of bars to fetch per interval
+  # Bars per interval per symbol
   bars: 1000
-  # Fallback start date if bars-based range cannot be determined
-  start: "2024-01-01"
+  # Global default — every symbol starts from this date unless overridden.
+  # Symbols listed AFTER this date use their listing date instead.
+  default_start: "2024-01-01"
+  # Per-symbol start date overrides for recently-listed coins.
+  # Backfill orchestrator uses: max(default_start, override, earliest_available_bar).
+  # Only needed when Binance listing date > default_start (2024-01-01).
+  # Approximate listing dates — verify against Binance announcements.
+  symbol_start_overrides:
+    WIFUSDT: "2024-03-05"
+    BONKUSDT: "2024-04-22"
+    ENAUSDT: "2024-04-02"
+    OMUSDT: "2024-06-27"
+    TAOUSDT: "2024-07-30"
+    ZKUSDT: "2024-06-17"
+    KAITOUSDT: "2024-11-28"
+    AEVOUSDT: "2024-11-28"
+    EIGENUSDT: "2024-10-01"
+    # Most T1-T3 coins listed before 2024 → use default_start.
 
 # ── Data storage ──────────────────────────────────────────────────
 storage:
