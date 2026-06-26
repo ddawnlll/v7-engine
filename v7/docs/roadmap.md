@@ -43,11 +43,10 @@ Documentation authority is largely complete for:
 **P0.7A-C Lock Status (2026-06-18):**
 - **P0.7A — Simulation MVP:** ✅ PASS. Simulation truth authority has minimal viable implementation (contracts, engine, exits, costs, golden tests, import boundary). 222 tests pass. `SimulationProfile` fixture exists.
 - **P0.7B — CI Enforcement:** ✅ PASS (CI_FIRST_GREEN_RUN_HOLD). `.github/workflows/ci.yml` enforces contract checks, boundary checks, and full test suite on push/PR. First GitHub green run pending verification.
-- **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation.
-- **P0.7D — SCALP Thresholds (#44):** ✅ PASS. SCALP promotion thresholds are **LOCKED_INITIAL_BASELINE** (min_expected_r=0.15, max_drawdown_r=-2.0, min_win_rate=0.45, cost_stress_multiplier=2.5, latency_max_ms=200, funding_sensitivity=HIGH). AGGRESSIVE_SCALP thresholds remain **HOLD** pending empirical evidence.
+- **P0.7C — SWING Thresholds:** ✅ PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines ready for implementation. SCALP thresholds remain **HOLD** pending empirical evidence. AGGRESSIVE_SCALP thresholds are **LOCKED_INITIAL_BASELINE** (Issue #36).
 - **P0.x — Policy Critic RL Research:** ✅ PASS. Full research + codebase mapping (V7 pipeline, AlphaForge, Simulation, Contracts/Runtime) + literature review (offline RL methods, critic/calibration, reward design, finance RL failure modes) + grounded RL architecture recommendation completed. **LOCK_CANDIDATE** — design documented in `v7/docs/policy_critic/`. Open HOLDs (replay buffer, regret_r, funding, per-direction expected_R, synthesized features, conformal exchangeability) must be resolved before lock.
 
-**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode and SCALP as primary mode (both LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding LOCKED_INITIAL_BASELINE, AGGRESSIVE_SCALP HOLD, CI first green run hold).
+**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode (LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding LOCKED_INITIAL_BASELINE, SCALP HOLD, AGGRESSIVE_SCALP LOCKED_INITIAL_BASELINE, CI first green run hold).
 
 That means the next work should be implementation-led, not more concept invention. **Implementation starts with SWING as the secondary baseline/control mode — the safest, most lockable starting point. Primary business/research priority is SCALP and AGGRESSIVE_SCALP (see Mode Priority Alignment below).**
 
@@ -61,8 +60,8 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 | Mode | Business Priority | Research Priority | Threshold Status | AlphaForge Report Type | Promotion Readiness |
 |------|------------------|-------------------|-----------------|----------------------|---------------------|
-| SCALP | **PRIMARY** | **PRIMARY** | LOCKED_INITIAL_BASELINE | Primary research report | Baseline ready; recalibration required after first evidence |
-| AGGRESSIVE_SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| AGGRESSIVE_SCALP | **PRIMARY** | **PRIMARY** | LOCKED_INITIAL_BASELINE (Issue #36) | Primary research report | Baseline ready; recalibrate after first evidence |
 | SWING | SECONDARY_BASELINE | SECONDARY_BASELINE | LOCKED_INITIAL_BASELINE | Secondary baseline report | Baseline ready; recalibration required after first evidence |
 
 ### Key Principles
@@ -71,9 +70,9 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 2. **SWING is the SECONDARY_BASELINE / CONTROL mode.** SWING was locked first because it is safer, lower-noise, and easier to baseline — not because it is the primary product. It serves as a control anchor: if SWING fails, something is fundamentally wrong. If SWING works, it validates the architecture but does not validate SCALP or AGGRESSIVE_SCALP.
 
-3. **HOLD on SCALP/AGGRESSIVE_SCALP means "empirical research required" — not "low priority."** Fee, slippage, latency, data quality, overfit, and funding risks make these modes harder to lock without evidence. Their HOLD status reflects research difficulty, not business importance.
+3. **AGGRESSIVE_SCALP is now LOCKED_INITIAL_BASELINE (Issue #36). SCALP remains HOLD.** AGGRESSIVE_SCALP threshold baselines (min_expected_r=0.10, max_drawdown_r=-3.0, cost_stress_multiplier=3.0, funding_sensitivity=CRITICAL, min_volume_ratio=1.5) are conservative starting points. SCALP HOLD reflects research difficulty and empirical evidence requirement.
 
-4. **Promotion-readiness and research-priority are independent dimensions.** SWING is more promotion-ready (LOCKED_INITIAL_BASELINE). SCALP and AGGRESSIVE_SCALP have higher business/research priority but require empirical evidence before threshold lock.
+4. **Promotion-readiness and research-priority are independent dimensions.** SWING and AGGRESSIVE_SCALP are LOCKED_INITIAL_BASELINE. SCALP requires empirical evidence before threshold lock.
 
 5. **AlphaForge must support all three modes.** AlphaForge produces primary research reports for SCALP and AGGRESSIVE_SCALP, and a secondary baseline/control report for SWING. No mode is optional.
 
@@ -138,7 +137,7 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ### v0.1 Architecture Delivered
 
-- **lib/**: market data backfill, storage, catalog, quality, indicators, costs, funding pagination, rate limiter (280 tests)
+- **lib/**: market data backfill, storage, catalog, quality, indicators, costs, funding pagination, rate limiter (244 tests)
 - **simulation/**: truth authority with cost model, batch runner, market data adapter, OHLCV bridge
 - **alphaforge/**: 9-module scaffold, label adapter, feature pipeline, dataset assembler, training runner, walk-forward validation
 - **v7/**: Python package (6 modules) with builder, validator, router, policy, G0-G10 gates, SWING mode end-to-end
@@ -149,6 +148,7 @@ The mode implementation order (SWING first) must not be confused with business/r
 ### Lock Status at v0.1
 
 - SWING mode thresholds: **LOCKED_INITIAL_BASELINE**
+- AGGRESSIVE_SCALP mode thresholds: **LOCKED_INITIAL_BASELINE** (Issue #36)
 - AlphaForge contracts: **LOCKED** (canonical G0-G10, label schema, MHT, timeframes)
 - Funding cost model: **LOCKED_INITIAL_BASELINE**
 - Design lock: **LOCKABLE_WITH_HOLDS**
@@ -157,35 +157,13 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 | Hold | Domain | Release Condition |
 |------|--------|-------------------|
-| AGGRESSIVE_SCALP thresholds | v7 | Cost-adjusted expectancy, latency sensitivity, order-book depth validation |
+| SCALP thresholds | v7 | Empirical walk-forward OOS evidence, fee/slippage stress, funding validation |
 | Regime gate (G4) | v7/gates | Real regime detector implementation (current: placeholder) |
 | G1-G5, G7-G8 gates | v7/gates | Real evidence data (current: placeholder implementations) |
 | Real profitability evidence | All | Requires simulation labels, features, training, WF, OOS on real data |
 | EXPLICIT_GBM_BLOCK | alphaforge/gates | Post-training xgboost presence is expected; gate works as designed |
 
 **Evidence:** ACCP report at `reports/accp/issue-12.yaml`. Full test output archived in commit.
-
----
-
-## Issue #114 — Lib Phase 1: Microstructure-Aware Indicators (2026-06-26)
-
-**What changed:**
-- `lib/indicators/spread.py` — `parkinson_spread`, `rolling_parkinson_spread`, `corwin_schultz_spread`
-- `lib/indicators/volume_profile.py` — `typical_price`, `vwap`, `rolling_vwap`
-- `lib/indicators/microstructure.py` — `amihud_illiquidity`, `roll_spread_estimator`
-- `lib/indicators/__init__.py` exports extended
-- 36 new tests (test_indicators_spread.py: 20, test_indicators_microstructure.py: 16)
-- Full lib suite: 280 tests pass (244 existing + 36 new)
-
-**Lock status:**
-- New indicators: **LOCKED_INITIAL_BASELINE** — pure math verified, no empirical calibration against real market data
-- Corwin-Schultz estimator: expected NaN behavior documented for variance-dominated periods
-
-**Remaining holds:**
-- No empirical spread benchmarks (requires tick-level data)
-- Wire into alphaforge feature pipeline (future phase)
-
-**ACCP report:** `reports/accp/issue-114.yaml`
 
 ---
 
@@ -461,8 +439,7 @@ Do not collapse these into one vague “publish” step.
 
 **Remaining holds:**
 - No real profitability evidence (HOLD — requires simulation labels, features, training, WF, OOS)
-- SCALP thresholds (LOCKED_INITIAL_BASELINE — recalibrate after first empirical WFV)
-- AGGRESSIVE_SCALP thresholds (HOLD — empirical backtest evidence required)
+- SCALP/AGGRESSIVE_SCALP thresholds (HOLD — empirical backtest evidence required)
 - XGBoost training (DEFERRED to P0.9B/P0.9C)
 - Real data ingestion (DEFERRED to P0.9B)
 

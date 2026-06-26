@@ -1,20 +1,18 @@
 """
-V7 Mode-Specific Thresholds.
+V7 Thresholds — mode-specific decision gates.
 
-Each mode has its own threshold dataclass defining the boundary between
-acceptable and rejected trade candidates. Thresholds are LOCKED_INITIAL_BASELINE
-for SWING and SCALP — recalibrate after first empirical WFV.
+Each mode has its own threshold profile defining the promotion
+and execution guardrails for policy acceptance.
 
-Domain authority:
-  - Owns mode-specific threshold definitions
-  - Does NOT own the policy evaluation logic (policy.py owns that)
-  - Does NOT own promotion gates (gates/evaluator.py owns G0-G10)
+Lock semantics:
+  - LOCKED_INITIAL_BASELINE: safe starting point; recalibrate after first evidence
+  - HOLD: empirical evidence required before lock
+  - LOCKED: authoritative, do not change without explicit contradiction evidence
+
+Thresholds are consumed by the policy acceptance layer (v7/policy.py)
+and validated against evaluation evidence before promotion.
 """
 
-from v7.thresholds.scalp import SCALP_THRESHOLDS, ScalpThresholds, validate_scalp
+from v7.thresholds.aggressive_scalp import AGGRESSIVE_SCALP_THRESHOLDS
 
-__all__ = [
-    "ScalpThresholds",
-    "SCALP_THRESHOLDS",
-    "validate_scalp",
-]
+__all__ = ["AGGRESSIVE_SCALP_THRESHOLDS"]
