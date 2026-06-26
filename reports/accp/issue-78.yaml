@@ -1,0 +1,104 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report_id: issue-78
+created_at: "2026-06-26T00:00:00Z"
+executor: ClaudeCode
+completion_authority: PraxisTruthKernel
+agent_self_report_is_claim_only: true
+reports_are_evidence_only: true
+
+metadata:
+  title: "Issue #78 — Rule-based regime classifier baseline"
+  description: "Implement rule-based market regime detection in alphaforge/features/regime.py with comprehensive test suite."
+  issue_ref: "https://github.com/nep/agent-factory/issues/78"
+
+summary:
+  verdict: PASS
+  reason: >
+    All 41 regime tests pass. Regime classifier implemented with 4 simple
+    rule-based categories (TREND_UP, TREND_DOWN, RANGE, TRANSITION).
+    numpy-only, deterministic, pure function of price series.
+    Multi-symbol classification and diagnostic helpers included.
+    Phase 3 supervised classifier upgrade is separate scope.
+  test_counts:
+    new_tests_created: 41
+    new_tests_passed: 41
+    new_tests_failed: 0
+
+result: PASS
+
+scope_confirmation:
+  implemented:
+    - item: "alphaforge/src/alphaforge/features/regime.py"
+      description: "Rule-based regime classifier with Regime enum, RegimeSignal frozen dataclass, and classify_regime() function."
+    - item: "alphaforge/tests/test_regime.py"
+      description: "41 tests covering all 4 regimes, edge cases, determinism, multi-symbol classification, immutability, and confidence bounds."
+  not_implemented:
+    - item: "Phase 3 supervised classifier"
+      reason: "Deferred to separate issue #78 scope per issue spec."
+
+files_changed:
+  created:
+    - path: alphaforge/src/alphaforge/features/regime.py
+      description: "Rule-based regime classifier: classify_regime(), classify_regime_multi_symbol(), regime_counts(), regime_transitions(). numpy-only."
+    - path: alphaforge/tests/test_regime.py
+      description: "41 tests in 12 test classes covering TREND_UP, TREND_DOWN, RANGE, TRANSITION, insufficient data, determinism, edge cases, multi-symbol, diagnostics, immutability, confidence bounds, ATR calculation."
+
+decisions_locked:
+  - decision: "Regime classification rules"
+    status: LOCKED_INITIAL_BASELINE
+    reason: >
+      Simple interpretable rules: TREND_UP (close > SMA50 AND slope > 0),
+      TREND_DOWN (close < SMA50 AND slope < 0), RANGE (ATR14/close < 0.02),
+      TRANSITION (none of the above). Thresholds treatable as hyperparameters.
+  - decision: "Regime enum values"
+    status: LOCKED
+    reason: "Matches canonical Regime enum from v7/docs/v7_regime_aware_extensions.md — TREND_UP, TREND_DOWN, RANGE, TRANSITION."
+  - decision: "Insufficient data defaults to TRANSITION"
+    status: LOCKED_INITIAL_BASELINE
+    reason: "Bars before SMA(50) lookback (49 bars) return TRANSITION with confidence 0.0."
+
+remaining_holds:
+  - hold_id: HOLD-REGIME-THRESHOLD-TUNING
+    description: "ATR/close < 0.02 threshold and SMA(50) period are initial baselines. Need empirical tuning."
+    release_condition: "Walk-forward evaluation with regime breakdown metrics."
+  - hold_id: HOLD-REGIME-SUPERVISED
+    description: "Phase 3 supervised classifier replacement is future work."
+    release_condition: "Separate issue scope."
+
+safe_next_step:
+  task: "Integrate regime detection into feature pipeline (regime features added to feature vectors)"
+  rationale: "Regime classifier is tested and deterministic. Can be consumed by feature_builder for regime-aware feature extension."
+
+commands_run:
+  - id: CMD-test-regime
+    command: "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_regime.py -v"
+    exit_code: 0
+    result: "41 passed, 0 failed"
+  - id: CMD-smoke-test
+    command: "PYTHONPATH=alphaforge/src python3 -c 'from alphaforge.features.regime import classify_regime, Regime, regime_counts; import numpy as np; ...'"
+    exit_code: 0
+    result: "Uptrend correctly classified as TREND_UP, downtrend as TREND_DOWN, flat as RANGE, choppy as TRANSITION."
+
+evidence:
+  test_evidence:
+    test_file: alphaforge/tests/test_regime.py
+    test_count: 41
+    test_classes:
+      TestTrendUp: 3
+      TestTrendDown: 3
+      TestRange: 3
+      TestTransition: 4
+      TestInsufficientData: 5
+      TestDeterminism: 2
+      TestEdgeCases: 6
+      TestMultiSymbol: 3
+      TestDiagnostics: 5
+      TestRegimeSignalImmutability: 3
+      TestConfidenceBounds: 3
+      TestATRCalculation: 1
+    all_passed: true
+  commit:
+    hash: "9fb78bba8cd76cf6a23417d9c6463b5cc3d08dbc"
+    branch: "worktree-wf_810acec5-3ca-8"
+    message: "feat: #78 Rule-based regime classifier baseline"
