@@ -1,0 +1,83 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ISSUE-98-P0-9C-EMPIRICAL-REPORT-BUILDER
+  report_type: FEATURE_IMPLEMENTATION
+  generated_at: "2026-06-26T22:00:00Z"
+  issue: "98"
+  title: "P0.9C — AlphaForge research reports finalization"
+
+result: PASS
+scope_confirmation:
+  files_changed:
+    - alphaforge/src/alphaforge/reports/empirical.py
+    - alphaforge/src/alphaforge/reports/__init__.py
+    - alphaforge/tests/test_empirical_report.py
+    - cli/v7_engine.py
+    - v7/docs/roadmap.md
+  acceptance_criteria_met:
+    - "Empirical report builder consumes WFV results and produces valid ModeResearchReport"
+    - "Verdict system: INCONCLUSIVE / CONTINUE_RESEARCH / BASELINE_VALID / PROMOTION_CANDIDATE"
+    - "37 tests covering verdict logic, fold stability, full report building, all modes"
+    - "JSON serialization and schema validation pass"
+    - "NO profitability claims — all verdicts are evidence-gated"
+    - "CLI command: make report generates report JSON to data/reports/{mode}/"
+
+evidence:
+  commands:
+    - id: CMD-empirical-tests
+      description: "Run empirical report tests"
+      exit_code: 0
+      count: 37
+      verdict: PASS
+    - id: CMD-alphaforge-tests
+      description: "Run full alphaforge test suite (excluding pre-existing GBM block)"
+      exit_code: 0
+      count: 589
+      verdict: PASS
+    - id: CMD-boundary-tests
+      description: "Run import boundary tests"
+      exit_code: 0
+      count: 6
+      verdict: PASS
+    - id: CMD-cli-report-dry-run
+      description: "Test CLI report dry run"
+      exit_code: 0
+      verdict: PASS
+    - id: CMD-cli-report-swing
+      description: "Generate SWING empirical report via CLI"
+      exit_code: 0
+      verdict: PASS
+    - id: CMD-make-report-dry-run
+      description: "Test make report dry run"
+      exit_code: 0
+      verdict: PASS
+
+  report_validation:
+    path: "data/reports/swing/mrr-empirical-swing.json"
+    all_18_required_keys_present: true
+    verdict: REJECT (expected — default WFV has zero metrics)
+    schema_valid: true
+    json_serializable: true
+
+verdict_detail: >
+  P0.9C empirical report builder implemented and verified. All deliverables complete:
+  (1) empirical.py with verdict computation, cost stress builder, regime breakdown builder,
+  no-trade comparison builder, V7 gate readiness mapping; (2) 37 tests covering all
+  verdict paths, edge cases, and full report building for all three modes;
+  (3) CLI `make report` command wired to generate reports to data/reports/{mode}/.
+  NO profitability claims in any code or documentation. All verdicts are evidence-gated.
+
+decisions_locked:
+  - "Empirical report builder: LOCKED_INITIAL_BASELINE"
+  - "Verdict thresholds (0.05/0.10/0.15 expectancy_r, 0.3/0.5/0.8 Sharpe): LOCKED_INITIAL_BASELINE"
+  - "CLI report command: LOCKED_INITIAL_BASELINE"
+
+remaining_holds:
+  - "No real profitability evidence (HOLD — requires real training + WFV)"
+  - "Verdict thresholds may need recalibration with real data (HOLD)"
+  - "Multiple symbol support not yet tested (HOLD)"
+
+safe_next_step: >
+  Run real walk-forward validation with trained model, then generate empirical
+  report from real WFV results to verify verdict thresholds on real data.

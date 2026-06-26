@@ -15,6 +15,10 @@ from alphaforge.reports._minimal import (
     build_minimal_mode_research_report,
     build_minimal_handoff_package,
 )
+# P0.9C empirical report builder
+from alphaforge.reports.empirical import (
+    build_empirical_mode_research_report,
+)
 from alphaforge.constants import CANONICAL_V7_GATES, FORBIDDEN_GATE_NAMES
 
 __all__ = [
@@ -26,6 +30,7 @@ __all__ = [
     "build_minimal_validation_report",
     "build_minimal_mode_research_report",
     "build_minimal_handoff_package",
+    "build_empirical_mode_research_report",
     "CANONICAL_V7_GATES",
     "FORBIDDEN_GATE_NAMES",
 ]

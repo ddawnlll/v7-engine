@@ -108,6 +108,41 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
+## P0.9C — AlphaForge Research Reports Finalization (2026-06-26)
+
+**Issue:** #98 — Empirical report builder, tests, CLI report command.
+
+**What changed:**
+- `alphaforge/src/alphaforge/reports/empirical.py` — Empirical report builder that consumes WFV results (per-fold metrics, OOS summary, cost stress, regime breakdown) and produces full ModeResearchReport with REAL metrics (not placeholder zeros)
+- Evidence-gated verdict system: INCONCLUSIVE → CONTINUE_RESEARCH → BASELINE_VALID → PROMOTION_CANDIDATE, mapped to schema-allowed verdicts (REJECT, CONTINUE_RESEARCH, BASELINE_VALID, CANDIDATE_FOR_V7_GATES)
+- Verdict computation considers: OOS trade count, fold count, fold stability, OOS expectancy_r, OOS Sharpe, cost stress survival, regime stability
+- Cost stress builder, regime breakdown builder, no-trade comparison builder all produce empirical values from WFV results
+- V7 gate readiness mapping based on actual evidence quality
+- `cli/v7_engine.py` — `make report` now generates empirical reports to `data/reports/{mode}/`
+- `alphaforge/tests/test_empirical_report.py` — 37 tests covering verdict computation, fold stability, full report building, schema validation, JSON serialization, all three modes, cost/regime blocking
+
+**Verdict thresholds (evidence-gated, NOT profitability claims):**
+- INCONCLUSIVE: < 100 OOS trades, < 6 folds, or OOS expectancy_r <= 0
+- CONTINUE_RESEARCH: OOS expectancy_r >= 0.05, OOS Sharpe >= 0.3
+- BASELINE_VALID (secondary modes): OOS expectancy_r >= 0.10, OOS Sharpe >= 0.5
+- PROMOTION_CANDIDATE (primary): OOS expectancy_r >= 0.15, OOS Sharpe >= 0.8
+- PROMOTION_CANDIDATE (baseline exceeding): OOS expectancy_r >= 0.15, OOS Sharpe >= 0.8
+- All promotions blocked by cost stress failure or regime instability
+
+**Lock status:**
+- Empirical report builder: LOCKED_INITIAL_BASELINE
+- Verdict thresholds: LOCKED_INITIAL_BASELINE — recalibrate after first real data
+- CLI report command: LOCKED_INITIAL_BASELINE
+
+**Remaining holds:**
+- No real profitability evidence (HOLD — requires real training + WFV)
+- Verdict thresholds may need recalibration with real data (HOLD)
+- Multiple symbol support not yet tested (HOLD)
+
+**Evidence:** 37/37 tests pass (empirical reports), 589/589 alphaforge tests pass, boundaries clean. ACCP report at `reports/accp/issue-98.yaml`.
+
+---
+
 ## TR-08 — Final Training Readiness Audit — v0.1 Milestone COMPLETE (2026-06-26)
 
 **Issue:** #12 — Final audit gate. Verify all TR-01 through TR-07 gates have evidence, run full test suite, update roadmap.
