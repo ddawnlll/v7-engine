@@ -868,14 +868,61 @@ class PipelineRunner:
         else:
             # Real labels from SimulationOutput via LabelAdapter
             # NOT YET WIRED — requires simulation pipeline
-            errors.append(
-                "Real label generation requires SimulationOutput. "
-                "Use --synthetic for synthetic labels, or wait for simulation pipeline."
-            )
-            return _make_evidence(
-                "labels", StepStatus.FAILED.value,
-                metrics=metrics, errors=errors,
-            )
+            try:
+                from simulation.engine.engine import simulate as sim_engine
+                from simulation.contracts.models import SimulationInput
+                from alphaforge.labels.adapter import LabelAdapter
+
+                adapter = LabelAdapter()
+                ohlcv = self._ctx.ohlcv_data
+                n = len(ohlcv["close"])
+
+                stop_mult = 2.0 if self._config.mode == "SWING" else 1.5
+                target_mult = 3.0 if self._config.mode == "SWING" else 2.0
+                max_hold = 30 if self._config.mode == "SWING" else 12
+
+                labels_list = []
+                label_ints_list = []
+
+                for i in range(n):
+                    atr_val = float(
+                        np.mean(np.abs(np.diff(ohlcv["close"][max(0, i-14):i+1])))
+                    ) if i >= 14 else float(ohlcv["high"][i] - ohlcv["low"][i])
+
+                    inp = SimulationInput(
+                        symbol=str(ohlcv["symbol"][i]) if isinstance(ohlcv["symbol"], list) else "S",
+                        entry_price=float(ohlcv["close"][i]),
+                        high_price=float(ohlcv["high"][i]),
+                        low_price=float(ohlcv["low"][i]),
+                        atr_14=atr_val,
+                        stop_loss_mult=stop_mult,
+                        take_profit_mult=target_mult,
+                        max_hold_bars=max_hold,
+                        fee_pct=0.04,
+                        slippage_pct=0.02,
+                    )
+                    try:
+                        sim_out = sim_engine(inp)
+                        ld = sim_out.model_dump() if hasattr(sim_out, "model_dump") else vars(sim_out)
+                        label = adapter.adapt_simulation_output(ld)
+                        best = label.get("best_action_after_cost", "NO_TRADE")
+                        labels_list.append(best)
+                        label_ints_list.append(_LABEL_TO_INT.get(best, _LABEL_TO_INT["NO_TRADE"]))
+                    except Exception:
+                        labels_list.append("NO_TRADE")
+                        label_ints_list.append(_LABEL_TO_INT["NO_TRADE"])
+
+                self._ctx.labels = np.array(labels_list)
+                self._ctx.label_ints = np.array(label_ints_list, dtype=int)
+
+                unique, counts = np.unique(labels_list, return_counts=True)
+                dist = {str(k): int(v) for k, v in zip(unique, counts)}
+                metrics.update({"n_labels": n, "label_distribution": dist, "label_source": "simulation"})
+                print(f"  Generated {n} simulation labels. Dist: {dist}")
+
+            except ImportError as e:
+                errors.append(f"Sim engine unavailable: {e}")
+                return _make_evidence("labels", StepStatus.FAILED.value, metrics=metrics, errors=errors)
 
         if errors:
             return _make_evidence(
