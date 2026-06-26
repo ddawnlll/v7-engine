@@ -10,7 +10,7 @@ touch "$SYNCED_FILE"
 
 echo "[SYNC] Scanning worktrees..."
 for wt in $(ls -d "$MAIN_DIR"/.claude/worktrees/wf_* 2>/dev/null); do
-  if [ ! -d "$wt/.git" ]; then
+  if [ ! -d "$wt/.git" ] && [ ! -f "$wt/.git" ]; then
     continue
   fi
 
