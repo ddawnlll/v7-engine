@@ -1,3 +1,598 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "checksum": "76c21a3fd6541f48ced39c3b0c470400a60bf2d3abb04e726d610629d13a7c89",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:02:45.056364+00:00",
+      "interval": "1d",
+      "row_count": 7,
+      "start_ts": 1781913600000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "abb70dc561df90e0204eccf298b7102e39225bad4489f990308d4385900b5710",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:02:45.347145+00:00",
+      "interval": "4h",
+      "row_count": 40,
+      "start_ts": 1781913600000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "4550a676cb233da21887c4753006bdd852db47b056d9c11da56dc45fd8114588",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:02:45.645214+00:00",
+      "interval": "1h",
+      "row_count": 160,
+      "start_ts": 1781913600000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "d0446b1e73f916c749cbcd221233b0b75daa63a05e04c9130e2fe92d22d95cd6",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:05:39.690067+00:00",
+      "interval": "1d",
+      "row_count": 7,
+      "start_ts": 1781913600000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "d257ac7cc394a573afa345ef5891068b29a26bd28c995ffb3b210bc3aca3be14",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:05:39.982139+00:00",
+      "interval": "4h",
+      "row_count": 40,
+      "start_ts": 1781913600000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "acc7504551d3633dbebb70f81010a8bf50f7ef55a908264fb092ab6c921fd56a",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:05:40.279605+00:00",
+      "interval": "1h",
+      "row_count": 160,
+      "start_ts": 1781913600000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "b3fda77d732cd228f5fcf3a8be3383d1f2cab592e4010a55b5deebf948bc0b39",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:06:18.248213+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "8a3e43b36aa671f1f1cb06a44e84692aa7d3a0c5eb42c3311e037d81a361188f",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:06:25.259844+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "0e405e357196b8f1183113e98d7606fffc61cb94ec70b603115b52b624caaed5",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:06:45.738570+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "e765da1b9d950eeadb7ab87b9046b80479a1fa45f22936c9fc1bb562d805c959",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:06:46.637884+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "669c7e3223aac7cfcbe873644e42083b91373693e1077c5465477baa05d71740",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:06:50.693396+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "52547d4fb079bb9de7c35e860f641a6396451bf7dafa92c74637d3fbc0d4f38a",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:07:05.923916+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "19eba6ba419159446d769bd2e3b902275c15822c6f42a5ae6b283654fdfc3523",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:07:06.829018+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "9204a75b45e05cc259508bbaf925ae6e6e7a2079c0a74dd8da2f398ccb514a05",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:07:14.343792+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "c035810fc134d00b279692af130a5b4a128430b95a17d15cf3238b10d0dcfd8c",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:07:31.745142+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "ac3ce9c45657c1df0f7a9604df76c2a6698503d622aec6ff8ab581ac51bc8552",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:07:32.639584+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "68b0d96583f000e4ffc9bb88eb0437f2dc2a37e2880792d8cb3c4775498adf20",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:07:37.069052+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "91e241f358c4fb64f8c5ee39d719769b5d50758ff0ba0a2357c26f1e42f969f5",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:07:53.879779+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "d4915ee42692987d0c2cd427ca9e95f90f9f4c29c64e144c099259f1e69f275e",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:07:54.771743+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "XRPUSDT"
+    },
+    {
+      "checksum": "b8a421025cb8d79a73dc83fa4ba697c6802db35cb7cd2d36d533f1c0452d4dcc",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:07:58.766733+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "XRPUSDT"
+    },
+    {
+      "checksum": "3ffc14582aae34acb2da0df198948487f5b296c7b62d6db36ac83248cec11e1f",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:08:16.020181+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "XRPUSDT"
+    },
+    {
+      "checksum": "e47d8f2b989c383a4bb2cdec2d200c1cc6e0a39f886eae0e2776a3a2a0887d4b",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:08:17.129097+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "ADAUSDT"
+    },
+    {
+      "checksum": "9102f4ed758f5e74efaa7751bcc2f569ece95590d6075d6c36b8279b5f074b8d",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:08:21.130697+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "ADAUSDT"
+    },
+    {
+      "checksum": "7af91589b6fc247d714a19e8ed7c150c08592472b3c3abfc76ced0e2222e559c",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:08:38.353355+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "ADAUSDT"
+    },
+    {
+      "checksum": "5d03ecc586bc690cb7fe192a1f3df4efde2820b7e76737977da7ea938075135b",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:08:39.243831+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "DOGEUSDT"
+    },
+    {
+      "checksum": "ccb44306a9ab60d9f090b1960319e3756683db4f66a05b062cc9dea1344cce9b",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:08:43.231179+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "DOGEUSDT"
+    },
+    {
+      "checksum": "0a76b3351ec14a52fcb6386fa56221e5fa8021aa9f02b6f48211d1d6e37add4f",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:08:58.766533+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "DOGEUSDT"
+    },
+    {
+      "checksum": "a37daaf96946b38df2d0f6861cfc37dbb1b572e7aa8f2881fe010242c620b81e",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:08:59.669478+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "AVAXUSDT"
+    },
+    {
+      "checksum": "4c69954bad481478612bdbad2fd1bbb0211b9256756f9719615c0c56282841fe",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:09:03.638390+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "AVAXUSDT"
+    },
+    {
+      "checksum": "e1dbdb5d2a7983fbde1462f042b064b4ab4d17edbf970d7f084ad54a63c9c7a2",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:09:22.865278+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "AVAXUSDT"
+    },
+    {
+      "checksum": "73651b1891b5584fa82a5e50acc3b294fa5d7cdbc1b13c43869adfeb0e6f1d19",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:09:23.752560+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "DOTUSDT"
+    },
+    {
+      "checksum": "fd72b1efcec46db2207de5bcdafddf5aacf2a9a55d40dcd97e6e3b846d7d6ad7",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:09:28.192674+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "DOTUSDT"
+    },
+    {
+      "checksum": "4b8e42f7badd23155cd268f1ab2a00b8540bda030a977d6a31b7b27bfe615c26",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:09:43.654554+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "DOTUSDT"
+    },
+    {
+      "checksum": "47f2f029e253bd6f8653b41543506ff6a229f871aacbd15517ce441a7e3a8c52",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:09:44.543530+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "LINKUSDT"
+    },
+    {
+      "checksum": "cda91153f2a9a3f0afab16a1c6e02fdbe41b843b888bf1f15297c9d9a5256374",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:09:48.954325+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "LINKUSDT"
+    },
+    {
+      "checksum": "603f75065cd2eccf0475568279dfeb5096fb888ab16f4035b9b7992226a9e5d1",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:10:05.280546+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "LINKUSDT"
+    },
+    {
+      "checksum": "8082b37ecf74eb7e35eb725e89d49d99311deff106419dbb686f1538e4672732",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:11:06.103246+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "c936ffda599a088938128f215aa8ed429b040feb17609229e366854ad5808d2c",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:11:10.582454+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "6a2ec92b19324177dbdba9ea287ea591b0f196f192a41d1291e83d21d0d2853f",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:11:31.819088+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "963a42151364804373327e6c59e326928d04207481527b1084d2ef78533d9585",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:11:32.712496+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "234e5226c6b5513f226ec4435c387ed14b2333f79efbb0e1f86052bdddde4ae9",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:11:37.685207+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "48225ff8a989a5d541737d04bcd34c697983d193981350896caa6556468c7a72",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:11:53.623676+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "24aed87c832b4869291b5500d99ecab54f257497cd439bba06228d8d8e7efc7d",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:11:54.532992+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "8b5691603f88f12c6d5dabd18a33282021d80a82dd2436367f3da86af5fb0b56",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:11:58.552795+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "1e5bbc44072b7c85e57b264d1d47e828e905b255f66c33d120ce0503b59d5345",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:12:16.234090+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "3d842ea11f4e9289a42a94c945e662356e68f7c805dd8b1db451d92fd4bf85cc",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:12:17.143002+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "e93157219d449818600f29bc99e990616af0d5b4762b8b7ae9649dd76d50457a",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:12:22.062795+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "c34faa6b9b077b36a4c9f8b61d1b63ebca2387f8be107db55aad0c6380761368",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:12:37.654803+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "e6c41285a8c6b50183a47af82546aa4fbe6736234cfcbf3ae3c86449d6bd3a39",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:12:38.567560+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "XRPUSDT"
+    },
+    {
+      "checksum": "3ba754afa12828a10231e99a2879cdb23793fb5f7232e830ee3a2eca6efbd388",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:12:42.589274+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "XRPUSDT"
+    },
+    {
+      "checksum": "35ed25ca594a28c5cd0bbae9607c199dbd1d46b26631f86bcdf17fcd7f91e2d2",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:12:58.162512+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "XRPUSDT"
+    },
+    {
+      "checksum": "b80633db315c53ce4e2de78e0ae1692b4b9da44e1b58fa9841d4a1709aa47111",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:12:59.064155+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "ADAUSDT"
+    },
+    {
+      "checksum": "9c517d1fd8ac932bc85e6da9238b1d768c6f573bffede2199e7f3e0d69d758f7",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:13:03.120689+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "ADAUSDT"
+    },
+    {
+      "checksum": "bd8169753ed22f1b2ccf5a5a07278c08c580c6f1d43c865091fb80cfabecffd2",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:13:20.918238+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "ADAUSDT"
+    },
+    {
+      "checksum": "578915411aec3dbbbdfbc8317c2adaf886cad971aedfe761c6c8f8e8a53da7bd",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:13:21.813361+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "DOGEUSDT"
+    },
+    {
+      "checksum": "a7ac181667a27515840b8c0a5711508d4917064f0ea0b21db2815fa17003fca8",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:13:25.846292+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "DOGEUSDT"
+    },
+    {
+      "checksum": "862f3d722860da88c0cfacf56b9dd116dd01de19a2184691efffe0c6d411863d",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:13:42.762825+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "DOGEUSDT"
+    },
+    {
+      "checksum": "e2234c0b155fac1e0ccfb3c4b76cb9f1555d1234bd72ca82bc06337d38c78737",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:13:43.668741+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "AVAXUSDT"
+    },
+    {
+      "checksum": "2136533be5449c1019225f21ed7063cbe2764c7315899f30e2f309e086290310",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:13:47.620552+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "AVAXUSDT"
+    },
+    {
+      "checksum": "ec5b840ff7aef5b4b769ec5d30bf1d42f1bf49fc27568294a83b2844c7b8ce16",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:14:03.573316+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "AVAXUSDT"
+    },
+    {
+      "checksum": "3ddd0134ba4359866faaf7ffa11ff1da2c3d1c4d4d188c99d7ccad188c88dc82",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:14:04.471814+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "DOTUSDT"
+    },
+    {
+      "checksum": "d586b95d01a400ff15601fd05babdebcfbce7bbfcc5df5a2b23fb4f9a6b4ecd2",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:14:08.428587+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "DOTUSDT"
+    },
+    {
+      "checksum": "11119904a971b5128c4395b359f6318e4bbc375513fee241180bb7f2ef353b87",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:14:26.088990+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "DOTUSDT"
+    },
+    {
+      "checksum": "111f89c4a1e7c261094d82a0bb5a256bfe3465d3e84d964c1119ef0d41de92df",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:14:26.976272+00:00",
+      "interval": "1d",
+      "row_count": 2003,
+      "start_ts": 1609459200000,
+      "symbol": "LINKUSDT"
+    },
+    {
+      "checksum": "87aeb77c14acc53a60b913241eb5fde5498da5e9efdaf2292d29984ed45cafea",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:14:31.796974+00:00",
+      "interval": "4h",
+      "row_count": 12016,
+      "start_ts": 1609459200000,
+      "symbol": "LINKUSDT"
+    },
+    {
+      "checksum": "81fe9a70401d5484806f7fc9ab063ab028524f513c0eef41b1d6c90c474c85d0",
+      "end_ts": 1782432000000,
+      "ingested_at": "2026-06-26T15:14:48.388972+00:00",
+      "interval": "1h",
+      "row_count": 48050,
+      "start_ts": 1609459200000,
+      "symbol": "LINKUSDT"
+    }
+  ]
 }
