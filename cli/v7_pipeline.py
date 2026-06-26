@@ -98,6 +98,26 @@ class PipelineVerdict(str, Enum):
 # ---------------------------------------------------------------------------
 
 
+def _get_mode_intervals(mode: str) -> list[str]:
+    """Relevant intervals for a trading mode (primary + context + refinement)."""
+    intervals_for_mode = {
+        "SWING": ["1d", "4h", "1h"],
+        "SCALP": ["4h", "1h", "15m"],
+        "AGGRESSIVE_SCALP": ["1h", "15m", "5m"],
+    }
+    return intervals_for_mode.get(mode.upper(), ["4h", "1h"])
+
+
+def _get_primary_interval(mode: str) -> str:
+    """Primary interval for a trading mode."""
+    primary = {
+        "SWING": "4h",
+        "SCALP": "1h",
+        "AGGRESSIVE_SCALP": "15m",
+    }
+    return primary.get(mode.upper(), "4h")
+
+
 @dataclass(frozen=True)
 class PipelineConfig:
     """Immutable pipeline configuration.
@@ -643,12 +663,19 @@ class PipelineRunner:
             print(f"  Generated {total_bars} synthetic bars across {n_symbols} symbols")
             print(f"  Bars per symbol: {bars_per_symbol}")
         else:
-            # Real Binance backfill
+            # Real Binance backfill — use lib-level backfill orchestrator directly
+            # AlphaForge BackfillPipeline requires service objects; skip it for
+            # v0.2 direct CLI usage and call the proven lib-level pipeline.
             try:
-                from alphaforge.data.backfill import (
-                    AlphaForgeBackfillPipeline,
-                    BackfillConfig,
+                from lib.market_data.binance.klines_service import KlinesService
+                from lib.market_data.binance.market_data_service import (
+                    BinanceMarketDataService,
                 )
+                from lib.market_data.storage import StorageWriter
+                from lib.market_data.catalog import DataCatalog
+                from lib.market_data.binance.backfill import BackfillOrchestrator
+                from lib.market_data.binance.rate_limiter import BinanceRateLimiter
+                from lib.market_data.binance.checkpoint import BackfillCheckpoint
 
                 # Parse dates to ms timestamps
                 if self._config.start_date and self._config.end_date:
@@ -667,26 +694,105 @@ class PipelineRunner:
                         metrics=metrics, errors=errors, warnings=warnings,
                     )
 
-                af_config = AlphaForgeBackfillPipeline.default_config(
-                    start=start_dt,
-                    end=end_dt,
-                    symbols=list(self._config.symbols),
-                    intervals=["4h"],
-                    data_dir=self._config.output_dir,
+                # Wire up services
+                bmd = BinanceMarketDataService()
+                klines = KlinesService(client=bmd._client)
+                storage = StorageWriter(base_dir=self._config.output_dir)
+                catalog = DataCatalog()
+                rate_limiter = BinanceRateLimiter()
+                checkpoint = BackfillCheckpoint(
+                    file_path="/tmp/backfill_checkpoint.json"
                 )
-                pipeline = AlphaForgeBackfillPipeline()
-                result = pipeline.run(af_config)
+
+                orchestrator = BackfillOrchestrator(
+                    klines_service=klines,
+                    funding_service=None,
+                    storage_writer=storage,
+                    catalog=catalog,
+                    rate_limiter=rate_limiter,
+                    checkpoint=checkpoint,
+                )
+
+                # Backfill all intervals relevant to the mode
+                intervals = _get_mode_intervals(self._config.mode)
+                stats = orchestrator.backfill(
+                    symbols=list(self._config.symbols),
+                    intervals=intervals,
+                    start_time=start_ms,
+                    end_time=end_ms,
+                    batch_size=50000,
+                )
 
                 metrics.update({
-                    "total_records": result.stats.get("total_records", 0),
-                    "errors_count": len(result.stats.get("errors", [])),
-                    "integrity_reports": len(result.integrity_reports),
+                    "total_records": stats.get("total_records", 0),
+                    "total_symbols": stats.get("total_symbols", 0),
+                    "total_intervals": stats.get("total_intervals", 0),
+                    "errors_count": len(stats.get("errors", [])),
                     "data_source": "binance",
+                    "intervals": intervals,
                 })
-                warnings = result.stats.get("errors", [])
+                warnings = stats.get("errors", [])
 
-                if not result.ok:
-                    errors.append("Backfill pipeline failed")
+                # Load cached data back into pipeline context for downstream steps
+                import numpy as np
+                import pyarrow.parquet as pq
+                from pathlib import Path
+
+                data_dir = Path(self._config.output_dir) / "cache"
+                if not data_dir.exists():
+                    data_dir = Path("data") / "cache"
+                    data_dir.mkdir(parents=True, exist_ok=True)
+
+                primary = _get_primary_interval(self._config.mode)
+                combined_close: list[float] = []
+                combined_open: list[float] = []
+                combined_high: list[float] = []
+                combined_low: list[float] = []
+                combined_volume: list[float] = []
+                combined_timestamp: list[int] = []
+                combined_symbol: list[str] = []
+
+                for sym in self._config.symbols:
+                    pq_path = data_dir / f"{sym}_{primary}.parquet"
+                    if pq_path.exists():
+                        table = pq.read_table(str(pq_path))
+                        df = table.to_pandas()
+                        n = len(df)
+                        combined_close.extend(df["close"].tolist())
+                        combined_open.extend(df["open"].tolist())
+                        combined_high.extend(df["high"].tolist())
+                        combined_low.extend(df["low"].tolist())
+                        combined_volume.extend(df["volume"].tolist())
+                        combined_timestamp.extend(df["timestamp"].tolist())
+                        combined_symbol.extend([sym] * n)
+                    else:
+                        # Try raw dir
+                        raw_dir = Path("data") / "raw" / sym
+                        if raw_dir.exists():
+                            pq_files = sorted(raw_dir.glob(f"*_{primary}_*.parquet"))
+                            for pf in pq_files:
+                                table = pq.read_table(str(pf))
+                                df = table.to_pandas()
+                                n = len(df)
+                                combined_close.extend(df["close"].tolist())
+                                combined_open.extend(df["open"].tolist())
+                                combined_high.extend(df["high"].tolist())
+                                combined_low.extend(df["low"].tolist())
+                                combined_volume.extend(df["volume"].tolist())
+                                combined_timestamp.extend(df["timestamp"].tolist())
+                                combined_symbol.extend([sym] * n)
+
+                if combined_close:
+                    self._ctx.ohlcv_data = {
+                        "close": np.array(combined_close, dtype=np.float64),
+                        "open": np.array(combined_open, dtype=np.float64),
+                        "high": np.array(combined_high, dtype=np.float64),
+                        "low": np.array(combined_low, dtype=np.float64),
+                        "volume": np.array(combined_volume, dtype=np.float64),
+                        "timestamp": np.array(combined_timestamp, dtype=np.int64),
+                        "symbol": combined_symbol,
+                    }
+                    metrics["ohlcv_loaded"] = len(combined_close)
 
             except ImportError as e:
                 errors.append(f"Cannot import backfill module: {e}")
