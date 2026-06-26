@@ -1,0 +1,14 @@
+accp_version: "2.0.0"
+report_id: "ISSUE-110-CLOSURE"
+issue_ref: "#110"
+title: "PolicyCriticReview contract registered"
+result: "PASS"
+scope: "Schema + fixture + registry registration"
+evidence:
+  - "contracts/schemas/policy_critic_review.schema.json created"
+  - "contracts/fixtures/policy_critic_review_minimal.json created"
+  - "contracts/registry.json updated (18 contracts)"
+decisions_locked:
+  - "PolicyCriticReview v1.0.0 LOCKED"
+  - "critic_verdict enum: CORRECT, WRONG, AMBIGUOUS, NOT_EVALUATED LOCKED"
+safe_next_step: "PC Phase 1-6 consume PolicyCriticReview contract"

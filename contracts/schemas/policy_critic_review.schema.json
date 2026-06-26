@@ -1,0 +1,48 @@
+{
+  "title": "PolicyCriticReview",
+  "description": "Policy Critic RL review output per decision event.",
+  "type": "object",
+  "required": [
+    "review_id",
+    "decision_event_id",
+    "regret_r",
+    "expected_r",
+    "critic_verdict"
+  ],
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "description": "Unique review identifier"
+    },
+    "decision_event_id": {
+      "type": "string",
+      "description": "Linked DecisionEvent ID"
+    },
+    "regret_r": {
+      "type": "number",
+      "description": "Regret R computed per policy critic formula"
+    },
+    "expected_r": {
+      "type": "number",
+      "description": "Expected R from critic ensemble"
+    },
+    "critic_verdict": {
+      "type": "string",
+      "enum": ["CORRECT", "WRONG", "AMBIGUOUS", "NOT_EVALUATED"]
+    },
+    "iql_expectile_tau": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "conformal_coverage": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -289,7 +289,7 @@
       "version": "1.0.0",
       "schema_file": "contracts/schemas/decision_event.schema.json",
       "fixture_file": "contracts/fixtures/decision_event_minimal.json",
-      "description": "Runtime lifecycle event recording the outcome of an AnalysisResult decision — order placement, fill, rejection, position open/close, or error",
+      "description": "Runtime lifecycle event recording the outcome of an AnalysisResult decision \u2014 order placement, fill, rejection, position open/close, or error",
       "source_authority": [
         "v7/docs/contracts/lifecycle_contracts.md"
       ],
@@ -300,6 +300,24 @@
       "consumers": [
         "v7",
         "runtime"
+      ]
+    },
+    {
+      "object_name": "PolicyCriticReview",
+      "owner_domain": "v7/policy_critic",
+      "version": "1.0.0",
+      "schema_file": "contracts/schemas/policy_critic_review.schema.json",
+      "fixture_file": "contracts/fixtures/policy_critic_review_minimal.json",
+      "description": "Policy Critic RL review output per decision event.",
+      "source_authority": [
+        "v7/docs/policy_critic/ai_summary.md"
+      ],
+      "producers": [
+        "v7/policy_critic"
+      ],
+      "consumers": [
+        "v7/evaluation",
+        "v7/monitoring"
       ]
     }
   ]
