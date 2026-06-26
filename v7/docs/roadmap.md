@@ -131,18 +131,22 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 - `make check-contracts`: 20/20 PASS (contract registry 11 + schema parity 9)
 - `make check-boundaries`: 6/6 PASS (lib boundary 1 + cross-domain 5, 1 skipped)
-- Full test suite: **1136 passed, 1 skipped, 0 failures** (lib/ + integration/ + simulation/ + alphaforge/ + v7/ + runtime/)
+- Full test suite: **1153 passed, 3 skipped, 0 failures** (lib/ + integration/ + simulation/ + alphaforge/ + v7/ + runtime/)
+- Policy Critic RL (#37): **69/69 PASS** (replay buffer 33, regret 20, expected_return 11) — commit `7492cdf`
+- Combined total: **1222 passed, 3 skipped, 0 failures**
 - v7 package: `v7/tests/` **93/93 PASS** (builder, validator, router, policy, gates, e2e_swing)
 - EXPLICIT_GBM_BLOCK: operating as designed (post-TR-05, xgboost installed blocks ml_pilot gate import)
 
 ### v0.1 Architecture Delivered
 
 - **lib/**: market data backfill, storage, catalog, quality, indicators, costs, funding pagination, rate limiter (244 tests)
-- **simulation/**: truth authority with cost model, batch runner, market data adapter, OHLCV bridge
-- **alphaforge/**: 9-module scaffold, label adapter, feature pipeline, dataset assembler, training runner, walk-forward validation
-- **v7/**: Python package (6 modules) with builder, validator, router, policy, G0-G10 gates, SWING mode end-to-end
-- **runtime/**: scan control, safety gates, conftest fixtures
+- **simulation/**: truth authority with cost model, batch runner, market data adapter, OHLCV bridge (41 tests)
+- **alphaforge/**: 9-module scaffold, label adapter, feature pipeline, dataset assembler, training runner, walk-forward validation (552 tests)
+- **v7/**: Python package (6 modules) with builder, validator, router, policy, G0-G10 gates, SWING mode end-to-end (93 tests)
+- **v7/policy_critic/**: RL advisory component — replay buffer, regret_r, expected_R, action space {LONG, SHORT, NO_TRADE} (69 tests)
+- **runtime/**: scan control, safety gates, conftest fixtures (58 tests)
 - **contracts/**: registry.json with cross-domain schemas, compatibility.json
+- **integration/**: cross-domain contract, schema parity, boundary tests (165 tests)
 - **cli/**: pipeline CLI, Makefile targets, runbook
 
 ### Lock Status at v0.1
@@ -163,7 +167,7 @@ The mode implementation order (SWING first) must not be confused with business/r
 | Real profitability evidence | All | Requires simulation labels, features, training, WF, OOS on real data |
 | EXPLICIT_GBM_BLOCK | alphaforge/gates | Post-training xgboost presence is expected; gate works as designed |
 
-**Evidence:** ACCP report at `reports/accp/issue-12.yaml`. Full test output archived in commit.
+**Evidence:** ACCP report at `reports/accp/v0_1_final_audit.accp.yaml`. Full test output (1222 passed, 3 skipped, 0 failures) archived in commit `a027200`.
 
 ---
 
