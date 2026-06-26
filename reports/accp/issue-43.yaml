@@ -1,0 +1,115 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ISSUE-43-ORDERBOOK-ANALYZER
+  report_type: IMPLEMENTATION
+  issue: "#43"
+  generated_at: "2026-06-26T16:55:00Z"
+  commit: e591d47
+
+result: PASS
+verdict_detail: >
+  Implemented OrderBookFeatureGroup with 4 microstructure proxy features
+  from OHLCV data. Extended FeatureGroup enum, FEATURE_GROUP_MAP, and
+  compute_features() to include the new group. 35 new tests + 103 updated
+  existing tests (26→30 features, 6→7 groups). All 138 pass. Determination
+  verified. No-revision leakage tests pass. Bridge to lib/indicators.microstructure
+  verified consistent.
+
+scope_confirmation:
+  all_required_files_created: true
+  feature_group_enum_extended: true
+  feature_group_map_extended: true
+  compute_features_wired: true
+  init_exports_updated: true
+  test_count_10_plus: true
+  ohlcv_proxies_only: true
+  no_real_order_book_data: true
+  numpy_primary: true
+  lib_bridge_consistent: true
+
+evidence:
+  commands:
+    - id: CMD-test-orderbook
+      command: PYTHONPATH=. python3 -m pytest alphaforge/tests/test_orderbook_features.py -v
+      exit_code: 0
+      passed: 35
+      failed: 0
+      verdict: PASS
+    - id: CMD-test-feature-pipeline
+      command: PYTHONPATH=. python3 -m pytest alphaforge/tests/test_feature_pipeline.py -v
+      exit_code: 0
+      passed: 103
+      failed: 0
+      verdict: PASS
+    - id: CMD-test-all
+      command: PYTHONPATH=. python3 -m pytest alphaforge/tests/test_feature_pipeline.py alphaforge/tests/test_orderbook_features.py -v
+      exit_code: 0
+      passed: 138
+      failed: 0
+      verdict: PASS
+    - id: CMD-lib-bridge-consistency
+      test: test_bridge_consistency
+      verdict: PASS
+      detail: "amihud_illiquidity_numpy matches direct lib/indicators.microstructure call"
+
+  features_implemented:
+    - id: spread_pct_N
+      description: "rolling mean of (high-low)/close — spread proxy"
+      test_count: 4
+      verdict: PASS
+    - id: volume_imbalance_N
+      description: "(up_volume - down_volume) / total_volume"
+      test_count: 4
+      verdict: PASS
+    - id: trade_intensity_N
+      description: "volume * (high-low)/close normalized by rolling mean"
+      test_count: 4
+      verdict: PASS
+    - id: amihud_illiquidity_N
+      description: "Amihud (2002) price impact bridged from lib/indicators"
+      test_count: 4
+      verdict: PASS
+
+  quality_checks:
+    - id: determinism
+      tests: ["test_determinism"]
+      verdict: PASS
+    - id: causality_no_revision
+      tests: ["test_no_revision"]
+      verdict: PASS
+    - id: edge_cases
+      tests: ["test_short_input_all_nan", "test_zero_volume_bars", "test_negative_close_no_crash"]
+      verdict: PASS
+
+files_changed:
+  - path: alphaforge/src/alphaforge/features/orderbook.py
+    action: CREATED
+    description: "OrderBookFeatureGroup — 4 microstructure proxy features"
+  - path: alphaforge/src/alphaforge/features/pipeline.py
+    action: MODIFIED
+    description: "Added ORDERBOOK to FeatureGroup enum + FEATURE_GROUP_MAP + wired in compute_features()"
+  - path: alphaforge/src/alphaforge/features/__init__.py
+    action: MODIFIED
+    description: "Exported ORDERBOOK group symbols"
+  - path: alphaforge/tests/test_orderbook_features.py
+    action: CREATED
+    description: "35 tests: 4 per feature + group integration + determinism + causality + edge cases"
+  - path: alphaforge/tests/test_feature_pipeline.py
+    action: MODIFIED
+    description: "Updated feature count 26→30, active groups 6→7, aligned LEAD_LAG deferred tests"
+
+decisions_locked:
+  - ORDERBOOK group uses OHLCV-only proxies (no real order book data in v0.2)
+  - amihud_illiquidity bridged from lib/indicators (list-based → numpy)
+  - Window defaults: 10 bars for spread/imbalance/intensity, 15 bars for Amihud
+  - volume_imbalance uses close>open heuristic for buy/sell classification
+  - All 4 features are causal and deterministic
+
+remaining_holds:
+  - ILLIQ values not calibrated against realized price impact (HOLD: empirical evidence needed)
+  - Volume imbalance proxy not validated against tick-level data (HOLD: real order book required)
+  - Window defaults (10, 15) are SWING-compatible initial baselines (HOLD: AGGRESSIVE_SCALP tuning)
+  - AGGRESSIVE_SCALP thresholds HOLD remains in effect
+
+safe_next_step: "Close #43. Proceed to ablation framework (#41) or AGGRESSIVE_SCALP threshold calibration."
