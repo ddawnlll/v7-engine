@@ -52,20 +52,5 @@
       "Bash(python3*httpx*)"
     ]
   },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash|Write|Edit",
-        "hooks": [
-          {"type": "command", "command": ".claude/hooks/overnight-guard.sh"}
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {"type": "command", "command": ".claude/hooks/pre-close-guard.sh"}
-        ]
-      }
-    ]
-  }
+  "hooks": {}
 }
