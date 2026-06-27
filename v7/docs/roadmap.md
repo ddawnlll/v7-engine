@@ -482,6 +482,40 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
+---
+
+## v0.25 — Diagnostics Repair & Metric System (2026-06-27)
+
+**What changed:**
+- Active trade metric system implemented (`compute_oos_metrics`) — tracks LONG_NOW/SHORT_NOW/NO_TRADE counts, cost decomposition (fee + slippage), net-R arithmetic, exposure percentage, NaN guards for zero-active edge cases. 17 tests pass.
+- `mode_research_report.schema.json` updated with 8 new active trade metric fields (`active_trade_count`, `long_trade_count`, `short_trade_count`, `no_trade_count`, `total_gross_R`, `total_net_R`, `exposure_pct`, `avg_net_R_per_active_trade`). Schema strictness increased: 3 new required fields in metrics object.
+- All 3 mode fixtures (SWING/SCALP/AGGRESSIVE_SCALP) updated with active trade metric fields.
+- `contracts/tests/test_schema_active_metrics.py` — 232-line schema validation test file for active metrics.
+- `alphaforge/tests/test_active_trade_metrics.py` — 17 tests covering count correctness, cost arithmetic, edge cases, NaN guards, empty input.
+- `empirical.py` report builder wired to consume `active_trade_metrics` from WFV results — wires active trade counts, net-R, exposure pct into report output.
+- MHT correction module (`alphaforge/src/alphaforge/reports/mht.py`) created with Bonferroni step-down correction, Benjamini-Hochberg FDR control, deflated Sharpe ratio, trial count computation, and data-snooping risk assessment. `test_mht.py` with unit tests.
+- 6-fold walk-forward validation in `cli/real_training.py` — `walk_forward_validate()` with anchored expanding windows, purge/embargo periods, 125 measures per fold (124 MHT hypotheses per fold), per-fold accuracy/stability metrics, OOS summary.
+- SOLUSDT stop/target optimization (`optimize_sol_stop_target_results.json`) — best params found: stop_mult=1.0, target_mult=5.0, expectancy_r=0.10, win_rate=0.996.
+
+**Lock status:**
+- Active trade metric system: LOCKED_INITIAL_BASELINE
+- Schema active metrics contract: LOCKED
+- MHT correction module: LOCKED_INITIAL_BASELINE (Issue #124)
+- 6-fold walk-forward validation: LOCKED_INITIAL_BASELINE (Issue #125)
+- SOLUSDT optimized params: LOCKED_INITIAL_BASELINE
+
+**Remaining holds:**
+- Cost Stress Matrix (HOLD — requires regime-aware cost multipliers)
+- Symbol Stability per-symbol contribution (HOLD — requires multi-symbol WFV)
+- NO_TRADE Collapse edge case under extreme market conditions (HOLD)
+- Real profitability evidence (HOLD — requires real training + WFV)
+- MHT correction real thresholds (HOLD — requires empirical baseline)
+- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL)
+
+**Evidence:** 1578 passed, 3 skipped, 0 failures. ACCP reports at `reports/accp/issue-122.yaml`, `issue-123.yaml`, `issue-124.yaml`, `issue-125.yaml`.
+
+---
+
 ## Final Position
 
 The roadmap for V7 is not:

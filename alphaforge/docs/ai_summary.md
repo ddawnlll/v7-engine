@@ -4,6 +4,8 @@
 
 **P0.8E complete.** Gate mapping corrected to V7 canonical IDs. Timeframe stacks aligned to locked simulation profiles. Label schema completed (gross/net cost, NO_TRADE quality). Validation contract aligned to V7 gates (6-fold, canonical regimes). MHT/data-snooping controls added. Nested schema requirements strengthened. Fixture validation and schema strictness tests pass. P0.9A gated on P0.8E PASS.
 
+**v0.25 Diagnostics Repair (2026-06-27):** Active trade metric system added — `compute_oos_metrics()` tracks LONG_NOW/SHORT_NOW/NO_TRADE counts, cost decomposition, net-R, exposure pct with NaN guards. `mode_research_report.schema.json` updated with 8 new active metric fields (3 required). MHT correction module (`mht.py`) provides Bonferroni step-down, Benjamini-Hochberg FDR, deflated Sharpe ratio, and data-snooping risk assessment. 6-fold walk-forward validation with anchored expanding windows in `cli/real_training.py`. SOLUSDT stop/target optimized. 1578 tests pass.
+
 ---
 
 ## Mission

@@ -1,0 +1,33 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "v0.25 diagnostics repair — 6-fold Walk-Forward Validation Pipeline — NOT alpha found"
+files_changed:
+  - "cli/real_training.py"
+  - "data/research_bundle_v0.2.json"
+  - "optimize_sol_stop_target_results.json"
+  - "reports/accp/walk_forward_validation.yaml"
+decisions_locked:
+  walk_forward_fold_count: LOCKED_INITIAL_BASELINE
+  walk_forward_anchor_type: LOCKED
+  walk_forward_purge_ratio: LOCKED_INITIAL_BASELINE
+  walk_forward_embargo_ratio: LOCKED_INITIAL_BASELINE
+  walk_forward_measures_per_fold: LOCKED
+  walk_forward_mht_hypotheses_per_fold: LOCKED
+  solusdt_stop_target_params: LOCKED_INITIAL_BASELINE
+remaining_holds:
+  - "Cost Stress Matrix — requires regime-aware cost multipliers"
+  - "Symbol Stability per-symbol contribution — requires multi-symbol WFV"
+  - "NO_TRADE Collapse — extreme market condition edge case"
+  - "Real profitability evidence — requires real training + WFV"
+  - "OOS expectancy_r/Sharpe still placeholder 0.0 — needs per-fold PnL"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ simulation/tests/ lib/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q"
+evidence:
+  - "cli/real_training.py: walk_forward_validate() with 6-fold anchored expanding windows"
+  - "purge_period_bars = fold_size // 4, embargo_period_bars = fold_size // 8"
+  - "125 measures per-fold, 124 MHT hypotheses per fold"
+  - "Per-fold metrics: accuracy, active_trade_count, long/short/no_trade counts"
+  - "SOLUSDT optimization: stop_mult=1.0, target_mult=5.0, expectancy_r=0.10, win_rate=0.996"
+  - "1578 passed, 3 skipped, 0 failures — full test suite green"

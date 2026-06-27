@@ -1,0 +1,25 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "v0.25 diagnostics repair — Diagnostic Layer/Metrics Contract Update — NOT alpha found"
+files_changed:
+  - "contracts/schemas/alphaforge/mode_research_report.schema.json"
+  - "contracts/fixtures/alphaforge/swing_mode_research_report_minimal.json"
+  - "contracts/fixtures/alphaforge/scalp_mode_research_report_minimal.json"
+  - "contracts/fixtures/alphaforge/aggressive_scalp_mode_research_report_minimal.json"
+  - "contracts/tests/test_schema_active_metrics.py"
+decisions_locked:
+  diagnostic_layer: LOCKED_INITIAL_BASELINE
+  schema_active_metrics: LOCKED
+remaining_holds:
+  - "Cost Stress Matrix — requires regime-aware cost multipliers"
+  - "Symbol Stability — requires multi-symbol WFV"
+  - "NO_TRADE Collapse — extreme market condition edge case"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest integration/tests/test_schema_parity.py -q"
+evidence:
+  - "9/9 schema parity tests pass"
+  - "mode_research_report.schema.json: 8 new active metric fields added (active_trade_count, long_trade_count, short_trade_count, no_trade_count, total_gross_R, total_net_R, exposure_pct, avg_net_R_per_active_trade)"
+  - "3 new required fields in metrics object: active_trade_count, total_net_R, exposure_pct"
+  - "All 3 mode fixtures updated with active metric fields"
+  - "contracts/tests/test_schema_active_metrics.py: 232-line schema validation file"

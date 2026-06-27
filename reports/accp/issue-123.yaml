@@ -1,0 +1,21 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "v0.25 diagnostics repair — Active Trade Metrics — NOT alpha found"
+files_changed:
+  - "alphaforge/tests/test_active_trade_metrics.py"
+  - "alphaforge/src/alphaforge/reports/empirical.py"
+decisions_locked:
+  active_trade_metric_system: LOCKED_INITIAL_BASELINE
+  oos_metrics_fn: LOCKED_INITIAL_BASELINE
+remaining_holds:
+  - "Cost Stress Matrix — requires regime-aware cost multipliers"
+  - "NO_TRADE Collapse — extreme market condition edge case"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_active_trade_metrics.py -q"
+evidence:
+  - "17/17 active trade metric tests pass"
+  - "compute_oos_metrics tracks: active/long/short/no_trade counts, total_gross_R, total_fee_cost_R, total_slippage_cost_R, total_net_R, avg_net_R_per_active_trade, exposure_pct, oos_trade_count"
+  - "NaN guards: avg_net_R_per_active_trade = 0.0 (not NaN) when active_trade_count=0"
+  - "Empty input returns all zeros, no crash"
+  - "empirical.py wired to consume active_trade_metrics from WFV results"
