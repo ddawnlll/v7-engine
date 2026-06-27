@@ -536,6 +536,17 @@ def build_empirical_mode_research_report(
     oos_max_drawdown_r = oos_summary.get("oos_max_drawdown_r", -3.0)
     oos_trade_count = oos_summary.get("oos_trade_count", 0)
 
+    # --- Active trade metrics (Issue 123) ---
+    atm = wfv_results.get("active_trade_metrics", {})
+    active_trade_count = atm.get("active_trade_count", oos_trade_count)
+    long_trade_count = atm.get("long_trade_count", 0)
+    short_trade_count = atm.get("short_trade_count", 0)
+    no_trade_count = atm.get("no_trade_count", 0)
+    total_gross_R = atm.get("total_gross_R", 0.0)
+    total_net_R = atm.get("total_net_R", 0.0)
+    exposure_pct = atm.get("exposure_pct", 0.0)
+    avg_net_R_per_active_trade = atm.get("avg_net_R_per_active_trade", 0.0)
+
     cost_stress_data = wfv_results.get("cost_stress")
     regime_data = wfv_results.get("regime_breakdown")
 
@@ -625,6 +636,14 @@ def build_empirical_mode_research_report(
             "oos_profit_factor": _make_metric_ci(oos_profit_factor),
             "oos_max_drawdown_r": _make_metric_ci(oos_max_drawdown_r),
             "oos_trade_count": oos_trade_count,
+            "active_trade_count": active_trade_count,
+            "long_trade_count": long_trade_count,
+            "short_trade_count": short_trade_count,
+            "no_trade_count": no_trade_count,
+            "total_gross_R": total_gross_R,
+            "total_net_R": total_net_R,
+            "exposure_pct": exposure_pct,
+            "avg_net_R_per_active_trade": avg_net_R_per_active_trade,
             "per_fold_metrics": per_fold_metrics,
         },
         "cost_stress": cost_stress_section,
