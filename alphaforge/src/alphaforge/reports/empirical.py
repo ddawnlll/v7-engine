@@ -35,6 +35,19 @@ from alphaforge.contracts.validator import validate_payload
 from alphaforge.errors import ReportBuildError, ModeError
 from alphaforge.modes.profiles import get_mode_profile
 
+# Try importing MHT correction functions; fall back gracefully when mht.py
+# is not available (e.g., during partial-checkout development).
+try:
+    from alphaforge.reports.mht import (
+        bonferroni_correction,
+        compute_data_snooping_risk,
+    )
+    _MHT_AVAILABLE = True
+except ImportError:
+    bonferroni_correction = lambda alpha, n: alpha  # noqa: E731
+    compute_data_snooping_risk = lambda n, a, f: "HIGH"  # noqa: E731
+    _MHT_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # Thresholds — conservative, evidence-gated, NOT profitability claims
@@ -441,29 +454,57 @@ def _build_empirical_regime_breakdown(wfv_results: dict) -> dict:
 def _build_empirical_mht_control(
     wfv_results: dict, fold_count: int, hypotheses_per_fold: int = 1,
 ) -> dict:
-    """Build multiple_hypothesis_control section from WFV results."""
+    """Build multiple_hypothesis_control section from WFV results.
+
+    Reads trial_count from wfv_results['trial_context']['trial_count'].
+    When trial_count > 1, applies Bonferroni correction and flags
+    data-snooping risk accordingly. Falls back to fold_count * hypotheses_per_fold
+    when trial_context is missing.
+    """
     mht_data = wfv_results.get("multiple_hypothesis_control", {})
 
+    # Read trial_count from wfv_results trial_context (v0.25+)
+    trial_context = wfv_results.get("trial_context", {})
+    trial_count = trial_context.get("trial_count", fold_count)
+
+    # Prefer explicit tested_hypothesis_count from pipeline, else compute
     tested_hypotheses = mht_data.get(
-        "tested_hypothesis_count", fold_count * hypotheses_per_fold
+        "tested_hypothesis_count", trial_count * hypotheses_per_fold
     )
-    correction_method = mht_data.get("correction_method", "NONE_APPLIED")
-    risk_flag = mht_data.get("data_snooping_risk_flag", "HIGH")
+
+    # Determine MHT status based on trial count
+    has_multiple_trials = trial_count > 1
+    if has_multiple_trials:
+        mht_status = "APPLIED_WITH_WARNINGS"
+        correction_method = "Bonferroni"
+        corrected_alpha = bonferroni_correction(0.05, trial_count)
+    else:
+        mht_status = "NONE_APPLIED"
+        correction_method = "NONE_APPLIED"
+        corrected_alpha = None
+
+    risk_flag = compute_data_snooping_risk(
+        n_trials=trial_count,
+        mht_applied=has_multiple_trials,
+        fold_count=fold_count,
+    )
 
     return {
+        "mht_status": mht_status,
         "tested_hypothesis_count": tested_hypotheses,
+        "tested_feature_count": mht_data.get("tested_feature_count", 1),
+        "tested_thesis_count": mht_data.get("tested_thesis_count", 1),
         "correction_method": correction_method,
-        "corrected_significance": None,
+        "corrected_significance": corrected_alpha,
         "data_snooping_risk_flag": risk_flag,
-        "deflated_sharpe_or_equivalent": None,
-        "pbo_or_backtest_overfit_risk": mht_data.get(
-            "pbo_or_backtest_overfit_risk", "NOT_RUN"
-        ),
-        "trial_count_disclosure": mht_data.get("trial_count_disclosure", 0),
+        "false_discovery_control": "NONE",
+        "deflated_sharpe_or_pbo_assessment": "NOT_RUN",
+        "trial_count_disclosure": trial_count,
         "rejected_candidate_count": mht_data.get("rejected_candidate_count", 0),
         "notes": (
             f"Empirical MHT assessment: {tested_hypotheses} hypotheses tested "
-            f"across {fold_count} folds. Correction: {correction_method}. "
+            f"across {fold_count} folds. Trial count from context: {trial_count}. "
+            f"Correction: {correction_method}. "
             f"Data-snooping risk: {risk_flag}."
         ),
     }

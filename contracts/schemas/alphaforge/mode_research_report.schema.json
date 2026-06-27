@@ -164,7 +164,21 @@
               "trade_count": { "type": "integer" }
             }
           }
-        }
+        },
+        "active_trade_count": { "type": "integer" },
+        "long_trade_count": { "type": "integer" },
+        "short_trade_count": { "type": "integer" },
+        "no_trade_count": { "type": "integer" },
+        "total_gross_R": { "type": "number" },
+        "total_net_R": { "type": "number" },
+        "exposure_pct": { "type": "number" },
+        "avg_net_R_per_active_trade": { "type": "number" },
+        "total_fee_cost_R": { "type": "number" },
+        "total_slippage_cost_R": { "type": "number" },
+        "total_funding_cost_R": { "type": "number" },
+        "avg_net_R_per_decision": { "type": "number" },
+        "turnover": { "type": "number" },
+        "avg_hold_bars": { "type": "number" }
       }
     },
     "cost_stress": {
