@@ -254,6 +254,12 @@ def test_mht_section_validates_against_schema():
 
     # Build a minimal valid report and override the MHT section
     report: Dict[str, Any] = build_minimal_mode_research_report(mode="SWING")
+    # Ensure required metric fields from P0.9C schema are present
+    report.setdefault("metrics", {}).update({
+        "active_trade_count": 7,
+        "total_net_R": 1.58,
+        "exposure_pct": 70.0,
+    })
     report["multiple_hypothesis_control"] = {
         "mht_status": "APPLIED_WITH_WARNINGS",
         "tested_hypothesis_count": trial_count,
