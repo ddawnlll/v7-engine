@@ -355,7 +355,12 @@ def main():
     avg_val_accuracy = float(np.mean(val_accs)) if val_accs else 0.0
     stability_score = _compute_stability(val_accs)
     total_active = sum(r["active_trade_count"] for r in wfv)
+    total_long = sum(r["long_count"] for r in wfv)
+    total_short = sum(r["short_count"] for r in wfv)
+    total_no_trade = sum(r["no_trade_count"] for r in wfv)
+    total_decisions = total_active + total_no_trade
     total_n_val = sum(r["n_val"] for r in wfv)
+    exposure_pct = (total_active / total_decisions * 100) if total_decisions > 0 else 0.0
 
     print(
         f"  Walk-forward: {len(wfv)} folds | stability_score={stability_score:.4f} | "
@@ -402,6 +407,23 @@ def main():
         "anchor_type": "anchored_expanding",
         "purge_period_bars": wfv[0]["purge_period"] if wfv else 0,
         "embargo_period_bars": wfv[0]["embargo_period"] if wfv else 0,
+        "metrics": {
+            "active_trade_count": total_active,
+            "long_trade_count": total_long,
+            "short_trade_count": total_short,
+            "no_trade_count": total_no_trade,
+            "oos_trade_count": total_active,
+            "exposure_pct": round(exposure_pct, 2),
+            "total_gross_R": 0.0,
+            "total_fee_cost_R": 0.0,
+            "total_slippage_cost_R": 0.0,
+            "total_funding_cost_R": 0.0,
+            "total_net_R": 0.0,
+            "avg_net_R_per_active_trade": 0.0,
+            "avg_net_R_per_decision": 0.0,
+            "turnover": round(total_active / max(1, total_decisions * total_n_val), 6),
+            "avg_hold_bars": cfg["max_hold"] / 2.0,
+        },
         "oos_summary": {
             "oos_accuracy": avg_val_accuracy,
             "oos_sample_count": max(1, total_n_val),
@@ -411,6 +433,11 @@ def main():
             "oos_win_rate": avg_val_accuracy,
             "oos_profit_factor": 1.0,
             "oos_trade_count": total_active,
+            "active_trade_count": total_active,
+            "long_trade_count": total_long,
+            "short_trade_count": total_short,
+            "no_trade_count": total_no_trade,
+            "exposure_pct": round(exposure_pct, 2),
         },
         "multiple_hypothesis_control": {
             "tested_hypothesis_count": len(wfv) * 124,  # MHT: 124 hypotheses per fold (independent)

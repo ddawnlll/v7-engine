@@ -1,0 +1,290 @@
+{
+  "schema_version": "1.0.0",
+  "report_id": "mrr-aggressive_scalp-empirical-001",
+  "mode": "AGGRESSIVE_SCALP",
+  "mode_priority": "PRIMARY",
+  "report_type": "primary_research_report",
+  "created_at": "2026-06-27T13:24:31Z",
+  "run_id": "run-empirical-aggressive_scalp-001",
+  "data_scope": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "date_range_start": "1704067200000",
+    "date_range_end": "1782489600000",
+    "primary_timeframes": [
+      "15m"
+    ],
+    "secondary_timeframes": [
+      "1h",
+      "5m"
+    ],
+    "data_quality_summary": "Empirical report from WFV results."
+  },
+  "feature_set_refs": [
+    "fs-aggressive_scalp-empirical-001"
+  ],
+  "label_dataset_refs": [
+    "lds-aggressive_scalp-empirical-001"
+  ],
+  "alpha_theses": [
+    {
+      "alpha_thesis_id": "ath-aggressive_scalp-empirical-001",
+      "title": "Empirical alpha thesis for AGGRESSIVE_SCALP",
+      "status": "UNDER_EVALUATION",
+      "evidence_quality": "INSUFFICIENT"
+    }
+  ],
+  "validation_summary": {
+    "validation_report_id": "vr-aggressive_scalp-empirical-001",
+    "fold_count": 6,
+    "verdict": "REJECT",
+    "overfit_risk": "HIGH"
+  },
+  "metrics": {
+    "oos_sharpe": {
+      "value": 0.0,
+      "ci_lower": 0.0,
+      "ci_upper": 0.0,
+      "ci_level": 0.95
+    },
+    "oos_expectancy_r": {
+      "value": 0.0,
+      "ci_lower": 0.0,
+      "ci_upper": 0.0,
+      "ci_level": 0.95
+    },
+    "oos_win_rate": {
+      "value": 0.43770827382652583,
+      "ci_lower": 0.3377,
+      "ci_upper": 0.5377,
+      "ci_level": 0.95
+    },
+    "oos_profit_factor": {
+      "value": 1.0,
+      "ci_lower": 0.8,
+      "ci_upper": 1.2,
+      "ci_level": 0.95
+    },
+    "oos_max_drawdown_r": {
+      "value": -1.0,
+      "ci_lower": -1.2,
+      "ci_upper": -0.8,
+      "ci_level": 0.95
+    },
+    "oos_trade_count": 84019,
+    "active_trade_count": 84019,
+    "long_trade_count": 0,
+    "short_trade_count": 0,
+    "no_trade_count": 0,
+    "total_gross_R": 0.0,
+    "total_net_R": 0.0,
+    "exposure_pct": 0.0,
+    "avg_net_R_per_active_trade": 0.0,
+    "per_fold_metrics": [
+      {
+        "fold": 1,
+        "n_train": 28008,
+        "n_val": 14004,
+        "val_accuracy": 0.4353756069694373,
+        "train_accuracy": 0.611862364439684,
+        "active_trade_count": 14000,
+        "long_count": 2116,
+        "short_count": 11884,
+        "no_trade_count": 4,
+        "label_distribution": {
+          "LONG_NOW": 6181,
+          "SHORT_NOW": 6102,
+          "NO_TRADE": 1721
+        }
+      },
+      {
+        "fold": 2,
+        "n_train": 65351,
+        "n_val": 14004,
+        "val_accuracy": 0.4329477292202228,
+        "train_accuracy": 0.5576978252137488,
+        "active_trade_count": 14003,
+        "long_count": 12763,
+        "short_count": 1240,
+        "no_trade_count": 1,
+        "label_distribution": {
+          "LONG_NOW": 6091,
+          "SHORT_NOW": 6179,
+          "NO_TRADE": 1734
+        }
+      },
+      {
+        "fold": 3,
+        "n_train": 102694,
+        "n_val": 14004,
+        "val_accuracy": 0.44522993430448443,
+        "train_accuracy": 0.534276254929646,
+        "active_trade_count": 14004,
+        "long_count": 8768,
+        "short_count": 5236,
+        "no_trade_count": 0,
+        "label_distribution": {
+          "LONG_NOW": 6103,
+          "SHORT_NOW": 6189,
+          "NO_TRADE": 1712
+        }
+      },
+      {
+        "fold": 4,
+        "n_train": 140037,
+        "n_val": 14004,
+        "val_accuracy": 0.43944587260782636,
+        "train_accuracy": 0.5199410872087834,
+        "active_trade_count": 14004,
+        "long_count": 8193,
+        "short_count": 5811,
+        "no_trade_count": 0,
+        "label_distribution": {
+          "LONG_NOW": 6107,
+          "SHORT_NOW": 6132,
+          "NO_TRADE": 1765
+        }
+      },
+      {
+        "fold": 5,
+        "n_train": 177380,
+        "n_val": 14004,
+        "val_accuracy": 0.4369465866895173,
+        "train_accuracy": 0.5119094599165633,
+        "active_trade_count": 14004,
+        "long_count": 2536,
+        "short_count": 11468,
+        "no_trade_count": 0,
+        "label_distribution": {
+          "LONG_NOW": 6190,
+          "SHORT_NOW": 6053,
+          "NO_TRADE": 1761
+        }
+      },
+      {
+        "fold": 6,
+        "n_train": 214723,
+        "n_val": 14004,
+        "val_accuracy": 0.43630391316766637,
+        "train_accuracy": 0.5026924129259106,
+        "active_trade_count": 14004,
+        "long_count": 8066,
+        "short_count": 5938,
+        "no_trade_count": 0,
+        "label_distribution": {
+          "LONG_NOW": 6012,
+          "SHORT_NOW": 6265,
+          "NO_TRADE": 1727
+        }
+      }
+    ]
+  },
+  "cost_stress": {
+    "baseline_fee_pct": 0.04,
+    "baseline_slippage_pct": 0.02,
+    "fee_stress_levels": [],
+    "slippage_stress_levels": [],
+    "combined_stress_edge_survives": false,
+    "break_even_cost_total_pct": 0.0,
+    "net_edge_after_costs": 0.0,
+    "cost_stress_verdict": "FAIL_EDGE_DESTROYED_BY_COSTS"
+  },
+  "no_trade_comparison": {
+    "long_vs_no_trade": "NO_TRADE_DOMINATES",
+    "short_vs_no_trade": "NO_TRADE_DOMINATES",
+    "active_beats_no_trade": false,
+    "summary": "Empirical assessment: active does not beat no-trade baseline. OOS expectancy_r=0.0000."
+  },
+  "regime_breakdown": {
+    "regimes_tested": [
+      "TREND_UP",
+      "TREND_DOWN",
+      "RANGE",
+      "TRANSITION"
+    ],
+    "regimes": [
+      {
+        "regime": "TREND_UP",
+        "sample_pct": 0.25,
+        "oos_expectancy_r": 0.0,
+        "edge_present": false
+      },
+      {
+        "regime": "TREND_DOWN",
+        "sample_pct": 0.25,
+        "oos_expectancy_r": 0.0,
+        "edge_present": false
+      },
+      {
+        "regime": "RANGE",
+        "sample_pct": 0.25,
+        "oos_expectancy_r": 0.0,
+        "edge_present": false
+      },
+      {
+        "regime": "TRANSITION",
+        "sample_pct": 0.25,
+        "oos_expectancy_r": 0.0,
+        "edge_present": false
+      }
+    ],
+    "best_regime": "NONE",
+    "worst_regime": "TREND_UP",
+    "edge_only_in_rare_regime": true,
+    "regime_stability_verdict": "EDGE_ONLY_IN_RARE_REGIME",
+    "summary": "Regime analysis over 4 regimes. Best: NONE (expectancy_r=-999.0000). Worst: TREND_UP (expectancy_r=0.0000). Edge only in rare regime."
+  },
+  "v7_gate_readiness": {
+    "gates_mapped": [
+      "G0_doc_ready",
+      "G1_research_backtest"
+    ],
+    "gates_not_ready": [
+      "G2_walk_forward_oos",
+      "G3_cost_stress",
+      "G4_regime_breakdown",
+      "G5_symbol_stability",
+      "G6_calibration_reliability",
+      "G7_shadow",
+      "G8_paper",
+      "G9_tiny_live",
+      "G10_live"
+    ],
+    "overall_readiness": "NOT_READY"
+  },
+  "multiple_hypothesis_control": {
+    "mht_status": "APPLIED_WITH_WARNINGS",
+    "tested_hypothesis_count": 744,
+    "tested_feature_count": 1,
+    "tested_thesis_count": 1,
+    "correction_method": "Bonferroni",
+    "corrected_significance": 0.008333333333333333,
+    "data_snooping_risk_flag": "LOW",
+    "false_discovery_control": "NONE",
+    "deflated_sharpe_or_pbo_assessment": "NOT_RUN",
+    "trial_count_disclosure": 6,
+    "rejected_candidate_count": 0,
+    "notes": "Empirical MHT assessment: 744 hypotheses tested across 6 folds. Trial count from context: 6. Correction: Bonferroni. Data-snooping risk: LOW."
+  },
+  "verdict": "REJECT",
+  "blocked_scopes": [
+    "Verdict is REJECT — insufficient evidence for any promotion",
+    "Cost stress blocks edge — fee/slippage sensitivity unresolved",
+    "Funding model DEFERRED — perpetual/live scope blocked",
+    "Single symbol limitation — cross-symbol stability not assessed",
+    "V7 gate readiness: G5-G10 not addressed — further evidence required"
+  ],
+  "limitations": [
+    "Empirical report — evidence quality: INCONCLUSIVE. No profitability claims.",
+    "AlphaForge RECOMMENDS. V7 DECIDES. This report does NOT authorize live trading."
+  ],
+  "recommended_actions": [
+    "Improve data quality or increase sample size",
+    "Review feature engineering for better signal extraction",
+    "Check for data leakage in label/feature construction",
+    "This is an evidence-assessment report, not a trade authorization"
+  ]
+}

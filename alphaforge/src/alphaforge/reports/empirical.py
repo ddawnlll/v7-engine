@@ -578,15 +578,38 @@ def build_empirical_mode_research_report(
     oos_trade_count = oos_summary.get("oos_trade_count", 0)
 
     # --- Active trade metrics (Issue 123) ---
-    atm = wfv_results.get("active_trade_metrics", {})
-    active_trade_count = atm.get("active_trade_count", oos_trade_count)
-    long_trade_count = atm.get("long_trade_count", 0)
-    short_trade_count = atm.get("short_trade_count", 0)
-    no_trade_count = atm.get("no_trade_count", 0)
-    total_gross_R = atm.get("total_gross_R", 0.0)
-    total_net_R = atm.get("total_net_R", 0.0)
-    exposure_pct = atm.get("exposure_pct", 0.0)
-    avg_net_R_per_active_trade = atm.get("avg_net_R_per_active_trade", 0.0)
+    # Read from wfv_results["metrics"] first, fall back to oos_summary, then defaults
+    wfv_metrics = wfv_results.get("metrics", {})
+    active_trade_count = (
+        wfv_metrics.get("active_trade_count")
+        or oos_summary.get("active_trade_count")
+        or oos_trade_count
+    )
+    long_trade_count = (
+        wfv_metrics.get("long_trade_count")
+        or oos_summary.get("long_trade_count")
+        or 0
+    )
+    short_trade_count = (
+        wfv_metrics.get("short_trade_count")
+        or oos_summary.get("short_trade_count")
+        or 0
+    )
+    no_trade_count = (
+        wfv_metrics.get("no_trade_count")
+        or oos_summary.get("no_trade_count")
+        or 0
+    )
+    total_gross_R = wfv_metrics.get("total_gross_R", 0.0) or oos_summary.get("total_gross_R", 0.0)
+    total_fee_cost_R = wfv_metrics.get("total_fee_cost_R", 0.0) or 0.0
+    total_slippage_cost_R = wfv_metrics.get("total_slippage_cost_R", 0.0) or 0.0
+    total_funding_cost_R = wfv_metrics.get("total_funding_cost_R", 0.0) or 0.0
+    total_net_R = wfv_metrics.get("total_net_R", 0.0) or oos_summary.get("total_net_R", 0.0)
+    exposure_pct = wfv_metrics.get("exposure_pct", 0.0) or oos_summary.get("exposure_pct", 0.0)
+    avg_net_R_per_active_trade = wfv_metrics.get("avg_net_R_per_active_trade", 0.0) or 0.0
+    avg_net_R_per_decision = wfv_metrics.get("avg_net_R_per_decision", 0.0) or 0.0
+    turnover = wfv_metrics.get("turnover", 0.0) or 0.0
+    avg_hold_bars = wfv_metrics.get("avg_hold_bars", 0.0) or 0.0
 
     cost_stress_data = wfv_results.get("cost_stress")
     regime_data = wfv_results.get("regime_breakdown")
@@ -682,9 +705,15 @@ def build_empirical_mode_research_report(
             "short_trade_count": short_trade_count,
             "no_trade_count": no_trade_count,
             "total_gross_R": total_gross_R,
+            "total_fee_cost_R": total_fee_cost_R,
+            "total_slippage_cost_R": total_slippage_cost_R,
+            "total_funding_cost_R": total_funding_cost_R,
             "total_net_R": total_net_R,
             "exposure_pct": exposure_pct,
             "avg_net_R_per_active_trade": avg_net_R_per_active_trade,
+            "avg_net_R_per_decision": avg_net_R_per_decision,
+            "turnover": turnover,
+            "avg_hold_bars": avg_hold_bars,
             "per_fold_metrics": per_fold_metrics,
         },
         "cost_stress": cost_stress_section,
