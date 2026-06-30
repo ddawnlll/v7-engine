@@ -38,7 +38,6 @@ import { toast } from "sonner";
 import { ProfileScopeBar } from "../components/profile/ProfileScopeBar";
 import { AnimatedRoute } from "../components/ui/AnimatedRoute";
 import { EmptyState } from "../components/ui/EmptyState";
-import { Panel } from "../components/ui/Panel";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useSettings } from "../contexts/SettingsContext";
 import { fetchPortfolioForScope, syncRuntimeProfileReadOnly } from "../lib/api";
@@ -94,12 +93,6 @@ function formatTooltipR(value: unknown) {
 function formatTooltipTrades(value: unknown) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? `${numeric} trades` : "--";
-}
-
-function getOutcomeBucket(realizedR: number): "wins" | "losses" | "scratch" {
-  if (realizedR > 0) return "wins";
-  if (realizedR < 0) return "losses";
-  return "scratch";
 }
 
 function computeDrawdownSeries(equityCurve: JsonRecord[]) {
@@ -463,7 +456,6 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 function CommandStrip({
   resolvedProfileId,
-  resolvedAccountId,
   executionMode,
   venue,
   engineStatus,
@@ -477,7 +469,6 @@ function CommandStrip({
   handleProfileScopeChange,
 }: {
   resolvedProfileId: string;
-  resolvedAccountId: string;
   executionMode: string;
   venue: string;
   engineStatus: ReturnType<typeof computeEngineStatus>;
@@ -1401,7 +1392,6 @@ function LiveSyncPanel({
   venueOpenOrders,
   venuePositions,
   pnlAssets,
-  resolvedAccountId,
 }: {
   engine: Record<string, unknown>;
   syncLiveMutation: any;
@@ -1413,7 +1403,6 @@ function LiveSyncPanel({
   venueOpenOrders: JsonRecord[];
   venuePositions: JsonRecord[];
   pnlAssets: JsonRecord[];
-  resolvedAccountId: string;
 }) {
   return (
     <Card className="p-5 shadow-[0_12px_32px_rgba(77,62,40,0.06)]">
@@ -1866,7 +1855,6 @@ export function PortfolioRoute() {
         {/* ── Zone 1: Command strip ── */}
         <CommandStrip
           resolvedProfileId={resolvedProfileId}
-          resolvedAccountId={resolvedAccountId}
           executionMode={executionMode}
           venue={venue}
           engineStatus={engineStatus}
@@ -1956,7 +1944,6 @@ export function PortfolioRoute() {
             venueOpenOrders={venueOpenOrders}
             venuePositions={venuePositions}
             pnlAssets={pnlAssets}
-            resolvedAccountId={resolvedAccountId}
           />
         )}
       </div>

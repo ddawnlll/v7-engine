@@ -6,13 +6,9 @@ import {
   ArrowUpDown,
   Clock3,
   Copy,
-  Layers3,
   Link2,
   Radar,
   Search,
-  Target,
-  TrendingDown,
-  TrendingUp,
   WalletCards,
   X,
 } from "lucide-react";
@@ -113,7 +109,7 @@ function tradeTimestamp(row: OrderRow) {
     row.close_timestamp ??
       row.open_timestamp ??
       row.last_venue_update_at_utc ??
-      row.payload?.venue_position?.update_time_utc ??
+      ((row.payload as Record<string, unknown>)?.venue_position as Record<string, unknown> | undefined)?.update_time_utc ??
       "",
   );
 }
@@ -225,7 +221,7 @@ function tradeProgressTone(row: OrderRow) {
 }
 
 function venuePositionPayload(row: OrderRow): JsonRecord {
-  return (row.payload?.venue_position ?? {}) as JsonRecord;
+  return ((row.payload as Record<string, unknown>)?.venue_position ?? {}) as JsonRecord;
 }
 
 function venueMetric(row: OrderRow, key: string, fallback?: unknown) {
@@ -356,7 +352,7 @@ function buildTradeExportRow(row: OrderRow, failure?: FailureRecord | null) {
 }
 
 export function TradesRoute() {
-  const { settings, term, rawKey } = useSettings();
+  const { settings, term } = useSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const profileScopeOptionsQuery = useProfileScopeOptions();
   const { options: profileScopeOptions } = profileScopeOptionsQuery;
@@ -413,7 +409,7 @@ export function TradesRoute() {
     staleTime: 60_000,
   });
   const syncMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (_variables: { silent?: boolean }) => {
       if (!scopedProfileId) {
         throw new Error("A profile scope is required before syncing Binance.");
       }
@@ -1652,7 +1648,7 @@ export function TradesRoute() {
                                   {
                                     label: "Trailing activation",
                                     value: formatNumber(
-                                      (selectedTrade.payload?.trailing_stop as JsonRecord | undefined)
+                                      ((selectedTrade.payload as Record<string, unknown>)?.trailing_stop as JsonRecord | undefined)
                                         ?.activate_price,
                                       4,
                                     ),
@@ -1661,7 +1657,7 @@ export function TradesRoute() {
                                     label: "Trailing callback",
                                     value: (() => {
                                       const callback = Number(
-                                        (selectedTrade.payload?.trailing_stop as JsonRecord | undefined)
+                                        ((selectedTrade.payload as Record<string, unknown>)?.trailing_stop as JsonRecord | undefined)
                                           ?.callback_rate,
                                       );
                                       return Number.isFinite(callback)

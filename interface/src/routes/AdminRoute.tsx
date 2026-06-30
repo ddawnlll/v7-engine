@@ -30,7 +30,7 @@ import { useProfileScopeOptions } from '../hooks/useProfileScopeOptions'
 import { useQueueScanMutation } from '../hooks/useQueueScanMutation'
 import { useRetryFailedJobsMutation } from '../hooks/useRetryFailedJobsMutation'
 import { useUpdateRuntimeSettingsMutation } from '../hooks/useUpdateRuntimeSettingsMutation'
-import { depositPaperBalance, exportLearningCsv, fetchCalibrationStatus, fetchEngineHealth, fetchJobs, fetchLogs, fetchOperatorAlerts, fetchPaperBalance, fetchRuntimeSettings, fetchSymbols, getCircuitBreakerEvents, getCircuitBreakerState, getFailures, getFailureSummary, getLearningEffectiveness, getLearningProfile, getWeaknessProfile, pauseScans, reconcilePaperBalance, resetCircuitBreaker, resetPaperBalance, resumeScans, stopScans, triggerScanNow, updateCircuitBreakerSettings, fetchV5Overview, fetchV5Models, fetchV5Comparison, fetchV5Readiness, promoteV5, rollbackV5, fetchV5GateReport, fetchV5GateCalibration } from '../lib/api'
+import { depositPaperBalance, exportLearningCsv, fetchCalibrationStatus, fetchEngineHealth, fetchJobs, fetchLogs, fetchOperatorAlerts, fetchPaperBalance, fetchRuntimeSettings, fetchSymbols, getCircuitBreakerEvents, getCircuitBreakerState, getFailures, getFailureSummary, getLearningEffectiveness, getLearningProfile, getWeaknessProfile, pauseScans, reconcilePaperBalance, resetCircuitBreaker, resetPaperBalance, resumeScans, stopScans, triggerScanNow, updateCircuitBreakerSettings, fetchV5Overview, fetchV5Comparison, fetchV5Readiness, promoteV5, rollbackV5, fetchV5GateReport } from '../lib/api'
 import { downloadFile, exportFilename } from '../lib/export'
 import { formatNumber, formatTime, statusTone, toNumber } from '../lib/format'
 import { DEFAULT_PROFILE_SCOPE, normalizeProfileScope, profileScopeToApiProfileId } from '../lib/profileScope'
@@ -363,12 +363,7 @@ export function AdminRoute({
     refetchInterval: 30_000,
     refetchOnWindowFocus: false,
   })
-  const v5ModelsQuery = useQuery({
-    queryKey: ['v5-models'],
-    queryFn: fetchV5Models,
-    refetchInterval: 30_000,
-    refetchOnWindowFocus: false,
-  })
+
   const v5ComparisonQuery = useQuery({
     queryKey: ['v5-comparison'],
     queryFn: fetchV5Comparison,
@@ -1097,7 +1092,7 @@ export function AdminRoute({
                       </button>
                       <button
                         type="button"
-                        onClick={() => triggerScanMutation.mutate()}
+                        onClick={() => triggerScanMutation.mutate(undefined)}
                         disabled={triggerScanMutation.isPending}
                         className="inline-flex items-center gap-2 rounded-full border border-teal-900/12 bg-teal-50/80 px-4 py-2.5 text-sm font-semibold text-teal-900 transition hover:bg-teal-50 disabled:opacity-60"
                       >
@@ -1418,7 +1413,7 @@ export function AdminRoute({
                           </button>
                           <button
                             type="button"
-                            onClick={() => triggerScanMutation.mutate()}
+                            onClick={() => triggerScanMutation.mutate(undefined)}
                             disabled={triggerScanMutation.isPending}
                             className="inline-flex items-center gap-2 rounded-full border border-teal-900/12 bg-teal-50/80 px-4 py-2 text-sm font-semibold text-teal-900 transition hover:bg-teal-50 disabled:opacity-60"
                           >
