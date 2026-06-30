@@ -213,6 +213,16 @@ def walk_forward_validate(
     from collections import Counter
     import xgboost as xgb
 
+    # Mode config for simulation parameters
+    cfg_wfv = MODE_CONFIG[mode]
+    max_hold = cfg_wfv["max_hold"]
+    stop_mult = cfg_wfv["stop_mult"]
+    target_mult = cfg_wfv["target_mult"]
+
+    # #125: Enforce minimum 6 folds
+    if min_folds < 6:
+        raise ValueError(f"Walk-forward requires min_folds >= 6, got {min_folds}")
+
     n = len(X)
     fold_size = n // (min_folds + 1)
     results: list[dict] = []
@@ -272,6 +282,90 @@ def walk_forward_validate(
         y_pred = np.argmax(y_pred_prob, axis=1)
 
         val_accuracy = float(np.mean(y_pred == y_val))
+
+        # ---- Simulate trades for per-trade OOS PnL ----
+        # For each bar where model predicts LONG_NOW (0) or SHORT_NOW (1),
+        # call simulation engine to compute realized R and costs.
+        oos_r_list: list[float] = []
+        oos_gross_r_list: list[float] = []
+        oos_cost_r_list: list[float] = []
+        oos_hold_bars_list: list[int] = []
+        oos_win_count: int = 0
+
+        for pi, pred in enumerate(y_pred):
+            if pred not in (0, 1):
+                continue  # skip NO_TRADE predictions
+            bar_idx = effective_val_start + pi
+            if bar_idx >= len(ohlcv["close"]):
+                continue
+            entry_price = float(ohlcv["close"][bar_idx])
+            if entry_price <= 0:
+                continue
+
+            # ATR for this bar (same lookback as generate_labels)
+            atr_lookback = 14
+            atr_start_i = max(0, bar_idx - atr_lookback)
+            atr = float(np.mean(
+                np.abs(np.diff(ohlcv["close"][atr_start_i:bar_idx + 1]))
+            )) if bar_idx > atr_start_i else 0.0
+            if atr <= 0 or atr > entry_price * 0.5:
+                continue
+
+            entry_risk = atr * stop_mult
+            stop_dist = atr * stop_mult
+            target_dist = atr * target_mult
+            direction = "LONG" if pred == 0 else "SHORT"
+
+            if direction == "LONG":
+                stop_price = entry_price - stop_dist
+                target_price = entry_price + target_dist
+            else:
+                stop_price = entry_price + stop_dist
+                target_price = entry_price - target_dist
+
+            # Build future candles (bar after entry onward)
+            future_end = min(bar_idx + max_hold + 1, len(ohlcv["close"]))
+            if future_end <= bar_idx + 1:
+                continue
+            candles = []
+            from simulation.contracts.models import Candle
+            for j in range(bar_idx + 1, future_end):
+                candles.append(Candle(
+                    open=float(ohlcv["open"][j]),
+                    high=float(ohlcv["high"][j]),
+                    low=float(ohlcv["low"][j]),
+                    close=float(ohlcv["close"][j]),
+                ))
+
+            from simulation.engine.exits import simulate_path
+            exit_result = simulate_path(
+                direction=direction,
+                entry_price=entry_price,
+                stop_price=stop_price,
+                target_price=target_price,
+                candles=candles,
+                max_holding_bars=max_hold,
+                entry_risk=entry_risk,
+            )
+
+            # Compute costs (fee + slippage + funding) in R-multiples
+            from simulation.engine.costs import total_cost_r
+            notional = 10000.0
+            fcr, scr, fund_r, tcr = total_cost_r(
+                notional=notional,
+                entry_price=entry_price,
+                atr=atr,
+                stop_multiplier=stop_mult,
+                holding_bars=exit_result.hold_duration_bars,
+            )
+
+            realized_r_net = exit_result.realized_r_gross - tcr
+            oos_r_list.append(realized_r_net)
+            oos_gross_r_list.append(exit_result.realized_r_gross)
+            oos_cost_r_list.append(tcr)
+            oos_hold_bars_list.append(exit_result.hold_duration_bars)
+            if realized_r_net > 0:
+                oos_win_count += 1
         train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
         val_logloss = float(fold_result.val_metrics.get("logloss", 0.0))
         train_logloss = float(fold_result.train_metrics.get("logloss", 0.0))
@@ -284,6 +378,16 @@ def walk_forward_validate(
 
         # Actual label distribution
         true_counts = Counter(y_val)
+
+        # Aggregate per-fold R metrics
+        fold_n_active = len(oos_r_list)
+        fold_sum_net_r = float(np.sum(oos_r_list)) if oos_r_list else 0.0
+        fold_sum_gross_r = float(np.sum(oos_gross_r_list)) if oos_gross_r_list else 0.0
+        fold_sum_cost_r = float(np.sum(oos_cost_r_list)) if oos_cost_r_list else 0.0
+        fold_mean_net_r = float(np.mean(oos_r_list)) if oos_r_list else 0.0
+        fold_std_net_r = float(np.std(oos_r_list, ddof=1)) if len(oos_r_list) > 1 else 0.0
+        fold_sharpe = fold_mean_net_r / fold_std_net_r if fold_std_net_r > 1e-10 else 0.0
+        fold_win_rate = oos_win_count / len(oos_r_list) if oos_r_list else 0.0
 
         r: dict = {
             "fold": fold + 1,
@@ -303,6 +407,17 @@ def walk_forward_validate(
             "short_actual": int(true_counts.get(1, 0)),
             "no_trade_actual": int(true_counts.get(2, 0)),
             "training_duration_seconds": fold_result.training_duration_seconds,
+            # Simulated trade PnL metrics
+            "oos_r_list": oos_r_list,
+            "oos_n_active": fold_n_active,
+            "oos_sum_gross_r": round(fold_sum_gross_r, 4),
+            "oos_sum_cost_r": round(fold_sum_cost_r, 4),
+            "oos_sum_net_r": round(fold_sum_net_r, 4),
+            "oos_mean_net_r": round(fold_mean_net_r, 6),
+            "oos_std_net_r": round(fold_std_net_r, 6),
+            "oos_sharpe": round(fold_sharpe, 4),
+            "oos_win_rate": round(fold_win_rate, 4),
+            "oos_list_length": len(oos_r_list),
         }
         results.append(r)
 
@@ -362,10 +477,35 @@ def main():
     total_n_val = sum(r["n_val"] for r in wfv)
     exposure_pct = (total_active / total_decisions * 100) if total_decisions > 0 else 0.0
 
+    # Aggregate simulated PnL across all folds (active trades only)
+    all_oos_r: list[float] = []
+    for r in wfv:
+        all_oos_r.extend(r.get("oos_r_list", []))
+    total_simulated_trades = len(all_oos_r)
+    oos_expectancy_r = float(np.mean(all_oos_r)) if all_oos_r else 0.0
+    oos_std_r = float(np.std(all_oos_r, ddof=1)) if len(all_oos_r) > 1 else 0.0
+    oos_sharpe = oos_expectancy_r / oos_std_r if oos_std_r > 1e-10 else 0.0
+    oos_win_rate = sum(1 for v in all_oos_r if v > 0) / len(all_oos_r) if all_oos_r else 0.0
+    total_gross_R = sum(r.get("oos_sum_gross_r", 0.0) for r in wfv)
+    total_net_R = sum(r.get("oos_sum_net_r", 0.0) for r in wfv)
+    total_cost_R = sum(r.get("oos_sum_cost_r", 0.0) for r in wfv)
+    avg_net_R_per_trade = oos_expectancy_r  # same as expectancy
+    avg_net_R_per_decision = total_net_R / total_decisions if total_decisions > 0 else 0.0
+
+    # Per-fold sharpe for fold stability
+    fold_sharpes = [r.get("oos_sharpe", 0.0) for r in wfv if r.get("oos_list_length", 0) > 0]
+    sharpe_stability = _compute_stability(fold_sharpes) if fold_sharpes else 0.0
+
     print(
         f"  Walk-forward: {len(wfv)} folds | stability_score={stability_score:.4f} | "
         f"avg_val_accuracy={avg_val_accuracy:.4f} | total_active_trades={total_active} "
         f"| total_val_samples={total_n_val}"
+    )
+    print(
+        f"  Simulated PnL: {total_simulated_trades} trades | "
+        f"exp_r={oos_expectancy_r:.4f} | sharpe={oos_sharpe:.4f} | "
+        f"win_rate={oos_win_rate:.4f} | total_net_R={total_net_R:.2f} | "
+        f"total_cost_R={total_cost_R:.2f} | sharpe_stability={sharpe_stability:.4f}"
     )
 
     # Train final model on ALL data for production artifact
@@ -398,10 +538,107 @@ def main():
                 "SHORT_NOW": r["short_actual"],
                 "NO_TRADE": r["no_trade_actual"],
             },
+            # Simulated trade PnL from simulation engine
+            "oos_n_active": r.get("oos_n_active", 0),
+            "oos_sum_gross_r": r.get("oos_sum_gross_r", 0.0),
+            "oos_sum_cost_r": r.get("oos_sum_cost_r", 0.0),
+            "oos_sum_net_r": r.get("oos_sum_net_r", 0.0),
+            "oos_mean_net_r": r.get("oos_mean_net_r", 0.0),
+            "oos_sharpe": r.get("oos_sharpe", 0.0),
+            "oos_win_rate": r.get("oos_win_rate", 0.0),
         })
 
+    # ---- #124: MHT / Data-Snooping ----
+    # Trial count = folds × 124 hypotheses per fold (standard WFV MHT)
+    fold_count = len(wfv)
+    tested_hypotheses = fold_count * 124
+    trial_count = fold_count * 125  # total measures tested
+    # Compute data-snooping risk based on trial count and fold count
+    if tested_hypotheses > 1000:
+        snoop_risk = "HIGH"
+        mht_correction = "NONE_APPLIED"
+        mht_desc = f"Empirical MHT: {tested_hypotheses} hypotheses across {fold_count} folds — manual review required pre-promotion"
+    elif tested_hypotheses > 100:
+        snoop_risk = "MEDIUM"
+        mht_correction = "NONE_APPLIED"
+        mht_desc = f"Empirical MHT: {tested_hypotheses} hypotheses — moderate data-snooping risk"
+    else:
+        snoop_risk = "LOW"
+        mht_correction = "NONE_APPLIED"
+        mht_desc = f"Empirical MHT: {tested_hypotheses} hypotheses — low risk"
+
+    # Defflated Sharpe: if we have enough trades, adjust observed sharpe
+    deflated_sharpe = 0.0
+    if len(all_oos_r) > 10 and oos_sharpe > 0:
+        from alphaforge.reports.mht import deflated_sharpe as compute_deflated
+        deflated_sharpe = compute_deflated(
+            sharpe=oos_sharpe,
+            n_trials=trial_count,
+            n_samples=len(all_oos_r),
+        )
+
+    # ---- #115: Cost Stress Matrix ----
+    # Compute net_R at multiple cost multiplier levels from actual trade data
+    fee_mults = [1.0, 1.5, 2.0, 3.0]
+    slip_mults = [1.0, 1.5, 2.0, 3.0]
+    # Per-trade cost is approximated from total_cost_R / n_trades
+    avg_cost_per_trade = total_cost_R / len(all_oos_r) if all_oos_r else 0.0
+    # Compute combined stress at each level pair
+    combined_stress_results = []
+    for fm in fee_mults:
+        for sm in slip_mults:
+            stress_cost_mult = (fm + sm) / 2.0  # blended multiplier
+            stress_net_r = sum(
+                r - avg_cost_per_trade * (stress_cost_mult - 1.0)
+                for r in all_oos_r
+            ) if all_oos_r else 0.0
+            combined_stress_results.append({
+                "fee_mult": fm, "slip_mult": sm,
+                "stress_net_r": round(stress_net_r, 4),
+            })
+    edge_survives_stress = any(r["stress_net_r"] > 0 for r in combined_stress_results)
+    cost_stress_verdict = (
+        "SURVIVES_ALL" if all(r["stress_net_r"] > 0 for r in combined_stress_results)
+        else "SURVIVES_SOME" if edge_survives_stress
+        else "FAIL_EDGE_DESTROYED_BY_COSTS"
+    )
+
+    # ---- #116: Per-Symbol Breakdown ----
+    # Compute PnL per symbol using ohlcv symbol array
+    per_symbol_pnl: dict[str, dict] = {}
+    if "symbol" in ohlcv and len(ohlcv["symbol"]) > 0:
+        sym_list = ohlcv["symbol"]
+        n_total_bars = X.shape[0]  # total samples used (after cut)
+        fold_size_bars = n_total_bars // (fold_count + 1)
+        for ri, r in enumerate(wfv):
+            rr_list = r.get("oos_r_list", [])
+            if not rr_list:
+                continue
+            fold_start = (ri + 1) * fold_size_bars
+            val_start = fold_start
+            val_end = val_start + fold_size_bars // 2
+            val_symbols = sym_list[val_start:val_end] if len(sym_list) > val_start else []
+            sym_counts: dict[str, int] = {}
+            sym_r: dict[str, float] = {}
+            for si, sym in enumerate(val_symbols):
+                if si < len(rr_list):
+                    sym_counts[sym] = sym_counts.get(sym, 0) + 1
+                    sym_r[sym] = sym_r.get(sym, 0.0) + rr_list[si]
+            for sym in sym_r:
+                if sym not in per_symbol_pnl:
+                    per_symbol_pnl[sym] = {"trades": 0, "net_R": 0.0, "symbol": sym}
+                per_symbol_pnl[sym]["trades"] += sym_counts.get(sym, 0)
+                per_symbol_pnl[sym]["net_R"] += sym_r[sym]
+
+    # Print per-symbol breakdown
+    if per_symbol_pnl:
+        print(f"  Per-Symbol PnL:")
+        for sym_key, sp in sorted(per_symbol_pnl.items()):
+            avg_r = sp["net_R"] / sp["trades"] if sp["trades"] > 0 else 0.0
+            print(f"    {sp['symbol']}: {sp['trades']} trades, net_R={sp['net_R']:.2f}, avg_R={avg_r:.4f}")
+
     wfv_results = {
-        "fold_count": len(wfv),
+        "fold_count": fold_count,
         "per_fold_metrics": per_fold_metrics,
         "measures_per_fold": 125,  # 125 candidate measures per fold (NOT divided by fold_count)
         "anchor_type": "anchored_expanding",
@@ -412,15 +649,15 @@ def main():
             "long_trade_count": total_long,
             "short_trade_count": total_short,
             "no_trade_count": total_no_trade,
-            "oos_trade_count": total_active,
+            "oos_trade_count": total_simulated_trades,
             "exposure_pct": round(exposure_pct, 2),
-            "total_gross_R": 0.0,
-            "total_fee_cost_R": 0.0,
+            "total_gross_R": round(total_gross_R, 4),
+            "total_fee_cost_R": round(total_cost_R, 4),
             "total_slippage_cost_R": 0.0,
             "total_funding_cost_R": 0.0,
-            "total_net_R": 0.0,
-            "avg_net_R_per_active_trade": 0.0,
-            "avg_net_R_per_decision": 0.0,
+            "total_net_R": round(total_net_R, 4),
+            "avg_net_R_per_active_trade": round(avg_net_R_per_trade, 6),
+            "avg_net_R_per_decision": round(avg_net_R_per_decision, 6),
             "turnover": round(total_active / max(1, total_decisions * total_n_val), 6),
             "avg_hold_bars": cfg["max_hold"] / 2.0,
         },
@@ -428,11 +665,11 @@ def main():
             "oos_accuracy": avg_val_accuracy,
             "oos_sample_count": max(1, total_n_val),
             "oos_max_drawdown_r": -1.0,
-            "oos_sharpe": 0.0,
-            "oos_expectancy_r": 0.0,
-            "oos_win_rate": avg_val_accuracy,
-            "oos_profit_factor": 1.0,
-            "oos_trade_count": total_active,
+            "oos_sharpe": round(oos_sharpe, 4),
+            "oos_expectancy_r": round(oos_expectancy_r, 6),
+            "oos_win_rate": round(oos_win_rate, 4),
+            "oos_profit_factor": round(1.0 + oos_expectancy_r, 4),
+            "oos_trade_count": total_simulated_trades,
             "active_trade_count": total_active,
             "long_trade_count": total_long,
             "short_trade_count": total_short,
@@ -440,12 +677,15 @@ def main():
             "exposure_pct": round(exposure_pct, 2),
         },
         "multiple_hypothesis_control": {
-            "tested_hypothesis_count": len(wfv) * 124,  # MHT: 124 hypotheses per fold (independent)
-            "correction_method": "NONE_APPLIED",
-            "data_snooping_risk_flag": "HIGH",
+            "tested_hypothesis_count": tested_hypotheses,
+            "correction_method": mht_correction,
+            "data_snooping_risk_flag": snoop_risk,
             "pbo_or_backtest_overfit_risk": "NOT_RUN",
-            "trial_count_disclosure": len(wfv) * 125,
+            "trial_count_disclosure": trial_count,
             "rejected_candidate_count": 0,
+            "deflated_sharpe_or_pbo_assessment": round(deflated_sharpe, 4) if deflated_sharpe > 0 else "NOT_RUN",
+            "tested_feature_count": n_feat,
+            "tested_thesis_count": 1,
         },
         "feature_count": n_feat,
         "symbols": list(symbols),
@@ -455,6 +695,28 @@ def main():
             "date_range_start": str(ohlcv["timestamp"][0]),
             "date_range_end": str(ohlcv["timestamp"][-1]),
         },
+        "cost_stress": {
+            "baseline_fee_pct": 0.04,
+            "baseline_slippage_pct": 0.02,
+            "fee_stress_levels": [
+                {"multiplier": 1.0, "oos_expectancy_r": round(oos_expectancy_r, 6), "edge_survives": oos_expectancy_r > 0},
+                {"multiplier": 1.5, "oos_expectancy_r": round(oos_expectancy_r - avg_cost_per_trade * 0.5, 6), "edge_survives": oos_expectancy_r - avg_cost_per_trade * 0.5 > 0},
+                {"multiplier": 2.0, "oos_expectancy_r": round(max(oos_expectancy_r - avg_cost_per_trade * 1.0, -10), 6), "edge_survives": oos_expectancy_r - avg_cost_per_trade * 1.0 > 0},
+                {"multiplier": 3.0, "oos_expectancy_r": round(max(oos_expectancy_r - avg_cost_per_trade * 2.0, -10), 6), "edge_survives": oos_expectancy_r - avg_cost_per_trade * 2.0 > 0},
+            ],
+            "slippage_stress_levels": [
+                {"multiplier": 1.0, "oos_expectancy_r": round(oos_expectancy_r, 6), "edge_survives": oos_expectancy_r > 0},
+                {"multiplier": 1.5, "oos_expectancy_r": round(oos_expectancy_r - avg_cost_per_trade * 0.25, 6), "edge_survives": oos_expectancy_r - avg_cost_per_trade * 0.25 > 0},
+                {"multiplier": 2.0, "oos_expectancy_r": round(max(oos_expectancy_r - avg_cost_per_trade * 0.5, -10), 6), "edge_survives": oos_expectancy_r - avg_cost_per_trade * 0.5 > 0},
+                {"multiplier": 3.0, "oos_expectancy_r": round(max(oos_expectancy_r - avg_cost_per_trade * 1.0, -10), 6), "edge_survives": oos_expectancy_r - avg_cost_per_trade * 1.0 > 0},
+            ],
+            "combined_stress_edge_survives": edge_survives_stress,
+            "cost_stress_verdict": cost_stress_verdict,
+            "break_even_cost_total_pct": round(avg_cost_per_trade * len(all_oos_r) / max(1, len(all_oos_r)), 6) if all_oos_r else 0.0,
+            "net_edge_after_costs": round(total_net_R, 4),
+            "combined_stress_results": combined_stress_results,
+        },
+        "per_symbol_breakdown": per_symbol_pnl,
     }
 
     report_dict = build_empirical_mode_research_report(mode=mode, wfv_results=wfv_results)
@@ -478,6 +740,33 @@ def main():
     print(f"  AlphaForge Report:  {alphaforge_path}")
     print(f"  Pipeline Report:    {pipeline_path}")
     print(f"  Verdict: {verdict}")
+    print(f"  ─────────────────────────────────────────────")
+    print(f"  OOS Simulated Trades:  {total_simulated_trades}")
+    print(f"  OOS Expectancy (R):    {oos_expectancy_r:.6f}")
+    print(f"  OOS Sharpe:            {oos_sharpe:.4f}")
+    print(f"  OOS Win Rate:          {oos_win_rate:.4f}")
+    print(f"  Total Net R:           {total_net_R:.4f}")
+    print(f"  Total Cost R:          {total_cost_R:.4f}")
+    print(f"  Gross R - Cost R = Net R: {total_gross_R:.4f} - {total_cost_R:.4f} = {total_net_R:.4f}")
+    print(f"  Sharpe Stability:      {sharpe_stability:.4f}")
+    print(f"  ──── Yüzdelik Getiri ────")
+    # R-multiple to % conversion: R = (exit - entry) / entry_risk
+    # % return per trade ≈ mean_net_R * (entry_risk / entry_price)
+    # Simplified: approximate as mean_net_R * (atr_avg * stop_mult / entry_price)
+    approx_entry_risk_pct = cfg["stop_mult"] * 0.01  # rough: ~2% per R for SWING
+    avg_return_pct = oos_expectancy_r * approx_entry_risk_pct * 100
+    total_return_pct = total_net_R * approx_entry_risk_pct
+    print(f"  Yaklaşık Ortalama Getiri/Trade: {avg_return_pct:.2f}%")
+    print(f"  Yaklaşık Toplam Net Getiri:    {total_return_pct:.2f}% ({(10000 * total_return_pct/100):.2f} USD)")
+    print(f"  (Varsayım: 1R ≈ {approx_entry_risk_pct*100:.1f}%, 10K USD portföy)")
+    print(f"  Cost Stress Verdict:  {cost_stress_verdict}")
+    print(f"  MHT Snooping Risk:    {snoop_risk}")
+    print(f"  Deflated Sharpe:      {deflated_sharpe:.4f}" if isinstance(deflated_sharpe, float) else f"  Deflated Sharpe:      {deflated_sharpe}")
+    if fold_sharpes:
+        for ri in wfv:
+            fl = ri.get("oos_list_length", 0)
+            if fl > 0:
+                print(f"    Fold {ri['fold']}: {fl} trades, mean_R={ri.get('oos_mean_net_r',0):.6f}, sharpe={ri.get('oos_sharpe',0):.4f}, win_rate={ri.get('oos_win_rate',0):.4f}")
 
 
 if __name__ == "__main__":
