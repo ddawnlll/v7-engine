@@ -75,3 +75,4 @@ config.local.json
 
 # --- Monitoring / dashboard local state ---
 .grafana/
+.claude/worktrees/
