@@ -516,6 +516,27 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
+## Issue #139 — Mode-Specific Purge/Embargo (2026-07-01)
+
+**What changed:**
+- Added `purge_bars` and `embargo_bars` to `MODE_CONFIG` in `cli/real_training.py`:
+  - SCALP: purge=100, embargo=50
+  - AGGRESSIVE_SCALP: purge=200, embargo=100
+  - SWING: purge=20, embargo=10
+- `walk_forward_validate()` now reads mode-specific values from `MODE_CONFIG` instead of computing `fold_size // 4` and `fold_size // 8` dynamically
+- Docstring updated to reference mode-specific config rather than dynamic formula
+
+**Lock status:**
+- Mode-specific purge/embargo values: LOCKED_INITIAL_BASELINE
+
+**Remaining holds:**
+- No real profitability evidence (HOLD — requires real training + WFV)
+- Purge/embargo values may need recalibration with real data (HOLD)
+
+**Evidence:** 83/83 tests pass (40 WFV + 43 validation/integration). ACCP report at `reports/accp/issue-139.yaml`.
+
+---
+
 ## Final Position
 
 The roadmap for V7 is not:

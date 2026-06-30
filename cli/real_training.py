@@ -30,14 +30,17 @@ MODE_CONFIG = {
     "SWING": {
         "primary": "4h", "max_hold": 30, "stop_mult": 2.0, "target_mult": 3.0,
         "ambiguity_margin_r": 0.15, "min_edge_r": 0.25,
+        "purge_bars": 20, "embargo_bars": 10,
     },
     "SCALP": {
         "primary": "1h", "max_hold": 12, "stop_mult": 1.5, "target_mult": 2.0,
         "ambiguity_margin_r": 0.10, "min_edge_r": 0.15,
+        "purge_bars": 100, "embargo_bars": 50,
     },
     "AGGRESSIVE_SCALP": {
         "primary": "15m", "max_hold": 5, "stop_mult": 1.5, "target_mult": 2.0,
         "ambiguity_margin_r": 0.05, "min_edge_r": 0.10,
+        "purge_bars": 200, "embargo_bars": 100,
     },
 }
 
@@ -187,9 +190,9 @@ def walk_forward_validate(
     Each fold trains on an anchored (expanding) window from bar 0 up to
     train_end, then validates on the next contiguous out-of-sample segment.
 
-    Leakage prevention:
-      - purge_period_bars = fold_size // 4  (removed from end of training set)
-      - embargo_period_bars = fold_size // 8 (skipped at start of validation set)
+    Leakage prevention (mode-specific, see MODE_CONFIG):
+      - purge_bars removed from end of training set
+      - embargo_bars skipped at start of validation set
 
     125 measures per-fold candidate performance (NOT divided by fold_count).
     MHT (124) handles hypothesis counting independently.
@@ -227,8 +230,8 @@ def walk_forward_validate(
     fold_size = n // (min_folds + 1)
     results: list[dict] = []
 
-    purge_bars = fold_size // 4
-    embargo_bars = fold_size // 8
+    purge_bars = cfg_wfv["purge_bars"]
+    embargo_bars = cfg_wfv["embargo_bars"]
 
     logger.info(
         "Walk-forward: min_folds=%d, fold_size=%d, purge=%d, embargo=%d, "
