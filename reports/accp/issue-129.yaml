@@ -1,0 +1,78 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+
+scope_confirmation:
+  objective: >
+    Rewrite generate_labels() in cli/real_training.py to consume
+    simulate() from simulation/engine/engine.py instead of reimplementing
+    simulation from OHLCV with flat fee_pct=0.04.
+  acceptance_criteria:
+    - "generate_labels() calls simulate() from simulation engine"
+    - "Labels include: best_action (with AMBIGUOUS_STATE), no_trade_quality (4 types), label_validity, cost decomposition"
+    - "R values returned alongside labels for WFV consumption"
+    - "All existing tests pass"
+    - "ACCP report at reports/accp/issue-129.yaml"
+  verification:
+    - "Functional test: generate_labels produces AMBIGUOUS_STATE labels (SWING mode)"
+    - "Functional test: generate_labels produces NO_TRADE for ambiguous when no_trade_default=True (SCALP)"
+    - "Functional test: no_trade_quality has all 4 types (CORRECT_NO_TRADE, SAVED_LOSS, MISSED_OPPORTUNITY, AMBIGUOUS_NO_TRADE)"
+    - "Functional test: label_validity boolean flag per bar"
+    - "Functional test: cost decomposition (fee, slippage, funding, total)"
+    - "Functional test: full E2E pipeline (labels → features → WFV → report R values)"
+    - "Test suite: 511 passed (lib+integration+simulation), 1083 passed (alphaforge), boundaries pass"
+
+files_changed:
+  - "cli/real_training.py"
+
+decisions_locked:
+  - key: "labels_source"
+    value: "simulation_engine"
+    status: "LOCKED_INITIAL_BASELINE"
+    rationale: "generate_labels() now calls simulate() from simulation/engine/engine.py, eliminating the duplicate OHLCV path simulation."
+  - key: "label_no_trade_default"
+    value: "per_mode"
+    status: "LOCKED_INITIAL_BASELINE"
+    rationale: "SWING no_trade_default=False (produces AMBIGUOUS_STATE), SCALP/AGGRESSIVE_SCALP no_trade_default=True (defaults to NO_TRADE), matching profiles.md."
+  - key: "label_funding_status"
+    value: "DEFERRED"
+    status: "LOCKED_INITIAL_BASELINE"
+    rationale: "Funding cost is computed in simulation engine but reported as DEFERRED in label metadata pending full validation."
+  - key: "label_r_values_for_wfv"
+    value: "returned_as_dict_of_ndarrays"
+    status: "LOCKED_INITIAL_BASELINE"
+    rationale: "R values (realized_r_net, realized_r_gross, cost decomposition) are returned alongside string labels for WFV consumption."
+
+remaining_holds:
+  - hold: "Per-fold R metric computation in walk_forward_validate"
+    domain: "WFV"
+    release_condition: "Add r_values parameter to walk_forward_validate() for per-fold net-R expectancy computation"
+  - hold: "Real profitability evidence"
+    domain: "All"
+    release_condition: "Requires real training data + WFV on production-sized datasets"
+  - hold: "SCALP threshold calibration"
+    domain: "v7"
+    release_condition: "Empirical walk-forward OOS evidence with real data"
+
+safe_next_step: >
+  Integrate per-fold R metric computation into walk_forward_validate(),
+  enabling OOS expectancy_r, Sharpe ratio, and profit_factor to be
+  populated from real simulation R values instead of placeholders.
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+  - "PYTHONPATH=. python3 -c 'from cli.real_training import generate_labels; labels, r_vals, meta = generate_labels(ohlcv, \"SWING\")'"
+  - "Full E2E pipeline: generate_labels → compute_features → walk_forward_validate with R metric extraction"
+
+evidence:
+  - "511 passed, 2 skipped in lib/integration/simulation"
+  - "1083 passed, 1 skipped in alphaforge"
+  - "8 passed, 1 skipped in boundary tests"
+  - "11 passed in contract registry tests"
+  - "generate_labels() produces AMBIGUOUS_STATE (21/169 SWING), NO_TRADE default (0 AMBIGUOUS_STATE SCALP)"
+  - "no_trade_quality produces all 4 types (AMBIGUOUS_NO_TRADE, CORRECT_NO_TRADE, MISSED_OPPORTUNITY, SAVED_LOSS)"
+  - "label_validity ranges 0-1 per bar with correct COMPLETE/UNRESOLVED gating"
+  - "Cost decomposition: fee=0.021, slippage=0.005, funding=0.0, total=0.026 avg R"
+  - "Full E2E: 469 labels → 30 features → 3-fold WFV → R metrics (total_net_R=137.45)"

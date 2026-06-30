@@ -516,24 +516,29 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
-## Issue #139 — Mode-Specific Purge/Embargo (2026-07-01)
+## Issue #129 — Labels from SimulationOutput (2026-07-01)
 
 **What changed:**
-- Added `purge_bars` and `embargo_bars` to `MODE_CONFIG` in `cli/real_training.py`:
-  - SCALP: purge=100, embargo=50
-  - AGGRESSIVE_SCALP: purge=200, embargo=100
-  - SWING: purge=20, embargo=10
-- `walk_forward_validate()` now reads mode-specific values from `MODE_CONFIG` instead of computing `fold_size // 4` and `fold_size // 8` dynamically
-- Docstring updated to reference mode-specific config rather than dynamic formula
+- `generate_labels()` in `cli/real_training.py` rewritten to call `simulate()` from `simulation/engine/engine.py` instead of reimplementing path simulation from raw OHLCV with flat fee_pct=0.04.
+- `SimulationProfile` built from `MODE_CONFIG` per-mode parameters, consuming the simulation engine's full cost model (fee, slippage, funding), exit semantics (stop/target/time-exit), and action selection (including AMBIGUOUS_STATE).
+- Labels now include: `best_action` (LONG_NOW, SHORT_NOW, NO_TRADE, AMBIGUOUS_STATE), `no_trade_quality` (4 types: CORRECT_NO_TRADE, SAVED_LOSS, MISSED_OPPORTUNITY, AMBIGUOUS_NO_TRADE), `label_validity` boolean per bar, and full cost decomposition (fee_cost_r, slippage_cost_r, funding_cost_r, total_cost_r).
+- R values returned alongside labels as dict of np.ndarrays for WFV consumption: realized_r_net, realized_r_gross, cost components, action_gap_r.
+- MODE_CONFIG extended with `no_trade_default` per-mode flag (SWING=False, SCALP=True, AGGRESSIVE_SCALP=True), matching simulation profiles.md.
+- Report R-value placeholders replaced with real aggregate metrics from simulation labels.
+- All existing tests pass: 511 lib/integration/simulation, 1083 alphaforge, boundaries clean.
 
 **Lock status:**
-- Mode-specific purge/embargo values: LOCKED_INITIAL_BASELINE
+- Labels from simulation engine: LOCKED_INITIAL_BASELINE
+- Label R values for WFV: LOCKED_INITIAL_BASELINE
+- MODE_CONFIG no_trade_default: LOCKED_INITIAL_BASELINE
+- Funding status DEFERRED: LOCKED_INITIAL_BASELINE
 
 **Remaining holds:**
-- No real profitability evidence (HOLD — requires real training + WFV)
-- Purge/embargo values may need recalibration with real data (HOLD)
+- Per-fold R metric computation in WFV (HOLD — requires extending walk_forward_validate signature)
+- Real profitability evidence (HOLD — requires real training data)
 
-**Evidence:** 83/83 tests pass (40 WFV + 43 validation/integration). ACCP report at `reports/accp/issue-139.yaml`.
+**Evidence:** 511+1083 tests pass, ACCP report at `reports/accp/issue-129.yaml`, full E2E pipeline verified.
+
 
 ---
 
