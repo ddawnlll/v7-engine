@@ -12,7 +12,9 @@ The only real numbers in any report are structural: fold counts and sample count
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from math import comb
 from typing import Any, Dict, List, Set, Tuple
 
 from alphaforge.validation.contracts import (
@@ -451,3 +453,209 @@ def _make_report_id(config: WalkForwardConfig, dataset_len: int) -> str:
     raw = f"{config.mode.value}|{config.train_window_bars}|{config.test_window_bars}|{dataset_len}|{now.isoformat()}"
     hash_part = hashlib.sha256(raw.encode()).hexdigest()[:8]
     return f"VR-{config.mode.value}-{date_part}-{hash_part}"
+
+
+# ===========================================================================
+# CPVC Splitter — Combinatorial Purged Cross-Validation
+# ===========================================================================
+
+DEFAULT_CPCV_N_GROUPS: int = 10
+DEFAULT_CPCV_K_TRAIN: int = 7
+DEFAULT_CPCV_PURGE_BARS: int = 5
+DEFAULT_CPCV_EMBARGO_BARS: int = 5
+
+
+@dataclass
+class CpcvSplitConfig:
+    """Configuration for combinatorial purged cross-validation.
+
+    CPCV generates all C(N_groups, K_train) combinations of training groups,
+    using the remaining groups for testing. Purge and embargo bars are
+    enforced between train and test sets.
+
+    Fields:
+        n_groups: Number of groups to split the data into (default 10).
+        k_train: Number of groups used for training in each combination (default 7).
+            Must be < n_groups. Remaining groups form the test set.
+        purge_bars: Bars to purge after training set boundary (default 5).
+        embargo_bars: Bars to embargo after test set labels (default 5).
+    """
+    n_groups: int = DEFAULT_CPCV_N_GROUPS
+    k_train: int = DEFAULT_CPCV_K_TRAIN
+    purge_bars: int = DEFAULT_CPCV_PURGE_BARS
+    embargo_bars: int = DEFAULT_CPCV_EMBARGO_BARS
+
+
+class CpcvSplitter:
+    """Combinatorial Purged Cross-Validation splitter for time series.
+
+    Generates all C(n_groups, k_train) train/test combinations from
+    chronologically-grouped data. Each combination uses k_train groups
+    for training and the remainder for testing, with purge and embargo
+    enforced between them.
+
+    Usage:
+        splitter = CpcvSplitter(n_groups=10, k_train=7)
+        for train_idx, test_idx, n_removed in splitter.split(dataset):
+            # train on dataset[train_idx], test on dataset[test_idx]
+            pass
+    """
+
+    def __init__(
+        self,
+        n_groups: int = DEFAULT_CPCV_N_GROUPS,
+        k_train: int = DEFAULT_CPCV_K_TRAIN,
+        purge_bars: int = DEFAULT_CPCV_PURGE_BARS,
+        embargo_bars: int = DEFAULT_CPCV_EMBARGO_BARS,
+    ) -> None:
+        if n_groups <= 1:
+            raise ValueError(f"n_groups must be > 1, got {n_groups}")
+        if k_train <= 0 or k_train >= n_groups:
+            raise ValueError(
+                f"k_train must be in (0, n_groups), got {k_train} with n_groups={n_groups}"
+            )
+        self._config = CpcvSplitConfig(
+            n_groups=n_groups,
+            k_train=k_train,
+            purge_bars=purge_bars,
+            embargo_bars=embargo_bars,
+        )
+
+    @property
+    def config(self) -> CpcvSplitConfig:
+        return self._config
+
+    def split(
+        self,
+        dataset: List[Any],
+    ) -> List[Tuple[List[int], List[int], int]]:
+        """Generate CPCV train/test splits from a chronologically-sorted dataset.
+
+        Args:
+            dataset: List of chronologically-sorted rows with
+                ``feature_timestamp`` attribute.
+
+        Returns:
+            List of (train_indices, test_indices, n_removed) tuples, one per
+            CPCV combination. n_removed is the number of indices removed
+            from train and test due to purge/embargo constraints.
+
+        Raises:
+            ValidationError: If dataset is not chronologically ordered.
+        """
+        # Validate chronological order
+        timestamps = _validate_chronological_order(dataset)
+        total_bars = len(timestamps)
+
+        if total_bars < self._config.n_groups:
+            raise ValidationError(
+                message=(
+                    f"Dataset has {total_bars} distinct timestamps, need at least "
+                    f"{self._config.n_groups} for {self._config.n_groups} CPCV groups."
+                ),
+                suggestion="Reduce n_groups or provide more data.",
+            )
+
+        # Build bar->index map
+        bar_map: Dict[str, Tuple[int, int]] = {}
+        for i, row in enumerate(dataset):
+            ts = row.feature_timestamp
+            if ts not in bar_map:
+                bar_map[ts] = (i, i + 1)
+            else:
+                start, _ = bar_map[ts]
+                bar_map[ts] = (start, i + 1)
+
+        # Assign each bar to a group sequentially
+        bars_per_group = total_bars // self._config.n_groups
+        remainder = total_bars % self._config.n_groups
+
+        group_bars: List[List[int]] = [[] for _ in range(self._config.n_groups)]
+        bar_idx = 0
+        for g in range(self._config.n_groups):
+            n_bars_in_group = bars_per_group + (1 if g < remainder else 0)
+            for _ in range(n_bars_in_group):
+                if bar_idx < len(timestamps):
+                    ts = timestamps[bar_idx]
+                    start, end = bar_map[ts]
+                    group_bars[g].extend(range(start, min(end, len(dataset))))
+                    bar_idx += 1
+
+        # Generate all combinations
+        from itertools import combinations
+
+        all_groups = list(range(self._config.n_groups))
+        splits: List[Tuple[List[int], List[int], int]] = []
+        total_removed = 0
+
+        for train_groups in combinations(all_groups, self._config.k_train):
+            test_groups = [g for g in all_groups if g not in train_groups]
+
+            train_idx_raw: Set[int] = set()
+            test_idx_raw: Set[int] = set()
+            for g in train_groups:
+                train_idx_raw.update(group_bars[g])
+            for g in test_groups:
+                test_idx_raw.update(group_bars[g])
+
+            # Apply purge and embargo
+            # Purge: remove train indices that are within purge_bars of test start
+            # Embargo: remove test indices that are within embargo_bars of train end
+
+            # Get bar positions (using distinct timestamps)
+            train_bars = sorted(
+                set(
+                    timestamps.index(dataset[i].feature_timestamp)
+                    for i in train_idx_raw
+                )
+            )
+            test_bars = sorted(
+                set(
+                    timestamps.index(dataset[i].feature_timestamp)
+                    for i in test_idx_raw
+                )
+            )
+
+            purged_train = set(train_idx_raw)
+            embargoed_test = set(test_idx_raw)
+
+            if train_bars and test_bars:
+                max_train_bar = max(train_bars)
+                min_test_bar = min(test_bars)
+
+                # Purge: drop train bars too close to test
+                for i in list(purged_train):
+                    bar_pos = timestamps.index(dataset[i].feature_timestamp)
+                    if bar_pos + self._config.purge_bars >= min_test_bar:
+                        purged_train.discard(i)
+                        total_removed += 1
+
+                # Embargo: drop test bars too close to train
+                for i in list(embargoed_test):
+                    bar_pos = timestamps.index(dataset[i].feature_timestamp)
+                    if bar_pos - self._config.embargo_bars <= max_train_bar:
+                        embargoed_test.discard(i)
+                        total_removed += 1
+
+            if purged_train and embargoed_test and len(embargoed_test) >= 2:
+                splits.append((
+                    sorted(purged_train),
+                    sorted(embargoed_test),
+                    len(train_idx_raw) - len(purged_train)
+                    + len(test_idx_raw) - len(embargoed_test),
+                ))
+
+        if not splits:
+            raise ValidationError(
+                message="CPCV produced zero valid train/test splits.",
+                suggestion="Reduce n_groups or k_train, or increase dataset size.",
+            )
+
+        return splits
+
+    def n_splits(self) -> int:
+        """Return the number of CPCV combinations.
+
+        C(n_groups, k_train) = n! / (k! * (n-k)!)
+        """
+        return comb(self._config.n_groups, self._config.k_train)

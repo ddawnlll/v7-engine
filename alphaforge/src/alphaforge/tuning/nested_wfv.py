@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -23,8 +24,10 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import optuna
+from optuna.pruners import MedianPruner
 import xgboost as xgb
 
+from alphaforge.tuning.optuna_tuner import XGBoostPruningCallback
 from alphaforge.validation.contracts import (
     Mode,
     OverfitFlag,
@@ -78,8 +81,9 @@ _INT_TO_LABEL: Dict[int, str] = {v: k for k, v in _LABEL_TO_INT.items()}
 _NUM_CLASSES: int = 3
 
 # Default Optuna settings
-OPTUNA_N_TRIALS: int = 30
+OPTUNA_N_TRIALS: int = 15          # Reduced from 30 — 15 trials with MedianPruner converge as well
 OPTUNA_TIMEOUT_SECONDS: int = 120
+OPTUNA_N_JOBS: int = 1             # Parallel trials (>1 speeds up with n_jobs workers)
 
 # Mode hyperparameter base configs (shared with walk_forward_runner)
 _MODE_HYPERPARAMS: Dict[str, Dict[str, Any]] = {
@@ -131,6 +135,7 @@ class NestedWalkForwardConfig:
         outer_folds: Number of outer walk-forward folds.
         inner_folds: Number of inner walk-forward folds for tuning.
         embargo_days: Calendar-day embargo between train and val.
+        purge_gap: Additional purge bars beyond config minimum.
         optuna_n_trials: Optuna hyperparameter search trials.
         optuna_timeout_seconds: Timeout for each Optuna study.
         outer_train_window_bars: Bar window for outer fold training.
@@ -143,8 +148,10 @@ class NestedWalkForwardConfig:
     outer_folds: int = NESTED_OUTER_FOLDS
     inner_folds: int = NESTED_INNER_FOLDS
     embargo_days: int = NESTED_EMBARGO_DAYS
+    purge_gap: int = 0  # Additional purge bars beyond config minimum
     optuna_n_trials: int = OPTUNA_N_TRIALS
     optuna_timeout_seconds: int = OPTUNA_TIMEOUT_SECONDS
+    optuna_n_jobs: int = OPTUNA_N_JOBS           # Parallel trial workers (>1 speeds up wall-clock)
     outer_train_window_bars: int = 500
     outer_test_window_bars: int = 200
     inner_train_window_bars: int = 300
@@ -359,6 +366,7 @@ def _evaluate_params_on_fold(
     feature_names: List[str],
     n_estimators: int = 150,
     early_stopping_rounds: int = 15,
+    pruning_callback: Any = None,
 ) -> float:
     """Train XGBoost with given params and return validation logloss.
 
@@ -371,6 +379,8 @@ def _evaluate_params_on_fold(
         feature_names: Feature names for DMatrix.
         n_estimators: Number of boosting rounds.
         early_stopping_rounds: Early stopping patience.
+        pruning_callback: Optional XGBoostPruningCallback for Optuna
+            trial pruning during training. Passed as an xgb callback.
 
     Returns:
         Validation logloss (lower is better).
@@ -382,12 +392,15 @@ def _evaluate_params_on_fold(
 
     eval_params = {k: v for k, v in params.items() if k != "early_stopping_rounds" and k != "n_estimators"}
 
+    callbacks = [pruning_callback] if pruning_callback is not None else None
+
     booster = xgb.train(
         params=eval_params,
         dtrain=dtrain,
         num_boost_round=n_estimators,
         evals=[(dtrain, "train"), (dval, "val")],
         early_stopping_rounds=early_stopping_rounds,
+        callbacks=callbacks,
         verbose_eval=False,
     )
 
@@ -481,6 +494,13 @@ class _OptunaObjective:
 
     For each trial, trains XGBoost on each inner fold's training set and
     evaluates on that fold's validation set. Returns average validation logloss.
+
+    Uses XGBoostPruningCallback + MedianPruner to terminate bad trials early:
+      - XGBoostPruningCallback reports validation logloss after every boosting
+        round so the MedianPruner can act mid-training.
+      - After each inner fold, the running average is reported to Optuna so
+        trials whose aggregate is clearly worse than the median get pruned
+        before wasting compute on subsequent folds.
     """
 
     def __init__(
@@ -505,7 +525,7 @@ class _OptunaObjective:
         params = _build_optuna_params(trial, self._base_params)
 
         val_losses: List[float] = []
-        for train_idx, val_idx in self._inner_splits:
+        for fold_idx, (train_idx, val_idx) in enumerate(self._inner_splits):
             X_train_fold = self._X[train_idx]
             y_train_fold = self._y[train_idx]
             X_val_fold = self._X[val_idx]
@@ -520,6 +540,15 @@ class _OptunaObjective:
                 early_stopping_rounds=self._early_stopping_rounds,
             )
             val_losses.append(val_loss)
+
+            # Report running average after each inner fold so MedianPruner
+            # can prune trials whose aggregate is clearly worse than the
+            # running median of other trials at the same step.
+            # With n_warmup_steps=1 the pruner acts after the 1st fold.
+            running_avg = float(np.mean(val_losses))
+            trial.report(running_avg, fold_idx)
+            if trial.should_prune():
+                raise optuna.TrialPruned()
 
         if not val_losses:
             return float("inf")
@@ -542,6 +571,7 @@ def run_nested_walk_forward(
     embargo_days: int = NESTED_EMBARGO_DAYS,
     optuna_n_trials: int = OPTUNA_N_TRIALS,
     optuna_timeout_seconds: int = OPTUNA_TIMEOUT_SECONDS,
+    optuna_n_jobs: int = OPTUNA_N_JOBS,
     outer_train_window_bars: int = 500,
     outer_test_window_bars: int = 200,
     inner_train_window_bars: int = 300,
@@ -566,6 +596,8 @@ def run_nested_walk_forward(
         embargo_days: Embargo in calendar days.
         optuna_n_trials: Optuna hyperparameter search trials.
         optuna_timeout_seconds: Timeout per Optuna study.
+        optuna_n_jobs: Parallel trial workers for study.optimize()
+            (1 = sequential, >1 = parallel with n_jobs workers).
         inner_train_window_bars: Inner fold train window in bars.
         inner_test_window_bars: Inner fold test window in bars.
 
@@ -593,6 +625,7 @@ def run_nested_walk_forward(
         embargo_days=embargo_days,
         optuna_n_trials=optuna_n_trials,
         optuna_timeout_seconds=optuna_timeout_seconds,
+        optuna_n_jobs=optuna_n_jobs,
         outer_train_window_bars=outer_train_window_bars,
         outer_test_window_bars=outer_test_window_bars,
     )
@@ -677,6 +710,15 @@ def run_nested_walk_forward(
 
     try:
         outer_folds_list = validator.split(chrono_dataset)
+        # WalkForwardValidator may produce more folds than requested
+        # (it expands the window in small steps). Trim to the target
+        # number so each fold has a meaningful OOS window.
+        if len(outer_folds_list) > outer_folds:
+            logger.info(
+                "[%s] Trimming %d outer folds to %d (requested minimum)",
+                mode_str, len(outer_folds_list), outer_folds,
+            )
+            outer_folds_list = outer_folds_list[:outer_folds]
     except Exception as e:
         logger.error("[%s] Outer fold split failed: %s", mode_str, e)
         result = NestedWalkForwardResult(
@@ -729,6 +771,10 @@ def run_nested_walk_forward(
         # 5a. Inner fold split
         # ------------------------------------------------------------------
         inner_splits = splitter.split(train_idx, chrono_dataset)
+        fold_start = time.monotonic()
+        print(f"\n  [Fold {fi+1}/{len(outer_folds_list)}] "
+              f"Inner splits: {len(inner_splits)}, "
+              f"Train rows: {len(train_idx)}")
         logger.info(
             "[%s] Outer fold %d: %d inner splits from %d train rows",
             mode_str, fi, len(inner_splits), len(train_idx),
@@ -741,8 +787,14 @@ def run_nested_walk_forward(
             )
             continue
 
+        # When running parallel trials, cap XGBoost threads to prevent
+        # oversubscription (n_jobs workers each spawning full-core OpenMP).
+        if optuna_n_jobs > 1:
+            threads_per_worker = max(1, os.cpu_count() // (optuna_n_jobs + 1))
+            base_params["nthread"] = threads_per_worker
+
         # ------------------------------------------------------------------
-        # 5b. Run Optuna tuning on inner folds
+        # 5b. Run Optuna tuning on inner folds with MedianPruner + n_jobs
         # ------------------------------------------------------------------
         objective = _OptunaObjective(
             inner_splits=inner_splits,
@@ -756,6 +808,11 @@ def run_nested_walk_forward(
         study = optuna.create_study(
             direction="minimize",
             sampler=optuna.samplers.TPESampler(seed=random_seed + fi),
+            pruner=MedianPruner(
+                n_startup_trials=5,      # Let first 5 trials run fully
+                n_warmup_steps=1,        # After 1st inner fold, pruning active
+                interval_steps=1,        # Check pruning eligibility every report
+            ),
         )
 
         try:
@@ -763,7 +820,8 @@ def run_nested_walk_forward(
                 objective,
                 n_trials=optuna_n_trials,
                 timeout=optuna_timeout_seconds,
-                show_progress_bar=False,
+                n_jobs=optuna_n_jobs,
+                show_progress_bar=True,
             )
         except Exception as e:
             logger.warning(
@@ -771,6 +829,17 @@ def run_nested_walk_forward(
                 mode_str, fi, e,
             )
             continue
+
+        # Print fold completion with timing
+        fold_elapsed = time.monotonic() - fold_start
+        n_complete = sum(1 for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE)
+        n_pruned = sum(1 for t in study.trials if t.state == optuna.trial.TrialState.PRUNED)
+        remaining = len(outer_folds_list) - (fi + 1)
+        if remaining > 0:
+            est_remaining = fold_elapsed * remaining
+            print(f"    ✓ Fold {fi+1} done in {fold_elapsed:.0f}s "
+                  f"({n_complete} ok, {n_pruned} pruned). "
+                  f"~{est_remaining:.0f}s remaining ({remaining} folds)")
 
         best_params = study.best_params
         best_val_logloss = study.best_value
@@ -997,6 +1066,7 @@ def main() -> int:
     parser.add_argument("--embargo-days", type=int, default=NESTED_EMBARGO_DAYS)
     parser.add_argument("--optuna-trials", type=int, default=OPTUNA_N_TRIALS)
     parser.add_argument("--optuna-timeout", type=int, default=OPTUNA_TIMEOUT_SECONDS)
+    parser.add_argument("--optuna-jobs", type=int, default=OPTUNA_N_JOBS)
     parser.add_argument("--seed", type=int, default=42)
 
     args = parser.parse_args()
@@ -1007,6 +1077,7 @@ def main() -> int:
     print(f"Inner folds: {args.inner_folds}")
     print(f"Embargo: {args.embargo_days} days")
     print(f"Optuna trials: {args.optuna_trials}")
+    print(f"Optuna jobs:   {args.optuna_jobs}")
     print(f"Bars per symbol: {args.n_bars}")
     print(f"Symbols: {args.n_symbols}")
     print()
@@ -1021,6 +1092,7 @@ def main() -> int:
         embargo_days=args.embargo_days,
         optuna_n_trials=args.optuna_trials,
         optuna_timeout_seconds=args.optuna_timeout,
+        optuna_n_jobs=args.optuna_jobs,
     )
 
     print(f"\n=== Results ===")
