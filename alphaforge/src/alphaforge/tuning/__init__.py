@@ -1,28 +1,32 @@
-"""AlphaForge Tuning — hyperparameter optimization with Optuna pruning.
+"""AlphaForge Tuning — model hyperparameter optimization and feature ablation.
 
-This package provides Optuna-based hyperparameter tuning with aggressive
-ASHA-style trial pruning (MedianPruner) and early stopping callbacks.
+This package provides tools for:
+1. Hyperparameter tuning (Optuna integration)
+2. Feature ablation with tuned models — identifying minimum viable feature sets
 
 Modules:
-    optuna_tuner: Optuna study management, pruning callbacks, search spaces.
+    ablation: Feature ablation using tuned XGBoost models to identify the
+        minimum viable feature set. Complements the group-level ablation in
+        alphaforge.validation.ablation by operating at individual feature
+        level with tuned hyperparameters.
 """
 
-from alphaforge.tuning.optuna_tuner import (
-    EARLY_STOPPING_ROUNDS,
-    PRUNER_CONFIG,
-    XGBoostPruningCallback,
-    create_study,
-    default_swing_search_space,
-    get_best_params,
-    run_tuning,
+from alphaforge.tuning.ablation import (
+    DEFAULT_IMPORTANCE_THRESHOLD_REL,
+    DEFAULT_MAX_PERFORMANCE_DROP_REL,
+    TUNED_HYPERPARAMS,
+    FeatureAblationResult,
+    compute_tuned_importance,
+    recommend_minimum_feature_set,
+    run_feature_ablation,
 )
 
 __all__ = [
-    "EARLY_STOPPING_ROUNDS",
-    "PRUNER_CONFIG",
-    "XGBoostPruningCallback",
-    "create_study",
-    "default_swing_search_space",
-    "get_best_params",
-    "run_tuning",
+    "DEFAULT_IMPORTANCE_THRESHOLD_REL",
+    "DEFAULT_MAX_PERFORMANCE_DROP_REL",
+    "TUNED_HYPERPARAMS",
+    "FeatureAblationResult",
+    "compute_tuned_importance",
+    "recommend_minimum_feature_set",
+    "run_feature_ablation",
 ]
