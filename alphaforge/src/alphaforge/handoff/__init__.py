@@ -127,6 +127,8 @@ from alphaforge.handoff.dry_run import (
 from alphaforge.handoff.builders import (
     build_v7_handoff_package,
     build_all_handoffs,
+    build_empirical_handoff_package,
+    build_empirical_handoffs,
 )
 
 __all__ = [
@@ -154,7 +156,10 @@ __all__ = [
     "_guard_promotion_status",
     "_evaluate_rejection_rules",
     "_make_gate_entry",
-    # P0.9A: builders
+    # P0.9A: scaffold builders
     "build_v7_handoff_package",
     "build_all_handoffs",
+    # P0.9C+: empirical handoff builders
+    "build_empirical_handoff_package",
+    "build_empirical_handoffs",
 ]
