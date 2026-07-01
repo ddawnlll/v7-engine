@@ -23,8 +23,10 @@ Causality contract:
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import logging
+import os
 import threading
 from dataclasses import dataclass, field
 from enum import Enum
@@ -84,7 +86,16 @@ logger = logging.getLogger(__name__)
 PIPELINE_VERSION: str = "0.2.0"
 
 # Default cache directory for feature matrices
-CACHE_DIR_DEFAULT: str = ".cache/features/"
+# Resolved to absolute path at module load time to prevent working-directory confusion.
+_CACHE_DIR_RELATIVE: str = ".cache/features/"
+CACHE_DIR_DEFAULT: str = str(
+    Path(__file__).resolve().parent.parent.parent.parent / _CACHE_DIR_RELATIVE
+)
+
+# Process-lifetime secret for cache integrity HMAC signing.
+# Generated once at import time — cache files from other processes or
+# tampered files are detected on read.
+_CACHE_INTEGRITY_SECRET: bytes = os.urandom(32)
 
 # SWING mode defaults (4h primary bars)
 # periods_per_year for 4h bars: 365 days * 6 bars/day = 2190
@@ -239,6 +250,38 @@ class FeatureCache:
         return Path(self._cache_dir) / f"{key}.parquet.zstd"
 
     # ------------------------------------------------------------------
+    # Integrity verification (HMAC-SHA256)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _sign_metadata(meta: Dict[str, str]) -> str:
+        """Compute HMAC-SHA256 tag over sorted metadata for integrity.
+
+        The tag is stored in the Parquet schema metadata so that
+        tampered or foreign cache files are detected on read.
+
+        Returns hex-encoded HMAC-SHA256 digest.
+        """
+        payload = "".join(f"{k}={v}|" for k, v in sorted(meta.items()))
+        return hmac.new(
+            _CACHE_INTEGRITY_SECRET, payload.encode(), "sha256"
+        ).hexdigest()
+
+    @staticmethod
+    def _verify_metadata(meta: Dict[str, str], tag: str) -> bool:
+        """Verify HMAC-SHA256 tag matches metadata.
+
+        Args:
+            meta: Metadata dictionary (without the 'hmac' key).
+            tag: Expected hex-encoded HMAC-SHA256 digest.
+
+        Returns:
+            True if tag matches, False otherwise.
+        """
+        expected = FeatureCache._sign_metadata(meta)
+        return hmac.compare_digest(expected, tag)
+
+    # ------------------------------------------------------------------
     # Read / Write
     # ------------------------------------------------------------------
 
@@ -280,6 +323,24 @@ class FeatureCache:
             # Restore pipeline_version if missing from metadata
             if "pipeline_version" not in metadata:
                 metadata["pipeline_version"] = PIPELINE_VERSION
+
+            # Verify HMAC integrity signature — reject files without HMAC
+            # (legacy caches from before v0.2.0) or with wrong HMAC (tampered).
+            stored_hmac = metadata.pop("hmac", None)
+            if stored_hmac is None:
+                logger.info(
+                    "Cache missing HMAC integrity tag for %s/%s/%s — "
+                    "treating as miss (legacy format)",
+                    symbol, interval, mode,
+                )
+                return None
+            if not self._verify_metadata(metadata, stored_hmac):
+                logger.warning(
+                    "Cache integrity check failed for %s/%s/%s — "
+                    "file may be tampered or from a different process",
+                    symbol, interval, mode,
+                )
+                return None
 
             # Parse feature_group_ids from JSON
             fg_ids_raw = metadata.get("feature_group_ids", "[]")
@@ -362,6 +423,11 @@ class FeatureCache:
             if matrix.metadata:
                 for k, v in matrix.metadata.items():
                     meta[str(k)] = str(v)
+
+            # HMAC integrity signature (signs over all keys EXCEPT hmac itself)
+            meta["hmac"] = self._sign_metadata(
+                {k: v for k, v in meta.items() if k != "hmac"}
+            )
 
             # Build schema — handle empty feature dict (no columns)
             if field_names:
