@@ -188,9 +188,13 @@ class TestInit:
 
 
 class TestAddRun:
+    @pytest.fixture(autouse=True)
+    def _setup(self, tmp_path):
+        self.index_path = tmp_path / "test_idx.json"
+
     def test_first_run_becomes_canonical(self):
         """First run added for a mode becomes canonical."""
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         entry = index.add_run(
             run_id="run-swing-001",
             mode="SWING",
@@ -206,7 +210,7 @@ class TestAddRun:
 
     def test_second_run_supersedes_first(self):
         """Second run for same mode supersedes the first."""
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         index.add_run(
             run_id="run-swing-001", mode="SWING",
             canonical_report_path="data/reports/swing/r1.json",
@@ -233,7 +237,7 @@ class TestAddRun:
 
     def test_independent_modes(self):
         """Different modes do not interfere with each other."""
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         swing = index.add_run(
             run_id="run-swing-001", mode="SWING",
             canonical_report_path="data/reports/swing/r1.json",
@@ -250,7 +254,7 @@ class TestAddRun:
 
     def test_duplicate_run_id_detected(self):
         """Adding a run with an existing run_id marks it as duplicate."""
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         index.add_run(
             run_id="run-swing-001", mode="SWING",
             canonical_report_path="data/reports/swing/r1.json",
@@ -268,7 +272,7 @@ class TestAddRun:
 
     def test_duplicate_does_not_change_canonical(self):
         """Duplicate entry does NOT update the canonical map."""
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         index.add_run(run_id="r1", mode="SWING", canonical_report_path="p1.json")
         index.add_run(run_id="r1", mode="SWING", canonical_report_path="p2.json")
         # Canonical still points to original r1
@@ -277,7 +281,7 @@ class TestAddRun:
 
     def test_multiple_supersedes_chain(self):
         """Three runs: each new canonical supersedes the previous."""
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         index.add_run(run_id="r1", mode="SWING", canonical_report_path="p1.json")
         index.add_run(run_id="r2", mode="SWING", canonical_report_path="p2.json")
         index.add_run(run_id="r3", mode="SWING", canonical_report_path="p3.json")
@@ -291,7 +295,7 @@ class TestAddRun:
 
     def test_artifact_paths_stored(self):
         """Artifact paths list is preserved."""
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         entry = index.add_run(
             run_id="r1", mode="SWING",
             canonical_report_path="p.json",
@@ -301,7 +305,7 @@ class TestAddRun:
 
     def test_default_artifact_paths_empty(self):
         """When artifact_paths is not provided, it defaults to empty list."""
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         entry = index.add_run(
             run_id="r1", mode="SWING",
             canonical_report_path="p.json",
@@ -310,7 +314,7 @@ class TestAddRun:
 
     def test_candidate_count_and_trial_count(self):
         """Candidate count and trial count are stored as provided."""
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         entry = index.add_run(
             run_id="r1", mode="SCALP",
             canonical_report_path="p.json",
@@ -322,7 +326,7 @@ class TestAddRun:
 
     def test_verdict_stored(self):
         """Verdict string is preserved."""
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         entry = index.add_run(
             run_id="r1", mode="AGGRESSIVE_SCALP",
             canonical_report_path="p.json",
@@ -337,27 +341,31 @@ class TestAddRun:
 
 
 class TestLookup:
+    @pytest.fixture(autouse=True)
+    def _setup(self, tmp_path):
+        self.index_path = tmp_path / "test_idx.json"
+
     def test_get_canonical_for_mode_returns_correct(self):
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         index.add_run(run_id="r1", mode="SWING", canonical_report_path="p1.json")
         index.add_run(run_id="r2", mode="SCALP", canonical_report_path="p2.json")
         assert index.get_canonical_for_mode("SWING")["run_id"] == "r1"
         assert index.get_canonical_for_mode("SCALP")["run_id"] == "r2"
 
     def test_get_canonical_for_mode_nonexistent(self):
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         assert index.get_canonical_for_mode("SWING") is None
         assert index.get_canonical_for_mode("UNKNOWN_MODE") is None
 
     def test_get_run_found(self):
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         index.add_run(run_id="find-me", mode="SWING", canonical_report_path="p.json")
         entry = index.get_run("find-me")
         assert entry is not None
         assert entry["run_id"] == "find-me"
 
     def test_get_run_not_found(self):
-        index = ResearchRunIndex()
+        index = ResearchRunIndex(index_path=self.index_path)
         assert index.get_run("nonexistent") is None
 
 
