@@ -693,15 +693,15 @@ class TestPurgePolicy:
         """PurgePolicy.for_mode() creates correct policy per mode."""
         scalp = PurgePolicy.for_mode(Mode.SCALP)
         assert scalp.purge_bars == 100
-        assert scalp.embargo_bars == 100
+        assert scalp.embargo_bars == 50
 
         aggressive = PurgePolicy.for_mode(Mode.AGGRESSIVE_SCALP)
         assert aggressive.purge_bars == 200
-        assert aggressive.embargo_bars == 200
+        assert aggressive.embargo_bars == 100
 
         swing = PurgePolicy.for_mode(Mode.SWING)
         assert swing.purge_bars == 20
-        assert swing.embargo_bars == 20
+        assert swing.embargo_bars == 10
 
     def test_purge_policy_validate_purge_accepts_valid_gaps(self, chrono_dataset):
         """PurgePolicy.validate_purge() passes when gaps are sufficient."""

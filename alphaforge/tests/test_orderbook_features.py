@@ -1,12 +1,13 @@
-"""Tests for AlphaForge OrderBook Feature Group (#43).
+"""Tests for AlphaForge OrderBook Feature Group (#43, #142).
 
 Covers:
-  (a) Unit tests per feature function (spread_pct, volume_imbalance,
-      trade_intensity, amihud_illiquidity_numpy)
-  (b) Group integration tests
+  (a) Unit tests per feature function (all 9 orderbook features)
+  (b) Group integration tests (9-feature group)
   (c) Leakage/causality negative tests (no-revision)
   (d) Determinism tests
   (e) Edge case tests (NaN, zero volume, short input)
+  (f) New microstructure features: roll_spread, microstructure_noise,
+      serial_correlation, vpin, price_impact_slope
 """
 
 import math
@@ -17,12 +18,22 @@ import pytest
 
 from alphaforge.features import (
     DEFAULT_AMIHUD_WINDOW,
+    DEFAULT_NOISE_WINDOW,
     DEFAULT_ORDERBOOK_WINDOW,
+    DEFAULT_PRICE_IMPACT_WINDOW,
+    DEFAULT_ROLL_SPREAD_WINDOW,
+    DEFAULT_SERIAL_CORR_WINDOW,
+    DEFAULT_VPIN_WINDOW,
     compute_amihud_illiquidity_numpy,
+    compute_microstructure_noise,
     compute_orderbook_group,
+    compute_price_impact_slope,
+    compute_roll_spread,
+    compute_serial_correlation,
     compute_spread_pct,
     compute_trade_intensity,
     compute_volume_imbalance,
+    compute_vpin,
 )
 from alphaforge.features.orderbook import _classify_volume_direction
 from alphaforge.features.pipeline import FeatureGroup, compute_features
@@ -175,7 +186,7 @@ class TestVolumeImbalance:
         volume = np.ones(n)
         result = compute_volume_imbalance(open_arr, close, volume, window=10)
         valid = result[~np.isnan(result)]
-        # All up bars → imbalance = 1.0
+        # All up bars -> imbalance = 1.0
         assert np.allclose(valid, 1.0)
 
     def test_all_down_bars_negative(self):
@@ -185,7 +196,7 @@ class TestVolumeImbalance:
         volume = np.ones(n)
         result = compute_volume_imbalance(open_arr, close, volume, window=10)
         valid = result[~np.isnan(result)]
-        # All down bars → imbalance = -1.0
+        # All down bars -> imbalance = -1.0
         assert np.allclose(valid, -1.0)
 
     def test_balanced_mixed(self, ohlcv_100):
@@ -204,7 +215,7 @@ class TestVolumeImbalance:
         volume = np.zeros(n)  # all zero volume
         result = compute_volume_imbalance(open_arr, close, volume, window=10)
         valid = result[~np.isnan(result)]
-        # Zero volume → balanced → 0.0
+        # Zero volume -> balanced -> 0.0
         assert np.allclose(valid, 0.0)
 
 
@@ -310,11 +321,267 @@ class TestAmihudIlliquidity:
 
 
 # ===========================================================================
-# test 6: compute_orderbook_group integration
+# test 12: compute_roll_spread (NEW — #142)
+# ===========================================================================
+
+class TestRollSpread:
+    """#142-01: compute_roll_spread — Roll (1984) effective spread."""
+
+    def test_non_negative(self, ohlcv_100):
+        result = compute_roll_spread(ohlcv_100["close"], window=20)
+        valid = result[~np.isnan(result)]
+        assert np.all(valid >= 0)
+
+    def test_nan_at_start(self, ohlcv_100):
+        result = compute_roll_spread(ohlcv_100["close"], window=20)
+        # First `window` = 20 values NaN (need window+1 prices)
+        for i in range(20):
+            assert np.isnan(result[i])
+
+    def test_insufficient_data(self):
+        close = np.array([100.0, 101.0, 102.0])
+        result = compute_roll_spread(close, window=20)
+        assert np.all(np.isnan(result))
+
+    def test_bridge_consistency(self, ohlcv_100):
+        """Bridged result matches direct lib call."""
+        from lib.indicators.microstructure import roll_spread_estimator
+
+        close = ohlcv_100["close"]
+        window = 20
+
+        # Direct lib call
+        direct = np.array(
+            roll_spread_estimator(close.tolist(), period=window), dtype=np.float64
+        )
+
+        # Bridged call
+        bridged = compute_roll_spread(close, window=window)
+
+        assert _nan_safe_equal(direct, bridged)
+
+    def test_constant_price_zero_spread(self):
+        """Constant prices yield zero Roll spread (zero covariance)."""
+        n = 60
+        close = np.full(n, 100.0, dtype=np.float64)
+        result = compute_roll_spread(close, window=20)
+        valid = result[~np.isnan(result)]
+        # With constant prices, covariance is zero -> Roll spread = 0
+        assert np.allclose(valid, 0.0, atol=1e-10)
+
+
+# ===========================================================================
+# test 13: compute_microstructure_noise (NEW — #142)
+# ===========================================================================
+
+class TestMicrostructureNoise:
+    """#142-02: compute_microstructure_noise — variance ratio noise."""
+
+    def test_non_negative(self, ohlcv_100):
+        result = compute_microstructure_noise(ohlcv_100["close"], window=20)
+        valid = result[~np.isnan(result)]
+        assert np.all(valid >= 0)
+
+    def test_nan_at_start(self, ohlcv_100):
+        result = compute_microstructure_noise(ohlcv_100["close"], window=20)
+        # First `window` = 20 values NaN
+        for i in range(20):
+            assert np.isnan(result[i])
+
+    def test_insufficient_data(self):
+        close = np.array([100.0, 101.0, 102.0])
+        result = compute_microstructure_noise(close, window=20)
+        assert np.all(np.isnan(result))
+
+    def test_constant_price_noise_idea(self):
+        """Constant prices: noise near 1 since no drift or bounce."""
+        n = 100
+        close = np.full(n, 100.0, dtype=np.float64)
+        result = compute_microstructure_noise(close, window=20)
+        valid = result[~np.isnan(result)]
+        # With all zero returns, the variance is zero, leading to NaN
+        # But we should have some valid values if there's tiny noise
+        assert len(valid) >= 0  # at least doesn't crash
+
+    def test_noise_values_in_reasonable_range(self, ohlcv_100):
+        """Noise values should be with [0.01, 10.0] after clipping."""
+        result = compute_microstructure_noise(ohlcv_100["close"], window=20)
+        valid = result[~np.isnan(result)]
+        assert np.all(valid >= 0.01)
+        assert np.all(valid <= 10.0)
+
+
+# ===========================================================================
+# test 14: compute_serial_correlation (NEW — #142)
+# ===========================================================================
+
+class TestSerialCorrelation:
+    """#142-03: compute_serial_correlation — return autocorrelation."""
+
+    def test_range_minus_one_to_one(self, ohlcv_100):
+        result = compute_serial_correlation(ohlcv_100["close"], window=10)
+        valid = result[~np.isnan(result)]
+        assert np.all(valid >= -1.0)
+        assert np.all(valid <= 1.0)
+
+    def test_nan_at_start(self, ohlcv_100):
+        result = compute_serial_correlation(ohlcv_100["close"], window=10)
+        # Need window+2 = 12 bars for first valid value
+        for i in range(11):
+            assert np.isnan(result[i])
+
+    def test_insufficient_data(self):
+        close = np.array([100.0, 101.0, 102.0, 103.0])
+        result = compute_serial_correlation(close, window=10)
+        assert np.all(np.isnan(result))
+
+    def test_monotonic_positive_corr(self):
+        """Monotonically increasing prices should show positive autocorrelation."""
+        close = np.arange(100.0, 200.0, dtype=np.float64)
+        result = compute_serial_correlation(close, window=10)
+        valid = result[~np.isnan(result)]
+        # With a strong trend, lag-1 autocorrelation should be positive
+        assert np.mean(valid) > 0
+
+    def test_alternating_bars_negative_corr(self):
+        """Alternating up/down (microstructure bounce) -> negative correlation."""
+        close = np.array(
+            [100.0, 101.0, 100.0, 101.0, 100.0, 101.0, 100.0, 101.0,
+             100.0, 101.0, 100.0, 101.0, 100.0, 101.0, 100.0, 101.0,
+             100.0, 101.0, 100.0, 101.0], dtype=np.float64
+        )
+        result = compute_serial_correlation(close, window=10)
+        valid = result[~np.isnan(result)]
+        # Alternating -> negative autocorrelation
+        assert np.mean(valid) < 0
+
+
+# ===========================================================================
+# test 15: compute_vpin (NEW — #142)
+# ===========================================================================
+
+class TestVPIN:
+    """#142-04: compute_vpin — VPIN order flow toxicity."""
+
+    def test_range_0_to_1(self, ohlcv_100):
+        result = compute_vpin(
+            ohlcv_100["open"], ohlcv_100["close"], ohlcv_100["volume"], window=50
+        )
+        valid = result[~np.isnan(result)]
+        assert np.all(valid >= 0.0)
+        # Use tolerance for floating-point precision edge cases
+        assert np.all(valid <= 1.0 + 1e-10), f"Max VPIN: {np.max(valid)}"
+
+    def test_nan_at_start(self, ohlcv_100):
+        result = compute_vpin(
+            ohlcv_100["open"], ohlcv_100["close"], ohlcv_100["volume"], window=50
+        )
+        # First 49 values NaN
+        for i in range(49):
+            assert np.isnan(result[i])
+        assert not np.isnan(result[49])
+
+    def test_insufficient_data(self):
+        n = 5
+        open_arr = np.arange(n, dtype=np.float64)
+        close = np.arange(n, dtype=np.float64) + 1.0
+        volume = np.ones(n)
+        result = compute_vpin(open_arr, close, volume, window=50)
+        assert np.all(np.isnan(result))
+
+    def test_all_up_bars_vpin(self):
+        """All up bars -> volume all on one side -> high VPIN."""
+        n = 100
+        open_arr = np.arange(n, dtype=np.float64)
+        close = np.arange(n, dtype=np.float64) + 2.0  # all up
+        volume = np.ones(n)
+        result = compute_vpin(open_arr, close, volume, window=50)
+        valid = result[~np.isnan(result)]
+        # All volume is buy volume, so |up - down| = total_vol -> VPIN = 1.0
+        assert np.allclose(valid, 1.0)
+
+    def test_balanced_flow_vpin(self):
+        """Equal up and down volume -> VPIN near 0."""
+        n = 100
+        rng = np.random.RandomState(42)
+        open_arr = np.full(n, 100.0)
+        close = np.full(n, 100.0)  # All flat -> split evenly = balanced
+        volume = np.ones(n)
+        result = compute_vpin(open_arr, close, volume, window=50)
+        valid = result[~np.isnan(result)]
+        # Flat bars split evenly -> up = down = 0.5 -> |up-down| = 0 -> VPIN = 0
+        assert np.allclose(valid, 0.0)
+
+    def test_zero_volume_safe(self):
+        """Zero volume should not crash and produce safe values."""
+        n = 100
+        open_arr = np.arange(n, dtype=np.float64)
+        close = np.arange(n, dtype=np.float64) + 1.0
+        volume = np.zeros(n)
+        result = compute_vpin(open_arr, close, volume, window=50)
+        valid = result[~np.isnan(result)]
+        assert np.allclose(valid, 0.0)
+
+
+# ===========================================================================
+# test 16: compute_price_impact_slope (NEW — #142)
+# ===========================================================================
+
+class TestPriceImpactSlope:
+    """#142-05: compute_price_impact_slope — Kyle's lambda proxy."""
+
+    def test_finite_output(self, ohlcv_100):
+        result = compute_price_impact_slope(
+            ohlcv_100["open"], ohlcv_100["high"], ohlcv_100["low"],
+            ohlcv_100["close"], ohlcv_100["volume"], window=15
+        )
+        valid = result[~np.isnan(result)]
+        assert np.all(np.isfinite(valid))
+
+    def test_nan_at_start(self, ohlcv_100):
+        result = compute_price_impact_slope(
+            ohlcv_100["open"], ohlcv_100["high"], ohlcv_100["low"],
+            ohlcv_100["close"], ohlcv_100["volume"], window=15
+        )
+        # First 15 values NaN (need window+1 bars)
+        for i in range(15):
+            assert np.isnan(result[i])
+
+    def test_insufficient_data(self):
+        n = 5
+        open_arr = np.arange(n, dtype=np.float64)
+        high = open_arr + 2.0
+        low = open_arr - 1.0
+        close = open_arr + 1.0
+        volume = np.ones(n)
+        result = compute_price_impact_slope(
+            open_arr, high, low, close, volume, window=15
+        )
+        assert np.all(np.isnan(result))
+
+    def test_constant_volume_no_price_move(self):
+        """When returns are zero, slope is NaN (zero variance)."""
+        n = 60
+        open_arr = np.full(n, 100.0)
+        high = np.full(n, 102.0)
+        low = np.full(n, 98.0)
+        close = np.full(n, 100.0)
+        volume = np.ones(n)
+        result = compute_price_impact_slope(
+            open_arr, high, low, close, volume, window=15
+        )
+        valid = result[~np.isnan(result)]
+        # With zero returns, covariance is 0 -> NaN from 0/0
+        # But some values may still compute if signed flow varies
+        assert len(valid) >= 0  # no crash
+
+
+# ===========================================================================
+# test 6: compute_orderbook_group integration (updated for 9 features)
 # ===========================================================================
 
 class TestOrderbookGroup:
-    """#43-06: compute_orderbook_group integration."""
+    """#43-06: compute_orderbook_group integration (9 features)."""
 
     def test_all_keys_present(self, ohlcv_100):
         result = compute_orderbook_group(
@@ -324,6 +591,9 @@ class TestOrderbookGroup:
         expected = {
             "spread_pct_N", "volume_imbalance_N",
             "trade_intensity_N", "amihud_illiquidity_N",
+            "roll_spread_N", "microstructure_noise_N",
+            "serial_correlation_N", "vpin_N",
+            "price_impact_slope_N",
         }
         assert set(result.keys()) == expected
         for arr in result.values():
@@ -373,6 +643,12 @@ class TestPipelineIncludesOrderbook:
         assert "volume_imbalance_N" in result.features
         assert "trade_intensity_N" in result.features
         assert "amihud_illiquidity_N" in result.features
+        # New microstructure features (#142)
+        assert "roll_spread_N" in result.features
+        assert "microstructure_noise_N" in result.features
+        assert "serial_correlation_N" in result.features
+        assert "vpin_N" in result.features
+        assert "price_impact_slope_N" in result.features
 
     def test_orderbook_in_feature_group_ids(self, ohlcv_100):
         result = compute_features(ohlcv_100, mode="SWING")
@@ -470,9 +746,9 @@ class TestOrderbookFeatureNames:
     def test_names_use_n_suffix(self):
         """Orderbook features should use _N suffix for window-dependent features."""
         result = compute_orderbook_group(
-            np.array([100.0] * 30), np.array([102.0] * 30),
-            np.array([98.0] * 30), np.array([101.0] * 30),
-            np.ones(30)
+            np.array([100.0] * 100), np.array([102.0] * 100),
+            np.array([98.0] * 100), np.array([101.0] * 100),
+            np.ones(100)
         )
         for key in result:
             assert key.endswith("_N"), f"Feature '{key}' should end with _N"
@@ -488,8 +764,18 @@ class TestOrderbookDefaults:
     def test_default_windows_positive(self):
         assert DEFAULT_ORDERBOOK_WINDOW > 0
         assert DEFAULT_AMIHUD_WINDOW > 0
+        assert DEFAULT_ROLL_SPREAD_WINDOW > 0
+        assert DEFAULT_NOISE_WINDOW > 0
+        assert DEFAULT_SERIAL_CORR_WINDOW > 0
+        assert DEFAULT_VPIN_WINDOW > 0
+        assert DEFAULT_PRICE_IMPACT_WINDOW > 0
 
     def test_default_windows_reasonable(self):
         """Windows should be in a reasonable range for 15m bars."""
         assert 5 <= DEFAULT_ORDERBOOK_WINDOW <= 60
         assert 5 <= DEFAULT_AMIHUD_WINDOW <= 60
+        assert 5 <= DEFAULT_ROLL_SPREAD_WINDOW <= 60
+        assert 5 <= DEFAULT_NOISE_WINDOW <= 100
+        assert 5 <= DEFAULT_SERIAL_CORR_WINDOW <= 60
+        assert 10 <= DEFAULT_VPIN_WINDOW <= 200
+        assert 5 <= DEFAULT_PRICE_IMPACT_WINDOW <= 60

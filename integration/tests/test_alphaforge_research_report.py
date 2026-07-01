@@ -163,11 +163,13 @@ def test_alphaforge_research_report_aggregate_validates():
     payloads (it should NOT build without MHT control).
     """
     # P0.9B repair: builders.py now wires aggregate multiple_hypothesis_control.
+    # P0.9D: builder correctly aggregates tested_hypothesis_count from mode reports.
+    # Scaffold mode reports each have tested_hypothesis_count=1, so aggregate=3.
     report = build_alphaforge_research_report()
     assert "multiple_hypothesis_control" in report
     mht = report["multiple_hypothesis_control"]
     assert mht["aggregate_mht_status"] == "NOT_RUN"
-    assert mht["aggregate_tested_hypothesis_count"] == 0
+    assert mht["aggregate_tested_hypothesis_count"] == 3
     assert mht["correction_method"] == "NONE_APPLIED"
     assert "mht_block_reason" in mht
 

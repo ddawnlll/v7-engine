@@ -31,7 +31,12 @@ import numpy as np
 
 from alphaforge.features.orderbook import (
     DEFAULT_AMIHUD_WINDOW,
+    DEFAULT_NOISE_WINDOW,
     DEFAULT_ORDERBOOK_WINDOW,
+    DEFAULT_PRICE_IMPACT_WINDOW,
+    DEFAULT_ROLL_SPREAD_WINDOW,
+    DEFAULT_SERIAL_CORR_WINDOW,
+    DEFAULT_VPIN_WINDOW,
     compute_orderbook_group,
 )
 
@@ -1113,6 +1118,11 @@ _MODE_DEFAULTS = {
         "periods_per_year": SWING_PERIODS_PER_YEAR,
         "orderbook_window": DEFAULT_ORDERBOOK_WINDOW,
         "amihud_window": DEFAULT_AMIHUD_WINDOW,
+        "roll_spread_window": 20,
+        "noise_window": 30,
+        "serial_corr_window": 20,
+        "vpin_window": 30,
+        "price_impact_window": 20,
     },
     "SCALP": {
         "n_returns": 12,
@@ -1130,6 +1140,11 @@ _MODE_DEFAULTS = {
         "periods_per_year": 8760,
         "orderbook_window": DEFAULT_ORDERBOOK_WINDOW,
         "amihud_window": DEFAULT_AMIHUD_WINDOW,
+        "roll_spread_window": 12,
+        "noise_window": 20,
+        "serial_corr_window": 12,
+        "vpin_window": 40,
+        "price_impact_window": 12,
     },
     "AGGRESSIVE_SCALP": {
         "n_returns": 16,
@@ -1147,6 +1162,11 @@ _MODE_DEFAULTS = {
         "periods_per_year": 35040,
         "orderbook_window": DEFAULT_ORDERBOOK_WINDOW,
         "amihud_window": DEFAULT_AMIHUD_WINDOW,
+        "roll_spread_window": 10,
+        "noise_window": 20,
+        "serial_corr_window": 10,
+        "vpin_window": 50,
+        "price_impact_window": 15,
     },
 }
 
@@ -1174,7 +1194,7 @@ def compute_features(
             Informational only — does not affect computation.
 
     Returns:
-        FeatureMatrix with features dict containing ~30 feature arrays,
+        FeatureMatrix with features dict containing ~35 feature arrays,
         each of shape (n_bars,). No Lead-Lag columns present.
 
     Raises:
@@ -1266,7 +1286,7 @@ def compute_features(
         )
     )
 
-    # 7. OrderBook Group (4 features)
+    # 7. OrderBook Group (9 features)
     features.update(
         compute_orderbook_group(
             open_arr=open_arr,
@@ -1276,6 +1296,11 @@ def compute_features(
             volume=volume,
             window=defaults.get("orderbook_window", DEFAULT_ORDERBOOK_WINDOW),
             amihud_window=defaults.get("amihud_window", DEFAULT_AMIHUD_WINDOW),
+            roll_spread_window=defaults.get("roll_spread_window", DEFAULT_ROLL_SPREAD_WINDOW),
+            noise_window=defaults.get("noise_window", DEFAULT_NOISE_WINDOW),
+            serial_corr_window=defaults.get("serial_corr_window", DEFAULT_SERIAL_CORR_WINDOW),
+            vpin_window=defaults.get("vpin_window", DEFAULT_VPIN_WINDOW),
+            price_impact_window=defaults.get("price_impact_window", DEFAULT_PRICE_IMPACT_WINDOW),
         )
     )
 

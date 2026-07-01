@@ -6,7 +6,7 @@
 
 **v0.25 Diagnostics Repair (2026-06-27):** Active trade metric system added — `compute_oos_metrics()` tracks LONG_NOW/SHORT_NOW/NO_TRADE counts, cost decomposition, net-R, exposure pct with NaN guards. `mode_research_report.schema.json` updated with 8 new active metric fields (3 required). MHT correction module (`mht.py`) provides Bonferroni step-down, Benjamini-Hochberg FDR, deflated Sharpe ratio, and data-snooping risk assessment. 6-fold walk-forward validation with anchored expanding windows in `cli/real_training.py`. SOLUSDT stop/target optimized. 1578 tests pass.
 
-**Issue #143 — Multi-Timeframe Alpha Tuning (2026-07-01):** SCALP and AGGRESSIVE_SCALP walk-forward pipelines operational with mode-specific hyperparameters, annualization factors (SCALP=8760, AGGRESSIVE_SCALP=35040), and purge/embargo defaults. Cross-timeframe edge comparison module (`cross_timeframe.py`) compares edges across all three canonical timeframes — detects dominant timeframe, multi-TF confirmation, timeframe specialization, direction conflicts. `train_multi_timeframe.py` script runs all three modes. 1129 alphaforge tests pass (+46 new).
+- **P0.x — Research Artifact Registry (2026-07-01):** `ResearchRunIndex` class creates/maintains `alphaforge_report/research_run_index.json` — a single index tracking every research run with canonical/superseded distinction, duplicate detection, and artifact paths. Integrated into CLI report generation. 29 tests, 1640 total pass.
 
 ---
 

@@ -65,6 +65,16 @@ FEATURE_NAME_TO_GROUP: Dict[str, str] = {
     "highest_N": "breakout",
     "lowest_N": "breakout",
     "range_breakout_N": "breakout",
+    # OrderBook group (9 features)
+    "spread_pct_N": "orderbook",
+    "volume_imbalance_N": "orderbook",
+    "trade_intensity_N": "orderbook",
+    "amihud_illiquidity_N": "orderbook",
+    "roll_spread_N": "orderbook",
+    "microstructure_noise_N": "orderbook",
+    "serial_correlation_N": "orderbook",
+    "vpin_N": "orderbook",
+    "price_impact_slope_N": "orderbook",
 }
 
 # Reverse: group name -> list of feature names
@@ -74,7 +84,7 @@ for _fn, _gn in FEATURE_NAME_TO_GROUP.items():
 
 # Canonical group order for consistent iteration
 ALL_GROUPS: Tuple[str, ...] = (
-    "returns", "volatility", "atr", "momentum", "volume", "breakout",
+    "returns", "volatility", "atr", "momentum", "volume", "breakout", "orderbook",
 )
 
 # CPU-safe default hyperparameters for ablation training

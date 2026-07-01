@@ -3,7 +3,7 @@
 # Run after each workflow phase completes
 set -euo pipefail
 
-MAIN_DIR="/home/erfolg/src/v7-engine"
+MAIN_DIR="/home/dresden/src/v7-engine"
 SYNCED_FILE="$MAIN_DIR/.claude/.synced_commits"
 
 touch "$SYNCED_FILE"

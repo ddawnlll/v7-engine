@@ -24,15 +24,30 @@ from alphaforge.features.orderbook import (
     AGGRESSIVE_AMIHUD_WINDOW,
     AGGRESSIVE_IMBALANCE_WINDOW,
     AGGRESSIVE_INTENSITY_WINDOW,
+    AGGRESSIVE_NOISE_WINDOW,
     AGGRESSIVE_PERIODS_PER_YEAR,
+    AGGRESSIVE_PRICE_IMPACT_WINDOW,
+    AGGRESSIVE_ROLL_SPREAD_WINDOW,
+    AGGRESSIVE_SERIAL_CORR_WINDOW,
     AGGRESSIVE_SPREAD_WINDOW,
+    AGGRESSIVE_VPIN_WINDOW,
     DEFAULT_AMIHUD_WINDOW,
+    DEFAULT_NOISE_WINDOW,
     DEFAULT_ORDERBOOK_WINDOW,
+    DEFAULT_PRICE_IMPACT_WINDOW,
+    DEFAULT_ROLL_SPREAD_WINDOW,
+    DEFAULT_SERIAL_CORR_WINDOW,
+    DEFAULT_VPIN_WINDOW,
     compute_amihud_illiquidity_numpy,
+    compute_microstructure_noise,
     compute_orderbook_group,
+    compute_price_impact_slope,
+    compute_roll_spread,
+    compute_serial_correlation,
     compute_spread_pct,
     compute_trade_intensity,
     compute_volume_imbalance,
+    compute_vpin,
 )
 
 # LeadLag cross-sectional features (HOLD-LEAD-LAG)
@@ -58,7 +73,7 @@ from alphaforge.features.mode_windows import (
     get_mode_windows,
 )
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __authority__ = "alphaforge"
 __domain__ = "feature_pipeline"
 
@@ -74,12 +89,27 @@ __all__ = [
     "compute_volume_imbalance",
     "compute_trade_intensity",
     "compute_amihud_illiquidity_numpy",
+    "compute_roll_spread",
+    "compute_microstructure_noise",
+    "compute_serial_correlation",
+    "compute_vpin",
+    "compute_price_impact_slope",
     "DEFAULT_ORDERBOOK_WINDOW",
     "DEFAULT_AMIHUD_WINDOW",
+    "DEFAULT_ROLL_SPREAD_WINDOW",
+    "DEFAULT_NOISE_WINDOW",
+    "DEFAULT_SERIAL_CORR_WINDOW",
+    "DEFAULT_VPIN_WINDOW",
+    "DEFAULT_PRICE_IMPACT_WINDOW",
     "AGGRESSIVE_SPREAD_WINDOW",
     "AGGRESSIVE_IMBALANCE_WINDOW",
     "AGGRESSIVE_INTENSITY_WINDOW",
     "AGGRESSIVE_AMIHUD_WINDOW",
+    "AGGRESSIVE_ROLL_SPREAD_WINDOW",
+    "AGGRESSIVE_NOISE_WINDOW",
+    "AGGRESSIVE_SERIAL_CORR_WINDOW",
+    "AGGRESSIVE_VPIN_WINDOW",
+    "AGGRESSIVE_PRICE_IMPACT_WINDOW",
     "AGGRESSIVE_PERIODS_PER_YEAR",
     # LeadLag group (cross-sectional, HOLD-LEAD-LAG)
     "LL_CORRELATION_WINDOW",

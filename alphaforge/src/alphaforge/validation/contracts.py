@@ -122,9 +122,9 @@ MODE_PURGE_BARS: Dict[Mode, int] = {
 }
 
 MODE_EMBARGO_BARS: Dict[Mode, int] = {
-    Mode.SCALP: 100,
-    Mode.AGGRESSIVE_SCALP: 200,
-    Mode.SWING: 20,
+    Mode.SCALP: 50,
+    Mode.AGGRESSIVE_SCALP: 100,
+    Mode.SWING: 10,
 }
 
 
@@ -595,13 +595,13 @@ class PurgePolicy:
 
 DEFAULT_PURGE_POLICIES: Dict[Mode, PurgePolicy] = {
     Mode.SCALP: PurgePolicy(
-        mode=Mode.SCALP, purge_bars=100, embargo_bars=100
+        mode=Mode.SCALP, purge_bars=100, embargo_bars=50
     ),
     Mode.AGGRESSIVE_SCALP: PurgePolicy(
-        mode=Mode.AGGRESSIVE_SCALP, purge_bars=200, embargo_bars=200
+        mode=Mode.AGGRESSIVE_SCALP, purge_bars=200, embargo_bars=100
     ),
     Mode.SWING: PurgePolicy(
-        mode=Mode.SWING, purge_bars=20, embargo_bars=20
+        mode=Mode.SWING, purge_bars=20, embargo_bars=10
     ),
 }
 
@@ -615,7 +615,7 @@ DEFAULT_FOLD_CONFIGS: Dict[Mode, WalkForwardConfig] = {
         train_window_bars=5000,
         test_window_bars=1000,
         purge_bars=100,
-        embargo_bars=100,
+        embargo_bars=50,
         window_type=WindowType.ROLLING,
     ),
     Mode.AGGRESSIVE_SCALP: WalkForwardConfig(
@@ -627,7 +627,7 @@ DEFAULT_FOLD_CONFIGS: Dict[Mode, WalkForwardConfig] = {
         train_window_bars=5000,
         test_window_bars=1000,
         purge_bars=200,
-        embargo_bars=200,
+        embargo_bars=100,
         window_type=WindowType.ROLLING,
     ),
     Mode.SWING: WalkForwardConfig(
@@ -639,7 +639,7 @@ DEFAULT_FOLD_CONFIGS: Dict[Mode, WalkForwardConfig] = {
         train_window_bars=2000,
         test_window_bars=500,
         purge_bars=20,
-        embargo_bars=20,
+        embargo_bars=10,
         window_type=WindowType.ANCHORED,
     ),
 }

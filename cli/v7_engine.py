@@ -12,6 +12,7 @@ import argparse
 import os
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 
@@ -140,6 +141,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     from alphaforge.reports.empirical import build_empirical_mode_research_report
     from alphaforge.reports.writer import write_json_report
     from alphaforge.contracts.loader import load_schema
+    from alphaforge.reports.run_index import ResearchRunIndex
 
     modes_to_run = [args.mode] if args.mode else ["SWING", "SCALP", "AGGRESSIVE_SCALP"]
 
@@ -157,6 +159,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     ]
 
     failures = 0
+    run_index = ResearchRunIndex()
     for mode in modes_to_run:
         wfv = {
             "fold_count": 6,
@@ -183,10 +186,25 @@ def cmd_report(args: argparse.Namespace) -> int:
             write_json_report(report, output_path, schema=schema,
                               schema_name=f"mode_research_report({mode})")
             print(f"[REPORT] Wrote {mode} report to {output_path}")
+
+            # Update Research Artifact Registry (#127)
+            v = report.get("verdict", "NOT_EVALUATED")
+            verdict = v.get("overall_verdict", str(v)) if isinstance(v, dict) else str(v)
+            run_index.add_run(
+                run_id=report.get("run_id", f"run-{mode_key}-cli-{datetime.now().strftime('%Y%m%dT%H%M%S')}"),
+                mode=mode,
+                canonical_report_path=str(Path(output_path).resolve()),
+                candidate_count=0,
+                trial_count=0,
+                verdict=verdict,
+                artifact_paths=[str(Path(output_path).resolve())],
+            )
         except Exception as e:
             print(f"[REPORT] FAILED {mode}: {e}")
             failures += 1
 
+    run_index.write()
+    print(f"[RUN INDEX] Updated {run_index.index_path}")
     return failures
 
 

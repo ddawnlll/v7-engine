@@ -891,10 +891,10 @@ class TestDeterminism:
 class TestFeatureMatrixShape:
     """AC-03-044/045: Feature matrix shape and NaN counts."""
 
-    def test_500_bars_30_features(self, ohlcv_500):
-        """AC-03-044: 500 bars produces all arrays length 500, 30 features."""
+    def test_500_bars_35_features(self, ohlcv_500):
+        """AC-03-044: 500 bars produces all arrays length 500, 35 features."""
         result = compute_features(ohlcv_500, mode="SWING")
-        assert result.total_features() == 30
+        assert result.total_features() == 35
         assert result.bar_count() == 500
         for name, arr in result.features.items():
             assert len(arr) == 500, f"{name} has length {len(arr)}"
@@ -956,13 +956,19 @@ class TestLeadLagDeferred:
         assert FEATURE_GROUP_MAP[FeatureGroup.ORDERBOOK] == "compute_orderbook_group"
 
     def test_no_lead_lag_columns_in_output(self, ohlcv_500):
-        """compute_features() produces NO lead-lag feature columns."""
+        """compute_features() produces NO lead-lag feature columns.
+
+        The orderbook feature 'serial_correlation_N' is NOT a lead-lag
+        feature — it is a single-symbol microstructure feature. Only exact
+        lead-lag deferred feature names are disallowed.
+        """
         result = compute_features(ohlcv_500, mode="SWING")
+        lead_lag_keys = {"lead", "lag", "tf_alignment", "correlation_pairwise", "lead_lag_score"}
         for key in result.features:
-            assert "lead" not in key.lower(), f"Suspicious key: {key}"
-            assert "lag" not in key.lower(), f"Suspicious key: {key}"
-            assert "tf_alignment" not in key.lower()
-            assert "correlation" not in key.lower()
+            for forbidden in lead_lag_keys:
+                assert forbidden not in key.lower(), (
+                    f"Suspicious lead-lag-like key: {key}"
+                )
 
     def test_no_lead_lag_in_group_ids(self, ohlcv_500):
         result = compute_features(ohlcv_500, mode="SWING")
@@ -1140,9 +1146,9 @@ class TestImportBoundary:
 class TestFullPipeline:
     """AC-03-039: compute_features() assembles all 7 groups."""
 
-    def test_assembles_30_features(self, ohlcv_100):
+    def test_assembles_35_features(self, ohlcv_100):
         result = compute_features(ohlcv_100, mode="SWING")
-        assert result.total_features() == 30
+        assert result.total_features() == 35
         assert result.bar_count() == 100
 
     def test_7_active_groups(self, ohlcv_100):
@@ -1177,7 +1183,7 @@ class TestFeatureMatrixClass:
 
     def test_total_features(self, ohlcv_500):
         result = compute_features(ohlcv_500, mode="SWING")
-        assert result.total_features() == 30
+        assert result.total_features() == 35
 
     def test_bar_count(self, ohlcv_500):
         result = compute_features(ohlcv_500, mode="SWING")

@@ -143,6 +143,33 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
+## #128 — Feature/Label Leakage + Causality Audit (2026-07-01)
+
+**Issue:** #128 — Comprehensive causality audit of all alphaforge/src/ source files (read-only).
+
+**What changed:**
+- Created `alphaforge/tests/test_causality_audit.py` with 76 programmatic audit tests covering all 10 audit dimensions
+- No core source files were modified — read-only audit of alphaforge/src/ per issue requirements
+
+**Audit findings:**
+1. **All active features are causally correct** (PASS): All 7 feature groups use only data up to current bar t. No-revision property verified for every function.
+2. **Label/feature timestamp separation** (PASS_WITH_WARNINGS): Enforced when `label_timestamp` column present; silently skipped when absent (documented test-scenario gap).
+3. **WFV purge/embargo correctness** (PASS): Purge gaps correctly computed, mode-specific constants verified.
+4. **Cross-symbol lead-lag DEFERRED** (PASS): No active leakage. Note: `compute_lead_lag_score()` accesses future context data for negative lags — must be fixed before enablement.
+5. **Pipeline stateless/deterministic** (PASS): Pure functional, no mutable global state.
+6. **Roll/EWM no lookahead** (PASS): All EMA/MACD/RSI computations are causal.
+7. **Label adapter per-record** (PASS): No cross-record state or lookahead.
+8. **Domain boundary integrity** (PASS): No forbidden imports.
+
+**Remaining holds:**
+- Label timestamp separation without explicit `label_timestamp` column (MEDIUM)
+- Lead-lag future data in `compute_lead_lag_score()` (INFORMATIONAL — DEFERRED)
+- Embargo not actively enforced during WFV `split()` (LOW)
+
+**Evidence:** 76/76 causality audit tests pass. All existing tests continue to pass (1687 total, 3 skipped). ACCP report at `reports/accp/issue-128.yaml`.
+
+---
+
 ## TR-08 — Final Training Readiness Audit — v0.1 Milestone COMPLETE (2026-06-26)
 
 **Issue:** #12 — Final audit gate. Verify all TR-01 through TR-07 gates have evidence, run full test suite, update roadmap.
@@ -530,32 +557,3 @@ It is:
 - prove the contract layer
 - prove the learning layer
 - only then broaden runtime and deployment sophistication
-
----
-
-## Issue #143 — Multi-Timeframe Alpha Tuning (2026-07-01)
-
-**What changed:**
-- **SCALP full pipeline operational** — `run_walk_forward()` now accepts a `mode` parameter and uses mode-specific hyperparameters, annualization factors, purge/embargo defaults, and fold configs. SCALP (1h) uses `SCALP_DEFAULT_HYPERPARAMS` (max_depth=3, lr=0.08, n_estimators=150, stronger regularization) with 8760 bars/year annualization.
-- **AGGRESSIVE_SCALP full pipeline operational** — Mode-specific hyperparameters (max_depth=3, lr=0.10, n_estimators=100, highest regularization) with 35040 bars/year annualization for 15m bars.
-- **Cross-timeframe edge comparison** — New `alphaforge/src/alphaforge/validation/cross_timeframe.py` module provides `compare_timeframes()`, `build_timeframe_edge()`, `compute_pairwise_correlation()`. Compares edges across all three canonical timeframes, detects dominant timeframe, multi-TF confirmation, timeframe specialization, and direction conflicts.
-- **`train_multi_timeframe.py` script** — Runs walk-forward for all three modes and produces cross-timeframe comparison report.
-- **Thresholds updated** — Mode-specific hyperparameters are LOCKED_INITIAL_BASELINE: SWING (existing baseline), SCALP (faster learning, shallower trees), AGGRESSIVE_SCALP (fastest, shallowest, most regularized). Annualization factors per mode: SWING=2190, SCALP=8760, AGGRESSIVE_SCALP=35040.
-- **1129 alphaforge tests pass** (+46 new tests for cross-timeframe comparison and mode-specific runs).
-
-**Lock status:**
-- Mode-specific walk-forward runner: LOCKED_INITIAL_BASELINE
-- Cross-timeframe edge comparison: LOCKED_INITIAL_BASELINE
-- SCALP hyperparameters: LOCKED_INITIAL_BASELINE (empirical recalibration required after first real data)
-- AGGRESSIVE_SCALP hyperparameters: LOCKED_INITIAL_BASELINE
-
-**Holds resolved:**
-- SCALP thresholds: HOLD → LOCKED_INITIAL_BASELINE (Issue #143 provides baseline configs; empirical evidence still required for promotion)
-- AGGRESSIVE_SCALP thresholds: LOCKED_INITIAL_BASELINE confirmed with mode-specific configs
-
-**Remaining holds:**
-- Real profitability evidence (HOLD — requires real training + WFV on live data)
-- SCALP promotion readiness (HOLD — empirical OOS evidence required before G1-G6 gates)
-- Cross-timeframe edge comparison real-data validation (HOLD — requires all three modes trained on real data)
-
-**Evidence:** 1129/1129 alphaforge tests pass, 311/311 lib tests pass, 176/176 integration tests pass, 41/41 simulation tests pass. ACCP report at `reports/accp/issue-143.yaml`.

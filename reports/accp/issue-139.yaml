@@ -1,34 +1,39 @@
 accp_version: "2.0.0"
 source_format: "ACCP-YAML"
-id: "issue-139"
 result: "PASS"
-scope_confirmation: |
-  Added purge_bars and embargo_bars to MODE_CONFIG in cli/real_training.py.
-  walk_forward_validate() now reads mode-specific values instead of dynamic
-  fold_size//4 formula. All 6-fold WFV tests (40) and integration validation
-  tests (43) pass with new values.
+scope_confirmation:
+  problem_statement: "Mode-specific purge/embargo not implemented — all modes use same formula"
+  in_scope:
+    - "SCALP: purge=100, embargo=50"
+    - "AGGRESSIVE_SCALP: purge=200, embargo=100"
+    - "SWING: purge=20, embargo=10"
+    - "MODE_CONFIG in cli/real_training.py"
+    - "MODE_EMBARGO_BARS, DEFAULT_PURGE_POLICIES, DEFAULT_FOLD_CONFIGS in contracts.py"
+    - "WFV_EMBARGO_BARS in walk_forward_runner.py"
+  out_of_scope:
+    - "No new modes or actions"
+    - "No timeframe stack changes"
+    - "No simulation profile changes"
 files_changed:
-  - cli/real_training.py
+  - "cli/real_training.py"
+  - "alphaforge/src/alphaforge/validation/contracts.py"
+  - "alphaforge/src/alphaforge/validation/walk_forward_runner.py"
+  - "alphaforge/tests/test_walk_forward_validator.py"
+  - "v7/docs/roadmap.md"
+  - "reports/accp/issue-139.yaml"
 decisions_locked:
-  - description: "Mode-specific purge/embargo values in MODE_CONFIG"
+  - name: "Mode-specific purge/embargo values"
     status: "LOCKED_INITIAL_BASELINE"
-    values:
-      SCALP: { purge_bars: 100, embargo_bars: 50 }
-      AGGRESSIVE_SCALP: { purge_bars: 200, embargo_bars: 100 }
-      SWING: { purge_bars: 20, embargo_bars: 10 }
+    details: "SCALP purge=100/embargo=50, AGGRESSIVE_SCALP purge=200/embargo=100, SWING purge=20/embargo=10"
 remaining_holds:
-  - "No real profitability evidence (HOLD — requires real training + WFV)"
-  - "Verdict thresholds may need recalibration with real data (HOLD)"
-safe_next_step: |
-  Real data training run with mode-specific purge/embargo to validate
-  leakage prevention is effective across all three modes.
+  - "Empirical validation of purge/embargo thresholds against real data"
+safe_next_step: "Integrate mode-specific config into real_training.py WFV pipeline and verify end-to-end with real data"
 commands_run:
-  - command: "PYTHONPATH=. /home/dresden/src/v7-engine/.venv/bin/python3 -m pytest alphaforge/tests/test_wfv.py -v"
-    exit_code: 0
-    summary: "40/40 WFV tests pass"
-  - command: "PYTHONPATH=. /home/dresden/src/v7-engine/.venv/bin/python3 -m pytest integration/tests/test_alphaforge_validation.py alphaforge/tests/test_walk_forward_validator.py -v"
-    exit_code: 0
-    summary: "43/43 additional validation tests pass"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ simulation/tests/ -q -x --timeout=60"
 evidence:
-  - "83/83 tests pass across both test suites"
-  - "ACCP report at reports/accp/issue-139.yaml"
+  - "alphaforge/tests/: 1083 passed, 1 skipped"
+  - "integration/tests/: 176 passed, 2 skipped"
+  - "lib/tests/ simulation/tests/: 352 passed"
+  - "All boundary tests passed"

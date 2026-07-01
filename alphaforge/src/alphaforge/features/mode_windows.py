@@ -88,6 +88,7 @@ class ModeWindowConfig:
         breakout_window: Lookback bars for range breakout (Donchian).
         bb_window: Lookback bars for Bollinger Bands.
         bb_num_std: Standard deviation multiplier for Bollinger Bands.
+        funding_window: Lookback bars for funding rate features.
         description: Human-readable rationale for this mode's windows.
         threshold_status: Lock status (LOCKED_INITIAL_BASELINE for all).
     """
@@ -107,6 +108,7 @@ class ModeWindowConfig:
     breakout_window: int
     bb_window: int
     bb_num_std: float
+    funding_window: int = 10
     description: str = ""
     threshold_status: str = "LOCKED_INITIAL_BASELINE"
 
@@ -186,6 +188,7 @@ class ModeWindowConfig:
             "breakout_window": self.breakout_window,
             "bb_window": self.bb_window,
             "bb_num_std": self.bb_num_std,
+            "funding_window": self.funding_window,
             "periods_per_year": self.periods_per_year,
         }
 
@@ -215,6 +218,7 @@ SWING_WINDOWS = ModeWindowConfig(
     breakout_window=20,
     bb_window=20,
     bb_num_std=2.0,
+    funding_window=10,
     description=(
         "SWING 4h windows — widest lookbacks for multi-day holding. "
         "n_returns=10 (40h), vol_window=20 (80h ~3.3d), "
@@ -250,6 +254,7 @@ SCALP_WINDOWS = ModeWindowConfig(
     breakout_window=24,
     bb_window=20,
     bb_num_std=2.0,
+    funding_window=12,
     description=(
         "SCALP 1h windows — compressed for intraday holding. "
         "n_returns=12 (12h), vol_window=24 (1d), MACD(8,17,9) at 1h. "
@@ -285,6 +290,7 @@ AGGRESSIVE_SCALP_WINDOWS = ModeWindowConfig(
     breakout_window=12,
     bb_window=12,
     bb_num_std=2.0,
+    funding_window=16,
     description=(
         "AGGRESSIVE_SCALP 15m windows — very narrow, microstructure-aware. "
         "n_returns=16 (4h), vol_window=24 (6h), ATR(10), RSI(10), "

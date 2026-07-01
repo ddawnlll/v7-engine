@@ -50,7 +50,7 @@ from alphaforge.validation.ablation import (
 
 def _make_synthetic_data(
     n_samples: int = 300,
-    n_features: int = 26,
+    n_features: int = 35,
     random_seed: int = 42,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Generate synthetic feature/label data with 3 moderately separable clusters."""
@@ -88,20 +88,20 @@ def _make_synthetic_data(
 
 @pytest.fixture
 def synth_data():
-    """300 samples, 26 features, 3 classes (0/1/2)."""
-    return _make_synthetic_data(300, 26)
+    """300 samples, 35 features, 3 classes (0/1/2)."""
+    return _make_synthetic_data(300, 35)
 
 
 @pytest.fixture
 def synth_data_small():
-    """120 samples, 26 features."""
-    return _make_synthetic_data(120, 26)
+    """120 samples, 35 features."""
+    return _make_synthetic_data(120, 35)
 
 
 @pytest.fixture
 def synth_data_string_labels():
     """300 samples with string labels."""
-    X, y_int = _make_synthetic_data(300, 26)
+    X, y_int = _make_synthetic_data(300, 35)
     label_map = {0: "LONG_NOW", 1: "SHORT_NOW", 2: "NO_TRADE"}
     y_str = np.array([label_map[i] for i in y_int])
     return X, y_str
@@ -109,7 +109,7 @@ def synth_data_string_labels():
 
 @pytest.fixture
 def pipeline_feature_names() -> List[str]:
-    """All 26 feature names from the SWING feature pipeline, in order."""
+    """All 35 feature names from the SWING feature pipeline, in order."""
     return [
         "log_return_1", "log_return_N", "return_volatility_N", "return_zscore_N",
         "realized_volatility_N", "high_low_range_N", "garman_klass_vol_N", "parkinson_vol_N",
@@ -117,6 +117,9 @@ def pipeline_feature_names() -> List[str]:
         "momentum_N", "roc_N", "rsi_N", "macd", "macd_signal", "macd_histogram",
         "volume_ratio_N", "volume_trend_N", "vwap_deviation", "obv_N",
         "bb_position", "bb_width", "highest_N", "lowest_N", "range_breakout_N",
+        "spread_pct_N", "volume_imbalance_N", "trade_intensity_N", "amihud_illiquidity_N",
+        "roll_spread_N", "microstructure_noise_N", "serial_correlation_N", "vpin_N",
+        "price_impact_slope_N",
     ]
 
 
@@ -128,15 +131,15 @@ def pipeline_feature_names() -> List[str]:
 class TestFeatureToGroupMapping:
     """Verify the feature-to-group mapping is correct and complete."""
 
-    def test_mapping_has_all_six_groups(self):
-        """All 6 active pipeline groups are represented."""
+    def test_mapping_has_all_seven_groups(self):
+        """All 7 active pipeline groups are represented."""
         groups = set(FEATURE_NAME_TO_GROUP.values())
         assert groups == set(ALL_GROUPS), f"Expected {set(ALL_GROUPS)}, got {groups}"
 
-    def test_mapping_has_26_features(self):
-        """All 26 pipeline features are mapped."""
-        assert len(FEATURE_NAME_TO_GROUP) == 26, (
-            f"Expected 26 features, got {len(FEATURE_NAME_TO_GROUP)}"
+    def test_mapping_has_35_features(self):
+        """All 35 pipeline features are mapped."""
+        assert len(FEATURE_NAME_TO_GROUP) == 35, (
+            f"Expected 35 features, got {len(FEATURE_NAME_TO_GROUP)}"
         )
 
     def test_reverse_mapping_consistency(self):
@@ -158,6 +161,7 @@ class TestFeatureToGroupMapping:
             "momentum": 6,
             "volume": 4,
             "breakout": 5,
+            "orderbook": 9,
         }
         for group_name, expected_count in expected.items():
             actual = GROUP_TO_FEATURES.get(group_name, [])
@@ -292,13 +296,13 @@ class TestFeatureGroupAblation:
         assert "accuracy" in study.baseline_metrics
         assert 0.0 <= study.baseline_metrics["accuracy"] <= 1.0
 
-    def test_all_six_groups_ablated(self, synth_data, pipeline_feature_names):
-        """All 6 groups produce ablation results."""
+    def test_all_seven_groups_ablated(self, synth_data, pipeline_feature_names):
+        """All 7 groups produce ablation results."""
         X, y = synth_data
         study = run_feature_group_ablation(X, y, feature_names=pipeline_feature_names)
         ablated_groups = {r.group_name for r in study.results}
         assert ablated_groups == set(ALL_GROUPS), (
-            f"Expected all 6 groups ablated, got {ablated_groups}"
+            f"Expected all 7 groups ablated, got {ablated_groups}"
         )
 
     def test_single_group_ablation(self, synth_data, pipeline_feature_names):
