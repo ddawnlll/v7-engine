@@ -344,6 +344,9 @@ class TestCostStressToStressLevels:
         assert "baseline_slippage_pct" in d
         assert "fee_stress_levels" in d
         assert "slippage_stress_levels" in d
+        assert "spread_stress_levels" in d
+        assert "funding_stress_levels" in d
+        assert "funding_deferred_block" in d
         assert "combined_stress_edge_survives" in d
         assert "break_even_cost_total_pct" in d
         assert "net_edge_after_costs" in d
@@ -359,6 +362,35 @@ class TestCostStressToStressLevels:
             assert "edge_survives" in level
             assert isinstance(level["multiplier"], float)
             assert isinstance(level["oos_expectancy_r"], float)
+
+    def test_spread_stress_levels_have_multiplier_expectancy_survives(self):
+        """Each spread stress level has multiplier, oos_expectancy_r, edge_survives."""
+        result = compute_cost_stress(oos_expectancy_r=0.50)
+        d = cost_stress_to_stress_levels(result, 0.04, 0.02)
+        assert len(d["spread_stress_levels"]) == 2
+        for level in d["spread_stress_levels"]:
+            assert "multiplier" in level
+            assert "oos_expectancy_r" in level
+            assert "edge_survives" in level
+            assert isinstance(level["multiplier"], float)
+            assert isinstance(level["oos_expectancy_r"], float)
+
+    def test_funding_stress_levels_deferred(self):
+        """Funding stress levels show DEFERRED and edge never survives."""
+        result = compute_cost_stress(oos_expectancy_r=0.50)
+        d = cost_stress_to_stress_levels(result, 0.04, 0.02)
+        assert len(d["funding_stress_levels"]) >= 1
+        for level in d["funding_stress_levels"]:
+            assert level["edge_survives"] is False
+            assert "note" in level
+
+    def test_funding_deferred_block_present(self):
+        """funding_deferred_block has the DEFERRED explanation."""
+        result = compute_cost_stress(oos_expectancy_r=0.50)
+        d = cost_stress_to_stress_levels(result, 0.04, 0.02)
+        assert isinstance(d["funding_deferred_block"], str)
+        assert len(d["funding_deferred_block"]) > 0
+        assert "DEFERRED" in d["funding_deferred_block"]
 
     def test_strong_edge_passes_verdict(self):
         """Strong edge yields PASS verdict."""

@@ -315,6 +315,8 @@ def _build_empirical_cost_stress(wfv_results: dict) -> dict:
 
     fee_levels = cost_data.get("fee_stress_levels", [])
     slip_levels = cost_data.get("slippage_stress_levels", [])
+    spread_levels = cost_data.get("spread_stress_levels", [])
+    funding_levels = cost_data.get("funding_stress_levels", [])
     combined = cost_data.get("combined_stress_edge_survives", False)
 
     # Default fee/slippage
@@ -330,31 +332,30 @@ def _build_empirical_cost_stress(wfv_results: dict) -> dict:
     else:
         cost_verdict = "FAIL_EDGE_DESTROYED_BY_COSTS"
 
+    def _norm_levels(levels: list) -> list:
+        return [
+            {
+                "multiplier": lv.get("multiplier", 1.0),
+                "oos_expectancy_r": lv.get("oos_expectancy_r", 0.0),
+                "edge_survives": lv.get("edge_survives", False),
+            }
+            for lv in levels
+        ]
+
     return {
         "baseline_fee_pct": baseline_fee,
         "baseline_slippage_pct": baseline_slip,
-        "fee_stress_levels": [
-            {
-                "multiplier": lv.get("multiplier", 1.0),
-                "oos_expectancy_r": lv.get("oos_expectancy_r", 0.0),
-                "edge_survives": lv.get("edge_survives", False),
-            }
-            for lv in fee_levels
-        ] if fee_levels else [],
-        "slippage_stress_levels": [
-            {
-                "multiplier": lv.get("multiplier", 1.0),
-                "oos_expectancy_r": lv.get("oos_expectancy_r", 0.0),
-                "edge_survives": lv.get("edge_survives", False),
-            }
-            for lv in slip_levels
-        ] if slip_levels else [],
+        "fee_stress_levels": _norm_levels(fee_levels),
+        "slippage_stress_levels": _norm_levels(slip_levels),
+        "spread_stress_levels": _norm_levels(spread_levels),
+        "funding_stress_levels": _norm_levels(funding_levels),
         "combined_stress_edge_survives": combined,
         "break_even_cost_total_pct": cost_data.get(
             "break_even_cost_total_pct", 0.0
         ),
         "net_edge_after_costs": cost_data.get("net_edge_after_costs", 0.0),
         "cost_stress_verdict": cost_verdict,
+        "funding_deferred_block": cost_data.get("funding_deferred_block", ""),
     }
 
 

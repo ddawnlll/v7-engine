@@ -570,6 +570,33 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
+## v0.27 — Cost Stress Matrix — Spread + Funding Stress Levels (2026-07-01)
+
+**What changed:**
+- `cost_stress_to_stress_levels()` now outputs `spread_stress_levels` (2 levels: 1.5x, 2x) and `funding_stress_levels` (1 level, DEFERRED) in addition to existing `fee_stress_levels` and `slippage_stress_levels`.
+- `funding_deferred_block` string added to the cost stress dict output, explaining why funding cost stress is not computed.
+- `_build_empirical_cost_stress()` in empirical.py passes through all 6 stress level arrays (fee, slippage, spread, funding) and the funding_deferred_block.
+- `_make_cost_stress()` scaffold in builders.py updated to include `spread_stress_levels`, `funding_stress_levels`, and `funding_deferred_block`.
+- 3 new tests: spread stress level structure, funding stress DEFERRED, funding deferred block text.
+
+**Lock status:**
+- Spread stress levels in report output: LOCKED_INITIAL_BASELINE
+- Funding stress DEFERRED reporting: LOCKED_INITIAL_BASELINE
+- 6-dimension cost stress matrix: LOCKED_INITIAL_BASELINE
+
+**Remaining holds:**
+- Funding cost model implementation (HOLD — no funding rate data pipeline)
+- Regime-aware cost multipliers (HOLD — requires regime breakdown integration with cost stress)
+- Symbol Stability per-symbol contribution (HOLD — requires multi-symbol WFV)
+- NO_TRADE Collapse edge case under extreme market conditions (HOLD)
+- Real profitability evidence (HOLD — requires real training + WFV)
+- MHT correction real thresholds (HOLD — requires empirical baseline)
+- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL)
+
+**Evidence:** 139 test cases across cost_stress, builders, and empirical report tests pass. ACCP report at `reports/accp/issue-115.yaml`.
+
+---
+
 ## Final Position
 
 The roadmap for V7 is not:

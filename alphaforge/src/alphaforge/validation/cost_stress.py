@@ -283,6 +283,21 @@ def cost_stress_to_stress_levels(
             "edge_survives": edge_survives,
         })
 
+    # Spread stress levels
+    spread_levels: List[Dict[str, Any]] = []
+    spread_field_map = {
+        1.5: ("spread_stress_1_5x",),
+        2.0: ("spread_stress_2x",),
+    }
+    for mult, (expect_attr,) in spread_field_map.items():
+        expect_val = getattr(result, expect_attr, 0.0)
+        edge_survives = bool(expect_val > 0) if isinstance(expect_val, (int, float)) else False
+        spread_levels.append({
+            "multiplier": mult,
+            "oos_expectancy_r": expect_val if isinstance(expect_val, (int, float)) else 0.0,
+            "edge_survives": edge_survives,
+        })
+
     combined = bool(result.combined_stress_edge_survives)
     break_even = (
         float(result.break_even_cost)
@@ -293,16 +308,31 @@ def cost_stress_to_stress_levels(
     # net_edge_after_costs is combined_stress in this model
     net_edge = float(result.combined_stress) if isinstance(result.combined_stress, (int, float)) else 0.0
 
+    # Funding stress is currently DEFERRED — always not surviving
+    funding_stress_levels: List[Dict[str, Any]] = [{
+        "multiplier": 1.0,
+        "oos_expectancy_r": 0.0,
+        "edge_survives": False,
+        "note": "Funding cost model is DEFERRED. See simulation/docs/cost_model.md.",
+    }]
+
     return {
         "baseline_fee_pct": baseline_fee_pct,
         "baseline_slippage_pct": baseline_slippage_pct,
         "fee_stress_levels": fee_levels,
         "slippage_stress_levels": slip_levels,
+        "spread_stress_levels": spread_levels,
+        "funding_stress_levels": funding_stress_levels,
         "combined_stress_edge_survives": combined,
         "break_even_cost_total_pct": break_even,
         "net_edge_after_costs": net_edge,
         "cost_stress_verdict": (
             "PASS" if combined
             else "FAIL_EDGE_DESTROYED_BY_COSTS"
+        ),
+        "funding_deferred_block": (
+            "Funding model is DEFERRED. Live/perpetual promotion is blocked "
+            "until funding cost model is implemented. "
+            "See simulation/docs/cost_model.md."
         ),
     }

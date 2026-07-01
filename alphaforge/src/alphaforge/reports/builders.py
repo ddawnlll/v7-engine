@@ -59,10 +59,22 @@ def _make_cost_stress(slippage_pct: float = 0.02) -> dict:
             {"multiplier": 1.5, "oos_expectancy_r": -0.1, "edge_survives": False},
             {"multiplier": 2.0, "oos_expectancy_r": -0.2, "edge_survives": False},
         ],
+        "spread_stress_levels": [
+            {"multiplier": 1.5, "oos_expectancy_r": 0.0, "edge_survives": False},
+            {"multiplier": 2.0, "oos_expectancy_r": 0.0, "edge_survives": False},
+        ],
+        "funding_stress_levels": [
+            {"multiplier": 1.0, "oos_expectancy_r": 0.0, "edge_survives": False,
+             "note": "Funding cost model is DEFERRED."},
+        ],
         "combined_stress_edge_survives": False,
         "break_even_cost_total_pct": 0.01,
         "cost_stress_verdict": "FAIL_EDGE_DESTROYED_BY_COSTS",
         "net_edge_after_costs": 0.0,
+        "funding_deferred_block": (
+            "Funding model is DEFERRED. Live/perpetual promotion is blocked "
+            "until funding cost model is implemented."
+        ),
     }
 
 
