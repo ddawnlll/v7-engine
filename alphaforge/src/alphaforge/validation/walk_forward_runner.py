@@ -1175,6 +1175,64 @@ def main() -> int:
     return 0 if result.verdict != ValidationVerdict.FAIL_OOS.value else 1
 
 
+# ---------------------------------------------------------------------------
+# Nested walk-forward validation convenience entry point
+# ---------------------------------------------------------------------------
+
+
+def run_nested_walk_forward(
+    n_bars: int = 2000,
+    n_symbols: int = 3,
+    random_seed: int = 42,
+    mode: str = "SWING",
+    outer_folds: int = 7,
+    inner_folds: int = 3,
+    embargo_days: int = 30,
+    optuna_n_trials: int = 30,
+    optuna_timeout_seconds: int = 120,
+    outer_train_window_bars: int = 500,
+    outer_test_window_bars: int = 200,
+) -> Any:
+    """Run nested walk-forward validation with Optuna-based hyperparameter tuning.
+
+    Convenience function that delegates to the tuning module's implementation.
+
+    Outer loop: [TRAIN][VAL][OOS] x outer_folds
+    Inner loop: [TRAIN][VAL] x inner_folds (Optuna tunes hyperparameters)
+    Best params -> train on outer TRAIN -> evaluate on outer OOS
+
+    Args:
+        n_bars: Bars per symbol.
+        n_symbols: Number of symbols.
+        random_seed: Random seed.
+        mode: Trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
+        outer_folds: Number of outer folds.
+        inner_folds: Number of inner folds for Optuna tuning.
+        embargo_days: Embargo between train and val in calendar days.
+        optuna_n_trials: Optuna hyperparameter search trials.
+        optuna_timeout_seconds: Timeout for Optuna study.
+
+    Returns:
+        NestedWalkForwardResult from the tuning module.
+    """
+    from alphaforge.tuning.nested_wfv import (
+        run_nested_walk_forward as _run_nested,
+    )
+    return _run_nested(
+        n_bars=n_bars,
+        n_symbols=n_symbols,
+        random_seed=random_seed,
+        mode=mode,
+        outer_folds=outer_folds,
+        inner_folds=inner_folds,
+        embargo_days=embargo_days,
+        optuna_n_trials=optuna_n_trials,
+        optuna_timeout_seconds=optuna_timeout_seconds,
+        outer_train_window_bars=outer_train_window_bars,
+        outer_test_window_bars=outer_test_window_bars,
+    )
+
+
 if __name__ == "__main__":
     import sys
     sys.exit(main())

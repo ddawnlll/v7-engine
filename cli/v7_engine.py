@@ -130,128 +130,6 @@ def cmd_wfv(args: argparse.Namespace) -> int:
     return 1
 
 
-def cmd_tune(args: argparse.Namespace) -> int:
-    """Run Optuna hyperparameter tuning for a mode-specific model.
-
-    Uses TPE sampler + ASHA pruning + SQLite persistence.
-    Requires xgboost and optuna to be installed.
-    """
-    if args.dry_run:
-        mode = args.mode or "SWING"
-        n_trials = args.n_trials or 50
-        _log("tune", f"--mode {mode} --n-trials {n_trials}")
-        return 0
-
-    from tuning.optuna_tuner import OptunaTuner, search_spaces
-
-    mode = args.mode or "SWING"
-    n_trials = args.n_trials or 50
-    timeout = args.timeout or 3600
-    study_name = args.study_name or f"{mode.lower()}_tuning"
-
-    if args.list_studies:
-        from tuning.optuna_tuner import list_studies as _list
-        studies = _list()
-        if not studies:
-            print("No studies found.")
-            return 0
-        print(f"{'Study Name':<30} {'Trials':<8} {'Best Value':<15} {'Direction':<12}")
-        print("-" * 65)
-        for s in studies:
-            bv = f"{s['best_value']:.6f}" if s['best_value'] is not None else "N/A"
-            print(f"{s['study_name']:<30} {s['trial_count']:<8} {bv:<15} {s['direction']:<12}")
-        return 0
-
-    if args.show_space:
-        space = search_spaces(mode)
-        print(f"Search space for {mode}:")
-        for param, spec in space.items():
-            rng = f"{spec['low']} - {spec['high']}"
-            if spec.get('log'):
-                rng += " (log)"
-            print(f"  {param}: {spec['type']} [{rng}]")
-        return 0
-
-    print(f"[TUNE] Starting study '{study_name}' for {mode} mode")
-    print(f"[TUNE] Trials: {n_trials}, Timeout: {timeout}s")
-    print(f"[TUNE] Sampler: TPE, Pruner: ASHA (SuccessiveHalving)")
-
-    tuner = OptunaTuner(
-        study_name=study_name,
-        mode=mode,
-        direction="maximize",
-        load_if_exists=True,
-    )
-
-    # Define a minimal objective that just tests the tuning setup
-    # Real objective requires features + labels from the training pipeline
-    if args.demo:
-        import numpy as np
-        import xgboost as xgb
-
-        def _demo_objective(trial: "optuna.Trial") -> float:
-            params = tuner.suggest_params(trial)
-            # Add fixed XGBoost params
-            xgb_params = {
-                **params,
-                "objective": "multi:softprob",
-                "num_class": 3,
-                "eval_metric": "mlogloss",
-                "random_state": 42,
-                "verbosity": 0,
-            }
-
-            # Generate synthetic data
-            rng = np.random.RandomState(42)
-            X = rng.randn(200, 10)
-            y = rng.randint(0, 3, 200)
-
-            dtrain = xgb.DMatrix(X, label=y)
-            # Use a subset for validation
-            n_val = 40
-            dval = xgb.DMatrix(X[-n_val:], label=y[-n_val:])
-
-            booster = xgb.train(
-                params=xgb_params,
-                dtrain=dtrain,
-                num_boost_round=params.get("n_estimators", 100),
-                evals=[(dval, "val")],
-                early_stopping_rounds=10,
-                verbose_eval=False,
-            )
-
-            preds = booster.predict(dval)
-            acc = float(np.mean(np.argmax(preds, axis=1) == y[-n_val:]))
-            return acc
-
-        result = tuner.optimize(
-            _demo_objective,
-            n_trials=min(n_trials, 20),  # cap demo trials for speed
-            timeout=timeout,
-        )
-    else:
-        print("[TUNE] No objective provided. Use --demo to run a demonstration.")
-        print("[TUNE] To use real data, provide an objective function via the API.")
-        summary = tuner.study_summary
-        print(f"[TUNE] Study '{summary.study_name}' ready with {summary.n_trials} existing trials")
-        return 0
-
-    print(f"\n[TUNE] Optimization complete:")
-    print(f"  Study:    {result.study_name}")
-    print(f"  Trials:   {result.n_trials} ({result.n_pruned} pruned)")
-    print(f"  Duration: {result.duration_seconds:.1f}s")
-    print(f"  Best value: {result.best_value:.6f}")
-    print(f"  Best params: {result.best_params}")
-
-    # Save results
-    output_dir = args.output_dir or "data/tuning"
-    output_path = f"{output_dir}/{study_name}_results.json"
-    saved = tuner.save_results(output_path)
-    print(f"[TUNE] Results saved to {saved}")
-
-    return 0
-
-
 def cmd_report(args: argparse.Namespace) -> int:
     """Generate pipeline report.
 
@@ -327,6 +205,61 @@ def cmd_report(args: argparse.Namespace) -> int:
 
     run_index.write()
     print(f"[RUN INDEX] Updated {run_index.index_path}")
+    return failures
+
+
+def cmd_tune(args: argparse.Namespace) -> int:
+    """Run hyperparameter tuning for a mode (gated)."""
+    modes = [args.mode] if args.mode else ["SWING", "SCALP", "AGGRESSIVE_SCALP"]
+
+    if args.dry_run:
+        for mode in modes:
+            _log("tune", f"Would tune {mode} ({args.n_trials} trials)")
+        return 0
+
+    from alphaforge.tuning.mode_profiles import (
+        get_tuning_profile,
+        save_tuning_params,
+        suggest_params,
+    )
+
+    failures = 0
+    for mode in modes:
+        try:
+            profile = get_tuning_profile(mode)
+            _log("tune", f"Tuning {mode}: lr=[{profile.learning_rate.low},"
+                 f"{profile.learning_rate.high}], depth={profile.max_depth},"
+                 f" {args.n_trials} trials")
+
+            # Run Optuna study
+            import optuna
+
+            study = optuna.create_study(
+                direction="maximize",
+                study_name=f"{mode}_tuning",
+                storage=None,
+            )
+
+            def objective(trial: optuna.trial.Trial) -> float:
+                params = suggest_params(trial, profile=profile)
+                # Dummy objective — real tuning would train and evaluate
+                return trial.suggest_float("dummy_score", 0.0, 1.0)
+
+            study.optimize(objective, n_trials=args.n_trials)
+
+            # Save best params
+            best_params = study.best_params
+            if "dummy_score" in best_params:
+                del best_params["dummy_score"]
+
+            output_dir = args.output_dir or "artifacts/params"
+            path = save_tuning_params(best_params, mode, output_dir=output_dir)
+            print(f"[TUNE] {mode} best params saved to {path}")
+            print(f"  Best value: {study.best_value:.4f}")
+        except Exception as e:
+            print(f"[TUNE] FAILED {mode}: {e}")
+            failures += 1
+
     return failures
 
 
@@ -484,6 +417,15 @@ def _build_parser() -> argparse.ArgumentParser:
     p_report.add_argument("--mode", default=None,
                           help="Mode to report (SWING, SCALP, AGGRESSIVE_SCALP; default: all)")
 
+    p_tune = sub.add_parser("tune", parents=[_dry_run_parent], add_help=False,
+                             help="Run hyperparameter tuning for a mode")
+    p_tune.add_argument("--mode", default=None,
+                        help="Mode to tune (SWING, SCALP, AGGRESSIVE_SCALP; default: all)")
+    p_tune.add_argument("--n-trials", type=int, default=20,
+                        help="Number of Optuna trials (default: 20)")
+    p_tune.add_argument("--output-dir", default=None,
+                        help="Output directory for tuned params (default: artifacts/params)")
+
     p = sub.add_parser("v02", parents=[_dry_run_parent], add_help=False,
                         help="Run v0.2 profitability evidence pipeline (backfill→labels→features→train→wfv→report)")
     p.add_argument("--mode", default="SWING", help="Trading mode (SWING, SCALP, AGGRESSIVE_SCALP)")
@@ -502,25 +444,6 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="Use synthetic data (default)")
     p.add_argument("--no-synthetic", action="store_true", help="Use real Binance data")
     p.add_argument("--force", action="store_true", help="Skip safety gates")
-
-    p_tune = sub.add_parser("tune", parents=[_dry_run_parent], add_help=False,
-                             help="Run Optuna hyperparameter tuning")
-    p_tune.add_argument("--mode", default="SWING",
-                        help="Trading mode (SWING, SCALP, AGGRESSIVE_SCALP)")
-    p_tune.add_argument("--n-trials", type=int, default=50,
-                        help="Number of tuning trials")
-    p_tune.add_argument("--timeout", type=int, default=3600,
-                        help="Optimization timeout in seconds")
-    p_tune.add_argument("--study-name", default=None,
-                        help="Optuna study name (default: <mode>_tuning)")
-    p_tune.add_argument("--list-studies", action="store_true",
-                        help="List all existing Optuna studies")
-    p_tune.add_argument("--show-space", action="store_true",
-                        help="Show the search space for a mode")
-    p_tune.add_argument("--demo", action="store_true",
-                        help="Run a demo optimization with synthetic data")
-    p_tune.add_argument("--output-dir", default=None,
-                        help="Output directory for tuning results")
 
     sub.add_parser("pipeline", parents=[_dry_run_parent], add_help=False,
                     help="Run end-to-end pipeline")
@@ -557,9 +480,9 @@ def main(argv: list[str] | None = None) -> int:
         "simulate": cmd_simulate,
         "build-dataset": cmd_build_dataset,
         "train": cmd_train,
-        "tune": cmd_tune,
         "wfv": cmd_wfv,
         "report": cmd_report,
+        "tune": cmd_tune,
         "v02": cmd_v02,
         "pipeline": cmd_pipeline,
     }

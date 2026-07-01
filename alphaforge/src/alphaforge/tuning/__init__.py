@@ -1,32 +1,40 @@
-"""AlphaForge Tuning — hyperparameter optimization and multi-objective tuning.
+"""AlphaForge Tuning — mode-specific hyperparameter optimisation.
 
-This subpackage provides:
-1. Objective functions (Sharpe ratio, Profit Factor) for Optuna studies.
-2. NSGAII-based multi-objective optimization with Pareto frontier extraction.
-3. Visualization support for Pareto-optimal trade fronts.
+This package defines canonical parameter search spaces for Optuna-based
+hyperparameter tuning. Each mode (SWING, SCALP, AGGRESSIVE_SCALP) has a
+dedicated profile encoding its learning rate range, tree depth bounds,
+and regularisation levels.
 
-Domain boundary: AlphaForge owns hyperparameter search and evidence collection.
-V7 owns final model acceptance decisions.
+Modules:
+    mode_profiles: ModeTuningProfile, canonical profiles, suggest + save helpers.
 """
 
-from alphaforge.tuning.objectives import (
-    compute_profit_factor,
-    compute_sharpe_ratio,
-    make_moo_objective,
-)
-from alphaforge.tuning.optuna_tuner import (
-    create_moo_study,
-    extract_pareto_front,
-    optimize_moo_study,
-    pareto_front_summary,
+from alphaforge.tuning.mode_profiles import (
+    AGGRESSIVE_SCALP_TUNING,
+    DEFAULT_PARAMS_DIR,
+    ModeTuningProfile,
+    SCALP_TUNING,
+    SWING_TUNING,
+    TuningCategoricalParam,
+    TuningParamRange,
+    all_tuning_profiles,
+    get_tuning_profile,
+    load_tuning_params,
+    save_tuning_params,
+    suggest_params,
 )
 
 __all__ = [
-    "compute_profit_factor",
-    "compute_sharpe_ratio",
-    "create_moo_study",
-    "extract_pareto_front",
-    "make_moo_objective",
-    "optimize_moo_study",
-    "pareto_front_summary",
+    "AGGRESSIVE_SCALP_TUNING",
+    "DEFAULT_PARAMS_DIR",
+    "ModeTuningProfile",
+    "SCALP_TUNING",
+    "SWING_TUNING",
+    "TuningCategoricalParam",
+    "TuningParamRange",
+    "all_tuning_profiles",
+    "get_tuning_profile",
+    "load_tuning_params",
+    "save_tuning_params",
+    "suggest_params",
 ]
