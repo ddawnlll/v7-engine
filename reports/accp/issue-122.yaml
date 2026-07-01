@@ -1,25 +1,34 @@
 accp_version: "2.0.0"
 source_format: "ACCP-YAML"
 result: "PASS"
-scope_confirmation: "v0.25 diagnostics repair — Diagnostic Layer/Metrics Contract Update — NOT alpha found"
+scope_confirmation:
+  implemented:
+    - "Centralized ResearchRunSummary.build_trial_ledger(): trial ledger of all alpha candidates with verdict, root-cause, failure layer, evidence, and next-step recommendation per candidate"
+    - "FAILURE_LAYER_MAP: maps each root cause (model_failure, cost_failure, etc.) to a human-readable layer (model, cost, decision, etc.)"
+    - "ResearchRunSummary.auto_generate_summary(): scans all standard report directories, merges reports, builds trial ledger + root cause trees + recommendations, writes to alphaforge_report/research_run_summary.json"
+    - "Trial ledger included in build_run_summary() output"
+    - "Empty trial ledger support (empty reports list, load errors)"
+    - "Markdown summary report updated to include Trial Ledger section"
+    - "DEFAULT_SUMMARY_PATH constant: alphaforge_report/research_run_summary.json"
+    - "REPORT_DIRS: standard report directories (swing, scalp, aggressive_scalp under data/reports/)"
+  not_implemented: []
 files_changed:
-  - "contracts/schemas/alphaforge/mode_research_report.schema.json"
-  - "contracts/fixtures/alphaforge/swing_mode_research_report_minimal.json"
-  - "contracts/fixtures/alphaforge/scalp_mode_research_report_minimal.json"
-  - "contracts/fixtures/alphaforge/aggressive_scalp_mode_research_report_minimal.json"
-  - "contracts/tests/test_schema_active_metrics.py"
+  - "alphaforge/src/alphaforge/reports/run_summary.py"
+  - "alphaforge/tests/test_run_summary.py"
 decisions_locked:
-  diagnostic_layer: LOCKED_INITIAL_BASELINE
-  schema_active_metrics: LOCKED
+  - "Trial ledger schema_version: 1.0.0"
+  - "Failure layer mapping: feature→feature, label→label, model→model, cost→cost, no_trade_collapse→decision, mht_failure→statistics, fold_instability→validation, symbol_instability→coverage"
+  - "Default summary output: <repo-root>/alphaforge_report/research_run_summary.json"
 remaining_holds:
-  - "Cost Stress Matrix — requires regime-aware cost multipliers"
-  - "Symbol Stability — requires multi-symbol WFV"
-  - "NO_TRADE Collapse — extreme market condition edge case"
+  - "Trial ledger does not yet integrate with the ResearchRunIndex (#127) — cross-referencing canonical run entries with trial ledger entries is deferred"
+  - "Promotion verdict set may need adjustment as v7 gate framework evolves"
+safe_next_step:
+  - "Wire auto_generate_summary() call into research pipeline end-of-run hooks"
+  - "Integrate trial ledger with ResearchRunIndex for canonical run tracking"
 commands_run:
-  - "PYTHONPATH=. python3 -m pytest integration/tests/test_schema_parity.py -q"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_run_summary.py -q --timeout=30"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_run_summary.py alphaforge/tests/test_run_index.py alphaforge/tests/test_report_builders.py alphaforge/tests/test_research_report.py -q --timeout=30"
 evidence:
-  - "9/9 schema parity tests pass"
-  - "mode_research_report.schema.json: 8 new active metric fields added (active_trade_count, long_trade_count, short_trade_count, no_trade_count, total_gross_R, total_net_R, exposure_pct, avg_net_R_per_active_trade)"
-  - "3 new required fields in metrics object: active_trade_count, total_net_R, exposure_pct"
-  - "All 3 mode fixtures updated with active metric fields"
-  - "contracts/tests/test_schema_active_metrics.py: 232-line schema validation file"
+  - "50 tests pass in test_run_summary.py (13 new + 37 existing)"
+  - "150 tests pass across run_summary + run_index + report_builders + research_report test files"
+  - "All 13 new trial ledger and auto-generation tests pass"
