@@ -611,6 +611,38 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
+## #158 — Feature Caching with Parquet+Zstd for Pipeline Speedup (2026-07-01)
+
+**Issue:** #158 — Add Parquet+Zstd disk caching to the feature pipeline to eliminate redundant 5-15 minute recomputations.
+
+**What changed:**
+- Created `FeatureCache` class in `alphaforge/src/alphaforge/features/pipeline.py`:
+  - Cache key = SHA-256 hash of `(symbol, interval, mode, PIPELINE_VERSION)` — version change automatically invalidates
+  - Stores feature matrices as PyArrow Parquet files with Zstd compression
+  - Loads with `memory_map=True` for zero-copy read access
+  - Thread-safe write via `threading.Lock`
+  - Methods: `get()`, `put()`, `invalidate()`, `clear_all()`
+- Added `cached_compute_features()` — thin wrapper around `compute_features()` that checks cache before computing
+- Added `CACHE_DIR_DEFAULT: str = ".cache/features/"` for default cache location
+- Bumped `PIPELINE_VERSION` to `"0.2.0"` to reflect new caching capability
+- Updated `alphaforge/src/alphaforge/features/__init__.py` to export new symbols
+- Created `alphaforge/tests/test_feature_cache.py` — 31 tests covering cache key determinism, put/get roundtrip, NaN preservation, metadata preservation, invalidate/clear_all lifecycle, thread safety, cached_compute_features wrapper integration, error resilience, and edge cases (empty matrix, corrupt files, missing symbol)
+
+**Lock status:**
+- FeatureCache: LOCKED_INITIAL_BASELINE
+- cached_compute_features wrapper: LOCKED_INITIAL_BASELINE
+- CACHE_DIR_DEFAULT: LOCKED_INITIAL_BASELINE
+- PIPELINE_VERSION 0.2.0: LOCKED
+
+**Remaining holds:**
+- Cache directory not yet configurable via environment variable or config file (LOW — can be added when CLI config lands)
+- No cache size limit or LRU eviction (LOW — storage is cheap; can add later)
+- No cross-process file locking (LOW — single-process pipeline is the expected use case)
+
+**Evidence:** 31/31 new cache tests pass. 76/76 causality audit tests pass (version check updated to 0.2.0). ACCP report at `reports/accp/issue-158.yaml`.
+
+---
+
 ## Final Position
 
 The roadmap for V7 is not:
