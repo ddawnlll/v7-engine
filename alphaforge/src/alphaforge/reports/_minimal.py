@@ -5,7 +5,9 @@ No real training, no fake OOS, no fake model artifact.
 """
 
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Any, Dict
+
+from alphaforge.reports.mht import TrialLedger, build_mht_section_from_ledger
 
 
 def _utc_now() -> str:
@@ -100,25 +102,55 @@ def build_minimal_validation_report(
 
 
 def build_minimal_mode_research_report(
-    mode: str, report_id: str = "mrr-minimal-001",
+    mode: str,
+    report_id: str = "mrr-minimal-001",
+    ledger: TrialLedger | None = None,
 ) -> Dict[str, Any]:
-    """Build a minimal mode research report. No real evidence."""
+    """Build a minimal mode research report. No real evidence.
+
+    When no TrialLedger is provided, creates a default minimal ledger
+    with a single symbol and single param combination (total=1) to
+    keep the report lightweight while remaining schema-valid.
+
+    Args:
+        mode: Mode identifier (SCALP, AGGRESSIVE_SCALP, SWING).
+        report_id: Optional report ID override.
+        ledger: Optional TrialLedger. When omitted, a minimal default
+            ledger (1 symbol, 1 param, 1 thesis, 1 feature set) is used.
+
+    Returns:
+        ModeResearchReport payload as dict.
+    """
     priority = "SECONDARY_BASELINE" if mode == "SWING" else "PRIMARY"
     rtype = "secondary_baseline_report" if mode == "SWING" else "primary_research_report"
     tf = {"SWING": "4h", "SCALP": "1h", "AGGRESSIVE_SCALP": "15m"}[mode]
     ctx = {"SWING": "1d", "SCALP": "4h", "AGGRESSIVE_SCALP": "1h"}[mode]
+
+    if ledger is None:
+        ledger = TrialLedger(
+            symbols=["BTCUSDT"],
+            param_combinations=1,
+            thesis_ids=["at-placeholder-001"],
+            feature_set_ids=["fs-placeholder-001"],
+        )
+    mht = build_mht_section_from_ledger(
+        ledger=ledger,
+        correction_method="NONE_APPLIED",
+        fold_count=6,
+    )
+
     return {
         "schema_version": "1.0.0", "report_id": report_id,
         "mode": mode, "mode_priority": priority, "report_type": rtype,
         "created_at": _utc_now(), "run_id": "run-placeholder-001",
         "data_scope": {
-            "symbols": ["BTCUSDT"],
+            "symbols": ledger.symbols or ["BTCUSDT"],
             "date_range_start": "2024-01-01T00:00:00Z",
             "date_range_end": "2025-01-01T00:00:00Z",
             "primary_timeframes": [tf], "secondary_timeframes": [ctx],
             "data_quality_summary": "Placeholder — no real data",
         },
-        "feature_set_refs": ["fs-placeholder-001"],
+        "feature_set_refs": ledger.feature_set_ids or ["fs-placeholder-001"],
         "label_dataset_refs": ["lds-placeholder-001"],
         "alpha_theses": [{
             "alpha_thesis_id": "at-placeholder-001",
@@ -137,19 +169,8 @@ def build_minimal_mode_research_report(
             "oos_max_drawdown_r": {"value": -1.0, "ci_lower": -3.0, "ci_upper": -0.5, "ci_level": 0.95},
             "oos_trade_count": 0,
             "active_trade_count": 0,
-            "long_trade_count": 0,
-            "short_trade_count": 0,
-            "no_trade_count": 0,
-            "total_gross_R": 0.0,
-            "total_fee_cost_R": 0.0,
-            "total_slippage_cost_R": 0.0,
-            "total_funding_cost_R": 0.0,
             "total_net_R": 0.0,
             "exposure_pct": 0.0,
-            "avg_net_R_per_active_trade": 0.0,
-            "avg_net_R_per_decision": 0.0,
-            "turnover": 0.0,
-            "avg_hold_bars": 0.0,
             "per_fold_metrics": [],
         },
         "cost_stress": {
@@ -167,12 +188,7 @@ def build_minimal_mode_research_report(
         },
         "multiple_hypothesis_control": {
             "mht_status": "NOT_RUN",
-            "tested_hypothesis_count": 0, "tested_feature_count": 0,
-            "tested_thesis_count": 0, "correction_method": "NONE",
-            "false_discovery_control": "NONE",
-            "deflated_sharpe_or_pbo_assessment": "NOT_RUN",
-            "trial_count_disclosure": 0, "rejected_candidate_count": 0,
-            "mht_block_reason": "P0.9A scaffold — no research has been run.",
+            **mht,
         },
         "verdict": "BLOCKED_FOR_MHT",
         "blocked_scopes": ["No real profitability evidence exists yet."],

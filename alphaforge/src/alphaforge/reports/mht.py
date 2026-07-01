@@ -7,18 +7,93 @@ Critical distinction:
     trial_count is hypotheses tested, NOT oos_trade_count.
     trial_count = grid_search_combinations x thesis_count x feature_set_count
 
+Classes:
+    TrialLedger: Records all trial configurations tested during research.
+        Auto-computes tested_hypothesis_count and trial_count_disclosure.
+
 Functions:
     compute_trial_count: Count total trials from grid search, thesis, and feature dimensions.
     bonferroni_correction: Classic Bonferroni correction (alpha / n_trials).
     benjamini_hochberg: FDR control via Benjamini-Hochberg procedure.
     deflated_sharpe: Approximate deflated Sharpe ratio for multiple testing.
     compute_data_snooping_risk: Risk level based on trial count and MHT status.
+    build_mht_section_from_ledger: Build a complete MHT control section from a TrialLedger.
 """
 
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass, field
 from typing import Sequence
+
+
+# ---------------------------------------------------------------------------
+# TrialLedger — tracks what was tested
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TrialLedger:
+    """Records all trial configurations tested during research.
+
+    Tracks the full combinatoric space of symbols, parameter combinations,
+    theses, and feature sets that were evaluated. Auto-computes
+    tested_hypothesis_count and trial_count_disclosure from its dimensions.
+
+    Each dimension is floored at 1 to avoid artificially zeroing out the
+    product. This mirrors the safety semantics of compute_trial_count().
+
+    Attributes:
+        symbols: Market symbols tested (e.g. ["BTCUSDT", "ETHUSDT"]).
+        param_combinations: Number of hyperparameter combinations tested
+            (e.g. 49 for a 7x7 grid).
+        thesis_ids: Alpha thesis IDs evaluated (e.g. ["ath-001"]).
+        feature_set_ids: Feature set IDs tested (e.g. ["fs-001", "fs-002"]).
+    """
+
+    symbols: list[str] = field(default_factory=list)
+    param_combinations: int = 1
+    thesis_ids: list[str] = field(default_factory=list)
+    feature_set_ids: list[str] = field(default_factory=list)
+
+    @property
+    def num_symbols(self) -> int:
+        """Number of symbols, floored at 1."""
+        return max(1, len(self.symbols))
+
+    @property
+    def num_theses(self) -> int:
+        """Number of thesis IDs, floored at 1."""
+        return max(1, len(self.thesis_ids))
+
+    @property
+    def num_feature_sets(self) -> int:
+        """Number of feature set IDs, floored at 1."""
+        return max(1, len(self.feature_set_ids))
+
+    @property
+    def tested_hypothesis_count(self) -> int:
+        """Total distinct hypothesis tests = product of all dimensions.
+
+        tested_hypothesis_count = num_symbols * param_combinations
+                                  * num_theses * num_feature_sets
+        """
+        return max(
+            1,
+            self.num_symbols
+            * max(1, self.param_combinations)
+            * self.num_theses
+            * self.num_feature_sets,
+        )
+
+    @property
+    def trial_count_disclosure(self) -> int:
+        """Synonym for tested_hypothesis_count.
+
+        Provides the explicit trial_count_disclosure field required by the
+        MHT schema. Always equals tested_hypothesis_count.
+        """
+        return self.tested_hypothesis_count
 
 
 # ---------------------------------------------------------------------------
@@ -228,3 +303,127 @@ def compute_data_snooping_risk(
         return "LOW"
     # Default: few trials and adequate folds — low risk
     return "LOW"
+
+
+# ---------------------------------------------------------------------------
+# MHT section builder from TrialLedger
+# ---------------------------------------------------------------------------
+
+
+def build_mht_section_from_ledger(
+    ledger: TrialLedger,
+    correction_method: str = "NONE_APPLIED",
+    fold_count: int = 6,
+    oos_sharpe: float | None = None,
+    oos_trade_count: int | None = None,
+    alpha: float = 0.05,
+    gamma: float = 0.5,
+    rejected_candidate_count: int = 0,
+) -> dict:
+    """Build a complete MHT control section dict from a TrialLedger.
+
+    This is the single entry point for producing a schema-valid
+    ``multiple_hypothesis_control`` section. It auto-computes:
+
+    - ``tested_hypothesis_count`` from the ledger dimensions
+    - ``trial_count_disclosure`` from the ledger
+    - ``corrected_significance`` via Bonferroni when a real correction
+      method is selected
+    - ``data_snooping_risk_flag`` from trial count, fold count, and
+      correction status
+    - ``deflated_sharpe_or_equivalent`` when OOS data is provided and
+      a correction method is active
+    - ``pbo_or_backtest_overfit_risk`` from the deflated Sharpe value
+
+    Args:
+        ledger: TrialLedger recording what was tested.
+        correction_method: MHT correction method. Pass a real method
+            (``"Bonferroni"``, ``"FDR"``, ``"Deflated_Sharpe"``,
+            ``"PBO"``) to enable corrections. Default ``"NONE_APPLIED"``.
+        fold_count: Number of walk-forward validation folds.
+        oos_sharpe: Observed OOS Sharpe ratio (for deflated Sharpe).
+        oos_trade_count: Number of OOS trades (n_samples for deflated
+            Sharpe). Ignored when None or <= 0.
+        alpha: Desired significance level (default 0.05).
+        gamma: Correlation factor between trials for deflated Sharpe
+            (default 0.5).
+        rejected_candidate_count: Number of candidates rejected during
+            research (default 0).
+
+    Returns:
+        Dict with all keys required by the ``multiple_hypothesis_control``
+        schema property.
+    """
+    trial_count = ledger.tested_hypothesis_count
+    has_real_method = correction_method not in ("NONE_APPLIED", "NONE")
+
+    # Corrected significance
+    corrected_alpha: float | None = None
+    if has_real_method and correction_method == "Bonferroni":
+        corrected_alpha = bonferroni_correction(alpha, trial_count)
+
+    # Data-snooping risk
+    risk_flag = compute_data_snooping_risk(
+        n_trials=trial_count,
+        mht_applied=has_real_method,
+        fold_count=fold_count,
+    )
+
+    # Deflated Sharpe
+    deflated_value: float | None = None
+    pbo_risk: str = "NOT_RUN"
+    if (
+        has_real_method
+        and oos_sharpe is not None
+        and oos_trade_count is not None
+        and oos_trade_count > 0
+    ):
+        deflated_value = deflated_sharpe(
+            sharpe=oos_sharpe,
+            n_trials=trial_count,
+            n_samples=oos_trade_count,
+            gamma=gamma,
+        )
+        deflated_value = round(deflated_value, 6)
+
+        # Derive PBO / overfit risk from deflated Sharpe
+        if deflated_value <= 0.0:
+            pbo_risk = "CRITICAL" if trial_count > 100 else "HIGH"
+        elif deflated_value < 0.3:
+            pbo_risk = "MEDIUM"
+        else:
+            pbo_risk = "LOW"
+
+    # Notes
+    notes_parts: list[str] = []
+    if not has_real_method and trial_count > 1:
+        notes_parts.append(
+            f"MHT correction not applied -- {trial_count} hypotheses tested "
+            f"across {fold_count} folds without multiple comparison correction. "
+            f"BLOCKING HOLD: correction_method={correction_method}, "
+            f"trial_count={trial_count}. "
+            f"Candidate promotion requires proper MHT correction "
+            f"(Bonferroni, FDR, Deflated Sharpe, or PBO)."
+        )
+    notes_parts.append(
+        f"Trial ledger: {ledger.num_symbols} symbols, "
+        f"{ledger.param_combinations} param combinations, "
+        f"{ledger.num_theses} theses, "
+        f"{ledger.num_feature_sets} feature sets. "
+        f"Total hypotheses tested: {trial_count}. "
+        f"Correction: {correction_method}. "
+        f"Data-snooping risk: {risk_flag}."
+    )
+    notes = " ".join(notes_parts)
+
+    return {
+        "tested_hypothesis_count": trial_count,
+        "correction_method": correction_method,
+        "corrected_significance": corrected_alpha,
+        "data_snooping_risk_flag": risk_flag,
+        "deflated_sharpe_or_equivalent": deflated_value,
+        "pbo_or_backtest_overfit_risk": pbo_risk,
+        "trial_count_disclosure": ledger.trial_count_disclosure,
+        "rejected_candidate_count": rejected_candidate_count,
+        "notes": notes,
+    }

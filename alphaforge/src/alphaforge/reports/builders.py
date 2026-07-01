@@ -23,6 +23,10 @@ from alphaforge.modes.profiles import get_mode_profile, ModeProfile
 from alphaforge.contracts.loader import load_schema
 from alphaforge.contracts.validator import validate_payload
 from alphaforge.errors import ReportBuildError, ModeError
+from alphaforge.reports.mht import (
+    TrialLedger,
+    build_mht_section_from_ledger,
+)
 
 
 def _now_iso() -> str:
@@ -59,22 +63,10 @@ def _make_cost_stress(slippage_pct: float = 0.02) -> dict:
             {"multiplier": 1.5, "oos_expectancy_r": -0.1, "edge_survives": False},
             {"multiplier": 2.0, "oos_expectancy_r": -0.2, "edge_survives": False},
         ],
-        "spread_stress_levels": [
-            {"multiplier": 1.5, "oos_expectancy_r": 0.0, "edge_survives": False},
-            {"multiplier": 2.0, "oos_expectancy_r": 0.0, "edge_survives": False},
-        ],
-        "funding_stress_levels": [
-            {"multiplier": 1.0, "oos_expectancy_r": 0.0, "edge_survives": False,
-             "note": "Funding cost model is DEFERRED."},
-        ],
         "combined_stress_edge_survives": False,
         "break_even_cost_total_pct": 0.01,
         "cost_stress_verdict": "FAIL_EDGE_DESTROYED_BY_COSTS",
         "net_edge_after_costs": 0.0,
-        "funding_deferred_block": (
-            "Funding model is DEFERRED. Live/perpetual promotion is blocked "
-            "until funding cost model is implemented."
-        ),
     }
 
 
@@ -106,16 +98,41 @@ def _make_regime_breakdown() -> dict:
     }
 
 
-def _make_mht_control(mode: str) -> dict:
-    risk_flag = "CRITICAL" if mode == "AGGRESSIVE_SCALP" else "HIGH" if mode == "SCALP" else "MEDIUM"
-    return {
-        "tested_hypothesis_count": 1,
-        "correction_method": "NONE_APPLIED",
-        "corrected_significance": None,
-        "data_snooping_risk_flag": risk_flag,
-        "deflated_sharpe_or_equivalent": None,
-        "notes": f"Scaffold placeholder — no real hypothesis testing for {mode}.",
-    }
+def _make_mht_control(mode: str, ledger: TrialLedger | None = None) -> dict:
+    """Build the multiple_hypothesis_control section.
+
+    When no TrialLedger is provided, creates a default ledger with
+    sensible research-scale defaults:
+        - symbols: 10 (matching the 10*49=490 example from Issue #124)
+        - param_combinations: 49 (7x7 grid search)
+        - thesis_ids: 1
+        - feature_set_ids: 1
+        - Total: 10 * 49 * 1 * 1 = 490
+
+    Args:
+        mode: Mode identifier (SCALP, AGGRESSIVE_SCALP, SWING).
+        ledger: Optional TrialLedger. When omitted, a default ledger
+            with representative research scale is used.
+
+    Returns:
+        Dict with schema-valid MHT control fields.
+    """
+    if ledger is None:
+        ledger = TrialLedger(
+            symbols=["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT",
+                     "ADAUSDT", "XRPUSDT", "DOGEUSDT", "DOTUSDT",
+                     "MATICUSDT", "AVAXUSDT"],
+            param_combinations=49,
+            thesis_ids=["ath-scaffold-001"],
+            feature_set_ids=["fs-scaffold-001"],
+        )
+    return build_mht_section_from_ledger(
+        ledger=ledger,
+        correction_method="NONE_APPLIED",
+        fold_count=6,
+        oos_sharpe=None,
+        oos_trade_count=None,
+    )
 
 
 def _make_v7_gate_readiness(mode: str) -> dict:
@@ -209,15 +226,9 @@ def build_mode_research_report(
             "short_trade_count": 0,
             "no_trade_count": 0,
             "total_gross_R": 0.0,
-            "total_fee_cost_R": 0.0,
-            "total_slippage_cost_R": 0.0,
-            "total_funding_cost_R": 0.0,
             "total_net_R": 0.0,
             "exposure_pct": 0.0,
             "avg_net_R_per_active_trade": 0.0,
-            "avg_net_R_per_decision": 0.0,
-            "turnover": 0.0,
-            "avg_hold_bars": 0.0,
             "per_fold_metrics": _empty_fold_metrics(6),
         },
         "cost_stress": _make_cost_stress(0.03 if mode == "AGGRESSIVE_SCALP" else 0.02),

@@ -39,15 +39,29 @@ from alphaforge.modes.profiles import get_mode_profile
 # is not available (e.g., during partial-checkout development).
 try:
     from alphaforge.reports.mht import (
+        TrialLedger,
         benjamini_hochberg,
         bonferroni_correction,
+        build_mht_section_from_ledger,
         compute_data_snooping_risk,
         deflated_sharpe,
     )
     _MHT_AVAILABLE = True
 except ImportError:
+    TrialLedger = None  # type: ignore[assignment,misc]
     benjamini_hochberg = lambda p, a: []  # noqa: E731
     bonferroni_correction = lambda alpha, n: alpha  # noqa: E731
+    build_mht_section_from_ledger = lambda l, cm="NONE_APPLIED", fc=6, **kw: {  # noqa: E731
+        "tested_hypothesis_count": max(1, (l.num_symbols if hasattr(l, "num_symbols") else 1)),
+        "correction_method": cm,
+        "corrected_significance": None,
+        "data_snooping_risk_flag": "HIGH",
+        "deflated_sharpe_or_equivalent": None,
+        "pbo_or_backtest_overfit_risk": "NOT_RUN",
+        "trial_count_disclosure": max(1, (l.trial_count_disclosure if hasattr(l, "trial_count_disclosure") else 1)),
+        "rejected_candidate_count": 0,
+        "notes": f"Fallback MHT section — build_mht_section_from_ledger unavailable.",
+    }
     compute_data_snooping_risk = lambda n, a, f: "HIGH"  # noqa: E731
     deflated_sharpe = lambda s, t, n, g=0.5: s  # noqa: E731
     _MHT_AVAILABLE = False
@@ -315,8 +329,6 @@ def _build_empirical_cost_stress(wfv_results: dict) -> dict:
 
     fee_levels = cost_data.get("fee_stress_levels", [])
     slip_levels = cost_data.get("slippage_stress_levels", [])
-    spread_levels = cost_data.get("spread_stress_levels", [])
-    funding_levels = cost_data.get("funding_stress_levels", [])
     combined = cost_data.get("combined_stress_edge_survives", False)
 
     # Default fee/slippage
@@ -332,30 +344,31 @@ def _build_empirical_cost_stress(wfv_results: dict) -> dict:
     else:
         cost_verdict = "FAIL_EDGE_DESTROYED_BY_COSTS"
 
-    def _norm_levels(levels: list) -> list:
-        return [
+    return {
+        "baseline_fee_pct": baseline_fee,
+        "baseline_slippage_pct": baseline_slip,
+        "fee_stress_levels": [
             {
                 "multiplier": lv.get("multiplier", 1.0),
                 "oos_expectancy_r": lv.get("oos_expectancy_r", 0.0),
                 "edge_survives": lv.get("edge_survives", False),
             }
-            for lv in levels
-        ]
-
-    return {
-        "baseline_fee_pct": baseline_fee,
-        "baseline_slippage_pct": baseline_slip,
-        "fee_stress_levels": _norm_levels(fee_levels),
-        "slippage_stress_levels": _norm_levels(slip_levels),
-        "spread_stress_levels": _norm_levels(spread_levels),
-        "funding_stress_levels": _norm_levels(funding_levels),
+            for lv in fee_levels
+        ] if fee_levels else [],
+        "slippage_stress_levels": [
+            {
+                "multiplier": lv.get("multiplier", 1.0),
+                "oos_expectancy_r": lv.get("oos_expectancy_r", 0.0),
+                "edge_survives": lv.get("edge_survives", False),
+            }
+            for lv in slip_levels
+        ] if slip_levels else [],
         "combined_stress_edge_survives": combined,
         "break_even_cost_total_pct": cost_data.get(
             "break_even_cost_total_pct", 0.0
         ),
         "net_edge_after_costs": cost_data.get("net_edge_after_costs", 0.0),
         "cost_stress_verdict": cost_verdict,
-        "funding_deferred_block": cost_data.get("funding_deferred_block", ""),
     }
 
 
@@ -472,6 +485,7 @@ def _build_empirical_mht_control(
     hypotheses_per_fold: int = 1,
     oos_sharpe: float | None = None,
     oos_trade_count: int | None = None,
+    ledger: TrialLedger | None = None,
 ) -> dict:
     """Build multiple_hypothesis_control section from WFV results.
 
@@ -484,6 +498,10 @@ def _build_empirical_mht_control(
     Computes deflated Sharpe from actual OOS data when MHT is applied
     and sufficient OOS observations are available.
 
+    When a TrialLedger is provided, its dimensions are used for
+    tested_hypothesis_count and trial_count_disclosure. Otherwise the
+    function falls back to trial_context or fold-based computation.
+
     Args:
         wfv_results: Walk-forward validation results dict.
         fold_count: Number of walk-forward folds.
@@ -492,12 +510,38 @@ def _build_empirical_mht_control(
             computation (default None).
         oos_trade_count: Number of OOS trades for deflated Sharpe
             n_samples (default None).
+        ledger: Optional TrialLedger. When provided, its dimensions
+            override trial_context-based computation (default None).
 
     Returns:
         Dict with schema-aligned MHT control fields.
     """
     mht_data = wfv_results.get("multiple_hypothesis_control", {})
 
+    # When a TrialLedger is provided, use it directly
+    if ledger is not None:
+        # Respect pipeline's explicit correction_method
+        pipeline_method = mht_data.get("correction_method")
+        method = pipeline_method if pipeline_method and pipeline_method != "NONE_APPLIED" else "NONE_APPLIED"
+
+        section = build_mht_section_from_ledger(
+            ledger=ledger,
+            correction_method=method,
+            fold_count=fold_count,
+            oos_sharpe=oos_sharpe,
+            oos_trade_count=oos_trade_count,
+            alpha=0.05,
+            gamma=0.5,
+            rejected_candidate_count=mht_data.get("rejected_candidate_count", 0),
+        )
+        # Add mht_status for compatibility
+        section["mht_status"] = "APPLIED" if method != "NONE_APPLIED" else "NONE_APPLIED"
+        # Add tested_feature_count / tested_thesis_count from ledger
+        section["tested_feature_count"] = mht_data.get("tested_feature_count", ledger.num_feature_sets)
+        section["tested_thesis_count"] = mht_data.get("tested_thesis_count", ledger.num_theses)
+        return section
+
+    # Legacy path (no ledger) — keep existing behavior
     # Read trial_count from wfv_results trial_context (v0.25+)
     trial_context = wfv_results.get("trial_context", {})
     trial_count = trial_context.get("trial_count", 0)

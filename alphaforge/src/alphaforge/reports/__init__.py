@@ -1,5 +1,9 @@
 """AlphaForge report builder interfaces — schema-valid placeholder report generation."""
 
+from alphaforge.reports.mht import (
+    TrialLedger,
+    build_mht_section_from_ledger,
+)
 from alphaforge.reports.research import (
     analyze_label_distribution,
     analyze_no_trade_quality,
@@ -23,13 +27,11 @@ from alphaforge.reports.empirical import (
 from alphaforge.reports.builders import (
     build_alphaforge_research_report,
 )
-# Issue #123: active trade metrics
-from alphaforge.reports.metrics import (
-    compute_oos_metrics,
-)
 from alphaforge.constants import CANONICAL_V7_GATES, FORBIDDEN_GATE_NAMES
 
 __all__ = [
+    "TrialLedger",
+    "build_mht_section_from_ledger",
     "analyze_label_distribution",
     "analyze_no_trade_quality",
     "assemble_non_ml_research_context",
@@ -40,7 +42,6 @@ __all__ = [
     "build_minimal_handoff_package",
     "build_empirical_mode_research_report",
     "build_alphaforge_research_report",
-    "compute_oos_metrics",
     "CANONICAL_V7_GATES",
     "FORBIDDEN_GATE_NAMES",
 ]
