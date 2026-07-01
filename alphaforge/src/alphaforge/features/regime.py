@@ -23,7 +23,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Sequence
+from typing import Dict, List, Optional, Sequence
+import math
 
 import numpy as np
 
@@ -37,7 +38,38 @@ ATR_PERIOD: int = 14
 SLOPE_LOOKBACK: int = 10  # bars for linear regression slope
 RANGE_ATR_PCT_THRESHOLD: float = 0.02  # ATR/close < 2% => RANGE
 
+# ===========================================================================
+# Constants for Online Regime Detector (#161)
+# ===========================================================================
 
+# CUSUM change point detection constants
+DEFAULT_CUSUM_THRESHOLD: float = 5.0
+DEFAULT_CUSUM_DRIFT: float = 0.0
+
+# HMM streaming volatility classifier constants
+DEFAULT_HMM_VOL_WINDOW: int = 20
+DEFAULT_HMM_TRANS_PROB: float = 0.85
+DEFAULT_HMM_VOL_FACTOR: float = 2.0
+
+# Volatility regime constants
+DEFAULT_VOL_REGIME_WINDOW: int = 20
+DEFAULT_VOL_REGIME_LOW_PERCENTILE: float = 33.0
+DEFAULT_VOL_REGIME_HIGH_PERCENTILE: float = 67.0
+
+# Mode-specific SWING (4h primary)
+SWING_CUSUM_THRESHOLD: float = 5.0
+SWING_HMM_VOL_WINDOW: int = 20
+SWING_VOL_REGIME_WINDOW: int = 20
+
+# Mode-specific SCALP (1h primary)
+SCALP_CUSUM_THRESHOLD: float = 3.0
+SCALP_HMM_VOL_WINDOW: int = 15
+SCALP_VOL_REGIME_WINDOW: int = 15
+
+# Mode-specific AGGRESSIVE_SCALP (15m primary)
+AGGRESSIVE_SCALP_CUSUM_THRESHOLD: float = 2.0
+AGGRESSIVE_SCALP_HMM_VOL_WINDOW: int = 10
+AGGRESSIVE_SCALP_VOL_REGIME_WINDOW: int = 10
 # ===========================================================================
 # Enums and dataclasses
 # ===========================================================================
@@ -356,3 +388,577 @@ def regime_transitions(signals: Sequence[RegimeSignal]) -> int:
         if signals[i].regime != signals[i - 1].regime:
             transitions += 1
     return transitions
+
+# ===========================================================================
+# Online Regime Detector (#161) — compute functions and streaming class
+# ===========================================================================
+def _compute_log_return(close: np.ndarray) -> np.ndarray:
+    """Compute 1-bar log returns from close prices (internal helper).
+
+    r[0] = NaN, r[t] = ln(close[t] / close[t-1]) for t >= 1.
+    NaN at bar 0. NaN-safe division.
+
+    Causality: uses close[t] and close[t-1] only.
+    """
+    n = len(close)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < 2:
+        return result
+    with np.errstate(divide="ignore", invalid="ignore"):
+        result[1:] = np.log(close[1:] / close[:-1])
+    return result
+
+
+def _gaussian_pdf(x: float, mu: float, sigma: float) -> float:
+    """Unnormalized Gaussian PDF (no sqrt(2pi) factor).
+
+    Returns density at x for N(mu, sigma^2), excluding the
+    1/sqrt(2pi) constant since it cancels in likelihood ratios.
+    """
+    if sigma <= 1e-12:
+        return 1.0 if abs(x - mu) <= 1e-12 else 0.0
+    z = (x - mu) / sigma
+    if abs(z) > 30.0:
+        return 0.0
+    return math.exp(-0.5 * z * z) / sigma
+
+
+# ===========================================================================
+# Feature: CUSUM change point detection
+# ===========================================================================
+
+
+def compute_cusum_detector(
+    close: np.ndarray,
+    threshold: float = DEFAULT_CUSUM_THRESHOLD,
+    drift: float = DEFAULT_CUSUM_DRIFT,
+) -> Dict[str, np.ndarray]:
+    """CUSUM change point detection on log returns.
+
+    CUSUM (Cumulative Sum) detects shifts in the mean of log returns.
+    When the cumulative sum exceeds the threshold, a change point is
+    signaled and the corresponding sum resets to zero.
+
+    S_pos[t] = max(0, S_pos[t-1] + log_return[t] - drift)
+    S_neg[t] = min(0, S_neg[t-1] + log_return[t] - drift)
+
+    Args:
+        close: Close prices.
+        threshold: CUSUM decision interval. Higher = fewer alarms.
+        drift: Allowable slack (small positive). Zero by default.
+
+    Returns:
+        Dict with keys:
+          cusum_positive: Positive CUSUM accumulation (NaN at bar 0).
+          cusum_negative: Absolute value of negative CUSUM (NaN at bar 0).
+          cusum_signal:   1 when a change is detected, else 0 (NaN at bar 0).
+
+    Causality: CUSUM at t uses returns up to t. Cumulative by construction.
+    """
+    n = len(close)
+    nan_arr = np.full(n, np.nan, dtype=np.float64)
+    if n < 2:
+        return {
+            "cusum_positive": nan_arr,
+            "cusum_negative": nan_arr,
+            "cusum_signal": nan_arr,
+        }
+
+    log_ret = _compute_log_return(close)
+
+    cusum_pos = nan_arr.copy()
+    cusum_neg = nan_arr.copy()
+    cusum_sig = nan_arr.copy()
+
+    s_pos = 0.0
+    s_neg = 0.0
+
+    for i in range(1, n):
+        ret = log_ret[i] if not np.isnan(log_ret[i]) else 0.0
+
+        s_pos = max(0.0, s_pos + ret - drift)
+        s_neg = min(0.0, s_neg + ret - drift)
+
+        sig = 0.0
+        if s_pos > threshold:
+            sig = 1.0
+            s_pos = 0.0
+        elif s_neg < -threshold:
+            sig = 1.0
+            s_neg = 0.0
+
+        cusum_pos[i] = s_pos
+        cusum_neg[i] = abs(s_neg)
+        cusum_sig[i] = sig
+
+    return {
+        "cusum_positive": cusum_pos,
+        "cusum_negative": cusum_neg,
+        "cusum_signal": cusum_sig,
+    }
+
+
+# ===========================================================================
+# Feature: HMM streaming volatility state classification
+# ===========================================================================
+
+
+def compute_hmm_vol_state(
+    close: np.ndarray,
+    window: int = DEFAULT_HMM_VOL_WINDOW,
+    trans_prob: float = DEFAULT_HMM_TRANS_PROB,
+    vol_factor: float = DEFAULT_HMM_VOL_FACTOR,
+) -> Dict[str, np.ndarray]:
+    """Streaming 2-state volatility classifier via HMM-like forward algorithm.
+
+    Uses adaptive thresholding on absolute log returns with a forward-pass
+    probability update that mimics the HMM forward algorithm:
+
+      State 0: Low volatility (small absolute returns).
+      State 1: High volatility (large absolute returns).
+
+    State parameters are initialized from the first ``window`` bars, then
+    updated adaptively via exponential smoothing weighted by state posterior.
+
+    Args:
+        close: Close prices.
+        window: Initialization and adaptation window.
+        trans_prob: HMM self-transition probability P(same | previous).
+            Higher values produce more temporally coherent state sequences.
+        vol_factor: Multiplicative separation between high and low vol.
+
+    Returns:
+        Dict with keys:
+          hmm_vol_state:        Most likely state (0 = low vol, 1 = high vol).
+          hmm_vol_probability:  Smoothed probability of high volatility state.
+
+        First ``window`` bars are NaN (need window returns for initialization).
+
+    Causality: state at t uses returns up to t. Forward-pass only.
+    """
+    n = len(close)
+    nan_state = np.full(n, np.nan, dtype=np.float64)
+    nan_prob = np.full(n, np.nan, dtype=np.float64)
+
+    if n < window + 1:
+        return {"hmm_vol_state": nan_state, "hmm_vol_probability": nan_prob}
+
+    log_ret = _compute_log_return(close)
+
+    vol_state = np.full(n, np.nan, dtype=np.float64)
+    vol_prob = np.full(n, np.nan, dtype=np.float64)
+
+    # --- Initialize from first ``window`` returns ---
+    init_idx = window + 1  # log_ret[window] is the (window)th return
+    init_abs = np.abs(log_ret[1:init_idx])
+
+    low_vol = float(np.percentile(init_abs, 25.0))
+    high_vol = max(
+        float(np.percentile(init_abs, 75.0)) * 1.5,
+        low_vol * vol_factor,
+    )
+    if high_vol <= low_vol:
+        high_vol = low_vol * vol_factor
+
+    prob_high = 0.5
+
+    # Bars 0..window remain NaN (warmup). Classification starts at window+1.
+    # Seed prob_high using the first non-init return's likelihood for temporal coherence.
+    first_ret = log_ret[init_idx]
+    like_high = _gaussian_pdf(first_ret, 0.0, high_vol)
+    like_low = _gaussian_pdf(first_ret, 0.0, low_vol)
+    total = like_high + like_low
+    prob_high = like_high / total if total > 0 else 0.5
+
+    # --- Streaming classification ---
+    alpha = 1.0 - trans_prob  # adaptation rate
+
+    for i in range(init_idx, n):
+        like_high = _gaussian_pdf(log_ret[i], 0.0, high_vol)
+        like_low = _gaussian_pdf(log_ret[i], 0.0, low_vol)
+
+        # Prior from transition matrix
+        prior_high = (
+            prob_high * trans_prob + (1.0 - prob_high) * (1.0 - trans_prob)
+        )
+        prior_low = (
+            (1.0 - prob_high) * trans_prob + prob_high * (1.0 - trans_prob)
+        )
+
+        # Posterior
+        post_numer = like_high * prior_high
+        post_low_numer = like_low * prior_low
+        total = post_numer + post_low_numer
+        prob_high = post_numer / total if total > 0 else 0.5
+
+        vol_prob[i] = prob_high
+        vol_state[i] = 1.0 if prob_high > 0.5 else 0.0
+
+        # Adapt volatility estimates weighted by state posterior
+        if prob_high > 0.5:
+            high_vol = math.sqrt(
+                (1.0 - alpha) * high_vol ** 2 + alpha * log_ret[i] ** 2
+            )
+        else:
+            low_vol = math.sqrt(
+                (1.0 - alpha) * low_vol ** 2 + alpha * log_ret[i] ** 2
+            )
+
+        if high_vol <= low_vol:
+            high_vol = low_vol * vol_factor
+
+    return {
+        "hmm_vol_state": vol_state,
+        "hmm_vol_probability": vol_prob,
+    }
+
+
+# ===========================================================================
+# Feature: Volatility regime classification (LOW/MEDIUM/HIGH)
+# ===========================================================================
+
+
+def compute_volatility_regime(
+    close: np.ndarray,
+    window: int = DEFAULT_VOL_REGIME_WINDOW,
+    low_percentile: float = DEFAULT_VOL_REGIME_LOW_PERCENTILE,
+    high_percentile: float = DEFAULT_VOL_REGIME_HIGH_PERCENTILE,
+) -> np.ndarray:
+    """Classify per-bar volatility into LOW (0), MEDIUM (1), or HIGH (2).
+
+    At each bar t, compares the current absolute log return to percentiles
+    of absolute returns over the preceding ``window`` bars:
+
+      |r[t]| <= P_low   -> LOW (0)
+      |r[t]| >= P_high  -> HIGH (2)
+      otherwise          -> MEDIUM (1)
+
+    Args:
+        close: Close prices.
+        window: Rolling lookback for percentile estimation.
+        low_percentile: Percentile for LOW boundary.
+        high_percentile: Percentile for HIGH boundary.
+
+    Returns:
+        numpy array of dtype float64 with values 0.0, 1.0, 2.0 or NaN.
+        First ``window`` bars are NaN (need window+1 for first return).
+
+    Causality: at t uses returns [t-window+1 .. t] only.
+    """
+    n = len(close)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < window + 1:
+        return result
+
+    log_ret = _compute_log_return(close)
+
+    for i in range(window, n):
+        seg = log_ret[i - window + 1 : i + 1]
+        valid = seg[~np.isnan(seg)]
+        if len(valid) < 5:
+            continue
+
+        abs_ret = np.abs(valid)
+        low_thresh = float(np.percentile(abs_ret, low_percentile))
+        high_thresh = float(np.percentile(abs_ret, high_percentile))
+
+        current_abs = abs_ret[-1]
+
+        if current_abs <= low_thresh:
+            result[i] = 0.0
+        elif current_abs >= high_thresh:
+            result[i] = 2.0
+        else:
+            result[i] = 1.0
+
+    return result
+
+
+# ===========================================================================
+# OnlineRegimeDetector class (stateful per-bar streaming)
+# ===========================================================================
+
+
+class OnlineRegimeDetector:
+    """Stateful online regime detector for per-bar streaming use.
+
+    Combines three detection methods in a single streaming pass:
+      - CUSUM change point detection on log returns
+      - HMM-like streaming 2-state volatility classification
+      - Per-bar volatility regime estimation (LOW/MEDIUM/HIGH)
+
+    Maintains internal state across update() calls. The first N bars
+    (determined by max warmup window) produce NaN results during warmup.
+
+    Usage:
+        detector = OnlineRegimeDetector(cusum_threshold=5.0)
+        for bar in bars:
+            state = detector.update(close=bar.close)
+
+    Attributes match the parameter names of the compute functions.
+    """
+
+    def __init__(
+        self,
+        cusum_threshold: float = DEFAULT_CUSUM_THRESHOLD,
+        cusum_drift: float = DEFAULT_CUSUM_DRIFT,
+        hmm_vol_window: int = DEFAULT_HMM_VOL_WINDOW,
+        hmm_trans_prob: float = DEFAULT_HMM_TRANS_PROB,
+        hmm_vol_factor: float = DEFAULT_HMM_VOL_FACTOR,
+        vol_regime_window: int = DEFAULT_VOL_REGIME_WINDOW,
+        vol_regime_low_pct: float = DEFAULT_VOL_REGIME_LOW_PERCENTILE,
+        vol_regime_high_pct: float = DEFAULT_VOL_REGIME_HIGH_PERCENTILE,
+    ):
+        self.cusum_threshold = cusum_threshold
+        self.cusum_drift = cusum_drift
+        self.hmm_vol_window = hmm_vol_window
+        self.hmm_trans_prob = hmm_trans_prob
+        self.hmm_vol_factor = hmm_vol_factor
+        self.vol_regime_window = vol_regime_window
+        self.vol_regime_low_pct = vol_regime_low_pct
+        self.vol_regime_high_pct = vol_regime_high_pct
+
+        # Warmup: need max(window) + 1 bars for initial vol estimates
+        self._warmup = max(hmm_vol_window, vol_regime_window) + 2
+
+        # Rolling return buffer for vol regime
+        self._prev_close: Optional[float] = None
+        self._returns: List[float] = []
+        self._abs_returns: List[float] = []
+        self._n_processed = 0
+
+        # CUSUM state
+        self._s_pos = 0.0
+        self._s_neg = 0.0
+
+        # HMM state
+        self._hmm_initialized = False
+        self._prob_high = 0.5
+        self._low_vol = 1.0
+        self._high_vol = 2.0
+        self._alpha = 1.0 - hmm_trans_prob
+
+        # Vol regime state
+        self._vol_regime_initialized = False
+        self._vol_low_thresh = 0.0
+        self._vol_high_thresh = 0.0
+
+    def update(
+        self, close: float, high: float = 0.0, low: float = 0.0
+    ) -> Dict[str, float]:
+        """Process one bar and return current regime state.
+
+        Args:
+            close: Close price of the current bar.
+            high: High price (reserved, not currently used).
+            low: Low price (reserved, not currently used).
+
+        Returns:
+            Dict with keys: cusum_positive, cusum_negative, cusum_signal,
+            hmm_vol_state, hmm_vol_probability, volatility_regime.
+            All values are NaN during the warmup period.
+        """
+        result: Dict[str, float] = {
+            "cusum_positive": np.nan,
+            "cusum_negative": np.nan,
+            "cusum_signal": np.nan,
+            "hmm_vol_state": np.nan,
+            "hmm_vol_probability": np.nan,
+            "volatility_regime": np.nan,
+        }
+
+        # Compute log return
+        log_ret: Optional[float] = None
+        if self._prev_close is not None and self._prev_close > 0:
+            log_ret = math.log(close / self._prev_close)
+            self._returns.append(log_ret)
+            self._abs_returns.append(abs(log_ret))
+
+        self._prev_close = close
+        self._n_processed += 1
+
+        if log_ret is None or self._n_processed < 2:
+            return result
+
+        # --- CUSUM (starts after first return) ---
+        self._s_pos = max(0.0, self._s_pos + log_ret - self.cusum_drift)
+        self._s_neg = min(0.0, self._s_neg + log_ret - self.cusum_drift)
+
+        sig = 0.0
+        if self._s_pos > self.cusum_threshold:
+            sig = 1.0
+            self._s_pos = 0.0
+        elif self._s_neg < -self.cusum_threshold:
+            sig = 1.0
+            self._s_neg = 0.0
+
+        result["cusum_positive"] = self._s_pos
+        result["cusum_negative"] = abs(self._s_neg)
+        result["cusum_signal"] = sig
+
+        # --- HMM and volatility regime need warmup ---
+        if self._n_processed < self._warmup:
+            return result
+
+        # --- Initialize HMM from warmup data ---
+        if not self._hmm_initialized:
+            init_abs = np.array(
+                self._abs_returns[: self.hmm_vol_window], dtype=np.float64
+            )
+            self._low_vol = float(np.percentile(init_abs, 25.0))
+            high_pct = float(np.percentile(init_abs, 75.0)) * 1.5
+            self._high_vol = max(
+                high_pct, self._low_vol * self.hmm_vol_factor
+            )
+            if self._high_vol <= self._low_vol:
+                self._high_vol = self._low_vol * self.hmm_vol_factor
+            self._hmm_initialized = True
+
+        # --- HMM forward update ---
+        like_high = _gaussian_pdf(log_ret, 0.0, self._high_vol)
+        like_low = _gaussian_pdf(log_ret, 0.0, self._low_vol)
+
+        prior_high = (
+            self._prob_high * self.hmm_trans_prob
+            + (1.0 - self._prob_high) * (1.0 - self.hmm_trans_prob)
+        )
+        prior_low = (
+            (1.0 - self._prob_high) * self.hmm_trans_prob
+            + self._prob_high * (1.0 - self.hmm_trans_prob)
+        )
+
+        post_numer = like_high * prior_high
+        post_low_numer = like_low * prior_low
+        total = post_numer + post_low_numer
+        self._prob_high = post_numer / total if total > 0 else 0.5
+
+        result["hmm_vol_state"] = 1.0 if self._prob_high > 0.5 else 0.0
+        result["hmm_vol_probability"] = self._prob_high
+
+        # Adapt volatility estimates
+        if self._prob_high > 0.5:
+            self._high_vol = math.sqrt(
+                (1.0 - self._alpha) * self._high_vol ** 2
+                + self._alpha * log_ret ** 2
+            )
+        else:
+            self._low_vol = math.sqrt(
+                (1.0 - self._alpha) * self._low_vol ** 2
+                + self._alpha * log_ret ** 2
+            )
+
+        if self._high_vol <= self._low_vol:
+            self._high_vol = self._low_vol * self.hmm_vol_factor
+
+        # --- Volatility regime ---
+        if not self._vol_regime_initialized:
+            init_abs_arr = np.array(
+                self._abs_returns[: self.vol_regime_window], dtype=np.float64
+            )
+            self._vol_low_thresh = float(
+                np.percentile(init_abs_arr, self.vol_regime_low_pct)
+            )
+            self._vol_high_thresh = float(
+                np.percentile(init_abs_arr, self.vol_regime_high_pct)
+            )
+            self._vol_regime_initialized = True
+        else:
+            recent = np.array(
+                self._abs_returns[-self.vol_regime_window:], dtype=np.float64
+            )
+            if len(recent) >= 5:
+                self._vol_low_thresh = float(
+                    np.percentile(recent, self.vol_regime_low_pct)
+                )
+                self._vol_high_thresh = float(
+                    np.percentile(recent, self.vol_regime_high_pct)
+                )
+
+        cur_abs = abs(log_ret)
+        if cur_abs <= self._vol_low_thresh:
+            result["volatility_regime"] = 0.0
+        elif cur_abs >= self._vol_high_thresh:
+            result["volatility_regime"] = 2.0
+        else:
+            result["volatility_regime"] = 1.0
+
+        return result
+
+    def reset(self) -> None:
+        """Reset all internal state to initial values."""
+        self._prev_close = None
+        self._returns.clear()
+        self._abs_returns.clear()
+        self._n_processed = 0
+        self._s_pos = 0.0
+        self._s_neg = 0.0
+        self._hmm_initialized = False
+        self._prob_high = 0.5
+        self._low_vol = 1.0
+        self._high_vol = 2.0
+        self._vol_regime_initialized = False
+
+
+# ===========================================================================
+# Regime Group compute function
+# ===========================================================================
+
+
+def compute_regime_group(
+    close: np.ndarray,
+    high: np.ndarray,
+    low: np.ndarray,
+    cusum_threshold: float = SWING_CUSUM_THRESHOLD,
+    cusum_drift: float = DEFAULT_CUSUM_DRIFT,
+    hmm_vol_window: int = SWING_HMM_VOL_WINDOW,
+    hmm_trans_prob: float = DEFAULT_HMM_TRANS_PROB,
+    hmm_vol_factor: float = DEFAULT_HMM_VOL_FACTOR,
+    vol_regime_window: int = SWING_VOL_REGIME_WINDOW,
+    vol_regime_low_pct: float = DEFAULT_VOL_REGIME_LOW_PERCENTILE,
+    vol_regime_high_pct: float = DEFAULT_VOL_REGIME_HIGH_PERCENTILE,
+) -> Dict[str, np.ndarray]:
+    """Compute all Online Regime Detector features (6 total).
+
+    Returns dict with keys:
+      - cusum_positive:      Positive CUSUM accumulation
+      - cusum_negative:      Absolute negative CUSUM accumulation
+      - cusum_signal:        CUSUM change point signal (0/1)
+      - hmm_vol_state:       HMM volatility state (0=low, 1=high)
+      - hmm_vol_probability: HMM high-vol state probability [0, 1]
+      - volatility_regime:   Volatility regime (0=LOW, 1=MEDIUM, 2=HIGH)
+
+    All arrays are same length as input. NaN at start for insufficient
+    lookback windows.
+
+    Args:
+        close: Close prices.
+        high: High prices (reserved).
+        low: Low prices (reserved).
+        cusum_threshold: CUSUM decision interval (mode-specific).
+        cusum_drift: CUSUM drift allowance.
+        hmm_vol_window: HMM vol state init and adaptation window.
+        hmm_trans_prob: HMM self-transition probability.
+        hmm_vol_factor: High/low vol separation factor.
+        vol_regime_window: Volatility regime lookback window.
+        vol_regime_low_pct: LOW volatility percentile boundary.
+        vol_regime_high_pct: HIGH volatility percentile boundary.
+
+    Returns:
+        Dict mapping feature name to numpy array of shape (n_bars,).
+    """
+    cusum = compute_cusum_detector(close, cusum_threshold, cusum_drift)
+    hmm = compute_hmm_vol_state(
+        close, hmm_vol_window, hmm_trans_prob, hmm_vol_factor
+    )
+    vol = compute_volatility_regime(
+        close, vol_regime_window, vol_regime_low_pct, vol_regime_high_pct
+    )
+
+    return {
+        "cusum_positive": cusum["cusum_positive"],
+        "cusum_negative": cusum["cusum_negative"],
+        "cusum_signal": cusum["cusum_signal"],
+        "hmm_vol_state": hmm["hmm_vol_state"],
+        "hmm_vol_probability": hmm["hmm_vol_probability"],
+        "volatility_regime": vol,
+    }
