@@ -46,6 +46,9 @@ MODE_CONFIG = {
     },
 }
 
+# Confidence threshold for trade filtering: if max softprob < this, force NO_TRADE
+CONFIDENCE_THRESHOLD = 0.55
+
 
 # ---------------------------------------------------------------------------
 # Synthetic data generator (fallback when no real data)
@@ -208,12 +211,17 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, dic
                 break
             short_gross = (entry_price - future_close) / entry_price
 
-        # Pick best action
-        no_trade_gross = 0.0
-        if long_gross > short_gross and long_gross > no_trade_gross:
+        # Pick best action — COST-AWARE: subtract round-trip fee from gross returns
+        # Round-trip cost = fee_pct * 2 (entry + exit)
+        round_trip_cost = fee_pct * 2 / 100  # fee_pct is 0.04, so this is 0.0008
+        net_long = long_gross - round_trip_cost
+        net_short = short_gross - round_trip_cost
+        no_trade_net = 0.0
+
+        if net_long > net_short and net_long > no_trade_net:
             best = "LONG_NOW"
-            best_r = long_gross
-        elif short_gross > long_gross and short_gross > no_trade_gross:
+            best_r = long_gross  # store gross for analysis, but decision uses net
+        elif net_short > net_long and net_short > no_trade_net:
             best = "SHORT_NOW"
             best_r = short_gross
         else:
@@ -255,16 +263,20 @@ def compute_features_selected(ohlcv: dict, mode: str, feature_groups: Optional[L
     Args:
         ohlcv: OHLCV data dict.
         mode: Trading mode.
-        feature_groups: If None or ["all"], compute all groups.
+        feature_groups: List of group names (e.g. ["returns", "volatility", "atr", "momentum", "breakout"]).
+            If None or ["all"], compute all groups.
 
     Returns (X, feature_names).
     """
     from alphaforge.features.pipeline import compute_features
 
-    fm = compute_features(ohlcv, mode=mode)
+    if feature_groups is None or feature_groups == ["all"]:
+        fm = compute_features(ohlcv, mode=mode)
+    else:
+        fm = compute_features(ohlcv, mode=mode, feature_groups=feature_groups)
     feat_names = sorted(fm.features.keys())
     X = np.column_stack([fm.features[k] for k in feat_names])
-    logger.info("Features: %d columns from mode=%s", X.shape[1], mode)
+    logger.info("Features: %d columns from mode=%s groups=%s", X.shape[1], mode, feature_groups or "all")
     return X, feat_names
 
 
@@ -338,7 +350,13 @@ def walk_forward_validate(
         fold_result = trainer.train(X_train, y_train)
         dval = xgb.DMatrix(X_val)
         y_pred_prob = fold_result.model.predict(dval)
+        y_pred_prob_max = np.max(y_pred_prob, axis=1)
         y_pred = np.argmax(y_pred_prob, axis=1)
+
+        # Apply confidence threshold: force NO_TRADE when model is uncertain
+        low_conf_count = int(np.sum(y_pred_prob_max < CONFIDENCE_THRESHOLD))
+        low_conf_pct = float(low_conf_count / len(y_pred_prob_max) * 100)
+        y_pred[y_pred_prob_max < CONFIDENCE_THRESHOLD] = 2  # NO_TRADE
 
         val_accuracy = float(np.mean(y_pred == y_val))
         train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
@@ -377,6 +395,8 @@ def walk_forward_validate(
             "no_trade_actual": int(true_counts.get(2, 0)),
             "confusion_matrix": cm.tolist(),
             "r_expectancy": r_expectancy_val,
+            "low_conf_count": low_conf_count,
+            "low_conf_pct": round(low_conf_pct, 2),
             "training_duration_seconds": fold_result.training_duration_seconds,
         })
 
@@ -452,6 +472,7 @@ def collect_metrics(
     wfv_results: List[dict],
     X: np.ndarray,
     feature_names: List[str],
+    fee_pct: float = 0.04,
 ) -> dict:
     """Collect and aggregate training metrics."""
     val_accs = [r["val_accuracy"] for r in wfv_results]
@@ -471,6 +492,16 @@ def collect_metrics(
     total_decisions = total_active + total_no_trade
     exposure_pct = (total_active / total_decisions * 100) if total_decisions > 0 else 0.0
 
+    # Confidence threshold metrics
+    low_conf_counts = [r.get("low_conf_count", 0) for r in wfv_results]
+    total_low_conf = sum(low_conf_counts)
+    total_val_samples = sum(r["n_val"] for r in wfv_results)
+    low_conf_rate = float(total_low_conf / total_val_samples * 100) if total_val_samples > 0 else 0.0
+
+    # Cost decomposition
+    round_trip_cost_bps = fee_pct * 2  # bps
+    round_trip_cost_r = fee_pct * 2 / 100  # R units
+
     return {
         "mode": mode.upper(),
         "accuracy": round(accuracy, 4),
@@ -488,6 +519,13 @@ def collect_metrics(
         "total_short": total_short,
         "total_no_trade": total_no_trade,
         "exposure_pct": round(exposure_pct, 2),
+        "confidence_threshold": CONFIDENCE_THRESHOLD,
+        "low_conf_rate_pct": round(low_conf_rate, 2),
+        "cost_decomposition": {
+            "fee_pct": fee_pct,
+            "round_trip_cost_bps": round_trip_cost_bps,
+            "round_trip_cost_r": round_trip_cost_r,
+        },
         "features": feature_names,
     }
 
@@ -499,7 +537,7 @@ def collect_metrics(
 def main():
     parser = argparse.ArgumentParser(description="AlphaForge Full Training Pipeline")
     parser.add_argument("--mode", default="SWING", choices=["SWING", "SCALP", "AGGRESSIVE_SCALP"])
-    parser.add_argument("--features", default="all", help="Feature groups (default: all)")
+    parser.add_argument("--features", default="all", help="Feature groups: comma-separated (returns,volatility,atr,momentum,volume,breakout,orderbook,regime,candle_pattern) or 'all'")
     parser.add_argument("--symbols", default="BTCUSDT,ETHUSDT,SOLUSDT", help="Comma-separated symbols")
     parser.add_argument("--synthetic", action="store_true", help="Force synthetic data")
     parser.add_argument("--folds", type=int, default=6, help="WFV folds")
@@ -539,7 +577,12 @@ def main():
 
     # Step 3: Compute features
     print("\n[3/6] Computing features...")
-    X, feat_names = compute_features_selected(ohlcv, mode)
+    feature_groups_arg = args.features.lower()
+    if feature_groups_arg == "all":
+        feature_groups = None
+    else:
+        feature_groups = [g.strip() for g in feature_groups_arg.split(",")]
+    X, feat_names = compute_features_selected(ohlcv, mode, feature_groups=feature_groups)
     print(f"  {X.shape[1]} feature columns, {X.shape[0]} rows")
 
     # Align lengths (labels are shorter due to max_hold lookahead)
@@ -579,7 +622,8 @@ def main():
 
     # Step 6: Collect metrics
     print("\n[6/6] Collecting metrics...")
-    metrics = collect_metrics(wfv_results, X_clean, feat_names)
+    fee_pct = cfg.get("ambiguity_margin_r", 0.04) if False else 0.04  # keep at 4bps
+    metrics = collect_metrics(wfv_results, X_clean, feat_names, fee_pct=fee_pct)
 
     print(f"\n{'='*60}")
     print(f"  TRAINING RESULTS — {mode}")
@@ -597,6 +641,10 @@ def main():
     print(f"  Active Trades:               {metrics['total_active_trades']}")
     print(f"  LONG / SHORT / NO_TRADE:     {metrics['total_long']} / {metrics['total_short']} / {metrics['total_no_trade']}")
     print(f"  Exposure %:                  {metrics['exposure_pct']:.1f}%")
+    print(f"  Confidence Threshold:        {metrics['confidence_threshold']}")
+    print(f"  Low Confidence Rate:         {metrics['low_conf_rate_pct']:.1f}%")
+    cd = metrics['cost_decomposition']
+    print(f"  Fee (bps):                   {cd['fee_pct']} ({cd['round_trip_cost_bps']} bps round-trip)")
     print(f"{'='*60}\n")
 
     # Save report if requested

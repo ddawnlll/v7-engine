@@ -1598,6 +1598,7 @@ def compute_features(
     ohlcv_data: dict,
     mode: str = "SWING",
     timeframe_stack: Optional[dict] = None,
+    feature_groups: Optional[List[str]] = None,
 ) -> FeatureMatrix:
     """Main feature pipeline entry point.
 
@@ -1767,6 +1768,76 @@ def compute_features(
 
     # Lead-Lag group is DEFERRED — not computed, no columns added.
     # PERPETUAL_FUNDING group is DEFERRED — requires external funding data feed, not OHLCV-only.
+
+    # Filter to requested feature groups if specified
+    if feature_groups is not None:
+        # Build a reverse mapping: feature name prefix -> group name
+        # Group prefixes are known from each group's output key conventions
+        GROUP_PREFIX_MAP = {
+            "log_return": "returns",
+            "return_": "returns",
+            "realized_vol": "volatility",
+            "high_low_range": "volatility",
+            "garman_klass": "volatility",
+            "parkinson_vol": "volatility",
+            "atr_": "atr",
+            "momentum_": "momentum",
+            "roc_": "momentum",
+            "rsi_": "momentum",
+            "macd": "momentum",
+            "volume_": "volume",
+            "vwap_": "volume",
+            "obv_": "volume",
+            "bb_": "breakout",
+            "highest_": "breakout",
+            "lowest_": "breakout",
+            "range_": "breakout",
+            "spread_": "orderbook",
+            "volume_imbalance": "orderbook",
+            "trade_intensity": "orderbook",
+            "amihud": "orderbook",
+            "roll_spread": "orderbook",
+            "microstructure": "orderbook",
+            "serial_correlation": "orderbook",
+            "vpin": "orderbook",
+            "price_impact": "orderbook",
+            "microprice": "orderbook",
+            "liquidity_vacuum": "orderbook",
+            "depth_ratio": "orderbook",
+            "obi": "orderbook",
+            "stoikov": "orderbook",
+            "ofi": "orderbook",
+            "vamp": "orderbook",
+            "quoted_spread": "orderbook",
+            "vwap_mid": "orderbook",
+            "trade_count": "orderbook",
+            "volume_concentration": "orderbook",
+            "cusum": "regime",
+            "hmm_": "regime",
+            "vol_regime": "regime",
+            "doji": "candle_pattern",
+            "engulfing": "candle_pattern",
+            "hammer": "candle_pattern",
+            "shooting_star": "candle_pattern",
+            "three_white": "candle_pattern",
+            "three_black": "candle_pattern",
+            "morning_star": "candle_pattern",
+            "evening_star": "candle_pattern",
+            "harami": "candle_pattern",
+            "piercing": "candle_pattern",
+            "dark_cloud": "candle_pattern",
+            "candle_": "candle_pattern",
+        }
+        filtered = {}
+        for name, arr in features.items():
+            matched_group = None
+            for prefix, group in GROUP_PREFIX_MAP.items():
+                if name.startswith(prefix):
+                    matched_group = group
+                    break
+            if matched_group is None or matched_group in feature_groups:
+                filtered[name] = arr
+        features = filtered
 
     # Verify array length consistency
     for name, arr in features.items():
