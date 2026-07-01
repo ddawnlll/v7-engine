@@ -1,0 +1,56 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: >
+  Replaced grid search with nested WFV autotune engine in alphaforge/src/alphaforge/tuning/.
+  Implements inner fold tuning, outer fold validation, multi-objective economic scoring,
+  MHT-corrected candidate selection, NO_TRADE collapse penalty, min active trade,
+  cost survival, and fold stability constraints.
+files_changed:
+  - alphaforge/src/alphaforge/tuning/__init__.py
+  - alphaforge/src/alphaforge/tuning/autotune.py
+  - alphaforge/tests/test_autotune.py
+  - v7/docs/roadmap.md
+decisions_locked:
+  - design: "Nested WFV autotune architecture"
+    status: "LOCKED_INITIAL_BASELINE"
+    detail: >
+      Outer fold = chronological anchored split (train + held-out OOS).
+      Inner fold = walk-forward grid search over XGBoost hyperparameters.
+      Multi-objective score = weighted combo of expectancy_R, Sharpe,
+      log(active_trades), fold_stability + NO_TRADE collapse penalty.
+      Bonferroni MHT correction (rank-based approximate).
+  - design: "Multi-objective scoring formula"
+    status: "LOCKED_INITIAL_BASELINE"
+    detail: >
+      Primary objective: cost_adjusted_active_expectancy_R (weight 1.0).
+      Secondary: Sharpe (0.5), log(active_trades)(0.2), fold_stability(0.3).
+      NO_TRADE collapse penalty: -2.0 when NO_TRADE ratio >= 60%.
+      Cost survival bonus: +0.1 when edge survives baseline costs.
+  - design: "Constraint system"
+    status: "LOCKED_INITIAL_BASELINE"
+    detail: >
+      Hard filters: min_active_trades, min_cost_survival_ratio, min_fold_stability.
+      Only candidates passing ALL constraints proceed to outer fold evaluation.
+remaining_holds:
+  - issue: "Outer fold construction may need refinement for production-scale data"
+    status: "HOLD"
+    release: "Empirical validation on production data"
+  - issue: "MHT correction is approximate (Bonferroni rank-based)"
+    status: "DEFERRED"
+    detail: "Proper p-value computation would require bootstrapping"
+  - issue: "Grid search is exhaustive"
+    status: "DEFERRED"
+    detail: "Random/search-based sampling may be more efficient for large grids"
+safe_next_step: >
+  Integrate the autotune engine into the training pipeline as a replacement for
+  manual hyperparameter selection. Validate against mode-specific production data
+  to calibrate constraint thresholds.
+commands_run:
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_autotune.py -q --tb=short --timeout=120"
+evidence:
+  - "44/44 autotune tests pass"
+  - "Implements nested WFV with inner/outer fold separation"
+  - "Multi-objective scoring with NO_TRADE collapse penalty"
+  - "MHT correction applied"
+  - "HyperparameterGrid: 4^5 * 3 * 2^3 = 24,576 combinations"

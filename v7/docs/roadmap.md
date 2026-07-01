@@ -170,6 +170,34 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
+## #118 — Autotune Engine with Nested WFV (2026-07-01)
+
+**Issue:** #118 — Replace grid search with nested walk-forward validation autotune engine.
+
+**What changed:**
+- Created `alphaforge/src/alphaforge/tuning/` subpackage with `__init__.py` and `autotune.py`
+- Implemented `NestedWFVAutotune` class with:
+  - Outer fold construction (chronological anchored splits)
+  - Inner fold grid search over XGBoost hyperparameters (max_depth, learning_rate, n_estimators, subsample, colsample_bytree, min_child_weight, gamma, reg_alpha, reg_lambda)
+  - Multi-objective scoring (primary: cost_adjusted_active_expectancy_R, secondary: Sharpe, active trade count, fold stability)
+  - NO_TRADE collapse penalty (harsh penalty when NO_TRADE ratio exceeds 60%)
+  - Hard constraints: min active trades, cost survival, fold stability
+  - MHT-corrected candidate selection (Bonferroni approximation)
+- Created `HyperparameterGrid`, `NestedWFVConfig`, `InnerTrialResult`, `OuterFoldResult`, `AutotuneResult` dataclasses
+- Created convenience function `run_nested_wfv_autotune()`
+- Created `alphaforge/tests/test_autotune.py` with 44 tests covering dataclass construction, input validation, scoring, fold building, label encoding, and end-to-end integration
+
+**Design lock status:** LOCKED_INITIAL_BASELINE — conservative starting point for hyperparameter tuning with nested WFV. Open to recalibration after first empirical evidence.
+
+**Remaining holds:**
+- Outer fold construction may need refinement for production-scale data (HOLD — empirical)
+- MHT correction is approximate (Bonferroni rank-based) — proper p-value computation would require bootstrapping (DEFERRED)
+- Grid search is exhaustive — random/search-based sampling may be more efficient for large grids (DEFERRED)
+
+**Evidence:** 44/44 autotune tests pass. ACCP report at `reports/accp/issue-118.yaml`.
+
+---
+
 ## TR-08 — Final Training Readiness Audit — v0.1 Milestone COMPLETE (2026-06-26)
 
 **Issue:** #12 — Final audit gate. Verify all TR-01 through TR-07 gates have evidence, run full test suite, update roadmap.
