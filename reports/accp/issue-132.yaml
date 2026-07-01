@@ -1,0 +1,39 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: |
+  Implemented build_empirical_handoff_package() that consumes a real
+  ModeResearchReport and produces a schema-valid V7HandoffPackage with:
+  - G0-G10 gate evidence extracted from report data with proper statuses
+    (PASS/PENDING/NOT_EVALUATED) based on evidence quality
+  - recommended_status mapped from verdict:
+    CANDIDATE_FOR_V7_GATES -> PROMOTION_CANDIDATE
+    BASELINE_VALID/CONTINUE_RESEARCH/REJECT -> REVIEW_REQUIRED
+  - Full lineage chain derived from report metadata (data_refs,
+    feature_set_id, label_dataset_id, simulation_profile_id)
+  - 12 rejection rules applied in rejection_rules_applied
+  - Schema validation against v7_handoff_package.schema.json
+  - Exported from alphaforge.handoff package
+files_changed:
+  - "alphaforge/src/alphaforge/handoff/__init__.py"
+  - "alphaforge/src/alphaforge/handoff/builders.py"
+  - "alphaforge/tests/test_handoff_builder.py"
+decisions_locked:
+  - "Handoff builder semantics: LOCKED_INITIAL_BASELINE"
+  - "Gate status mapping (PASS/PENDING/NOT_EVALUATED based on evidence quality): LOCKED"
+  - "Verdict to recommended_status mapping: LOCKED"
+  - "12 rejection rules applied: LOCKED"
+  - "Lineage chain derivation from report metadata: LOCKED"
+remaining_holds:
+  - "Handoff package not yet consumed by V7 pipeline integration (HOLD — requires P0.9A+ infrastructure)"
+  - "Real profitability evidence not available to populate handoff gates (HOLD)"
+  - "G1-G6 still use empirical defaults until real data flows through (HOLD)"
+safe_next_step: "Integrate handoff package into real_training.py pipeline output — produce V7HandoffPackage alongside report"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=60"
+evidence:
+  - "lib/tests/ + integration/tests/ + simulation/tests/: 511 passed, 2 skipped"
+  - "alphaforge/tests/: 1109 passed, 1 skipped"
+  - "37 new handoff builder tests added and passing"
+  - "Commit: ed347da"
