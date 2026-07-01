@@ -1,0 +1,26 @@
+{
+  "index_version": "1.0.0",
+  "created_at": "2026-07-01T05:52:39Z",
+  "updated_at": "2026-07-01T05:52:39Z",
+  "runs": [
+    {
+      "run_id": "run-empirical-swing-001",
+      "mode": "SWING",
+      "timestamp": "2026-07-01T05:52:39Z",
+      "canonical_report_path": "/home/dresden/src/v7-engine/data/reports/swing/mode_research_report_20260701T085239.json",
+      "candidate_count": 0,
+      "trial_count": 750,
+      "verdict": "REJECT",
+      "artifact_paths": [
+        "/home/dresden/src/v7-engine/data/reports/swing/mode_research_report_20260701T085239.json",
+        "/home/dresden/src/v7-engine/artifacts/pipeline/reports/alphaforge_swing_20260701T085239.json"
+      ],
+      "superseded_reports": [],
+      "duplicate_reports": [],
+      "status": "canonical"
+    }
+  ],
+  "canonical": {
+    "SWING": "run-empirical-swing-001"
+  }
+}

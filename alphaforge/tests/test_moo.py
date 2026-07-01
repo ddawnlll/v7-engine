@@ -33,7 +33,7 @@ from alphaforge.tuning.objectives import (
     make_moo_objective,
     returns_from_signals,
 )
-from alphaforge.tuning.optuna_tuner import (
+from alphaforge.tuning.moo import (
     ParetoFrontier,
     ParetoPoint,
     create_moo_study,
@@ -312,7 +312,7 @@ class TestCreateMooStudy:
         assert study.study_name == "test_moo"
 
     def test_raises_without_optuna(self):
-        from alphaforge.tuning import optuna_tuner as tuner_mod
+        from alphaforge.tuning import moo as tuner_mod
         original = tuner_mod._HAS_OPTUNA
         try:
             tuner_mod._HAS_OPTUNA = False
@@ -555,7 +555,7 @@ class TestMooIntegration:
 
         optimize_moo_study(study, _objective, n_trials=20)
 
-        from alphaforge.tuning.optuna_tuner import plot_pareto_frontier
+        from alphaforge.tuning.moo import plot_pareto_frontier
 
         try:
             html_bytes = plot_pareto_frontier(study)

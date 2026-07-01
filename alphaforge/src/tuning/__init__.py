@@ -26,7 +26,7 @@ Usage:
 Authority boundary: see alphaforge/docs/discovery_authority.md
 """
 
-from tuning.optuna_tuner import (
+from alphaforge.src.tuning.optuna_tuner import (
     DEFAULT_N_TRIALS,
     DEFAULT_TIMEOUT_SECONDS,
     STUDIES_DIR,

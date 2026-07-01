@@ -127,8 +127,9 @@ def test_mode_research_report_aggressive_scalp_validates():
     assert report["mode"] == "AGGRESSIVE_SCALP"
     assert report["mode_priority"] == "PRIMARY"
     assert report["report_type"] == "primary_research_report"
-    # P0.8E: MHT data_snooping_risk_flag is CRITICAL for AGGRESSIVE_SCALP
-    assert report["multiple_hypothesis_control"]["data_snooping_risk_flag"] == "CRITICAL"
+    # MHT data_snooping_risk_flag is HIGH for AGGRESSIVE_SCALP
+    # with default TrialLedger (490 trials, no correction applied)
+    assert report["multiple_hypothesis_control"]["data_snooping_risk_flag"] == "HIGH"
 
 
 def test_mode_research_report_swing_validates():
@@ -164,12 +165,13 @@ def test_alphaforge_research_report_aggregate_validates():
     """
     # P0.9B repair: builders.py now wires aggregate multiple_hypothesis_control.
     # P0.9D: builder correctly aggregates tested_hypothesis_count from mode reports.
-    # Scaffold mode reports each have tested_hypothesis_count=1, so aggregate=3.
+    # Default TrialLedger per mode: 10 symbols * 49 params * 1 thesis * 1 feature_set = 490.
+    # Aggregate across 3 modes: 490 * 3 = 1470.
     report = build_alphaforge_research_report()
     assert "multiple_hypothesis_control" in report
     mht = report["multiple_hypothesis_control"]
     assert mht["aggregate_mht_status"] == "NOT_RUN"
-    assert mht["aggregate_tested_hypothesis_count"] == 3
+    assert mht["aggregate_tested_hypothesis_count"] == 1470
     assert mht["correction_method"] == "NONE_APPLIED"
     assert "mht_block_reason" in mht
 
