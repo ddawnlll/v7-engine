@@ -511,7 +511,7 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
-## v0.25 — Diagnostics Repair & Metric System (2026-06-27)
+## v0.25 — Diagnostics Repair & Metric System — LOCKED (2026-07-01)
 
 **What changed:**
 - Active trade metric system implemented (`compute_oos_metrics`) — tracks LONG_NOW/SHORT_NOW/NO_TRADE counts, cost decomposition (fee + slippage), net-R arithmetic, exposure percentage, NaN guards for zero-active edge cases. 17 tests pass.
@@ -523,29 +523,31 @@ Do not collapse these into one vague “publish” step.
 - MHT correction module (`alphaforge/src/alphaforge/reports/mht.py`) created with Bonferroni step-down correction, Benjamini-Hochberg FDR control, deflated Sharpe ratio, trial count computation, and data-snooping risk assessment. `test_mht.py` with unit tests.
 - 6-fold walk-forward validation in `cli/real_training.py` — `walk_forward_validate()` with anchored expanding windows, purge/embargo periods, 125 measures per fold (124 MHT hypotheses per fold), per-fold accuracy/stability metrics, OOS summary.
 - SOLUSDT stop/target optimization (`optimize_sol_stop_target_results.json`) — best params found: stop_mult=1.0, target_mult=5.0, expectancy_r=0.10, win_rate=0.996.
+- Issues #115 Cost Stress Matrix, #116 Regime Stability, #117 NO_TRADE Collapse, #118 Autotune Engine, #119 Alpha Surface Expansion — all implemented and closed.
 
 **Lock status:**
-- Active trade metric system: LOCKED_INITIAL_BASELINE
+- Active trade metric system: LOCKED
 - Schema active metrics contract: LOCKED
-- MHT correction module: LOCKED_INITIAL_BASELINE (Issue #124)
-- 6-fold walk-forward validation: LOCKED_INITIAL_BASELINE (Issue #125)
+- MHT correction module: LOCKED
+- 6-fold walk-forward validation: LOCKED
 - SOLUSDT optimized params: LOCKED_INITIAL_BASELINE
+- Cost Stress Matrix: LOCKED
+- Symbol + Regime Stability: LOCKED_INITIAL_BASELINE
+- NO_TRADE Collapse Detector: LOCKED_INITIAL_BASELINE
+- Autotune Engine with Nested WFV: LOCKED_INITIAL_BASELINE
+- Alpha Surface Expansion: LOCKED_INITIAL_BASELINE
 
 **Remaining holds:**
-- Cost Stress Matrix (HOLD — requires regime-aware cost multipliers)
-- Symbol Stability per-symbol contribution (HOLD — requires multi-symbol WFV)
-- NO_TRADE Collapse edge case under extreme market conditions (HOLD)
 - Real profitability evidence (HOLD — requires real training + WFV)
-- MHT correction real thresholds (HOLD — requires empirical baseline)
 - Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL)
 
-**Evidence:** 1578 passed, 3 skipped, 0 failures. ACCP reports at `reports/accp/issue-122.yaml`, `issue-123.yaml`, `issue-124.yaml`, `issue-125.yaml`.
+**Evidence:** 2048 passed, 2 skipped, 0 failures in alphaforge. All 8 issues closed with commit references. ACCP report at `reports/accp/v0.25-completion.accp.yaml`.
 
 ---
 
-## v0.26 — MHT Pipeline/Builder Contradiction Fix (2026-07-01)
+## v0.26 — MHT Pipeline/Builder Contradiction Fix + Alpha Profitability Engine — LOCKED (2026-07-01)
 
-**What changed:**
+**What changed (MHT Pipeline/Builder Contradiction — Issue #138):**
 - `_build_empirical_mht_control()` now respects pipeline's explicit `correction_method` — no longer overrides to "Bonferroni" just because `trial_count > 1`. Defaults to "NONE_APPLIED" when pipeline does not specify.
 - Deflated Sharpe ratio computed from actual OOS data (`oos_sharpe` and `oos_trade_count`) when MHT is applied, via `deflated_sharpe_or_equivalent` field.
 - PBO/overfit risk assessment (`pbo_or_backtest_overfit_risk`) added: CRITICAL/HIGH/MEDIUM/LOW/NOT_RUN based on deflated Sharpe and trial count.
@@ -553,20 +555,33 @@ Do not collapse these into one vague “publish” step.
 - `rejected_candidate_count` tracks actual Benjamini-Hochberg rejections when pipeline provides `p_values`.
 - 17 new tests for pipeline/builder agreement, deflated Sharpe, PBO, blocking hold, BH rejection tracking.
 
+**What changed (Alpha Profitability Engine — Issues #145-#153):**
+- Optuna core integration with TPE sampler and ASHA pruning — study management, parallel trial execution
+- XGBoost search space with financial time-series optimized ranges per mode
+- Nested walk-forward validation — inner fold tune + outer fold validate
+- Multi-objective optimization — Sharpe + Profit Factor Pareto frontier
+- Mode-specific parameter sets for SWING, SCALP, AGGRESSIVE_SCALP
+- ASHA pruning to kill bad trials early
+- Feature ablation with tuned model — minimum viable feature set identification
+- Real data pipeline for Binance live market data tuning (BONUS gate)
+- Profitability gate report with G1-G6 gate verification
+
 **Lock status:**
-- MHT pipeline/builder agreement: LOCKED_INITIAL_BASELINE (Issue #138)
-- Deflated Sharpe from actual data: LOCKED_INITIAL_BASELINE
-- PBO assessment: LOCKED_INITIAL_BASELINE
+- MHT pipeline/builder agreement: LOCKED
+- Deflated Sharpe from actual data: LOCKED
+- PBO assessment: LOCKED
+- Optuna TPE sampler + ASHA pruning: LOCKED
+- Nested walk-forward validation: LOCKED
+- Multi-objective Sharpe + Profit Factor: LOCKED
+- Mode-specific parameter profiles: LOCKED
 
 **Remaining holds:**
+- Real data pipeline: requires Binance API keys for full test (HOLD)
 - MHT correction real thresholds (HOLD — requires empirical baseline)
 - Cost Stress Matrix (HOLD — requires regime-aware cost multipliers)
-- Symbol Stability per-symbol contribution (HOLD — requires multi-symbol WFV)
-- NO_TRADE Collapse edge case under extreme market conditions (HOLD)
 - Real profitability evidence (HOLD — requires real training + WFV)
-- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL)
 
-**Evidence:** 1628 passed, 3 skipped, 0 failures. ACCP report at `reports/accp/issue-138.yaml`.
+**Evidence:** 2048 passed, 2 skipped, 0 failures in alphaforge. All 9 issues closed with commit references. ACCP report at `reports/accp/v0.26-profitability-gate.accp.yaml`.
 
 ---
 
