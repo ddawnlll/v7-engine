@@ -484,6 +484,79 @@ class TestFullReportBuild:
         assert "XGBClassifier" not in source
         assert "XGBRegressor" not in source
 
+    # ===================================================================
+    # Issue #126 report consistency fixes
+    # ===================================================================
+
+    def test_empty_regime_breakdown_no_false_rare_claim(self):
+        """Empty regimes produce edge_only_rare=False (no contradiction)."""
+        results = _make_wfv_results("SWING")
+        # Remove regime_breakdown entirely — triggers V7_REGIMES fallback
+        results.pop("regime_breakdown", None)
+        report = build_empirical_mode_research_report("SWING", results)
+        rb = report["regime_breakdown"]
+        assert rb["edge_only_in_rare_regime"] is False, (
+            "Empty regime data should force edge_only_rare=False; "
+            "True would contradict no edge existing anywhere"
+        )
+        assert len(rb["regimes"]) == 4  # V7_REGIMES count
+        assert all(not r["edge_present"] for r in rb["regimes"])
+
+    def test_cost_stress_empty_levels_verdict_not_run(self):
+        """Empty stress levels produce NOT_RUN verdict instead of FAIL."""
+        results = _make_wfv_results("SWING")
+        # Remove cost_stress entirely
+        results.pop("cost_stress", None)
+        report = build_empirical_mode_research_report("SWING", results)
+        cs = report["cost_stress"]
+        assert cs["cost_stress_verdict"] == "NOT_RUN", (
+            "Empty stress levels should yield NOT_RUN, not FAIL_EDGE_DESTROYED_BY_COSTS"
+        )
+        assert cs["fee_stress_levels"] == []
+        assert cs["slippage_stress_levels"] == []
+
+    def test_blocked_scopes_multi_symbol_no_single_sym_text(self):
+        """Multiple symbols should not have stale single-symbol text."""
+        results = _make_wfv_results("SWING")
+        results["data_scope"]["symbols"] = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+        report = build_empirical_mode_research_report("SWING", results)
+        blocked_text = " ".join(report["blocked_scopes"]).lower()
+        assert "single symbol" not in blocked_text, (
+            "Multi-symbol data should not mention single symbol limitation"
+        )
+
+    def test_blocked_scopes_single_symbol_has_text(self):
+        """Single symbol data includes single symbol limitation text."""
+        results = _make_wfv_results("SWING")
+        results["data_scope"]["symbols"] = ["BTCUSDT"]
+        report = build_empirical_mode_research_report("SWING", results)
+        blocked_text = " ".join(report["blocked_scopes"]).lower()
+        assert "single symbol" in blocked_text, (
+            "Single-symbol data should mention single symbol limitation"
+        )
+
+    def test_report_id_default_contains_timestamp(self):
+        """Default report_id includes a timestamp for uniqueness."""
+        results = _make_wfv_results("SWING")
+        report = build_empirical_mode_research_report("SWING", results)
+        rid = report["report_id"]
+        # Default ID format: mrr-{mode}-empirical-{timestamp}
+        assert rid.startswith("mrr-")
+        assert "empirical" in rid
+        # Should contain date digits (timestamp component)
+        assert any(c.isdigit() for c in rid), (
+            "Default report_id must contain a timestamp for uniqueness"
+        )
+
+    def test_report_ids_differ_on_consecutive_calls(self):
+        """Two consecutive calls produce different report IDs."""
+        results = _make_wfv_results("SWING")
+        r1 = build_empirical_mode_research_report("SWING", results)
+        r2 = build_empirical_mode_research_report("SWING", results)
+        assert r1["report_id"] != r2["report_id"], (
+            "Consecutive calls must generate unique report_ids"
+        )
+
     def test_per_fold_metrics_structure(self):
         """Per-fold metrics have correct structure."""
         results = _make_wfv_results("SWING")

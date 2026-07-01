@@ -317,6 +317,15 @@ def _build_empirical_cost_stress(wfv_results: dict) -> dict:
     baseline_fee = cost_data.get("baseline_fee_pct", 0.04)
     baseline_slip = cost_data.get("baseline_slippage_pct", 0.02)
 
+    # Determine cost stress verdict based on available data
+    levels_empty = not fee_levels and not slip_levels
+    if levels_empty:
+        cost_verdict = "NOT_RUN"
+    elif combined:
+        cost_verdict = "PASS"
+    else:
+        cost_verdict = "FAIL_EDGE_DESTROYED_BY_COSTS"
+
     return {
         "baseline_fee_pct": baseline_fee,
         "baseline_slippage_pct": baseline_slip,
@@ -341,10 +350,7 @@ def _build_empirical_cost_stress(wfv_results: dict) -> dict:
             "break_even_cost_total_pct", 0.0
         ),
         "net_edge_after_costs": cost_data.get("net_edge_after_costs", 0.0),
-        "cost_stress_verdict": (
-            "PASS" if combined
-            else "FAIL_EDGE_DESTROYED_BY_COSTS"
-        ),
+        "cost_stress_verdict": cost_verdict,
     }
 
 
@@ -406,6 +412,10 @@ def _build_empirical_regime_breakdown(wfv_results: dict) -> dict:
 
     # If regimes_raw is empty, build from V7_REGIMES with placeholder zeros
     if not regime_entries:
+        # Force edge_only_rare to False when no real regime data exists:
+        # if no regime has edge_present=True, then no edge exists at all,
+        # and edge_only_in_rare_regime=true would be a CONTRADICTION.
+        edge_only_rare = False
         for regime in V7_REGIMES:
             regime_entries.append({
                 "regime": regime,
@@ -562,7 +572,10 @@ def build_empirical_mode_research_report(
     elif mode == "SWING":
         mode_key = "swing"
 
-    rid = report_id or f"mrr-{mode_key}-empirical-001"
+    rid = report_id or (
+        f"mrr-{mode_key}-empirical-"
+        f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
+    )
     run = run_id or wfv_results.get("run_id", f"run-empirical-{mode_key}-001")
 
     # --- Extract WFV values ---
@@ -722,7 +735,9 @@ def build_empirical_mode_research_report(
         "v7_gate_readiness": gate_readiness,
         "multiple_hypothesis_control": mht_section,
         "verdict": verdict,
-        "blocked_scopes": _build_blocked_scopes(mode, verdict, cost_stress_section),
+        "blocked_scopes": _build_blocked_scopes(
+            mode, verdict, cost_stress_section, symbol_count=len(symbols),
+        ),
         "limitations": [
             *wfv_results.get("limitations", []),
             f"Empirical report — evidence quality: {verdict_label}. No profitability claims.",
@@ -783,8 +798,21 @@ def _build_gate_readiness(
     }
 
 
-def _build_blocked_scopes(mode: str, verdict: str, cost_stress: dict) -> list[str]:
-    """Build blocked scopes list based on evidence quality."""
+def _build_blocked_scopes(mode: str, verdict: str, cost_stress: dict,
+                          symbol_count: int = 1) -> list[str]:
+    """Build blocked scopes list based on evidence quality.
+
+    Args:
+        mode: Mode identifier.
+        verdict: Evidence verdict string.
+        cost_stress: Cost stress section dict.
+        symbol_count: Number of symbols in data scope (used to avoid
+            stale "single symbol limitation" text when multiple symbols
+            were tested).
+
+    Returns:
+        List of scope-blocking reasons.
+    """
     blocked = []
 
     if verdict in ("REJECT", "INCONCLUSIVE"):
@@ -798,7 +826,12 @@ def _build_blocked_scopes(mode: str, verdict: str, cost_stress: dict) -> list[st
         )
 
     blocked.append("Funding model DEFERRED — perpetual/live scope blocked")
-    blocked.append("Single symbol limitation — cross-symbol stability not assessed")
+
+    # Only flag single symbol limitation when truly single-symbol data
+    if symbol_count <= 1:
+        blocked.append(
+            "Single symbol limitation — cross-symbol stability not assessed"
+        )
 
     if verdict != "CANDIDATE_FOR_V7_GATES":
         blocked.append(
