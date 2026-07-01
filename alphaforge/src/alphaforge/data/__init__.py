@@ -30,8 +30,12 @@ from alphaforge.data.backfill import (
     BackfillError,
     BackfillPipeline,
     BackfillResult,
+    BinanceVisionConfig,
+    SYMBOLS_20,
     create_backfill_config,
+    create_binance_vision_config,
     create_pipeline,
+    download_from_binance_vision,
 )
 from alphaforge.data.scalp_manifest import (
     SCALP_MODE,
@@ -62,6 +66,11 @@ __all__ = [
     "BackfillResult",
     "create_backfill_config",
     "create_pipeline",
+    # Binance Vision download
+    "BinanceVisionConfig",
+    "SYMBOLS_20",
+    "create_binance_vision_config",
+    "download_from_binance_vision",
     # SCALP mode manifest
     "SCALP_MODE",
     "SCALP_PRIMARY_INTERVAL",

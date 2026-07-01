@@ -67,6 +67,23 @@ class BackfillError(AlphaForgeError):
 VALID_BACKFILL_MODES = frozenset({"SCALP", "AGGRESSIVE_SCALP", "SWING"})
 VALID_BACKFILL_INTERVALS = frozenset({"15m", "1h", "4h", "1d"})
 
+# ---------------------------------------------------------------------------
+# Binance Vision (data.binance.vision) — public S3 mirror
+# ---------------------------------------------------------------------------
+
+SYMBOLS_20: List[str] = [
+    "BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
+    "SOLUSDT", "DOTUSDT", "MATICUSDT", "AVAXUSDT", "UNIUSDT",
+    "LINKUSDT", "ATOMUSDT", "LTCUSDT", "BCHUSDT", "DOGEUSDT",
+    "FILUSDT", "APTUSDT", "ARBUSDT", "OPUSDT", "SUIUSDT",
+]
+
+VALID_VISION_INTERVALS: frozenset[str] = frozenset({"1m", "5m", "15m", "1h"})
+
+BINANCE_VISION_BASE: str = (
+    "https://data.binance.vision/data/futures/um/monthly/klines"
+)
+
 
 @dataclass(frozen=True)
 class BackfillConfig:
@@ -144,6 +161,101 @@ def create_backfill_config(
         primary_interval=primary_interval,
         batch_size=batch_size,
         created_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Binance Vision config
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class BinanceVisionConfig:
+    """Immutable configuration for downloading from data.binance.vision.
+
+    All fields are frozen — two identical configs produce identical downloads.
+    The public S3 mirror (data.binance.vision) requires no API key.
+    """
+
+    symbols: tuple[str, ...]
+    intervals: tuple[str, ...]
+    output_dir: str
+    start_year: int
+    start_month: int
+    end_year: int
+    end_month: int
+
+    def __post_init__(self) -> None:
+        if not self.symbols:
+            raise BackfillError("vision_config", "symbols must be non-empty")
+        if not self.intervals:
+            raise BackfillError("vision_config", "intervals must be non-empty")
+        for interval in self.intervals:
+            if interval not in VALID_VISION_INTERVALS:
+                raise BackfillError(
+                    "vision_config",
+                    f"interval must be one of {sorted(VALID_VISION_INTERVALS)}, "
+                    f"got {interval!r}",
+                )
+        if self.start_year < 2022:
+            raise BackfillError(
+                "vision_config",
+                f"start_year must be >= 2022, got {self.start_year}",
+            )
+        start_valid = self.start_year > 0 and 1 <= self.start_month <= 12
+        end_valid = self.end_year > 0 and 1 <= self.end_month <= 12
+        if not start_valid:
+            raise BackfillError(
+                "vision_config",
+                f"invalid start ({self.start_year}-{self.start_month:02d})",
+            )
+        if not end_valid:
+            raise BackfillError(
+                "vision_config",
+                f"invalid end ({self.end_year}-{self.end_month:02d})",
+            )
+        if self.start_year > self.end_year or (
+            self.start_year == self.end_year and self.start_month > self.end_month
+        ):
+            raise BackfillError(
+                "vision_config",
+                f"start ({self.start_year}-{self.start_month:02d}) must be <= "
+                f"end ({self.end_year}-{self.end_month:02d})",
+            )
+
+
+def create_binance_vision_config(
+    symbols: List[str],
+    intervals: List[str],
+    output_dir: str | Path,
+    start_year: int = 2022,
+    start_month: int = 1,
+    end_year: int | None = None,
+    end_month: int | None = None,
+) -> BinanceVisionConfig:
+    """Factory for BinanceVisionConfig with frozen-tuple conversion.
+
+    Args:
+        symbols: Trading pair symbols (e.g. ``["BTCUSDT"]``).
+        intervals: Kline intervals — one or more of ``1m``, ``5m``, ``15m``, ``1h``.
+        output_dir: Root directory for partitioned Parquet output.
+        start_year: First year to download (default 2022).
+        start_month: First month to download (default January).
+        end_year: Last year to download (default current year).
+        end_month: Last month to download (default current month).
+
+    Returns:
+        A validated, frozen :class:`BinanceVisionConfig`.
+    """
+    _today = datetime.now(timezone.utc)
+    return BinanceVisionConfig(
+        symbols=tuple(s.upper() for s in symbols),
+        intervals=tuple(intervals),
+        output_dir=str(output_dir),
+        start_year=start_year,
+        start_month=start_month,
+        end_year=end_year if end_year is not None else _today.year,
+        end_month=end_month if end_month is not None else _today.month,
     )
 
 
@@ -257,6 +369,28 @@ class BackfillPipeline:
             integrity_passed=True,
             integrity_details={"dry_run": True},
         )
+
+    def download_vision(self, vision_config: BinanceVisionConfig) -> Dict[str, Any]:
+        """Optional step: download monthly klines from data.binance.vision.
+
+        This is a pre-backfill download step that pulls data from the public
+        Binance Vision S3 mirror (no API key required).  The downloaded files
+        are written as partitioned Parquet+Zstd and can be used as input to
+        the normal API-driven backfill or as a standalone data source.
+
+        Args:
+            vision_config: :class:`BinanceVisionConfig` specifying what to
+                download and where to write it.
+
+        Returns:
+            Dict with download statistics (total_files, total_records, errors,
+            skipped).
+        """
+        logger.info(
+            "Binance Vision download: symbols=%s intervals=%s",
+            list(vision_config.symbols), list(vision_config.intervals),
+        )
+        return download_from_binance_vision(vision_config)
 
     # -------------------------------------------------------------------
     # Manifest generation
@@ -392,3 +526,277 @@ def create_pipeline(
         rate_limiter=rate_limiter,
         checkpoint=checkpoint,
     )
+
+
+# ---------------------------------------------------------------------------
+# Binance Vision download — public S3 mirror (no API key required)
+# ---------------------------------------------------------------------------
+
+
+def _file_sha256(path: str) -> str:
+    """Compute SHA-256 hex digest of a file."""
+    sha = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            sha.update(chunk)
+    return sha.hexdigest()
+
+
+def _fetch_url(url: str, timeout: int = 120) -> bytes | None:
+    """Fetch a URL and return bytes, or None on 404.
+
+    Uses stdlib ``urllib.request`` — no external HTTP dependency needed
+    for public S3 mirror access.
+    """
+    import urllib.request
+    from urllib.error import HTTPError
+
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as resp:
+            return resp.read()
+    except HTTPError as exc:
+        if exc.code == 404:
+            return None
+        raise
+
+
+def _fetch_checksum(checksum_url: str) -> str | None:
+    """Fetch a Binance .CHECKSUM file and extract the SHA-256 hash.
+
+    The CHECKSUM file format is::
+
+        <sha256_hex>  <filename>
+    """
+    data = _fetch_url(checksum_url)
+    if data is None:
+        return None
+    return data.decode("utf-8").strip().split()[0]
+
+
+def _parse_klines_csv(csv_text: str, interval: str) -> "Any":
+    """Parse Binance kline CSV text into a pyarrow Table with typed columns.
+
+    Args:
+        csv_text: Raw CSV text (header row included).
+        interval: Kline interval string stored as a column.
+
+    Returns:
+        A ``pyarrow.Table`` with int64 timestamps and float64 price/volume columns.
+    """
+    import csv
+    import io
+
+    import pyarrow as pa
+
+    reader = csv.reader(io.StringIO(csv_text))
+
+    open_times: list[int] = []
+    opens: list[float] = []
+    highs: list[float] = []
+    lows: list[float] = []
+    closes: list[float] = []
+    volumes: list[float] = []
+    close_times: list[int] = []
+    quote_volumes: list[float] = []
+    trades: list[int] = []
+    taker_buy_volumes: list[float] = []
+    taker_buy_quote_volumes: list[float] = []
+
+    for i, row in enumerate(reader):
+        # Skip header row (first row has text headers)
+        if i == 0 and not row[0].isdigit():
+            continue
+        if len(row) < 11:
+            continue
+        open_times.append(int(row[0]))
+        opens.append(float(row[1]))
+        highs.append(float(row[2]))
+        lows.append(float(row[3]))
+        closes.append(float(row[4]))
+        volumes.append(float(row[5]))
+        close_times.append(int(row[6]))
+        quote_volumes.append(float(row[7]))
+        trades.append(int(row[8]))
+        taker_buy_volumes.append(float(row[9]))
+        taker_buy_quote_volumes.append(float(row[10]))
+
+    n = len(open_times)
+    return pa.table(
+        {
+            "open_time": pa.array(open_times, type=pa.int64()),
+            "open": pa.array(opens, type=pa.float64()),
+            "high": pa.array(highs, type=pa.float64()),
+            "low": pa.array(lows, type=pa.float64()),
+            "close": pa.array(closes, type=pa.float64()),
+            "volume": pa.array(volumes, type=pa.float64()),
+            "close_time": pa.array(close_times, type=pa.int64()),
+            "quote_volume": pa.array(quote_volumes, type=pa.float64()),
+            "trades": pa.array(trades, type=pa.int64()),
+            "taker_buy_volume": pa.array(taker_buy_volumes, type=pa.float64()),
+            "taker_buy_quote_volume": pa.array(taker_buy_quote_volumes, type=pa.float64()),
+            "interval": pa.array([interval] * n, type=pa.string()),
+        }
+    )
+
+
+def download_from_binance_vision(
+    config: BinanceVisionConfig,
+) -> Dict[str, Any]:
+    """Download monthly klines from data.binance.vision and convert to Parquet+Zstd.
+
+    Downloads ZIP files from the public Binance Vision S3 mirror, verifies
+    SHA-256 checksums against ``.CHECKSUM`` sidecar files, extracts CSVs,
+    and writes partitioned Parquet+Zstd files.
+
+    Output layout::
+
+        {output_dir}/{symbol}/{interval}/{year}/{month:02d}.parquet
+
+    Files that already exist are skipped (safe for resume).
+
+    Args:
+        config: :class:`BinanceVisionConfig` specifying symbols, intervals,
+            date range, and output directory.
+
+    Returns:
+        Dict with keys ``total_symbols``, ``total_intervals``, ``total_files``,
+        ``total_records``, ``errors`` (list of error messages), and ``skipped``
+        (list of paths already on disk).
+
+    Raises:
+        BackfillError: On invalid configuration or unrecoverable download failure.
+    """
+    import shutil
+    import tempfile
+    import urllib.request
+    import zipfile
+    from urllib.error import HTTPError
+
+    import pyarrow.parquet as pq
+
+    stats: Dict[str, Any] = {
+        "total_symbols": len(config.symbols),
+        "total_intervals": len(config.intervals),
+        "total_files": 0,
+        "total_records": 0,
+        "errors": [],
+        "skipped": [],
+    }
+
+    output_root = Path(config.output_dir)
+
+    for symbol in config.symbols:
+        for interval in config.intervals:
+            url_base = f"{BINANCE_VISION_BASE}/{symbol}/{interval}/"
+
+            for year in range(config.start_year, config.end_year + 1):
+                start_m = config.start_month if year == config.start_year else 1
+                end_m = config.end_month if year == config.end_year else 12
+
+                for month in range(start_m, end_m + 1):
+                    out_path = (
+                        output_root
+                        / symbol
+                        / interval
+                        / str(year)
+                        / f"{month:02d}.parquet"
+                    )
+
+                    # Skip if already on disk (supports resume)
+                    if out_path.exists():
+                        stats["skipped"].append(str(out_path))
+                        continue
+
+                    filename = f"{symbol}-{interval}-{year}-{month:02d}.zip"
+                    zip_url = url_base + filename
+                    checksum_url = zip_url + ".CHECKSUM"
+
+                    # Download ZIP to a temporary file
+                    try:
+                        with urllib.request.urlopen(zip_url, timeout=300) as resp:
+                            with tempfile.NamedTemporaryFile(
+                                delete=False, suffix=".zip"
+                            ) as tmp:
+                                shutil.copyfileobj(resp, tmp)
+                                zip_tmp = tmp.name
+                    except HTTPError as exc:
+                        msg = (
+                            f"{symbol}/{interval}/{year}-{month:02d}: "
+                            f"HTTP {exc.code} downloading {filename}"
+                        )
+                        logger.warning(msg)
+                        stats["errors"].append(msg)
+                        continue
+                    except Exception as exc:
+                        msg = (
+                            f"{symbol}/{interval}/{year}-{month:02d}: "
+                            f"network error: {exc}"
+                        )
+                        logger.warning(msg)
+                        stats["errors"].append(msg)
+                        continue
+
+                    # Verify checksum
+                    try:
+                        expected = _fetch_checksum(checksum_url)
+                        if expected is not None:
+                            actual = _file_sha256(zip_tmp)
+                            if actual != expected:
+                                msg = (
+                                    f"{symbol}/{interval}/{year}-{month:02d}: "
+                                    f"SHA-256 mismatch — expected {expected}, got {actual}"
+                                )
+                                logger.warning(msg)
+                                stats["errors"].append(msg)
+                                os.unlink(zip_tmp)
+                                continue
+                    except Exception as exc:
+                        logger.warning(
+                            "Checksum fetch failed for %s: %s", checksum_url, exc
+                        )
+                        # Proceed without checksum verification if fetch fails
+
+                    # Extract CSV from ZIP and convert to Parquet
+                    try:
+                        csv_name = f"{symbol}-{interval}-{year}-{month:02d}.csv"
+                        with zipfile.ZipFile(zip_tmp, "r") as zf:
+                            with zf.open(csv_name) as csv_file:
+                                csv_text = csv_file.read().decode("utf-8")
+
+                        table = _parse_klines_csv(csv_text, interval)
+
+                        out_path.parent.mkdir(parents=True, exist_ok=True)
+                        pq.write_table(table, str(out_path), compression="zstd")
+
+                        stats["total_files"] += 1
+                        stats["total_records"] += len(table)
+                    except KeyError:
+                        # CSV not found in ZIP — try alternate names
+                        msg = (
+                            f"{symbol}/{interval}/{year}-{month:02d}: "
+                            f"CSV {csv_name} not found in ZIP"
+                        )
+                        logger.warning(msg)
+                        stats["errors"].append(msg)
+                    except Exception as exc:
+                        msg = (
+                            f"{symbol}/{interval}/{year}-{month:02d}: "
+                            f"extract/convert error: {exc}"
+                        )
+                        logger.warning(msg)
+                        stats["errors"].append(msg)
+                    finally:
+                        # Clean up temp ZIP
+                        try:
+                            os.unlink(zip_tmp)
+                        except OSError:
+                            pass
+
+    logger.info(
+        "Binance Vision download complete: %d files, %d records, %d errors, %d skipped",
+        stats["total_files"],
+        stats["total_records"],
+        len(stats["errors"]),
+        len(stats["skipped"]),
+    )
+    return stats
