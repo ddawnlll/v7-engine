@@ -1,0 +1,132 @@
+{
+  "successful_strategies": [
+    {
+      "name": "Crypto Four-Factor Model (Sparkline Capital / Liu-Tsyvinski-Wu)",
+      "source": "Sparkline Capital Research (Kai Wu, 2024) + Liu, Tsyvinski & Wu, Journal of Finance (2022)",
+      "data_sources": [
+        "CoinMarketCap OHLCV daily data",
+        "market capitalization ranks across 2,250+ cryptocurrencies",
+        "on-chain active addresses (for intangible value factor)",
+        "circulating supply data",
+        "3-month US T-Bill as risk-free rate"
+      ],
+      "key_factors": [
+        "Crypto market factor: cap-weighted portfolio of all liquid crypto, 31.6% CAGR, 0.37 Sharpe",
+        "Momentum factor: past 14-day returns, strongest in large-caps with media attention and leverage cascades",
+        "Intangible value factor: price-to-network-activity (active addresses, transactions) filters out junk/shitcoins, delivers market-like returns with half the volatility",
+        "Size factor: small-cap premium exists but not statistically significant alone; works when quality-screened"
+      ],
+      "reported_performance": "Market factor: 31.6% CAGR, 0.37 Sharpe (7/2017-2/2024). Value factor: Sharpe 2.43, annualized alpha 150.51. Momentum: 13.28% annualized, Sharpe 0.27. Combined size+momentum+value portfolio: 40.67% annualized, Sharpe 1.51. Equal-weighted crypto benchmark: 46.95% annualized, Sharpe 0.51. Value-weighted benchmark: 54.03% annualized, Sharpe 0.73.",
+      "methodology": "Fama-French-style factor construction via Fama-MacBeth cross-sectional regressions. Weekly rebalancing with 7-day rolling window. Newey-West standard errors. Studied 31 cryptocurrencies over Dec 2017-Dec 2023. Long-short factor portfolios, long-only model portfolio of 60% BTC + 20% large-cap momentum + 20% small-cap intangible value."
+    },
+    {
+      "name": "Deep Reinforcement Learning for Crypto Trading with Overfitting Control",
+      "source": "Gort, Liu, Sun, Gao, Chen & Wang — arXiv:2209.05559 (2022)",
+      "data_sources": [
+        "OHLCV data for 10 major cryptocurrencies",
+        "9 technical indicators: RSI, MACD, CCI, Directional Index (DX), Rate of Change (ROC), and others",
+        "15 features total including prices, volumes, and technicals"
+      ],
+      "key_factors": [
+        "Overfitting detection via hypothesis testing: formulate backtest overfitting as a statistical test, estimate probability of overfitting (p-value), reject overfitted agents above threshold",
+        "Combinatorial cross-validation simulates many market situations instead of single walk-forward split",
+        "DRL agents (PPO/DQN) trained on feature set with buy/sell/hold actions",
+        "Agents with lower overfitting probability outperform in out-of-sample testing"
+      ],
+      "reported_performance": "Less-overfitted DRL agents outperformed: (1) more-overfitted agents, (2) equal-weight benchmark, and (3) S&P DBM Index during a testing period (05/2022-06/2022) when the crypto market crashed twice. Demonstrates that overfitting control is the key differentiator, not the model architecture itself.",
+      "methodology": "Markov Decision Process formulation. Walk-forward and K-fold cross-validation shown to be insufficient (single regime test, false IID assumption). Combinatorial cross-validation (CCV) tracks degree of overfitting. Agents rejected if probability of overfitting exceeds threshold."
+    },
+    {
+      "name": "Dynamic Grid Trading (DGT) Strategy",
+      "source": "Chen, Chen & Jang — arXiv:2506.11921 (2025)",
+      "data_sources": [
+        "Minute-level price data for Bitcoin and Ethereum",
+        "January 2021 to July 2024 data period"
+      ],
+      "key_factors": [
+        "Traditional grid strategy proven to have zero expected return under simple assumptions",
+        "DGT dynamically resets grid positions adapting to market conditions",
+        "Adapts to volatility regimes and trend changes automatically"
+      ],
+      "reported_performance": "DGT significantly outperforms both traditional grid trading and buy-and-hold in IRR (internal rate of return) and risk control on minute-level BTC and ETH data from 2021-2024.",
+      "methodology": "Dynamic grid positioning with reset mechanism. Comparison against naive grid strategy and BH benchmark. Statistical proof that traditional grid has zero expected value under random walk."
+    },
+    {
+      "name": "Cointegration-Based Pairs Trading in Crypto",
+      "source": "Tadi & Kortchmeski — Studies in Economics and Finance (2021)",
+      "data_sources": [
+        "Minute-binned price data from Bitmex exchange",
+        "Best bid/ask quotes for realistic fill simulation",
+        "Market trades data for accurate backtesting"
+      ],
+      "key_factors": [
+        "Dynamic cointegration-based pairs trading with optimal look-back window estimation",
+        "Ornstein-Uhlenbeck process half-life calibration for mean-reversion speed",
+        "Three cointegration tests: Engle-Granger, KSS, Johansen",
+        "Multiple coin pairs improve risk-adjusted profitability"
+      ],
+      "reported_performance": "Exceeds naive buy-and-hold on Bitmex. Strategy achieves reasonably low maximum drawdown. Multiple coin formulations improve risk-adjusted profitability. Class of coins identified with better arbitrage potential.",
+      "methodology": "Dynamic look-back window framework. Realistic market microstructure modeling: uses best bid/ask quotes, waits one or more periods after signal generation before executing. Minute-level formation and trading periods."
+    },
+    {
+      "name": "Support Vector Machine Crypto Price Prediction Strategy",
+      "source": "Zhao, Rinaldo & Brookins — arXiv:1911.11819 (2019)",
+      "data_sources": [
+        "Historical OHLCV data from July 2015 to November 2019",
+        "Large set of technical indicators derived from price/volume"
+      ],
+      "key_factors": [
+        "SVM classification outperformed Random Forest, KNN, and logistic regression for 1-hour-ahead direction prediction",
+        "Translates class predictions into trading decisions via realistic backtester",
+        "Performs well on BTC, ETH, and LTC over 22-month out-of-sample period"
+      ],
+      "reported_performance": "Support vector machines yield the most profitable trading strategies across Bitcoin, Ethereum, and Litecoin. Outperforms the market on average over the 22-month out-of-sample period since January 2018.",
+      "methodology": "Classification approach: predict direction of next 1-hour return. Multiple technical indicators as features. Realistic backtester simulating actual trading conditions. Comparison across SVM, RF, KNN, logistic regression."
+    }
+  ],
+  "failed_approaches": [
+    {
+      "approach": "Naive OHLCV-based neural network forecasting with walk-forward validation",
+      "reason_for_failure": "Single walk-forward split only tests one market regime; no control for false positives. DRL hyperparameter sensitivity means 'lucky' agents pass backtests. Backtest overfitting probability is high. Negative correlation found between prediction F1 score and trading Sharpe ratio (-0.425).",
+      "lesson": "Standard ML validation (train/val/test split, K-fold CV) is insufficient for financial time series. Need combinatorial cross-validation or overfitting hypothesis tests. Good forecasting accuracy does NOT imply good trading performance."
+    },
+    {
+      "approach": "Fixed-horizon forecasting with overlapping time windows and IID assumption",
+      "reason_for_failure": "Financial time series violates the IID assumption. Overlapping windows create dependent samples. Fixed forecasting horizon is unrealistic because liquidity and execution timing are uncertain. Models that ace backtests on single-asset time series fail when applied to a universe of assets.",
+      "lesson": "Use non-overlapping windows or triple-barrier labeling (De Prado, 2018). Work with asset universes, not single instruments. Replace fixed-horizon forecasting with control theory / reinforcement learning approaches."
+    },
+    {
+      "approach": "Pure OHLCV feature sets without order book or on-chain data",
+      "reason_for_failure": "OHLCV bars contain only averaged noise. They lack information about order flow, bid-ask queues, tick imbalances, and actual market microstructure. Models trained on bars-only data miss the highest-signal features.",
+      "lesson": "Incorporate order book data (bids, asks, queue lengths, tick imbalances). On-chain metrics (active addresses, transaction count, realized cap) provide orthogonal signal. Dollar volume is more informative than raw volume."
+    },
+    {
+      "approach": "Ignoring transaction costs, slippage, and market impact in backtests",
+      "reason_for_failure": "Using mid-price fills when real fills cross the spread. Ignoring market impact for position sizing. Not accounting for shorting costs. Small per-trade alpha quickly destroyed by 2-5% slippage and fees in crypto markets.",
+      "lesson": "Model costs at 1.5x-2x best estimate. Use actual bid-ask spread data. Apply Almgren-Chriss market impact model. A strategy that looks profitable with 0 costs often loses money with realistic costs."
+    },
+    {
+      "approach": "Data snooping: testing hundreds of strategy variations and reporting the best one",
+      "reason_for_failure": "If 50 independent strategies are tested at 5% significance, ~2.5 false positives are expected by chance. Harvey, Liu & Zhu (2016) argue standard t=2.0 threshold is far too low; suggest t=3.0. Crypto technical trading rules often fail FDR control when tested across 21,000+ rules.",
+      "lesson": "Track ALL variations tested, not just the winner. Apply Bonferroni correction or FDR control. Reserve truly untouched out-of-sample data. Use false discovery rate methodology to separate signal from noise."
+    },
+    {
+      "approach": "Ignoring survivorship bias in crypto backtest datasets",
+      "reason_for_failure": "Survivorship bias inflates returns by ~0.9%/year in equities, likely worse in crypto where 80%+ of projects fail. When delisted/rug-pulled coins are excluded, backtests look artificially good.",
+      "lesson": "Use survivorship-bias-free datasets. At minimum acknowledge the limitation. Be skeptical of strategies that hold small-cap or obscure tokens with high failure rates."
+    }
+  ],
+  "key_lessons": [
+    "Factor investing works in crypto: the market, momentum, size, and intangible value factors successfully port from equities to crypto. The Value and Momentum Everywhere (Asness, Moskowitz, Pedersen, 2013) framework extends to digital assets.",
+    "Momentum in crypto is strongest at shorter horizons (1-4 weeks, not 1-12 months) and works best in large-cap, liquid assets. Intangible value works best in small-caps, acting as a quality/shitcoin filter.",
+    "Backtest overfitting is the single biggest threat to crypto alpha research. Standard ML validation is insufficient. Use combinatorial cross-validation, overfitting hypothesis tests, and track multiple testing corrections.",
+    "Data quality matters enormously: order book data > OHLCV, on-chain metrics add orthogonal signal, point-in-time data is essential, survivorship bias must be accounted for.",
+    "Cost modeling is critical: crypto has wider spreads, higher slippage, and more volatile execution costs than equities. Model conservatively at 1.5x-2x estimated costs.",
+    "Market non-stationarity means strategies must be tested across multiple regime types (bull, bear, high volatility, low volatility, sideways). A backtest during one regime tells you little about another.",
+    "Good prediction does not imply good trading: F1 score and Sharpe ratio can be negatively correlated. The translation layer from forecast to execution is where alpha is won or lost.",
+    "Portfolio-level strategies (multi-asset, multi-factor) are more robust than single-asset single-strategy approaches. Single-asset concentration is effectively overfitting to one time series.",
+    "False discovery rate control is essential: the sheer number of tested strategies in crypto (21,000+ technical rules, countless ML variations) means many apparent alphas are spurious.",
+    "The most successful practitioners (Renaissance Technologies, Wintermute, Jump) share: curated proprietary data, scientific culture, heavy infrastructure investment, no human interference with models, and long time horizons for strategy development."
+  ],
+  "recommended_approach_for_alphaforge": "For the V7 AlphaForge subsystem, the research strongly supports a factor-based alpha discovery pipeline with the following design: (1) Use multiple data layers — OHLCV for baseline, order book for microstructure signals, on-chain metrics for fundamental value, and sentiment/macro for regime detection. (2) Adopt the proven crypto factors (momentum at 1-4 week lookback, intangible value via network-activity ratios, market beta timing, and a quality/size screen). (3) Implement combinatorial cross-validation (not single walk-forward) as the primary backtesting methodology, with explicit overfitting probability estimation via hypothesis testing (per Gort et al. 2022). (4) Track all tested feature/parameter combinations and apply FDR control (Bonferroni or Benjamini-Hochberg). (5) Build a realistic cost model incorporating spread, slippage (Almgren-Chriss), and exchange-specific fees. (6) Test explicitly across at least 3 distinct market regimes (bull, bear, sideways) before promoting any factor. (7) Reject single-asset strategies — require universe-level validation across a minimum of 10 liquid assets. (8) Begin with the baseline three-factor model (market + momentum + size), then add intangible value as the fourth factor, before attempting ML-based alpha discovery."
+}

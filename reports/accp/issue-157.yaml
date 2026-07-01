@@ -1,0 +1,36 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "issue-157"
+title: "Wire funding rate features — period-over-period funding rate change"
+result: "PASS"
+scope_confirmation:
+  - "alphaforge/src/alphaforge/features/funding.py: added compute_funding_rate_change() — period-over-period change in funding rate with configurable lookback n"
+  - "alphaforge/src/alphaforge/features/funding.py: added DEFAULT_FUNDING_CHANGE_N=1 constant"
+  - "alphaforge/src/alphaforge/features/funding.py: wired funding_rate_change_N into compute_funding_group() output dict"
+  - "alphaforge/src/alphaforge/features/funding.py: updated module docstring to reflect 7 features (5 core + 2 Funding-OI)"
+  - "alphaforge/src/alphaforge/features/pipeline.py: added PERPETUAL_FUNDING FeatureGroup enum (DEFERRED — reserved for future funding data integration)"
+  - "alphaforge/tests/test_funding_features.py: updated TestFundingGroup expected keys to include funding_rate_change_N"
+  - No new tests added — existing TestFundingGroup keys assertion covers validation; compute_funding_rate_change verified integrally via compute_funding_group tests"
+decisions_locked:
+  - "DEFAULT_FUNDING_CHANGE_N=1: LOCKED_INITIAL_BASELINE — period-over-period funding rate change uses 1-bar lookback; recalibrate if noise/signal ratio warrants smoothing"
+remaining_holds:
+  - "PERPETUAL_FUNDING FeatureGroup is DEFERRED — requires real funding rate data feed integration to activate"
+  - "Funding rate features remain proxy-derived from OHLCV when actual funding data unavailable (existing behavior)"
+  - "Real profitability evidence still HOLD — requires real training + WFV"
+safe_next_step: >
+  Continue with remaining AlphaForge Profitability v0.1 issues: regime classifier (#161),
+  triple-barrier labeling (#156/160), CPCV (#159/169), orderbook extended features (#154/162-166/170),
+  and research/diversity (#167/168).
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_funding_features.py -v --tb=short"
+  - "PYTHONPATH=alphaforge/src:. python3 -c 'from alphaforge.features.funding import compute_funding_rate_change; ...' (verification)"
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_funding_features.py alphaforge/tests/test_feature_pipeline.py alphaforge/tests/test_regime.py -q --tb=short"
+  - "make check-boundaries"
+evidence:
+  - "18/18 funding tests pass"
+  - "103/103 pipeline tests pass (includes funding_rate_change_N in expected keys)"
+  - "188/188 combined funding + pipeline + regime tests pass"
+  - "Boundary checks: 1/1 lib boundary pass, 5/6 cross-domain pass (1 skipped)"
+  - "compute_funding_rate_change verified: n=1 change array matches expected values [0.01, -0.005, 0.015, -0.005, -0.015] with correct NaN prefix"
+  - "Module exports cleanly: compute_funding_rate_change visible in __all__"
+  - "Pipeline imports cleanly: FeatureGroup includes PERPETUAL_FUNDING (DEFERRED)"

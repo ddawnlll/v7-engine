@@ -1,0 +1,123 @@
+{
+  "papers_reviewed": [
+    {
+      "title": "Discovery of a 13-Sharpe OOS Factor: Drift Regimes (2511.12490v1)",
+      "key_findings": "Regime-conditional signal activation combining value + short-term reversal, gated by stock-specific drift regimes (>60% positive days in 63d window). Walk-forward validation 2004-2024, 3 test windows. OOS Sharpe 13.19, annualized return 158.6%, vol 12%, max DD -11.9%. 42% daily turnover, 8d median holding. Near-zero factor exposure (R2<3%). Survives 1000 randomization trials, p<0.001. Maintains Sharpe>7 under 30% parameter perturbation. Only 35% of stock-days qualify.",
+      "model_type": "Regime-conditional cross-sectional factor (value + reversal gated by drift)",
+      "performance": "OOS Sharpe 13.19, ann ret 158.6%, vol 12%, max DD -11.9%, 67% win days, rho=0.08 to market"
+    },
+    {
+      "title": "When Alpha Breaks: Two-Level Uncertainty for Cross-Sectional Stock Rankers (2603.13252v1)",
+      "key_findings": "LightGBM ranker for equities under regime shift. During 2024 AI thematic rally, RankIC at 20d dropped from 0.072 to 0.010; longer horizons turned negative. Proposes two-level deployment: strategy-level regime-trust gate G(t) based on trailing realized efficacy (AUROC 0.72), and position-level epistemic tail-risk cap. Documents structural coupling between uncertainty and signal strength (median rho=0.616) making inverse-uncertainty sizing fail. VIX percentile gate is worse than random (AUROC 0.449). Best policy: Gate + Vol-Sizing + e-Cap improves FINAL Sharpe from 0.375 to 0.925.",
+      "model_type": "LightGBM ranker + DEUP uncertainty",
+      "performance": "Base LightGBM: ALL Sharpe 2.73, DEV 3.12, FINAL 2.34. Deployment layer incremental value."
+    },
+    {
+      "title": "Empirical Crypto Asset Pricing (2405.15716v1)",
+      "key_findings": "Novel panel of crypto assets, 63 characteristics tested. Only univariate financial factors (functions of previous returns) showed statistically significant long-short strategy returns. Factors based on non-financial characteristics (network usage, fundamentals) lacked predictive power. Returns primarily driven by speculative dynamics rather than fundamental pricing. Crypto assets argued to be an independent asset class with eleven empirical facts.",
+      "model_type": "Univariate factor portfolio sorts on 63 crypto characteristics",
+      "performance": "Only momentum/reversal-based factors significant; fundamental/TVL-based factors not significant"
+    },
+    {
+      "title": "PRISM-VQ: Vector-Quantized Discrete Latent Factors for Stock Ranking (2605.13407v1)",
+      "key_findings": "Integrates expert prior factors (value, size, momentum) with vector-quantized discrete latent factors learned from cross-sectional structure. VQ acts as information bottleneck suppressing noise. Structure-conditioned Mixture-of-Experts for dynamic factor loadings. Two-stage: spatial learning (discrete codebook + contrastive) then temporal learning (Transformer MoE gated by codes). State-of-the-art on CSI 300 and S&P 500.",
+      "model_type": "VQ + Transformer MoE hybrid factor model",
+      "performance": "RankIC 0.0646 (CSI 300), 0.0141 (S&P 500); Sharpe 1.57 (CSI 300), 0.67 (S&P 500)"
+    },
+    {
+      "title": "FinTSBridge: Financial Time Series Evaluation Suite (2503.06928v2)",
+      "key_findings": "Three financial datasets (GSMI - 20 indices, OPTION - options, BTCF - Bitcoin futures-spot hourly). Benchmarks 10+ time series models including Non-stationary Transformer, TimesNet, PatchTST, iTransformer, DLinear. New metrics msIC and msIR for temporal correlation. Non-stationary Transformers and decomposition-based methods (Autoformer, FEDformer) perform well. BTCF dataset captures crypto lead-lag effects. Shows MSE/MAE alone insufficient; correlation-aware metrics needed.",
+      "model_type": "Multi-model benchmark (Non-stationary Transformer, TimesNet, PatchTST, iTransformer, DLinear, etc.)",
+      "performance": "Non-stationary models best for financial data; point-wise MSE metrics insufficient, msIC/msIR more informative"
+    },
+    {
+      "title": "101 Formulaic Alphas (Kakushadze 2016, arXiv:1601.00991)",
+      "key_findings": "WorldQuant's 101 formulaic alphas published as explicit formulas. Average holding period 0.6-6.4 days. Average pairwise correlation only 15.9%. Returns strongly correlated with volatility but not turnover. 80 of 101 alphas were in production at WorldQuant. Based solely on price and volume data (open, high, low, close, volume, vwap). Operators include rank, correlation, covariance, ts_argmin/max, scale, decay_linear, ts_sum, ts_mean, ts_stddev, ts_rank.",
+      "model_type": "Formulaic cross-sectional alphas (hand-crafted mathematical expressions)",
+      "performance": "Avg low pairwise correlation (15.9%), SR returns correlated with vol, not turnover"
+    },
+    {
+      "title": "XGBoost vs LSTM for Crypto Prediction (Independent Benchmark, 2026)",
+      "key_findings": "Tested 8 ML architectures on 10 crypto pairs with walk-forward validation. XGBoost (aggressive tuning) achieved 54.9% avg accuracy vs LSTM best 53.6%. XGBoost trained in seconds per fold vs LSTM minutes. Over 13,500 total fits tested. Random Forest: 52.3%, GRU: 52.4%, BiLSTM: 51.9%, TCN: 51.2%, Transformer 1-layer: 51.4%, LSTM+XGB hybrid: 52.1%. XGBoost won consistently across every coin and fold. On datasets under 10,000 samples, gradient boosting consistently outperforms deep learning.",
+      "model_type": "XGBoost vs LSTM vs GRU vs BiLSTM vs TCN vs Transformer",
+      "performance": "XGBoost Aggressive: 54.9% accuracy, LSTM seq=10: 53.6%, Transformer: 51.4%"
+    }
+  ],
+  "alpha_factor_categories": [
+    {
+      "category": "Momentum / Trend Following",
+      "examples": ["ROC (rate of change) over 5/10/20/60d windows", "MA crossovers (SMA5-SMA20)", "MACD signal line", "ADX for trend strength", "RSI trend-following modes", "Alpha101 #4: rank(ts_rank(rank(low), 9)) - conditional on returns"],
+      "effectiveness": "Strongest signal in crypto per Baybutt 2024. Works best during trending regimes. Decays rapidly in choppy/mean-reverting markets. Regime gating (Singha 2025) significantly improves performance by activating momentum only during drift regimes."
+    },
+    {
+      "category": "Mean Reversion / Reversal",
+      "examples": ["Short-term reversal (trailing 5-10d returns negated)", "RSI (Relative Strength Index) 6/14 period", "Bollinger Band %B", "CCI (Commodity Channel Index)", "Bias ratio (price vs moving average deviation)", "Alpha101 #12: sign(delta(volume,1)) * (-1 * delta(close,1))"],
+      "effectiveness": "WorldQuant's most common alpha class - most 101 alphas are contrarian. Strong signals in crypto on short horizons (1-3 days). Shorter holding periods than momentum. Volume confirmation reduces false signals."
+    },
+    {
+      "category": "Volume Analysis",
+      "examples": ["Volume-to-MA ratio", "OBV (On-Balance Volume)", "VPT (Volume Price Trend)", "VSUMP/VSUMD (volume on up vs down days)", "Dollar volume (price * volume)", "Adv{d} (average daily dollar volume)", "Alpha101 #3, #5 use rank(correlation(volume, close))"],
+      "effectiveness": "Volume alone does not predict direction but amplifies price signals. Volume confirmation (price+volume moving same direction) is more reliable. Changepoints in volume precede volatility regime shifts."
+    },
+    {
+      "category": "Volatility",
+      "examples": ["ATR (Average True Range) 14d", "STDDEV of returns over 5/10/20d", "VWAP deviation (price vs volume-weighted avg)", "Bollinger Band width", "Parkinson's estimator (HL/CO range)", "Alpha101 #6, #30 use ts_stddev and correlation with rank"],
+      "effectiveness": "Returns strongly correlated with volatility per Kakushadze. Volatility regimes gate signal effectiveness. Low-volatility anomaly exists in equities but less established in crypto. Useful for position sizing (volatility targeting)."
+    },
+    {
+      "category": "Microstructure",
+      "examples": ["Bid-ask spread", "Order flow imbalance", "Tick-level trade intensity", "Candle pattern features (KMID, KLEN, KUP, KLOW, KSFT)", "Funding rate (crypto perpetuals)", "Open interest change (futures)", "Liquidity ratio"],
+      "effectiveness": "Most relevant for high-frequency/crypto due to data availability. Funding rate and open interest have strong predictive power in crypto derivatives. Perpetual futures basis contains rich signal."
+    },
+    {
+      "category": "Price Pattern / K-Line",
+      "examples": ["KMID: (close-open)/open", "KLEN: (high-low)/open", "KUP: (high-max(open,close))/open", "KLOW: (min(open,close)-low)/open", "KSFT: (2*close-high-low)/open", "Candle body vs wick ratios"],
+      "effectiveness": "Standardized in Alpha158. Single-bar patterns have low individual predictive power but combined with rolling windows they capture intraday structure. Use as building blocks for more complex composite factors."
+    },
+    {
+      "category": "Composite / Multi-Factor",
+      "examples": ["MACD histogram", "KDJ stochastic", "Alpha158's 5/10/20/30/60d rolling window combinations", "Alpha101 #98: nested rank(decay_linear(correlation(vwap, sum(adv5, 26.5), 4.58), 7.18))", "PRISM-VQ's combined prior + learned latent factors"],
+      "effectiveness": "Composite factors often outperform individual ones due to diversification of signal sources. Alpha101 avg pairwise correlation is only 15.9% - combining uncorrelated alphas is key. Deep learning excels at combining many weak signals."
+    }
+  ],
+  "success_factors": [
+    "Walk-forward validation with strict point-in-time (PIT) safety: all features computable from data available at prediction time, no future leakage.",
+    "Regime-aware signal activation: gate factors on market/stock-specific conditions (e.g., drift regime in Singha 2025) rather than always-on signals.",
+    "Low pairwise correlation between alpha factors: combine uncorrelated signals to reduce portfolio variance (Kakushadze avg 15.9% pairwise correlation).",
+    "Conservative transaction cost modeling: include slippage, market impact, and bid-ask spread in backtests. Crypto costs differ significantly from equities.",
+    "Multiple train/test window evaluation: test across different market regimes (bull, bear, sideways, high-vol) rather than single holdout period.",
+    "Model-specific regime detection: monitor model's trailing realized efficacy rather than market-level VIX/volatility proxies (Sanderink 2026 - AUROC 0.75 vs 0.449).",
+    "Simplicity and interpretability: simpler models (XGBoost) generalize better on financial data than complex deep learning. Gradient boosting benchmarks within 1-3% of DL with far less compute.",
+    "Survivorship-bias-free universes: include delisted/merged/failed assets in backtests.",
+    "Explicit kill-switch and drawdown controls: pre-defined thresholds that halt trading during regime breaks (Singha 2025: 30% drawdown and -10% rolling 63d performance thresholds).",
+    "Robustness testing: parameter perturbation tests, randomization tests (shuffling), noise injection to verify signal is not spurious.",
+    "Use of volatility targeting rather than constant position sizing: scales exposure inversely to recent volatility, improving risk-adjusted returns."
+  ],
+  "common_pitfalls": [
+    "Look-ahead bias: using future data in feature construction (normalizing across full dataset, using future volatility) inflates in-sample performance. PIT-safe design is mandatory.",
+    "Survivorship bias: testing only on current exchange listings. Crypto exchanges have high delisting rates. Must include delisted coins in universe.",
+    "Inadequate transaction costs: crypto has higher costs than equities (funding rates, spread, slippage, withdrawal fees). Underestimating costs kills live performance.",
+    "Deep learning on small datasets: LSTM/Transformer with millions of parameters on <10,000 samples memorizes noise. Financial data has ~80% noise component.",
+    "Assuming stationarity: financial markets change regime frequently. A factor that worked in 2021 may invert in 2023. Non-stationarity is the primary challenge.",
+    "MSE-based evaluation: low MSE does not equal tradability. Using RankIC (Information Coefficient) and msIC (mean sequential correlation) better captures directional accuracy.",
+    "Factor crowding: using the same 158 public factors from Alpha158 as everyone else eliminates edge. Public factors are baseline, not moat.",
+    "Over-optimization of hyperparameters: fine-tuning on multiple test sets erodes OOS validity. Freeze parameters after training period (Singha methodology).",
+    "Ignoring cross-asset correlation: crypto assets are highly correlated (avg pairwise ~60% per Giller 2024). Diversification benefits are lower than in equities.",
+    "No kill-switch logic: deploying models without regime-change detection leads to catastrophic losses when signal breaks. Two-level gate (strategy + position) recommended.",
+    "Data mining / multiple testing: testing thousands of factor specifications without correction. Harvey et al. recommend t-stat threshold > 3.0 for new factors. Randomization placebo tests essential."
+  ],
+  "recommended_feature_count": "50-200 well-engineered features is the empirical sweet spot. WorldQuant uses 101 alphas (low correlation). Qlib's Alpha158 has 158 features. Alpha360 has 360. PRISM-VQ uses ~100 input features. More features require stronger regularization (L1, VQ bottleneck, PCA). The 'factor zoo' problem in finance (100s of correlated features) means feature selection is as important as feature creation. Start with 50-100 core features spanning momentum(20%), reversal(15%), volume(15%), volatility(10%), microstructure(15%), and composite(25%). Scale up only if walk-forward signal holds.",
+  "model_recommendation": "LightGBM/XGBoost is the recommended primary model for crypto alpha factor research. Evidence across multiple benchmarks: (1) XGBoost achieves 54.9% accuracy vs LSTM 53.6% on crypto (2026 independent benchmark, 8 architectures, 10 crypto pairs, 13,500 fits). (2) Gradient boosting trains seconds per fold vs minutes for LSTM, enabling rapid iteration. (3) Financial time series is a tabular problem - features already aggregate temporal information. (4) XGBoost provides built-in feature importance (gain, cover, weight) and SHAP compatibility. (5) Tree-based models handle non-stationarity better through ensemble averaging. (6) Deep learning (Transformers/LSTM) only justified with 100k+ samples and demonstrates clear walk-forward improvement over gradient boosting. For production: use LightGBM as primary ranker, apply two-level uncertainty gates (regime-trust gate + epistemic tail cap per Sanderink 2026), volatility-size all positions, and maintain kill-switch at 30% drawdown. Consider PRISM-VQ architecture only after gradient boosting baseline is established and dataset exceeds 50k samples.",
+  "github_libraries": [
+    "microsoft/qlib (15k+ stars) - AI quant platform with Alpha158/Alpha360 factors, data handlers, model zoo",
+    "chickenopoulos/crypto-factors - Crypto-specific alpha factor research with Binance perpetuals universe",
+    "lvlh2/alpha101 - Python implementation of WorldQuant 101 Formulaic Alphas (pip install alpha101)",
+    "lansetaowa/alpha101-crypto - WorldQuant 101 alphas tested on crypto data (Binance + CoinGecko)",
+    "VernonOY/alpha-skills (53 stars) - Quant factor research skills for AI coding assistants, IC calculation templates",
+    "paperswithbacktest/awesome-systematic-trading (8.4k stars) - Curated list of libraries, strategies, books",
+    "alpha-miner/alpha-mind (239 stars) - ML-based alpha combining and portfolio calculation pipeline",
+    "rocky-d/wqb (267 stars) - WorldQuant BRAIN library for automated factor submission",
+    "wangzhe3224/awesome-systematic-trading (4.3k stars) - Systematic trading resources including crypto",
+    "The-Alpha-Project/alpha-core (304 stars) - Python framework for alpha research"
+  ]
+}
