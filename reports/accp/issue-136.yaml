@@ -1,0 +1,31 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Implemented CalibrationCandidate production after training — ECE, MCE, confidence bins reported, calibration status assigned, per-fold degradation tracked, schema validation passes. G6 gate now has a concrete evidence source."
+files_changed:
+  - alphaforge/src/alphaforge/calibration/__init__.py
+  - alphaforge/src/alphaforge/calibration/calculator.py
+  - alphaforge/tests/test_calibration.py
+decisions_locked:
+  - calibration_candidate.schema.json: LOCKED (unchanged — schema was already canonical)
+  - Calibration status thresholds (ECE < 0.05 CALIBRATED, 0.05-0.10 UNCALIBRATED, >= 0.10 UNRELIABLE): LOCKED_INITIAL_BASELINE — per model_artifact_contract.md
+  - Degradation multiplier (1.5x baseline ECE): LOCKED_INITIAL_BASELINE
+remaining_holds:
+  - Calibration method selection (isotonic/platt/beta) deferred — current implementation uses "none" (raw metrics only)
+  - Per-fold degradation thresholds may need recalibration with real data
+  - No automated integration with XGBoost training loop yet (module is callable but not auto-wired)
+safe_next_step: "Integrate calibration into training pipeline: call calibrate_model() after train() to produce CalibrationCandidate alongside ModelArtifact"
+commands_run:
+  - PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_calibration.py -v --timeout=60
+  - PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q --timeout=60
+  - PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py --timeout=60
+  - make check-contracts
+  - make check-boundaries
+evidence:
+  - "47 calibration tests pass: ECE/MCE/Brier correctness, confidence bin construction, status assignment, schema validation, per-fold degradation, edge cases"
+  - "1130 alphaforge tests pass (includes 47 new + 1083 existing)"
+  - "1641 total tests pass across lib/ + integration/ + simulation/ + alphaforge/ (3 skipped, pre-existing)"
+  - "Boundary checks: 5/6 pass (1 pre-existing skip)"
+  - "Contract registry: 11/11 pass"
+  - "Schema parity: 9/9 pass"
+  - "Commit: a4cf332"

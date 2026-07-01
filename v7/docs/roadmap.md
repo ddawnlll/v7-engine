@@ -229,6 +229,31 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
+## Issue #136 — CalibrationCandidate Module (2026-07-01)
+
+**What changed:**
+- `alphaforge/src/alphaforge/calibration/` — new package with `calculator.py`
+- `CalibrationCalculator` computes ECE, MCE, Brier score, confidence bins (reliability diagram), and calibration status per model_artifact_contract.md thresholds
+- `build_calibration_candidate()` produces CalibrationCandidate dict matching `calibration_candidate.schema.json`
+- `compute_per_fold_degradation()` tracks per-fold calibration stability
+- `calibrate_model()` one-shot convenience function for the full pipeline
+- 47 new tests covering all calibration functions, schema validation, edge cases
+- All 1641 tests pass across lib/ + integration/ + simulation/ + alphaforge/
+
+**Lock status:**
+- Calibration module: LOCKED_INITIAL_BASELINE
+- Status thresholds (ECE < 0.05/0.10): LOCKED_INITIAL_BASELINE (per model_artifact_contract.md)
+- Degradation multiplier (1.5x): LOCKED_INITIAL_BASELINE
+
+**Remaining holds:**
+- No automated integration with XGBoost training loop — module is callable but not auto-wired (HOLD)
+- Calibration method selection (isotonic/platt/beta) deferred — uses "none" for raw metrics (HOLD)
+- Per-fold degradation thresholds may need recalibration with real data (HOLD)
+
+**Evidence:** 47/47 calibration tests pass, 1641/1644 total pass. ACCP report at `reports/accp/issue-136.yaml`. Commit: `a4cf332`.
+
+---
+
 ### Implementation Sequence
 
 SWING is implemented first as the **control baseline** — it validates the entire architecture (contracts, simulation truth, labels, features, model training, calibration, policy, portfolio, risk, runtime integration) with the lowest risk. Once the architecture is proven via SWING, SCALP and AGGRESSIVE_SCALP research accelerates on a validated foundation.
