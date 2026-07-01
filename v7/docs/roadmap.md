@@ -143,33 +143,6 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
-## #128 — Feature/Label Leakage + Causality Audit (2026-07-01)
-
-**Issue:** #128 — Comprehensive causality audit of all alphaforge/src/ source files (read-only).
-
-**What changed:**
-- Created `alphaforge/tests/test_causality_audit.py` with 76 programmatic audit tests covering all 10 audit dimensions
-- No core source files were modified — read-only audit of alphaforge/src/ per issue requirements
-
-**Audit findings:**
-1. **All active features are causally correct** (PASS): All 7 feature groups use only data up to current bar t. No-revision property verified for every function.
-2. **Label/feature timestamp separation** (PASS_WITH_WARNINGS): Enforced when `label_timestamp` column present; silently skipped when absent (documented test-scenario gap).
-3. **WFV purge/embargo correctness** (PASS): Purge gaps correctly computed, mode-specific constants verified.
-4. **Cross-symbol lead-lag DEFERRED** (PASS): No active leakage. Note: `compute_lead_lag_score()` accesses future context data for negative lags — must be fixed before enablement.
-5. **Pipeline stateless/deterministic** (PASS): Pure functional, no mutable global state.
-6. **Roll/EWM no lookahead** (PASS): All EMA/MACD/RSI computations are causal.
-7. **Label adapter per-record** (PASS): No cross-record state or lookahead.
-8. **Domain boundary integrity** (PASS): No forbidden imports.
-
-**Remaining holds:**
-- Label timestamp separation without explicit `label_timestamp` column (MEDIUM)
-- Lead-lag future data in `compute_lead_lag_score()` (INFORMATIONAL — DEFERRED)
-- Embargo not actively enforced during WFV `split()` (LOW)
-
-**Evidence:** 76/76 causality audit tests pass. All existing tests continue to pass (1687 total, 3 skipped). ACCP report at `reports/accp/issue-128.yaml`.
-
----
-
 ## TR-08 — Final Training Readiness Audit — v0.1 Milestone COMPLETE (2026-06-26)
 
 **Issue:** #12 — Final audit gate. Verify all TR-01 through TR-07 gates have evidence, run full test suite, update roadmap.
@@ -220,37 +193,12 @@ The mode implementation order (SWING first) must not be confused with business/r
 | Hold | Domain | Release Condition |
 |------|--------|-------------------|
 | SCALP thresholds | v7 | Empirical walk-forward OOS evidence, fee/slippage stress, funding validation |
-| Regime gate (G4) | v7/gates | ✅ **RESOLVED (#134):** G4 gate now evaluates real regime breakdown data from RegimeEvaluator. Symbol x regime stability matrix added. |
+| Regime gate (G4) | v7/gates | Real regime detector implementation (current: placeholder) |
 | G1-G5, G7-G8 gates | v7/gates | Real evidence data (current: placeholder implementations) |
 | Real profitability evidence | All | Requires simulation labels, features, training, WF, OOS on real data |
 | EXPLICIT_GBM_BLOCK | alphaforge/gates | Post-training xgboost presence is expected; gate works as designed |
 
 **Evidence:** ACCP report at `reports/accp/issue-12.yaml`. Full test output archived in commit.
-
----
-
-## Issue #136 — CalibrationCandidate Module (2026-07-01)
-
-**What changed:**
-- `alphaforge/src/alphaforge/calibration/` — new package with `calculator.py`
-- `CalibrationCalculator` computes ECE, MCE, Brier score, confidence bins (reliability diagram), and calibration status per model_artifact_contract.md thresholds
-- `build_calibration_candidate()` produces CalibrationCandidate dict matching `calibration_candidate.schema.json`
-- `compute_per_fold_degradation()` tracks per-fold calibration stability
-- `calibrate_model()` one-shot convenience function for the full pipeline
-- 47 new tests covering all calibration functions, schema validation, edge cases
-- All 1641 tests pass across lib/ + integration/ + simulation/ + alphaforge/
-
-**Lock status:**
-- Calibration module: LOCKED_INITIAL_BASELINE
-- Status thresholds (ECE < 0.05/0.10): LOCKED_INITIAL_BASELINE (per model_artifact_contract.md)
-- Degradation multiplier (1.5x): LOCKED_INITIAL_BASELINE
-
-**Remaining holds:**
-- No automated integration with XGBoost training loop — module is callable but not auto-wired (HOLD)
-- Calibration method selection (isotonic/platt/beta) deferred — uses "none" for raw metrics (HOLD)
-- Per-fold degradation thresholds may need recalibration with real data (HOLD)
-
-**Evidence:** 47/47 calibration tests pass, 1641/1644 total pass. ACCP report at `reports/accp/issue-136.yaml`. Commit: `a4cf332`.
 
 ---
 
@@ -565,6 +513,35 @@ Do not collapse these into one vague “publish” step.
 - Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL)
 
 **Evidence:** 1578 passed, 3 skipped, 0 failures. ACCP reports at `reports/accp/issue-122.yaml`, `issue-123.yaml`, `issue-124.yaml`, `issue-125.yaml`.
+
+---
+
+## Cost Stress Independent Dimensions (2026-07-01)
+
+**Issue:** #137 — Cost stress uses blended fee+slippage multiplier instead of independent dimensions.
+
+**What changed:**
+- Added `alphaforge/src/alphaforge/validation/cost_stress.py` with `compute_cost_stress()` that computes independent cost stress dimensions:
+  - Fee stress at 1.5x, 2x, 3x of baseline fee
+  - Slippage stress at 1.5x, 2x, 3x of baseline slippage
+  - Spread sensitivity at 1.5x, 2x of baseline spread
+  - Combined worst-case (all costs at highest multiplier simultaneously)
+  - Break-even total cost multiplier
+- Uses linear cost model: `cost_r = 2 * cost_pct / 100 / entry_risk_pct` where entry_risk_pct defaults to 0.02 (SWING mode).
+- Added `cost_stress_to_stress_levels()` to convert `CostStressResult` into the dict format used by empirical report builders.
+- Exported both functions from `alphaforge.validation` package.
+
+**Lock status:**
+- Independent cost stress computation: LOCKED_INITIAL_BASELINE
+- Cost stress model (linear R approximation): LOCKED_INITIAL_BASELINE
+- Report format converter: LOCKED_INITIAL_BASELINE
+
+**Remaining holds:**
+- Cost stress model uses linear approximation — may need recalibration against simulation engine truth (HOLD)
+- Entry risk percentage default (0.02) is SWING-appropriate; SCALP/AGGRESSIVE_SCALP callers must override (HOLD)
+- No real profitability evidence to validate cost stress outputs (HOLD)
+
+**Evidence:** 28/28 tests pass (cost stress), 1622/1622 tests pass overall (0 failures). ACCP report at `reports/accp/issue-137.yaml`.
 
 ---
 

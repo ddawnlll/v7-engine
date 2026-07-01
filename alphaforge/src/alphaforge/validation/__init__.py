@@ -34,10 +34,11 @@ from alphaforge.validation.contracts import (
     embargo_distance,
     purge_gap,
 )
-from alphaforge.validation.regime_eval import (
-    RegimeEvaluator,
-    compute_symbol_regime_matrix,
+from alphaforge.validation.cost_stress import (
+    compute_cost_stress,
+    cost_stress_to_stress_levels,
 )
+from alphaforge.validation.regime_eval import RegimeEvaluator
 from alphaforge.validation.walk_forward import WalkForwardValidator
 
 __all__ = [
@@ -53,7 +54,6 @@ __all__ = [
     "PurgePolicy",
     "RegimeBreakdown",
     "RegimeEvaluator",
-    "compute_symbol_regime_matrix",
     "SymbolStability",
     "ValidationError",
     "ValidationReport",
@@ -61,6 +61,8 @@ __all__ = [
     "WalkForwardConfig",
     "WalkForwardValidator",
     "WindowType",
+    "compute_cost_stress",
+    "cost_stress_to_stress_levels",
     "embargo_distance",
     "purge_gap",
 ]

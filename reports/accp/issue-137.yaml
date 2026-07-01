@@ -1,0 +1,72 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation:
+  issue: "#137"
+  title: "Cost stress uses blended fee+slippage multiplier instead of independent dimensions"
+  files_changed:
+    - alphaforge/src/alphaforge/validation/cost_stress.py  (new)
+    - alphaforge/src/alphaforge/validation/__init__.py  (updated exports)
+    - alphaforge/tests/test_cost_stress.py  (new, 28 tests)
+    - v7/docs/roadmap.md  (updated with issue entry)
+    - reports/accp/issue-137.yaml  (this file)
+  scope_verified: true
+  scope_notes: >
+    Replaced blended single-multiplier cost stress approach with independent
+    fee, slippage, and spread stress dimensions. Added compute_cost_stress()
+    function that produces fully populated CostStressResult with all independent
+    dimensions. Added cost_stress_to_stress_levels() converter for report format.
+    The existing CostStressResult contract structure already had the right fields
+    (fee_baseline, fee_stress_1_5x, fee_stress_2x, fee_stress_3x, etc.) —
+    issue was that no computation function existed to populate them.
+decisions_locked:
+  - "Independent cost stress computation: LOCKED_INITIAL_BASELINE"
+  - "Cost stress model (linear R approximation): LOCKED_INITIAL_BASELINE"
+  - "Report format converter: LOCKED_INITIAL_BASELINE"
+remaining_holds:
+  - "Cost stress model uses linear approximation — may need recalibration against simulation engine truth (HOLD)"
+  - "Entry risk percentage default (0.02) is SWING-appropriate; SCALP/AGGRESSIVE_SCALP callers must override (HOLD)"
+  - "No real profitability evidence to validate cost stress outputs (HOLD)"
+safe_next_step: >
+  Wire compute_cost_stress() into the empirical report builder as a fallback
+  when WFV results lack pre-computed cost stress data. Also integrate with
+  the walk_forward_runner to compute cost stress automatically.
+files_changed:
+  - path: alphaforge/src/alphaforge/validation/cost_stress.py
+    action: create
+    description: >
+      New module with compute_cost_stress() and cost_stress_to_stress_levels().
+      compute_cost_stress() computes independent fee/slippage/spread stress
+      dimensions using a linear R cost model. Returns a fully populated
+      CostStressResult.
+  - path: alphaforge/src/alphaforge/validation/__init__.py
+    action: modify
+    description: >
+      Added exports for compute_cost_stress and cost_stress_to_stress_levels.
+  - path: alphaforge/tests/test_cost_stress.py
+    action: create
+    description: >
+      28 tests covering: positive edge survival, marginal edge failure,
+      combined worst-case, break-even cost, baseline cost values, edge cases
+      (zero/negative edge, zero entry_risk), independent dimensions
+      (fee vs slippage separation), and report dict converter.
+  - path: v7/docs/roadmap.md
+    action: modify
+    description: >
+      Added issue #137 entry under "Cost Stress Independent Dimensions"
+      section with lock status and remaining holds.
+  - path: reports/accp/issue-137.yaml
+    action: create
+    description: This ACCP report.
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_cost_stress.py -v"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ -q -x"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ -q -x"
+  - "PYTHONPATH=. python3 -m pytest simulation/tests/ -q -x"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ integration/tests/ lib/tests/ simulation/tests/ -q -x --ignore=lib/tests/test_market_data_binance.py"
+evidence:
+  - "28/28 cost stress tests pass"
+  - "1622/1622 total tests pass (alphaforge + integration + lib + simulation, 0 failures)"
+  - "Commit: 34196a6"
+  - "All pre-existing tests continue to pass (no regressions)"
