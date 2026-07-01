@@ -1,9 +1,12 @@
 """Walk-Forward Validation Runner — actual model training and metric computation.
 
 Performs walk-forward validation with real XGBoost models trained per fold
-using the TR-05 SWING hyperparameter configuration. Computes per-fold
+using mode-specific hyperparameter configurations. Computes per-fold
 financial metrics (Sharpe, win rate, max drawdown, profit factor) and
 overfitting diagnostics (train vs validation gap).
+
+Supports all three modes: SWING (4h baseline), SCALP (1h), AGGRESSIVE_SCALP (15m).
+Mode-specific annualization factors and window defaults are applied automatically.
 
 This module IMPORTS xgboost and numpy. It is intended for the training
 environment, NOT the gate-check environment.
@@ -12,6 +15,10 @@ Usage:
     from alphaforge.validation.walk_forward_runner import run_walk_forward
     report = run_walk_forward(n_bars=4000, n_symbols=3)
     # report is a dict with fold_metrics, overfit_flags, aggregate_metrics
+
+    # Mode-specific:
+    scalp_report = run_walk_forward(n_bars=6000, n_symbols=3, mode="SCALP")
+    agg_report = run_walk_forward(n_bars=6000, n_symbols=3, mode="AGGRESSIVE_SCALP")
 """
 
 from __future__ import annotations
@@ -29,6 +36,8 @@ import numpy as np
 import xgboost as xgb
 
 from alphaforge.validation.contracts import (
+    DEFAULT_FOLD_CONFIGS,
+    DEFAULT_PURGE_POLICIES,
     MODE_PURGE_BARS,
     Fold,
     Mode,
@@ -40,8 +49,10 @@ from alphaforge.validation.contracts import (
 )
 from alphaforge.validation.walk_forward import WalkForwardValidator
 # ---------------------------------------------------------------------------
-# TR-05 model hyperparameters (inlined — training module not in this worktree)
-# These are LOCKED_INITIAL_BASELINE for SWING mode.
+# Mode-specific hyperparameters (LOCKED_INITIAL_BASELINE)
+# SWING: widest windows, deepest memory — established baseline
+# SCALP: 1h bars, slightly faster — match intraday horizon
+# AGGRESSIVE_SCALP: 15m bars, fastest reaction — microstructure aware
 # ---------------------------------------------------------------------------
 
 # Label mapping for multi-class classification
@@ -73,6 +84,55 @@ SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "verbosity": 0,
 }
 
+# SCALP hyperparameters (LOCKED_INITIAL_BASELINE)
+# Slightly faster learning rate, shallower trees for 1h micro-patterns.
+# Reduced n_estimators to prevent overfitting on shorter lookback windows.
+SCALP_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
+    "objective": "multi:softprob",
+    "num_class": _NUM_CLASSES,
+    "max_depth": 3,
+    "learning_rate": 0.08,
+    "n_estimators": 150,
+    "subsample": 0.7,
+    "colsample_bytree": 0.7,
+    "min_child_weight": 3,
+    "gamma": 0.2,
+    "reg_alpha": 0.2,
+    "reg_lambda": 0.8,
+    "eval_metric": "mlogloss",
+    "early_stopping_rounds": 15,
+    "random_state": 42,
+    "verbosity": 0,
+}
+
+# AGGRESSIVE_SCALP hyperparameters (LOCKED_INITIAL_BASELINE)
+# Highest learning rate, shallowest trees for fast microstructure adaptation.
+# Stronger regularization to combat noise at 15m resolution.
+AGGRESSIVE_SCALP_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
+    "objective": "multi:softprob",
+    "num_class": _NUM_CLASSES,
+    "max_depth": 3,
+    "learning_rate": 0.10,
+    "n_estimators": 100,
+    "subsample": 0.65,
+    "colsample_bytree": 0.65,
+    "min_child_weight": 2,
+    "gamma": 0.3,
+    "reg_alpha": 0.3,
+    "reg_lambda": 0.5,
+    "eval_metric": "mlogloss",
+    "early_stopping_rounds": 10,
+    "random_state": 42,
+    "verbosity": 0,
+}
+
+# Mode hyperparameter lookup
+_MODE_HYPERPARAMS: Dict[str, Dict[str, Any]] = {
+    "SWING": SWING_DEFAULT_HYPERPARAMS,
+    "SCALP": SCALP_DEFAULT_HYPERPARAMS,
+    "AGGRESSIVE_SCALP": AGGRESSIVE_SCALP_DEFAULT_HYPERPARAMS,
+}
+
 RANDOM_SEED: int = 42
 
 logger = logging.getLogger(__name__)
@@ -94,8 +154,31 @@ WFV_VAL_FRACTION: float = 0.25  # fraction of test window used for validation
 OVERFIT_ACCURACY_GAP_THRESHOLD: float = 0.15  # train - val accuracy > this => flagged
 OVERFIT_LOGLOSS_GAP_THRESHOLD: float = 0.10  # val - train logloss > this => flagged
 
-# For annualized Sharpe, approximate periods per year for 4h bars
-ANNUALIZATION_FACTOR: float = 2190.0  # 365 * 6 bars/day
+# Mode-specific parameters (LOCKED_INITIAL_BASELINE)
+# Periods per year for annualized Sharpe computation:
+#   SWING: 4h bars   → 365 * 6 = 2190
+#   SCALP: 1h bars   → 365 * 24 = 8760
+#   AGGRESSIVE_SCALP: 15m bars → 365 * 96 = 35040
+MODE_ANNUALIZATION: Dict[str, float] = {
+    "SWING": 2190.0,
+    "SCALP": 8760.0,
+    "AGGRESSIVE_SCALP": 35040.0,
+}
+
+# Backward-compatible alias for SWING annualization (used in function defaults)
+ANNUALIZATION_FACTOR: float = 2190.0
+
+# Default purge/embargo bars per mode for walk_forward_runner test configs
+MODE_RUNNER_PURGE_BARS: Dict[str, int] = {
+    "SWING": 20,
+    "SCALP": 100,
+    "AGGRESSIVE_SCALP": 200,
+}
+MODE_RUNNER_EMBARGO_BARS: Dict[str, int] = {
+    "SWING": 20,
+    "SCALP": 100,
+    "AGGRESSIVE_SCALP": 200,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -345,12 +428,15 @@ def compute_profit_factor(returns: np.ndarray) -> float:
 def compute_all_metrics(
     y_pred: np.ndarray,
     y_true: np.ndarray,
+    annualization_factor: float = ANNUALIZATION_FACTOR,
 ) -> Dict[str, Any]:
     """Compute all financial metrics from classification predictions.
 
     Args:
         y_pred: Integer predicted labels (0/1/2).
         y_true: Integer true labels (0/1/2).
+        annualization_factor: Periods per year for Sharpe annualization.
+            Defaults to ANNUALIZATION_FACTOR (2190 for SWING 4h bars).
 
     Returns:
         Dict with sharpe, win_rate, max_drawdown, profit_factor, and trade counts.
@@ -364,7 +450,7 @@ def compute_all_metrics(
     no_trade_count = int(np.sum(y_pred == 2))
 
     return {
-        "sharpe": compute_sharpe_ratio(returns),
+        "sharpe": compute_sharpe_ratio(returns, annualization_factor=annualization_factor),
         "win_rate": compute_win_rate(y_pred, y_true),
         "max_drawdown": compute_max_drawdown(returns),
         "profit_factor": compute_profit_factor(returns),
@@ -383,24 +469,49 @@ def compute_all_metrics(
 def _build_walk_forward_config(
     mode: Mode = Mode.SWING,
     min_folds: int = WFV_MIN_FOLDS,
-    train_window_bars: int = WFV_TRAIN_WINDOW_BARS,
-    test_window_bars: int = WFV_TEST_WINDOW_BARS,
-    purge_bars: int = WFV_PURGE_BARS,
-    embargo_bars: int = WFV_EMBARGO_BARS,
+    train_window_bars: int | None = None,
+    test_window_bars: int | None = None,
+    purge_bars: int | None = None,
+    embargo_bars: int | None = None,
     val_fraction: float = WFV_VAL_FRACTION,
 ) -> WalkForwardConfig:
-    """Build a walk-forward config suitable for synthetic data evaluation."""
-    # Ratios must sum to 1.0 (train_ratio + val_ratio + oos_ratio = 1.0)
-    # Use the val_fraction to determine split between val and oos
-    # train gets the remainder
-    oos_ratio = 1.0 - val_fraction
-    train_ratio = 1.0 - val_fraction - oos_ratio
-    # But train_ratio, val_ratio, oos_ratio are used within the test window
-    # for val/oos split. Re-read walk_forward.py: test_alloc = val_ratio + oos_ratio,
-    # val_bars = test_bar_count * val_ratio / test_alloc
-    # So these are relative weights within the test window, and test window
-    # is already separate from train window. The sum-to-1 constraint is
-    # just a validation check — we can set train=0.50, val=0.25, oos=0.25.
+    """Build a walk-forward config suitable for synthetic data evaluation.
+
+    When optional bar parameters are None, mode-specific defaults from
+    DEFAULT_FOLD_CONFIGS are used. This ensures each mode gets appropriate
+    window sizes, purge/embargo bars, and window type.
+
+    Args:
+        mode: Trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
+        min_folds: Minimum fold count.
+        train_window_bars: Training window in bars. None = mode default.
+        test_window_bars: Test window in bars. None = mode default.
+        purge_bars: Purge gap in bars. None = mode default.
+        embargo_bars: Embargo in bars. None = mode default.
+        val_fraction: Fraction of test window for validation.
+
+    Returns:
+        WalkForwardConfig with appropriate mode-specific parameters.
+    """
+    mode_str = mode.value
+    default_config = DEFAULT_FOLD_CONFIGS.get(mode)
+
+    if train_window_bars is None:
+        train_window_bars = (
+            default_config.train_window_bars if default_config else WFV_TRAIN_WINDOW_BARS
+        )
+    if test_window_bars is None:
+        test_window_bars = (
+            default_config.test_window_bars if default_config else WFV_TEST_WINDOW_BARS
+        )
+    if purge_bars is None:
+        purge_bars = MODE_RUNNER_PURGE_BARS.get(mode_str, WFV_PURGE_BARS)
+    if embargo_bars is None:
+        embargo_bars = MODE_RUNNER_EMBARGO_BARS.get(mode_str, WFV_EMBARGO_BARS)
+
+    window_type = WindowType.ANCHORED
+    if default_config is not None:
+        window_type = default_config.window_type
 
     return WalkForwardConfig(
         mode=mode,
@@ -412,7 +523,7 @@ def _build_walk_forward_config(
         test_window_bars=test_window_bars,
         purge_bars=purge_bars,
         embargo_bars=embargo_bars,
-        window_type=WindowType.ANCHORED,
+        window_type=window_type,
     )
 
 
@@ -420,19 +531,21 @@ def run_walk_forward(
     n_bars: int = 2000,
     n_symbols: int = 3,
     random_seed: int = 42,
-    train_window_bars: int = WFV_TRAIN_WINDOW_BARS,
-    test_window_bars: int = WFV_TEST_WINDOW_BARS,
+    train_window_bars: int | None = None,
+    test_window_bars: int | None = None,
     min_folds: int = WFV_MIN_FOLDS,
+    mode: str = "SWING",
 ) -> WalkForwardResult:
-    """Run complete walk-forward validation.
+    """Run complete walk-forward validation for a specified trading mode.
 
     1. Generate synthetic OHLCV data with the specified bar count.
-    2. Compute features via the feature pipeline.
+    2. Compute features via the feature pipeline (mode-aware).
     3. Generate synthetic labels.
     4. Assemble a chronological dataset (feature rows sorted by timestamp).
     5. Split into walk-forward folds using WalkForwardValidator.
-    6. For each fold, train an XGBoost classifier with TR-05 hyperparameters
-       on the training subset, evaluate on validation and OOS subsets.
+    6. For each fold, train an XGBoost classifier with mode-appropriate
+       hyperparameters on the training subset, evaluate on validation
+       and OOS subsets.
     7. Compute per-fold financial metrics.
     8. Check for overfitting (train vs val accuracy/logloss gap).
     9. Assemble aggregate metrics and verdict.
@@ -441,13 +554,29 @@ def run_walk_forward(
         n_bars: Number of bars per symbol. Total bars = n_bars * n_symbols.
         n_symbols: Number of trading symbols.
         random_seed: Random seed for reproducibility.
-        train_window_bars: Training window size in bars.
-        test_window_bars: Test window size in bars.
+        train_window_bars: Training window size in bars. None = mode default.
+        test_window_bars: Test window size in bars. None = mode default.
         min_folds: Minimum number of folds.
+        mode: Trading mode ('SWING', 'SCALP', 'AGGRESSIVE_SCALP').
 
     Returns:
         WalkForwardResult with folds, overfit_flags, aggregate_metrics, verdict.
     """
+    # Validate mode and get mode-specific config
+    mode_upper = mode.upper().strip()
+    if mode_upper not in ("SWING", "SCALP", "AGGRESSIVE_SCALP"):
+        raise ValueError(
+            f"Unsupported mode: '{mode}'. Must be SWING, SCALP, or AGGRESSIVE_SCALP."
+        )
+    mode_enum = Mode(mode_upper)
+    mode_str = mode_upper
+
+    # Get mode-specific hyperparameters
+    hyperparams = _MODE_HYPERPARAMS.get(mode_str, SWING_DEFAULT_HYPERPARAMS).copy()
+
+    # Get mode-specific annualization factor
+    annualization = MODE_ANNUALIZATION.get(mode_str, 2190.0)
+
     # ------------------------------------------------------------------
     # 1. Generate synthetic data
     # ------------------------------------------------------------------
@@ -458,16 +587,16 @@ def run_walk_forward(
         random_seed=random_seed,
     )
     total_bars = n_bars * len(symbols)
-    logger.info(f"Generated {total_bars} bars across {len(symbols)} symbols")
+    logger.info(f"[{mode_str}] Generated {total_bars} bars across {len(symbols)} symbols")
 
     # ------------------------------------------------------------------
-    # 2. Compute features
+    # 2. Compute features (mode-aware)
     # ------------------------------------------------------------------
     from alphaforge.features.pipeline import compute_features
 
-    feature_matrix = compute_features(ohlcv_data, mode="SWING")
+    feature_matrix = compute_features(ohlcv_data, mode=mode_str)
     feature_names = sorted(feature_matrix.features.keys())
-    logger.info(f"Computed {len(feature_names)} features: {feature_names}")
+    logger.info(f"[{mode_str}] Computed {len(feature_names)} features: {feature_names}")
 
     # Assemble feature array
     X_all = np.column_stack([
@@ -517,13 +646,13 @@ def run_walk_forward(
     # 5. Split into walk-forward folds
     # ------------------------------------------------------------------
     config = _build_walk_forward_config(
-        mode=Mode.SWING,
+        mode=mode_enum,
         min_folds=min_folds,
         train_window_bars=train_window_bars,
         test_window_bars=test_window_bars,
     )
     purge_policy = PurgePolicy(
-        mode=Mode.SWING,
+        mode=mode_enum,
         purge_bars=config.purge_bars,
         embargo_bars=config.embargo_bars,
     )
@@ -532,7 +661,7 @@ def run_walk_forward(
     try:
         folds = validator.split(chrono_dataset)
     except Exception as e:
-        logger.error(f"Fold split failed: {e}")
+        logger.error(f"[{mode_str}] Fold split failed: {e}")
         return WalkForwardResult(
             overfit_flags=[
                 OverfitFlag(
@@ -544,12 +673,11 @@ def run_walk_forward(
             verdict=ValidationVerdict.INCONCLUSIVE.value,
         )
 
-    logger.info(f"Split into {len(folds)} walk-forward folds")
+    logger.info(f"[{mode_str}] Split into {len(folds)} walk-forward folds")
 
     # ------------------------------------------------------------------
     # 6. Train and evaluate per fold
     # ------------------------------------------------------------------
-    hyperparams = SWING_DEFAULT_HYPERPARAMS.copy()
     fold_metrics: List[FoldMetrics] = []
     overfit_flags: List[OverfitFlag] = []
 
@@ -565,7 +693,7 @@ def run_walk_forward(
         oos_idx = [i for i in oos_idx if i < len(X)]
 
         if len(train_idx) < 10 or len(val_idx) < 5 or len(oos_idx) < 5:
-            logger.warning(f"Fold {fi}: insufficient samples. Skipping.")
+            logger.warning(f"[{mode_str}] Fold {fi}: insufficient samples. Skipping.")
             continue
 
         X_train = X[train_idx]
@@ -575,7 +703,7 @@ def run_walk_forward(
         X_oos = X[oos_idx]
         y_oos = y_int[oos_idx]
 
-        # Train XGBoost with TR-05 hyperparameters
+        # Train XGBoost with mode-specific hyperparameters
         dtrain = xgb.DMatrix(X_train, label=y_train)
         dtrain.feature_names = feature_names
         dval = xgb.DMatrix(X_val, label=y_val)
@@ -632,7 +760,9 @@ def run_walk_forward(
             pass
 
         # OOS financial metrics
-        oos_fin_metrics = compute_all_metrics(oos_pred, y_oos)
+        oos_fin_metrics = compute_all_metrics(
+            oos_pred, y_oos, annualization_factor=annualization
+        )
 
         # Overfitting indicators
         acc_gap = train_acc - val_acc
@@ -738,9 +868,9 @@ def run_walk_forward(
     # 9. Assemble result
     # ------------------------------------------------------------------
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-    rid_raw = f"{Mode.SWING.value}|{len(fold_metrics)}|{total_oos_trades}|{ts}"
+    rid_raw = f"{mode_str}|{len(fold_metrics)}|{total_oos_trades}|{ts}"
     rid_hash = hashlib.sha256(rid_raw.encode()).hexdigest()[:8]
-    report_id = f"WFV-SWING-{ts}-{rid_hash}"
+    report_id = f"WFV-{mode_str}-{ts}-{rid_hash}"
 
     aggregate_metrics = {
         "n_folds": len(fold_metrics),
@@ -909,11 +1039,15 @@ def main() -> int:
         "--seed", type=int, default=42,
         help="Random seed (default: 42)"
     )
+    parser.add_argument(
+        "--mode", type=str, default="SWING",
+        help="Trading mode: SWING, SCALP, or AGGRESSIVE_SCALP (default: SWING)"
+    )
 
     args = parser.parse_args()
 
-    print("=== TR-06 Walk-Forward Validation ===")
-    print(f"Mode: SWING (TR-05 hyperparameters)")
+    print(f"=== Multi-Timeframe Walk-Forward Validation ===")
+    print(f"Mode: {args.mode}")
     print(f"Bars per symbol: {args.n_bars}")
     print(f"Symbols: {args.n_symbols}")
     print(f"Min folds: {args.min_folds}")
@@ -929,6 +1063,7 @@ def main() -> int:
         train_window_bars=args.train_window,
         test_window_bars=args.test_window,
         min_folds=args.min_folds,
+        mode=args.mode,
     )
 
     print(f"\n=== Walk-Forward Results ===")

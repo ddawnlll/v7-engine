@@ -2,6 +2,7 @@
 
 Contracts and dataclasses are defined in contracts.py.
 The WalkForwardValidator implementation lives in walk_forward.py.
+Cross-timeframe edge comparison lives in cross_timeframe.py.
 
 This subpackage does NOT:
 - Train models (no xgboost, sklearn, tensorflow, torch imports)
@@ -34,9 +35,13 @@ from alphaforge.validation.contracts import (
     embargo_distance,
     purge_gap,
 )
-from alphaforge.validation.cost_stress import (
-    compute_cost_stress,
-    cost_stress_to_stress_levels,
+from alphaforge.validation.cross_timeframe import (
+    CrossTimeframeComparison,
+    TimeframeEdge,
+    build_timeframe_edge,
+    compare_timeframes,
+    compare_timeframes_to_dict,
+    compute_pairwise_correlation,
 )
 from alphaforge.validation.regime_eval import RegimeEvaluator
 from alphaforge.validation.walk_forward import WalkForwardValidator
@@ -44,6 +49,7 @@ from alphaforge.validation.walk_forward import WalkForwardValidator
 __all__ = [
     "NOT_EVALUATED",
     "CostStressResult",
+    "CrossTimeframeComparison",
     "DEFAULT_FOLD_CONFIGS",
     "DEFAULT_PURGE_POLICIES",
     "Fold",
@@ -55,14 +61,17 @@ __all__ = [
     "RegimeBreakdown",
     "RegimeEvaluator",
     "SymbolStability",
+    "TimeframeEdge",
     "ValidationError",
     "ValidationReport",
     "ValidationVerdict",
     "WalkForwardConfig",
     "WalkForwardValidator",
     "WindowType",
-    "compute_cost_stress",
-    "cost_stress_to_stress_levels",
+    "build_timeframe_edge",
+    "compare_timeframes",
+    "compare_timeframes_to_dict",
+    "compute_pairwise_correlation",
     "embargo_distance",
     "purge_gap",
 ]

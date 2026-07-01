@@ -516,35 +516,6 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
-## Cost Stress Independent Dimensions (2026-07-01)
-
-**Issue:** #137 — Cost stress uses blended fee+slippage multiplier instead of independent dimensions.
-
-**What changed:**
-- Added `alphaforge/src/alphaforge/validation/cost_stress.py` with `compute_cost_stress()` that computes independent cost stress dimensions:
-  - Fee stress at 1.5x, 2x, 3x of baseline fee
-  - Slippage stress at 1.5x, 2x, 3x of baseline slippage
-  - Spread sensitivity at 1.5x, 2x of baseline spread
-  - Combined worst-case (all costs at highest multiplier simultaneously)
-  - Break-even total cost multiplier
-- Uses linear cost model: `cost_r = 2 * cost_pct / 100 / entry_risk_pct` where entry_risk_pct defaults to 0.02 (SWING mode).
-- Added `cost_stress_to_stress_levels()` to convert `CostStressResult` into the dict format used by empirical report builders.
-- Exported both functions from `alphaforge.validation` package.
-
-**Lock status:**
-- Independent cost stress computation: LOCKED_INITIAL_BASELINE
-- Cost stress model (linear R approximation): LOCKED_INITIAL_BASELINE
-- Report format converter: LOCKED_INITIAL_BASELINE
-
-**Remaining holds:**
-- Cost stress model uses linear approximation — may need recalibration against simulation engine truth (HOLD)
-- Entry risk percentage default (0.02) is SWING-appropriate; SCALP/AGGRESSIVE_SCALP callers must override (HOLD)
-- No real profitability evidence to validate cost stress outputs (HOLD)
-
-**Evidence:** 28/28 tests pass (cost stress), 1622/1622 tests pass overall (0 failures). ACCP report at `reports/accp/issue-137.yaml`.
-
----
-
 ## Final Position
 
 The roadmap for V7 is not:
@@ -559,3 +530,32 @@ It is:
 - prove the contract layer
 - prove the learning layer
 - only then broaden runtime and deployment sophistication
+
+---
+
+## Issue #143 — Multi-Timeframe Alpha Tuning (2026-07-01)
+
+**What changed:**
+- **SCALP full pipeline operational** — `run_walk_forward()` now accepts a `mode` parameter and uses mode-specific hyperparameters, annualization factors, purge/embargo defaults, and fold configs. SCALP (1h) uses `SCALP_DEFAULT_HYPERPARAMS` (max_depth=3, lr=0.08, n_estimators=150, stronger regularization) with 8760 bars/year annualization.
+- **AGGRESSIVE_SCALP full pipeline operational** — Mode-specific hyperparameters (max_depth=3, lr=0.10, n_estimators=100, highest regularization) with 35040 bars/year annualization for 15m bars.
+- **Cross-timeframe edge comparison** — New `alphaforge/src/alphaforge/validation/cross_timeframe.py` module provides `compare_timeframes()`, `build_timeframe_edge()`, `compute_pairwise_correlation()`. Compares edges across all three canonical timeframes, detects dominant timeframe, multi-TF confirmation, timeframe specialization, and direction conflicts.
+- **`train_multi_timeframe.py` script** — Runs walk-forward for all three modes and produces cross-timeframe comparison report.
+- **Thresholds updated** — Mode-specific hyperparameters are LOCKED_INITIAL_BASELINE: SWING (existing baseline), SCALP (faster learning, shallower trees), AGGRESSIVE_SCALP (fastest, shallowest, most regularized). Annualization factors per mode: SWING=2190, SCALP=8760, AGGRESSIVE_SCALP=35040.
+- **1129 alphaforge tests pass** (+46 new tests for cross-timeframe comparison and mode-specific runs).
+
+**Lock status:**
+- Mode-specific walk-forward runner: LOCKED_INITIAL_BASELINE
+- Cross-timeframe edge comparison: LOCKED_INITIAL_BASELINE
+- SCALP hyperparameters: LOCKED_INITIAL_BASELINE (empirical recalibration required after first real data)
+- AGGRESSIVE_SCALP hyperparameters: LOCKED_INITIAL_BASELINE
+
+**Holds resolved:**
+- SCALP thresholds: HOLD → LOCKED_INITIAL_BASELINE (Issue #143 provides baseline configs; empirical evidence still required for promotion)
+- AGGRESSIVE_SCALP thresholds: LOCKED_INITIAL_BASELINE confirmed with mode-specific configs
+
+**Remaining holds:**
+- Real profitability evidence (HOLD — requires real training + WFV on live data)
+- SCALP promotion readiness (HOLD — empirical OOS evidence required before G1-G6 gates)
+- Cross-timeframe edge comparison real-data validation (HOLD — requires all three modes trained on real data)
+
+**Evidence:** 1129/1129 alphaforge tests pass, 311/311 lib tests pass, 176/176 integration tests pass, 41/41 simulation tests pass. ACCP report at `reports/accp/issue-143.yaml`.
