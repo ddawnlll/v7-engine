@@ -20,6 +20,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from alphaforge.lifecycle.state_machine import (
+    AlphaThesisState,
+    ThesisStateMachine,
+)
 from alphaforge.validation.contracts import NOT_EVALUATED, Mode
 
 
@@ -238,7 +242,8 @@ class AlphaThesis:
         actual_evidence: Dict summarizing what evidence was observed.
         verdict: Computed verdict (SUPPORTED / REFUTED / INCONCLUSIVE).
         rejection_criteria: Explicit criteria that would refute the thesis.
-        status: Lifecycle state per alpha_thesis_lifecycle.md.
+        status: Lifecycle state per alpha_thesis_lifecycle.md (AlphaThesisState enum).
+        state_machine: ThesisStateMachine managing the lifecycle transitions.
         notes: Additional context or explanation of verdict.
     """
 
@@ -249,7 +254,8 @@ class AlphaThesis:
     actual_evidence: Dict[str, Any] = field(default_factory=dict)
     verdict: ThesisVerdict = ThesisVerdict.INCONCLUSIVE
     rejection_criteria: List[str] = field(default_factory=list)
-    status: str = "PROPOSED"
+    status: AlphaThesisState = AlphaThesisState.PROPOSED
+    state_machine: Optional[ThesisStateMachine] = None
     notes: str = ""
 
 
@@ -268,6 +274,43 @@ class ThesisValidator:
     The validator applies the rejection rules from alpha_thesis_lifecycle.md
     and cross-references expected evidence against actual evidence.
     """
+
+    # ------------------------------------------------------------------
+    # Pipeline advancement
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _advance_pipeline(sm: ThesisStateMachine) -> ThesisStateMachine:
+        """Advance the state machine to the next logical state in the pipeline.
+
+        Supports the normal forward progression:
+        PROPOSED → DATA_READY → FEATURED → SIMULATED → TRAINED → VALIDATED
+        """
+        _PIPELINE_ORDER = [
+            AlphaThesisState.PROPOSED,
+            AlphaThesisState.DATA_READY,
+            AlphaThesisState.FEATURED,
+            AlphaThesisState.SIMULATED,
+            AlphaThesisState.TRAINED,
+            AlphaThesisState.VALIDATED,
+        ]
+        current = sm.current_state
+        for i, state in enumerate(_PIPELINE_ORDER):
+            if state == current and i + 1 < len(_PIPELINE_ORDER):
+                next_state = _PIPELINE_ORDER[i + 1]
+                # Use the appropriate transition method
+                if next_state == AlphaThesisState.DATA_READY:
+                    return sm.mark_data_ready(notes="Pipeline advancement: data ready.")
+                elif next_state == AlphaThesisState.FEATURED:
+                    return sm.mark_featured(notes="Pipeline advancement: featured.")
+                elif next_state == AlphaThesisState.SIMULATED:
+                    return sm.mark_simulated(notes="Pipeline advancement: simulated.")
+                elif next_state == AlphaThesisState.TRAINED:
+                    return sm.mark_trained(notes="Pipeline advancement: trained.")
+                elif next_state == AlphaThesisState.VALIDATED:
+                    return sm.mark_validated(notes="Pipeline advancement: validated.")
+        # If already at VALIDATED or beyond, no pipeline advancement
+        return sm
 
     def validate(
         self,
@@ -413,17 +456,81 @@ class ThesisValidator:
             verdict = ThesisVerdict.INCONCLUSIVE
             notes = "No evidence available for evaluation."
 
-        return AlphaThesis(
-            thesis_id=thesis.thesis_id,
-            hypothesis=thesis.hypothesis,
-            mode=thesis.mode,
-            expected_evidence=thesis.expected_evidence,
-            actual_evidence=thesis.actual_evidence,
-            verdict=verdict,
-            rejection_criteria=thesis.rejection_criteria,
-            status="VALIDATED" if verdict == ThesisVerdict.SUPPORTED else thesis.status,
-            notes=notes,
-        )
+        # Compute lifecycle state via state machine
+        current_status = thesis.status
+        if isinstance(current_status, str) and not isinstance(current_status, AlphaThesisState):
+            # Handle legacy string status (backward compat)
+            try:
+                current_status = AlphaThesisState(current_status)
+            except ValueError:
+                current_status = AlphaThesisState.PROPOSED
+
+        sm = thesis.state_machine or ThesisStateMachine(current_state=current_status)
+
+        if verdict == ThesisVerdict.SUPPORTED:
+            # Advance state along the pipeline
+            if sm.current_state == AlphaThesisState.VALIDATED:
+                sm = sm.promote_to_v7_candidate(
+                    notes="Validation supports thesis — promoting to V7 candidate.",
+                )
+            elif sm.current_state in (
+                AlphaThesisState.PROPOSED,
+                AlphaThesisState.DATA_READY,
+                AlphaThesisState.FEATURED,
+                AlphaThesisState.SIMULATED,
+                AlphaThesisState.TRAINED,
+            ):
+                # Advance to next state in pipeline
+                sm = self._advance_pipeline(sm)
+            return AlphaThesis(
+                thesis_id=thesis.thesis_id,
+                hypothesis=thesis.hypothesis,
+                mode=thesis.mode,
+                expected_evidence=thesis.expected_evidence,
+                actual_evidence=thesis.actual_evidence,
+                verdict=verdict,
+                rejection_criteria=thesis.rejection_criteria,
+                status=sm.current_state,
+                state_machine=sm,
+                notes=notes,
+            )
+        elif verdict == ThesisVerdict.REFUTED:
+            sm = sm.reject(
+                rejection_rules_fired=thesis.rejection_criteria or ["Evidence refutes thesis hypothesis."],
+                rejection_detail=notes,
+                notes=notes,
+            )
+            return AlphaThesis(
+                thesis_id=thesis.thesis_id,
+                hypothesis=thesis.hypothesis,
+                mode=thesis.mode,
+                expected_evidence=thesis.expected_evidence,
+                actual_evidence=thesis.actual_evidence,
+                verdict=verdict,
+                rejection_criteria=thesis.rejection_criteria,
+                status=sm.current_state,
+                state_machine=sm,
+                notes=notes,
+            )
+        else:
+            # INCONCLUSIVE — continue research if from VALIDATED,
+            # otherwise keep current state
+            if sm.current_state == AlphaThesisState.VALIDATED:
+                sm = sm.continue_research(
+                    notes="Validation inconclusive — continuing research.",
+                )
+            return AlphaThesis(
+                thesis_id=thesis.thesis_id,
+                hypothesis=thesis.hypothesis,
+                mode=thesis.mode,
+                expected_evidence=thesis.expected_evidence,
+                actual_evidence=thesis.actual_evidence,
+                verdict=verdict,
+                rejection_criteria=thesis.rejection_criteria,
+                status=sm.current_state,
+                state_machine=sm,
+                notes=notes,
+            )
 
     # ------------------------------------------------------------------
     # Rejection rules (alpha_thesis_lifecycle.md)

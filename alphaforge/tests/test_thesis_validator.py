@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
+from alphaforge.lifecycle.state_machine import AlphaThesisState
 from alphaforge.validation.contracts import NOT_EVALUATED, Mode
 from alphaforge.validation.thesis_validator import (
     AlphaThesis,
@@ -247,7 +248,8 @@ class TestSupportedVerdict:
             f"Expected SUPPORTED, got {result.verdict}. Notes: {result.notes}"
         )
         assert "SUPPORTED" in result.notes
-        assert result.status == "VALIDATED"
+        # SUPPORTED from PROPOSED advances one pipeline step → DATA_READY
+        assert result.status == AlphaThesisState.DATA_READY
 
     def test_supported_wfv_plus_cost_stress_suffices(self):
         """SUPPORTED verdict when WFV and cost stress are positive, even if
