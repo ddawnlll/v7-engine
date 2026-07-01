@@ -1,0 +1,43 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Optuna Core Integration implemented with TPE sampler, ASHA pruning, SQLite persistence, and study lifecycle management."
+files_changed:
+  - cli/v7_engine.py
+  - alphaforge/src/tuning/__init__.py
+  - alphaforge/src/tuning/optuna_tuner.py
+  - alphaforge/tests/test_optuna_tuner.py
+decisions_locked:
+  - subject: "TPE sampler as default optimization strategy"
+    status: "LOCKED_INITIAL_BASELINE"
+    evidence: "Optuna default for single-objective optimization; arXiv:1907.10902"
+  - subject: "ASHA (SuccessiveHalving) pruning for early stopping"
+    status: "LOCKED_INITIAL_BASELINE"
+    evidence: "Proven pruning strategy for hyperparameter optimization"
+  - subject: "SQLite storage for study persistence"
+    status: "LOCKED_INITIAL_BASELINE"
+    evidence: "Enables study resume and cross-session durability"
+  - subject: "Mode-specific search spaces"
+    status: "LOCKED_INITIAL_BASELINE"
+    evidence: "SWING conservative, SCALP medium, AGGRESSIVE_SCALP fast-adaptation ranges"
+remaining_holds:
+  - hold: "Real objective integration with WFV"
+    condition: "Requires features/labels pipeline and WFV integration (ongoing work)"
+    blocking: false
+  - hold: "Parallel trial execution tuning"
+    condition: "n_jobs > 1 needs performance benchmarking across modes"
+    blocking: false
+  - hold: "Search space calibration from empirical results"
+    condition: "After first optimization runs, validate ranges produce meaningful diversity"
+    blocking: false
+safe_next_step: "Wire Optuna tuning into WFV pipeline — run tuning on initial training segment, then evaluate best params via walk-forward validation."
+commands_run:
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_optuna_tuner.py -v --timeout=120"
+  - "PYTHONPATH=alphaforge/src python3 -m cli tune --help"
+  - "PYTHONPATH=alphaforge/src python3 -m cli tune --mode SWING --show-space"
+  - "PYTHONPATH=alphaforge/src python3 -m cli tune --mode SWING --demo --n-trials 3"
+evidence:
+  - "38/38 pytest tests passed"
+  - "tune --demo runs successfully with 3 trials"
+  - "tune --show-space displays mode-specific search spaces"
+  - "Commit: 7c7217f"

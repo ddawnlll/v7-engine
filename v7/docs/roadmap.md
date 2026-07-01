@@ -170,6 +170,38 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
+## #145 — Optuna Core Integration (2026-07-01)
+
+**Issue:** #145 (P0, milestone v0.26) — Install and integrate Optuna as core hyperparameter optimization engine.
+
+**What changed:**
+- `alphaforge/src/tuning/__init__.py` — Module exports for tuning package
+- `alphaforge/src/tuning/optuna_tuner.py` — OptunaTuner class with:
+  - TPE (Tree-structured Parzen Estimator) sampler for efficient search
+  - ASHA (SuccessiveHalving) pruner for early stopping of unpromising trials
+  - SQLite study persistence for durability and resume capability
+  - Mode-specific search spaces (SWING, SCALP, AGGRESSIVE_SCALP)
+  - Study lifecycle management (create, load, list, delete studies)
+  - Results serialization to JSON
+  - Helper functions: `search_spaces()`, `list_studies()`, `delete_study()`
+- `cli/v7_engine.py` — Added `tune` CLI command with `--demo`, `--show-space`, `--list-studies`, and standard optimization options
+- `alphaforge/tests/test_optuna_tuner.py` — 38 tests covering initialization, sampler/pruner config, search spaces, optimization, study lifecycle, results persistence, study management
+
+**Lock status:**
+- TPE sampler as default strategy: LOCKED_INITIAL_BASELINE
+- ASHA (SuccessiveHalving) pruning: LOCKED_INITIAL_BASELINE
+- SQLite study persistence: LOCKED_INITIAL_BASELINE
+- Mode-specific search spaces: LOCKED_INITIAL_BASELINE
+
+**Remaining holds:**
+- Real objective integration with WFV pipeline (HOLD — requires features/labels pipeline)
+- Parallel trial execution tuning (HOLD — needs performance benchmarking)
+- Search space calibration from empirical results (HOLD — after first real optimization runs)
+
+**Evidence:** 38/38 tests pass. ACCP report at `reports/accp/issue-145.yaml`. Commit `7c7217f`.
+
+---
+
 ## TR-08 — Final Training Readiness Audit — v0.1 Milestone COMPLETE (2026-06-26)
 
 **Issue:** #12 — Final audit gate. Verify all TR-01 through TR-07 gates have evidence, run full test suite, update roadmap.
