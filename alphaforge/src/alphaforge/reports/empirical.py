@@ -39,13 +39,17 @@ from alphaforge.modes.profiles import get_mode_profile
 # is not available (e.g., during partial-checkout development).
 try:
     from alphaforge.reports.mht import (
+        benjamini_hochberg,
         bonferroni_correction,
         compute_data_snooping_risk,
+        deflated_sharpe,
     )
     _MHT_AVAILABLE = True
 except ImportError:
+    benjamini_hochberg = lambda p, a: []  # noqa: E731
     bonferroni_correction = lambda alpha, n: alpha  # noqa: E731
     compute_data_snooping_risk = lambda n, a, f: "HIGH"  # noqa: E731
+    deflated_sharpe = lambda s, t, n, g=0.5: s  # noqa: E731
     _MHT_AVAILABLE = False
 
 
@@ -462,61 +466,134 @@ def _build_empirical_regime_breakdown(wfv_results: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 def _build_empirical_mht_control(
-    wfv_results: dict, fold_count: int, hypotheses_per_fold: int = 1,
+    wfv_results: dict,
+    fold_count: int,
+    hypotheses_per_fold: int = 1,
+    oos_sharpe: float | None = None,
+    oos_trade_count: int | None = None,
 ) -> dict:
     """Build multiple_hypothesis_control section from WFV results.
 
-    Reads trial_count from wfv_results['trial_context']['trial_count'].
-    When trial_count > 1, applies Bonferroni correction and flags
-    data-snooping risk accordingly. Falls back to fold_count * hypotheses_per_fold
-    when trial_context is missing.
+    Respects the pipeline's explicit correction_method when provided in
+    wfv_results['multiple_hypothesis_control']. When the pipeline did
+    not set a correction method (or set NONE_APPLIED), defaults to
+    NONE_APPLIED and adds a blocking hold note when multiple trials
+    were conducted.
+
+    Computes deflated Sharpe from actual OOS data when MHT is applied
+    and sufficient OOS observations are available.
+
+    Args:
+        wfv_results: Walk-forward validation results dict.
+        fold_count: Number of walk-forward folds.
+        hypotheses_per_fold: Hypotheses tested per fold (default 1).
+        oos_sharpe: Observed OOS Sharpe ratio for deflated Sharpe
+            computation (default None).
+        oos_trade_count: Number of OOS trades for deflated Sharpe
+            n_samples (default None).
+
+    Returns:
+        Dict with schema-aligned MHT control fields.
     """
     mht_data = wfv_results.get("multiple_hypothesis_control", {})
 
     # Read trial_count from wfv_results trial_context (v0.25+)
     trial_context = wfv_results.get("trial_context", {})
-    trial_count = trial_context.get("trial_count", fold_count)
+    trial_count = trial_context.get("trial_count", 0)
+
+    # Respect pipeline's explicit correction_method when provided
+    pipeline_method = mht_data.get("correction_method")
+    if pipeline_method and pipeline_method != "NONE_APPLIED":
+        correction_method = pipeline_method
+        if correction_method == "Bonferroni":
+            corrected_alpha = bonferroni_correction(0.05, max(1, trial_count or 1))
+        else:
+            corrected_alpha = None
+    else:
+        correction_method = "NONE_APPLIED"
+        corrected_alpha = None
+
+    # trial_count fallback when trial_context is missing/zero
+    if not trial_count:
+        trial_count = max(1, fold_count)
 
     # Prefer explicit tested_hypothesis_count from pipeline, else compute
     tested_hypotheses = mht_data.get(
         "tested_hypothesis_count", trial_count * hypotheses_per_fold
     )
 
-    # Determine MHT status based on trial count
-    has_multiple_trials = trial_count > 1
-    if has_multiple_trials:
-        mht_status = "APPLIED_WITH_WARNINGS"
-        correction_method = "Bonferroni"
-        corrected_alpha = bonferroni_correction(0.05, trial_count)
-    else:
-        mht_status = "NONE_APPLIED"
-        correction_method = "NONE_APPLIED"
-        corrected_alpha = None
+    has_mht_applied = correction_method != "NONE_APPLIED"
 
     risk_flag = compute_data_snooping_risk(
         n_trials=trial_count,
-        mht_applied=has_multiple_trials,
+        mht_applied=has_mht_applied,
         fold_count=fold_count,
     )
 
+    # Deflated Sharpe from actual OOS data
+    deflated_sharpe_value: float | None = None
+    if (
+        has_mht_applied
+        and oos_sharpe is not None
+        and oos_trade_count is not None
+        and oos_trade_count > 0
+    ):
+        deflated_sharpe_value = deflated_sharpe(
+            sharpe=oos_sharpe,
+            n_trials=trial_count,
+            n_samples=oos_trade_count,
+            gamma=0.5,
+        )
+        deflated_sharpe_value = round(deflated_sharpe_value, 6)
+
+    # PBO / overfit risk assessment
+    pbo_risk = "NOT_RUN"
+    if has_mht_applied and deflated_sharpe_value is not None:
+        if deflated_sharpe_value <= 0.0:
+            pbo_risk = "CRITICAL" if trial_count > 100 else "HIGH"
+        elif deflated_sharpe_value < 0.3:
+            pbo_risk = "MEDIUM"
+        else:
+            pbo_risk = "LOW"
+
+    # Notes with blocking hold when NONE_APPLIED and multiple trials
+    notes_parts: list[str] = []
+    if correction_method == "NONE_APPLIED" and trial_count > 1:
+        notes_parts.append(
+            f"MHT correction not applied -- {tested_hypotheses} hypotheses tested "
+            f"across {fold_count} folds without multiple comparison correction. "
+            f"BLOCKING HOLD: correction_method=NONE_APPLIED, trial_count={trial_count}. "
+            f"Candidate promotion requires proper MHT correction "
+            f"(Bonferroni, FDR, Deflated Sharpe, or PBO)."
+        )
+    notes_parts.append(
+        f"Empirical MHT assessment: {tested_hypotheses} hypotheses tested "
+        f"across {fold_count} folds. Trial count from context: {trial_count}. "
+        f"Correction: {correction_method}. "
+        f"Data-snooping risk: {risk_flag}."
+    )
+    notes = " ".join(notes_parts)
+
+    # Rejected candidates count (from pipeline or computed via BH)
+    rejected_count = mht_data.get("rejected_candidate_count", 0)
+    pipeline_p_values = mht_data.get("p_values")
+    if pipeline_p_values:
+        bh_result = benjamini_hochberg(pipeline_p_values, 0.05)
+        rejected_count = sum(bh_result)
+
     return {
-        "mht_status": mht_status,
+        "mht_status": "APPLIED" if has_mht_applied else "NONE_APPLIED",
         "tested_hypothesis_count": tested_hypotheses,
         "tested_feature_count": mht_data.get("tested_feature_count", 1),
         "tested_thesis_count": mht_data.get("tested_thesis_count", 1),
         "correction_method": correction_method,
         "corrected_significance": corrected_alpha,
         "data_snooping_risk_flag": risk_flag,
-        "false_discovery_control": "NONE",
-        "deflated_sharpe_or_pbo_assessment": "NOT_RUN",
+        "deflated_sharpe_or_equivalent": deflated_sharpe_value,
+        "pbo_or_backtest_overfit_risk": pbo_risk,
         "trial_count_disclosure": trial_count,
-        "rejected_candidate_count": mht_data.get("rejected_candidate_count", 0),
-        "notes": (
-            f"Empirical MHT assessment: {tested_hypotheses} hypotheses tested "
-            f"across {fold_count} folds. Trial count from context: {trial_count}. "
-            f"Correction: {correction_method}. "
-            f"Data-snooping risk: {risk_flag}."
-        ),
+        "rejected_candidate_count": rejected_count,
+        "notes": notes,
     }
 
 
@@ -651,7 +728,11 @@ def build_empirical_mode_research_report(
         wfv_results, oos_expectancy_r,
     )
     regime_section = _build_empirical_regime_breakdown(wfv_results)
-    mht_section = _build_empirical_mht_control(wfv_results, fold_count)
+    mht_section = _build_empirical_mht_control(
+        wfv_results, fold_count,
+        oos_sharpe=oos_sharpe,
+        oos_trade_count=oos_trade_count,
+    )
 
     # --- V7 gate readiness ---
     gate_readiness = _build_gate_readiness(

@@ -543,6 +543,33 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
+## v0.26 — MHT Pipeline/Builder Contradiction Fix (2026-07-01)
+
+**What changed:**
+- `_build_empirical_mht_control()` now respects pipeline's explicit `correction_method` — no longer overrides to "Bonferroni" just because `trial_count > 1`. Defaults to "NONE_APPLIED" when pipeline does not specify.
+- Deflated Sharpe ratio computed from actual OOS data (`oos_sharpe` and `oos_trade_count`) when MHT is applied, via `deflated_sharpe_or_equivalent` field.
+- PBO/overfit risk assessment (`pbo_or_backtest_overfit_risk`) added: CRITICAL/HIGH/MEDIUM/LOW/NOT_RUN based on deflated Sharpe and trial count.
+- Blocking hold note added when `correction_method == "NONE_APPLIED"` with `trial_count > 1`.
+- `rejected_candidate_count` tracks actual Benjamini-Hochberg rejections when pipeline provides `p_values`.
+- 17 new tests for pipeline/builder agreement, deflated Sharpe, PBO, blocking hold, BH rejection tracking.
+
+**Lock status:**
+- MHT pipeline/builder agreement: LOCKED_INITIAL_BASELINE (Issue #138)
+- Deflated Sharpe from actual data: LOCKED_INITIAL_BASELINE
+- PBO assessment: LOCKED_INITIAL_BASELINE
+
+**Remaining holds:**
+- MHT correction real thresholds (HOLD — requires empirical baseline)
+- Cost Stress Matrix (HOLD — requires regime-aware cost multipliers)
+- Symbol Stability per-symbol contribution (HOLD — requires multi-symbol WFV)
+- NO_TRADE Collapse edge case under extreme market conditions (HOLD)
+- Real profitability evidence (HOLD — requires real training + WFV)
+- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL)
+
+**Evidence:** 1628 passed, 3 skipped, 0 failures. ACCP report at `reports/accp/issue-138.yaml`.
+
+---
+
 ## Final Position
 
 The roadmap for V7 is not:

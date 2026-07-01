@@ -13,6 +13,7 @@ import pytest
 
 from alphaforge.errors import ModeError
 from alphaforge.reports.empirical import (
+    _build_empirical_mht_control,
     _compute_verdict,
     _fold_stability_score,
     _make_metric_ci,
@@ -588,3 +589,247 @@ class TestFullReportBuild:
         )
         report2 = build_empirical_mode_research_report("SWING", results2)
         assert report2["alpha_theses"][0]["evidence_quality"] == "INSUFFICIENT"
+
+
+# ============================================================================
+# MHT pipeline/builder contradiction tests
+# ============================================================================
+
+
+class TestMhtEmpiricalControl:
+    """Tests for _build_empirical_mht_control — Issue #138.
+
+    Pipeline and builder must agree on correction_method.
+    NONE_APPLIED sets a blocking hold. Deflated Sharpe from actual data.
+    PBO assessment when sufficient data.
+    rejected_candidate_count tracks actual rejections.
+    """
+
+    def test_default_none_applied_when_pipeline_unsets_method(self):
+        """When pipeline does not set correction_method, defaults NONE_APPLIED."""
+        result = _build_empirical_mht_control(
+            wfv_results={"trial_context": {"trial_count": 49}},
+            fold_count=6,
+        )
+        assert result["correction_method"] == "NONE_APPLIED"
+        assert result["corrected_significance"] is None
+        assert result["mht_status"] == "NONE_APPLIED"
+
+    def test_default_single_trial_also_none_applied(self):
+        """Single trial (trial_count=1) also yields NONE_APPLIED."""
+        result = _build_empirical_mht_control(
+            wfv_results={"trial_context": {"trial_count": 1}},
+            fold_count=6,
+        )
+        assert result["correction_method"] == "NONE_APPLIED"
+        assert result["corrected_significance"] is None
+
+    def test_respects_pipeline_bonferroni_method(self):
+        """Pipeline's explicit Bonferroni method is respected."""
+        result = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 490},
+                "multiple_hypothesis_control": {
+                    "correction_method": "Bonferroni",
+                    "tested_hypothesis_count": 490,
+                },
+            },
+            fold_count=6,
+        )
+        assert result["correction_method"] == "Bonferroni"
+        assert result["corrected_significance"] is not None
+        assert result["corrected_significance"] == pytest.approx(0.05 / 490, abs=1e-10)
+        assert result["mht_status"] == "APPLIED"
+
+    def test_respects_pipeline_fdr_method(self):
+        """Pipeline's explicit FDR method is respected."""
+        result = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 100},
+                "multiple_hypothesis_control": {
+                    "correction_method": "FDR",
+                    "tested_hypothesis_count": 100,
+                },
+            },
+            fold_count=6,
+        )
+        assert result["correction_method"] == "FDR"
+        assert result["mht_status"] == "APPLIED"
+
+    def test_pipeline_none_applied_kept(self):
+        """Pipeline's explicit NONE_APPLIED is kept (not overridden to Bonferroni)."""
+        result = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 490},
+                "multiple_hypothesis_control": {
+                    "correction_method": "NONE_APPLIED",
+                    "tested_hypothesis_count": 490,
+                },
+            },
+            fold_count=6,
+        )
+        assert result["correction_method"] == "NONE_APPLIED"
+        assert result["corrected_significance"] is None
+
+    def test_blocking_hold_note_when_none_applied_multiple_trials(self):
+        """NONE_APPLIED with trial_count>1 adds blocking hold note."""
+        result = _build_empirical_mht_control(
+            wfv_results={"trial_context": {"trial_count": 49}},
+            fold_count=6,
+        )
+        assert "BLOCKING HOLD" in result["notes"]
+        assert "NONE_APPLIED" in result["notes"]
+
+    def test_no_blocking_hold_when_mht_applied(self):
+        """No blocking hold when MHT is properly applied."""
+        result = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 49},
+                "multiple_hypothesis_control": {
+                    "correction_method": "Bonferroni",
+                },
+            },
+            fold_count=6,
+        )
+        assert "BLOCKING HOLD" not in result["notes"]
+
+    def test_deflated_sharpe_computed_when_data_available(self):
+        """Deflated Sharpe is computed when MHT applied and OOS data provided."""
+        result = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 49},
+                "multiple_hypothesis_control": {
+                    "correction_method": "Bonferroni",
+                },
+            },
+            fold_count=6,
+            oos_sharpe=1.0,
+            oos_trade_count=300,
+        )
+        assert result["deflated_sharpe_or_equivalent"] is not None
+        assert result["deflated_sharpe_or_equivalent"] > 0.0
+
+    def test_deflated_sharpe_not_computed_when_no_mht(self):
+        """Deflated Sharpe is None when MHT not applied."""
+        result = _build_empirical_mht_control(
+            wfv_results={"trial_context": {"trial_count": 49}},
+            fold_count=6,
+            oos_sharpe=1.0,
+            oos_trade_count=300,
+        )
+        assert result["deflated_sharpe_or_equivalent"] is None
+
+    def test_pbo_not_run_when_no_mht(self):
+        """PBO is NOT_RUN when MHT not applied."""
+        result = _build_empirical_mht_control(
+            wfv_results={"trial_context": {"trial_count": 49}},
+            fold_count=6,
+        )
+        assert result["pbo_or_backtest_overfit_risk"] == "NOT_RUN"
+
+    def test_pbo_high_when_deflated_sharpe_zero_moderate_trials(self):
+        """PBO assessment is HIGH when deflated Sharpe = 0 and trial_count <= 100."""
+        result = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 50},
+                "multiple_hypothesis_control": {
+                    "correction_method": "Bonferroni",
+                },
+            },
+            fold_count=6,
+            oos_sharpe=1.0,
+            oos_trade_count=20,  # 0.5*50/20 = 1.25 >= 1.0 -> deflated=0.0 -> HIGH
+        )
+        assert result["pbo_or_backtest_overfit_risk"] == "HIGH"
+
+    def test_pbo_critical_when_large_trial_count_and_zero_sharpe(self):
+        """PBO assessment is CRITICAL when trial_count > 100 and deflated=0."""
+        result = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 500},
+                "multiple_hypothesis_control": {
+                    "correction_method": "Bonferroni",
+                },
+            },
+            fold_count=6,
+            oos_sharpe=1.0,
+            oos_trade_count=50,  # 0.5*500/50 = 5.0 >= 1.0 -> deflated=0.0
+        )
+        assert result["pbo_or_backtest_overfit_risk"] == "CRITICAL"
+
+    def test_rejected_candidate_count_from_p_values(self):
+        """rejected_candidate_count tracks BH rejections when p_values provided."""
+        result = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 10},
+                "multiple_hypothesis_control": {
+                    "correction_method": "FDR",
+                    "tested_hypothesis_count": 10,
+                    "p_values": [0.01, 0.02, 0.03, 0.04, 0.9],
+                },
+            },
+            fold_count=6,
+        )
+        # BH on [0.01, 0.02, 0.03, 0.04, 0.9] at alpha=0.05 rejects 4
+        assert result["rejected_candidate_count"] == 4
+
+    def test_rejected_candidate_count_defaults_to_pipeline_value(self):
+        """rejected_candidate_count falls back to pipeline value when no p_values."""
+        result = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 10},
+                "multiple_hypothesis_control": {
+                    "rejected_candidate_count": 7,
+                },
+            },
+            fold_count=6,
+        )
+        assert result["rejected_candidate_count"] == 7
+
+    def test_data_snooping_risk_higher_without_mht(self):
+        """Data snooping risk is higher without MHT for same trial count."""
+        # No MHT, 490 trials -> HIGH (n_trials > 100 and <= 1000, no MHT)
+        result_no_mht = _build_empirical_mht_control(
+            wfv_results={"trial_context": {"trial_count": 490}},
+            fold_count=6,
+        )
+        assert result_no_mht["data_snooping_risk_flag"] == "HIGH"
+
+        # With Bonferroni, 490 trials -> MEDIUM
+        result_mht = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 490},
+                "multiple_hypothesis_control": {
+                    "correction_method": "Bonferroni",
+                },
+            },
+            fold_count=6,
+        )
+        assert result_mht["data_snooping_risk_flag"] == "MEDIUM"
+
+    def test_schema_required_keys_present(self):
+        """Output contains all schema-required keys."""
+        result = _build_empirical_mht_control(
+            wfv_results={"trial_context": {"trial_count": 10}},
+            fold_count=6,
+        )
+        assert "tested_hypothesis_count" in result
+        assert "correction_method" in result
+        assert "data_snooping_risk_flag" in result
+
+    def test_pbo_low_when_deflated_sharpe_healthy(self):
+        """PBO assessment is LOW when deflated Sharpe is healthy."""
+        result = _build_empirical_mht_control(
+            wfv_results={
+                "trial_context": {"trial_count": 5},
+                "multiple_hypothesis_control": {
+                    "correction_method": "Bonferroni",
+                },
+            },
+            fold_count=6,
+            oos_sharpe=1.5,
+            oos_trade_count=1000,
+        )
+        # 0.5*5/1000 = 0.0025, deflated = 1.5*sqrt(0.9975/0.5) ~ 2.12
+        # deflated > 0.3 so PBO = LOW
+        assert result["pbo_or_backtest_overfit_risk"] == "LOW"
