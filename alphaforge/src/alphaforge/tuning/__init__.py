@@ -1,38 +1,36 @@
-"""AlphaForge Tuning — Autotune Engine with Nested Walk-Forward Validation.
+"""AlphaForge Tuning — hyperparameter search space and Optuna integration.
 
-Replaces grid search with nested WFV:
-- Inner fold: hyperparameter tuning via walk-forward validation
-- Outer fold: held-out validation on unseen chronological data
-- Multi-objective scoring based on economic metrics, not accuracy
-- MHT-corrected candidate selection
-- NO_TRADE collapse penalty
-- Min active trade, cost survival, and regime stability constraints
-- Primary objective: maximize cost_adjusted_active_expectancy_R
+This module defines mode-specific XGBoost hyperparameter search spaces
+for financial time-series optimisation. It integrates with Optuna for
+automated hyperparameter tuning.
 
-Domain boundary:
-  AlphaForge owns tuning. V7 owns final acceptance of tuned models.
-  This subpackage imports xgboost and numpy — it is for the training
-  environment, not the gate-check environment.
+Modules:
+    search_space: XGBoost search space definitions per mode, Optuna
+        integration via suggest_params() and build_objective().
 """
 
-from alphaforge.tuning.autotune import (
-    AutotuneResult,
-    DEFAULT_GRID,
-    HyperparameterGrid,
-    InnerTrialResult,
-    NestedWFVConfig,
-    NestedWFVAutotune,
-    OuterFoldResult,
-    run_nested_wfv_autotune,
+from alphaforge.tuning.search_space import (
+    AGGRESSIVE_SCALP_SEARCH_SPACE,
+    SCALP_SEARCH_SPACE,
+    SWING_SEARCH_SPACE,
+    ParameterRange,
+    SearchSpace,
+    all_search_spaces,
+    build_objective,
+    get_search_space,
+    param_bounds,
+    suggest_params,
 )
 
 __all__ = [
-    "AutotuneResult",
-    "DEFAULT_GRID",
-    "HyperparameterGrid",
-    "InnerTrialResult",
-    "NestedWFVConfig",
-    "NestedWFVAutotune",
-    "OuterFoldResult",
-    "run_nested_wfv_autotune",
+    "AGGRESSIVE_SCALP_SEARCH_SPACE",
+    "ParameterRange",
+    "SCALP_SEARCH_SPACE",
+    "SearchSpace",
+    "SWING_SEARCH_SPACE",
+    "all_search_spaces",
+    "build_objective",
+    "get_search_space",
+    "param_bounds",
+    "suggest_params",
 ]

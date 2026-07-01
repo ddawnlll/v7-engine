@@ -31,6 +31,18 @@ from alphaforge.reports.stability import (
     compute_symbol_concentration,
     compute_symbol_metrics,
 )
+# P0.9F: active trade metrics (Issue #117)
+from alphaforge.reports.metrics import (
+    compute_oos_metrics,
+)
+# P0.9G: collapse detector (Issue #120)
+from alphaforge.reports.collapse_detector import (
+    build_collapse_report,
+    build_collapse_root_cause_tree,
+    compute_no_trade_trend,
+    counterfactual_analysis,
+    detect_no_trade_collapse,
+)
 from alphaforge.constants import CANONICAL_V7_GATES, FORBIDDEN_GATE_NAMES
 
 __all__ = [
@@ -49,6 +61,12 @@ __all__ = [
     "compute_regime_concentration",
     "compute_symbol_concentration",
     "compute_symbol_metrics",
+    "compute_oos_metrics",
+    "build_collapse_report",
+    "build_collapse_root_cause_tree",
+    "compute_no_trade_trend",
+    "counterfactual_analysis",
+    "detect_no_trade_collapse",
     "CANONICAL_V7_GATES",
     "FORBIDDEN_GATE_NAMES",
 ]

@@ -170,34 +170,6 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
-## #118 — Autotune Engine with Nested WFV (2026-07-01)
-
-**Issue:** #118 — Replace grid search with nested walk-forward validation autotune engine.
-
-**What changed:**
-- Created `alphaforge/src/alphaforge/tuning/` subpackage with `__init__.py` and `autotune.py`
-- Implemented `NestedWFVAutotune` class with:
-  - Outer fold construction (chronological anchored splits)
-  - Inner fold grid search over XGBoost hyperparameters (max_depth, learning_rate, n_estimators, subsample, colsample_bytree, min_child_weight, gamma, reg_alpha, reg_lambda)
-  - Multi-objective scoring (primary: cost_adjusted_active_expectancy_R, secondary: Sharpe, active trade count, fold stability)
-  - NO_TRADE collapse penalty (harsh penalty when NO_TRADE ratio exceeds 60%)
-  - Hard constraints: min active trades, cost survival, fold stability
-  - MHT-corrected candidate selection (Bonferroni approximation)
-- Created `HyperparameterGrid`, `NestedWFVConfig`, `InnerTrialResult`, `OuterFoldResult`, `AutotuneResult` dataclasses
-- Created convenience function `run_nested_wfv_autotune()`
-- Created `alphaforge/tests/test_autotune.py` with 44 tests covering dataclass construction, input validation, scoring, fold building, label encoding, and end-to-end integration
-
-**Design lock status:** LOCKED_INITIAL_BASELINE — conservative starting point for hyperparameter tuning with nested WFV. Open to recalibration after first empirical evidence.
-
-**Remaining holds:**
-- Outer fold construction may need refinement for production-scale data (HOLD — empirical)
-- MHT correction is approximate (Bonferroni rank-based) — proper p-value computation would require bootstrapping (DEFERRED)
-- Grid search is exhaustive — random/search-based sampling may be more efficient for large grids (DEFERRED)
-
-**Evidence:** 44/44 autotune tests pass. ACCP report at `reports/accp/issue-118.yaml`.
-
----
-
 ## TR-08 — Final Training Readiness Audit — v0.1 Milestone COMPLETE (2026-06-26)
 
 **Issue:** #12 — Final audit gate. Verify all TR-01 through TR-07 gates have evidence, run full test suite, update roadmap.
@@ -598,31 +570,33 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
-## v0.27 — Symbol + Regime Stability Real Metrics (2026-07-01)
+## v0.26 — XGBoost Search Space Design (2026-07-01)
 
 **What changed:**
-- New module `alphaforge/src/alphaforge/reports/stability.py` with:
-  - `compute_symbol_metrics()` — per-symbol expectancy_r, win_rate, trade_count
-  - `compute_symbol_concentration()` — top symbol share % and HHI
-  - `compute_regime_concentration()` — top regime share % and HHI
-  - `build_stability_section()` — combined section builder for WFV results
-  - `classify_symbol_regimes_from_ohlcv()` — regime classification from price data
-- `_build_empirical_regime_breakdown()` in `empirical.py` now includes per-regime win_rate and concentration ratios
-- `_build_symbol_stability()` added to empirical report builder — produces `symbol_stability` section with per-symbol metrics and concentration ratios
-- `_build_gate_readiness()` maps G5_symbol_stability when symbol_count > 1
-- Report `__init__.py` exports all 5 new functions
-- Tests: `alphaforge/tests/test_stability.py` — 31 tests covering per-symbol metrics, concentration ratios, HHI, regime classification, empty/edge cases, and integration with empirical report builder
+- New `alphaforge/src/alphaforge/tuning/` package with `search_space.py` module
+- Three mode-specific XGBoost hyperparameter search spaces defined:
+  - SWING: conservative baseline (max_depth 3-10, n_estimators 50-500, log-uniform reg_alpha/reg_lambda 1e-8 to 5.0)
+  - SCALP: tighter regularization (max_depth cap 8, n_estimators cap 300, min_child_weight floor 3)
+  - AGGRESSIVE_SCALP: strongest regularization (max_depth 2-6, n_estimators 30-200, wider gamma 0-8, reg penalty up to 10.0)
+- Log-uniform sampling for learning_rate, reg_alpha, reg_lambda (per arXiv 2601.08896 and XGBoost regularization best practices)
+- `ParameterRange` and `SearchSpace` frozen dataclasses for immutable configuration
+- `get_search_space()`, `all_search_spaces()`, `param_bounds()` lookup functions
+- Optuna integration via `suggest_params()` (sampling) and `build_objective()` (training objective minimizing validation mlogloss)
+- 78 tests covering: structure/bounds per mode, Optuna integration, edge cases, cross-mode consistency, API surface
 
 **Lock status:**
-- Symbol stability metrics: LOCKED_INITIAL_BASELINE
-- Regime concentration ratios: LOCKED_INITIAL_BASELINE
-- Per-symbol OOS metrics: LOCKED_INITIAL_BASELINE (fallback to aggregate when per_symbol_oos not in WFV results)
+- XGBoost search space ranges: LOCKED_INITIAL_BASELINE (Issue #146)
+- Log-uniform regularization sampling: LOCKED
+- Optuna integration via suggest_params/build_objective: LOCKED_INITIAL_BASELINE
 
 **Remaining holds:**
-- Multi-symbol WFV pipeline producing per_symbol_oos (HOLD — needs pipeline change)
-- Cross-symbol correlation and cluster analysis (HOLD — future enhancement)
+- Search space ranges need recalibration after first empirical tuning results (HOLD)
+- AGGRESSIVE_SCALP search space is speculative (HOLD — mode is HOLD)
+- build_objective uses simple train/val split; walk-forward CV should replace for production (HOLD)
+- XGBoost training with real market data (HOLD — requires real data pipeline)
+- OptunaTuner class to wire search space + data into full tuning pipeline (DEFERRED)
 
-**Evidence:** 31/31 stability tests passed, 60/60 empirical report tests passed. ACCP report at `reports/accp/issue-116.yaml`.
+**Evidence:** 78 passed, 0 failures. ACCP report at `reports/accp/issue-146.yaml`. Commit `d67cc06`.
 
 ---
 

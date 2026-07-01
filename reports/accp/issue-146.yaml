@@ -1,0 +1,53 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Implement XGBoost Search Space Design for financial time-series per mode (SWING, SCALP, AGGRESSIVE_SCALP) with Optuna integration"
+files_changed:
+  - "alphaforge/src/alphaforge/tuning/__init__.py"          # tuning package init and exports
+  - "alphaforge/src/alphaforge/tuning/search_space.py"      # search space definitions + Optuna integration
+  - "alphaforge/tests/test_search_space.py"                 # 78 tests for search space module
+decisions_locked:
+  - subject: "XGBoost Search Space Ranges"
+    status: "LOCKED_INITIAL_BASELINE"
+    detail: |
+      SWING: learning_rate [0.01, 0.3] log, max_depth [3,10], n_estimators [50,500],
+             subsample [0.5,1.0], colsample_bytree [0.3,1.0], min_child_weight [1,15],
+             gamma [0.0,5.0], reg_alpha [1e-8,5.0] log, reg_lambda [1e-8,5.0] log.
+      SCALP: tighter max_depth cap (8), n_estimators cap (300), min_child_weight floor (3).
+      AGGRESSIVE_SCALP: lowest max_depth (2-6), n_estimators (30-200),
+                        min_child_weight floor (5), wider gamma (0-8),
+                        wider reg_alpha/lambda (1e-8 to 10.0).
+    hold: "Recalibrate after first year of empirical tuning results"
+  - subject: "Log-uniform Regularization Sampling"
+    status: "LOCKED"
+    detail: "learning_rate, reg_alpha, reg_lambda use log-uniform sampling per arXiv 2601.08896 and XGBoost regularization best practices"
+  - subject: "Optuna Integration via suggest_params / build_objective"
+    status: "LOCKED_INITIAL_BASELINE"
+    hold: "Validate with production-scale data (10k+ samples, 50+ features)"
+remaining_holds:
+  - "Search space ranges should be recalibrated after first empirical tuning results (minimum 50 Optuna trials per mode)"
+  - "AGGRESSIVE_SCALP search space is speculative — no empirical evidence yet (mode is HOLD)"
+  - "build_objective uses simple random train/val split; walk-forward CV should replace this for production"
+safe_next_step:
+  - "Wire search_space into training pipeline: add OptunaTuner class that takes SearchSpace + data → best params"
+  - "Add tune subcommand to CLI (alphaforge tune --mode SWING --trials 50)"
+  - "Validate with real market data to confirm ranges are appropriate"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_search_space.py -q --timeout=120 -v"
+evidence:
+  - test_output: "78 passed in 1.04s"
+  - test_categories:
+      - "ParameterRange immutability and defaults"
+      - "SearchSpace fixed_params_without and defaults"
+      - "SWING: all 9 params with correct ranges, fixed params, log-uniform"
+      - "SCALP: tighter max_depth (3-8), n_estimators (50-300), min_child_weight floor (3)"
+      - "AGGRESSIVE_SCALP: lowest ranges, wider gamma/reg, 80 trials, 900s timeout"
+      - "get_search_space: valid modes, invalid mode error, case sensitivity"
+      - "all_search_spaces: returns 3 spaces, immutability"
+      - "param_bounds: all params, correct bounds per mode"
+      - "suggest_params: all keys present, within bounds, int/float types, log-uniform spread, all modes"
+      - "build_objective: callable, returns positive float, small data, feature names, multiple trials differ, all modes, full study optimize round-trip"
+      - "Cross-mode: SWING widest ranges, all modes have 9 params, all have required params, log params correct, fixed params consistent"
+      - "Edge cases: empty ranges, zero range, negative values"
+      - "API surface: __all__ exports match expected set"
+  - commit_hash: "d67cc06"

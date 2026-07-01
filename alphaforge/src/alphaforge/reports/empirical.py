@@ -509,6 +509,7 @@ def _build_empirical_mht_control(
     hypotheses_per_fold: int = 1,
     oos_sharpe: float | None = None,
     oos_trade_count: int | None = None,
+    ledger: Any | None = None,
 ) -> dict:
     """Build multiple_hypothesis_control section from WFV results.
 
@@ -529,15 +530,34 @@ def _build_empirical_mht_control(
             computation (default None).
         oos_trade_count: Number of OOS trades for deflated Sharpe
             n_samples (default None).
+        ledger: Optional TrialLedger recording what was tested. When
+            provided, tested_hypothesis_count and trial_count_disclosure
+            are taken from the ledger rather than computed from WFV
+            results alone.
 
     Returns:
         Dict with schema-aligned MHT control fields.
     """
     mht_data = wfv_results.get("multiple_hypothesis_control", {})
 
-    # Read trial_count from wfv_results trial_context (v0.25+)
-    trial_context = wfv_results.get("trial_context", {})
-    trial_count = trial_context.get("trial_count", 0)
+    # When an explicit TrialLedger is provided, use it as the source of
+    # truth for tested_hypothesis_count and trial_count_disclosure.
+    if ledger is not None:
+        trial_count = ledger.trial_count_disclosure
+        tested_hypotheses = ledger.tested_hypothesis_count
+    else:
+        # Read trial_count from wfv_results trial_context (v0.25+)
+        trial_context = wfv_results.get("trial_context", {})
+        trial_count = trial_context.get("trial_count", 0)
+
+        # trial_count fallback when trial_context is missing/zero
+        if not trial_count:
+            trial_count = max(1, fold_count)
+
+        # Prefer explicit tested_hypothesis_count from pipeline, else compute
+        tested_hypotheses = mht_data.get(
+            "tested_hypothesis_count", trial_count * hypotheses_per_fold
+        )
 
     # Respect pipeline's explicit correction_method when provided
     pipeline_method = mht_data.get("correction_method")
@@ -550,15 +570,6 @@ def _build_empirical_mht_control(
     else:
         correction_method = "NONE_APPLIED"
         corrected_alpha = None
-
-    # trial_count fallback when trial_context is missing/zero
-    if not trial_count:
-        trial_count = max(1, fold_count)
-
-    # Prefer explicit tested_hypothesis_count from pipeline, else compute
-    tested_hypotheses = mht_data.get(
-        "tested_hypothesis_count", trial_count * hypotheses_per_fold
-    )
 
     has_mht_applied = correction_method != "NONE_APPLIED"
 

@@ -7,6 +7,7 @@
 **v0.25 Diagnostics Repair (2026-06-27):** Active trade metric system added — `compute_oos_metrics()` tracks LONG_NOW/SHORT_NOW/NO_TRADE counts, cost decomposition, net-R, exposure pct with NaN guards. `mode_research_report.schema.json` updated with 8 new active metric fields (3 required). MHT correction module (`mht.py`) provides Bonferroni step-down, Benjamini-Hochberg FDR, deflated Sharpe ratio, and data-snooping risk assessment. 6-fold walk-forward validation with anchored expanding windows in `cli/real_training.py`. SOLUSDT stop/target optimized. 1578 tests pass.
 
 - **P0.x — Research Artifact Registry (2026-07-01):** `ResearchRunIndex` class creates/maintains `alphaforge_report/research_run_index.json` — a single index tracking every research run with canonical/superseded distinction, duplicate detection, and artifact paths. Integrated into CLI report generation. 29 tests, 1640 total pass.
+- **Issue #146 — XGBoost Search Space Design (2026-07-01):** New `alphaforge/src/alphaforge/tuning/` package with mode-specific XGBoost hyperparameter search spaces (SWING, SCALP, AGGRESSIVE_SCALP). Log-uniform regularization sampling. Optuna integration via `suggest_params()` and `build_objective()`. 78 tests.
 
 ---
 
@@ -63,6 +64,7 @@ Timeframes are LOCKED from `simulation/docs/profiles.md`. P0.8E corrected previo
 | [storage_policy.md](storage_policy.md) | What stays in repo vs. external storage |
 | [phase_plan.md](phase_plan.md) | Implementation phases P0.8B through P1.0 |
 | [decision_log.md](decision_log.md) | Locked AlphaForge decisions |
+| `alphaforge/src/alphaforge/tuning/search_space.py` | XGBoost search space definitions per mode + Optuna integration (Issue #146) |
 
 **Legacy docs (historical reference only):**
 - `ai_summary__v7_alphaforge_xgb.md` (625KB) — pre-authority-lock combined doc. SUPERSEDED by the 12 canonical docs above.
@@ -166,8 +168,8 @@ V7HandoffPackage (canonical G0-G10 gate mapping) ──► V7 Acceptance Gates
 
 ## Do Not Do (For Agents)
 
-- Do NOT implement AlphaForge source code until P0.9A
-- Do NOT add training scripts, dataset builders, or model code
+- Do NOT implement AlphaForge source code until P0.9A (exceptions: tuning/search_space.py — Issue #146)
+- Do NOT add training scripts, dataset builders, or model code (exceptions: training/xgb_trainer.py, tuning/search_space.py)
 - Do NOT modify lib/, simulation/, v7/, runtime/, or interface/ source files
 - Do NOT change SimulationOutput semantics
 - Do NOT use wrong V7 gate names — canonical names are in `v7/docs/pipeline/evaluation.md`

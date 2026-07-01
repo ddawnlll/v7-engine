@@ -54,6 +54,25 @@ ROOT_CAUSE_KEYS: Tuple[str, ...] = (
 
 CONSISTENCY_SEVERITY_ORDER: Dict[str, int] = {"ERROR": 0, "WARN": 1, "INFO": 2}
 
+# Default report directories relative to repo root for auto-generate mode
+REPORT_DIRS: Tuple[str, ...] = (
+    "data/reports/models",
+    "data/reports/reports",
+    "data/reports/",
+)
+
+# Failure layer mapping — maps primary_cause to failure_layer
+FAILURE_LAYER_MAP: Dict[str, str] = {
+    "feature_failure": "feature",
+    "model_failure": "model",
+    "cost_failure": "cost",
+    "no_trade_collapse": "decision",
+    "mht_failure": "statistics",
+    "fold_instability": "validation",
+    "symbol_instability": "coverage",
+    "NO_FAILURE": "none",
+}
+
 # ---------------------------------------------------------------------------
 # Type aliases
 # ---------------------------------------------------------------------------
@@ -314,6 +333,7 @@ class ResearchRunSummary:
             "root_cause_trees": root_trees,
             "recommendations": recommendations,
             "aggregate": aggregate,
+            "trial_ledger": ResearchRunSummary.build_trial_ledger(raw_reports),
         }
 
         # ---- 7. Write outputs ----------------------------------------
@@ -820,6 +840,13 @@ class ResearchRunSummary:
                 "mht_high_risk_count": 0,
                 "no_trade_fail_count": 0,
             },
+            "trial_ledger": {
+                "total_candidates": 0,
+                "promoted_count": 0,
+                "rejected_count": 0,
+                "research_count": 0,
+                "candidates": [],
+            },
         }
 
     @staticmethod
@@ -916,3 +943,202 @@ class ResearchRunSummary:
                 seen.add(rec)
                 recs.append(rec)
         return recs
+
+    # ------------------------------------------------------------------
+    # Trial ledger
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def build_trial_ledger(reports: List[dict]) -> Dict[str, Any]:
+        """Build a trial ledger from a list of reports.
+
+        Maps each report to a candidate entry with verdict, root cause,
+        failure layer, and key metrics. Counts promoted / rejected /
+        research candidates.
+
+        Args:
+            reports: List of report dicts.
+
+        Returns:
+            Dict with ``total_candidates``, ``promoted_count``,
+            ``rejected_count``, ``research_count``, and ``candidates`` list.
+        """
+        PROMOTED_VERDICTS = {"CANDIDATE_FOR_V7_GATES", "BASELINE_VALID"}
+        REJECTED_VERDICTS = {"REJECT"}
+        RESEARCH_VERDICTS = {"CONTINUE_RESEARCH"}
+
+        candidates: List[Dict[str, Any]] = []
+        promoted = 0
+        rejected = 0
+        research = 0
+
+        for rank, report in enumerate(reports, start=1):
+            verdict = report.get("verdict", "UNKNOWN")
+            tree = ResearchRunSummary.build_root_cause_tree(report)
+            rc_tree = tree.get("root_cause_tree", {})
+            primary_cause = rc_tree.get("primary_cause", "NO_FAILURE")
+
+            is_promoted = verdict in PROMOTED_VERDICTS
+            is_rejected = verdict in REJECTED_VERDICTS
+            is_research = verdict in RESEARCH_VERDICTS
+
+            if is_promoted:
+                promoted += 1
+            elif is_rejected:
+                rejected += 1
+            elif is_research:
+                research += 1
+
+            # Determine failure_layer from primary cause
+            failure_layer = FAILURE_LAYER_MAP.get(primary_cause, "none")
+
+            # Build evidence list from root cause tree + diagnostics
+            evidence = list(rc_tree.get("evidence", []))
+
+            # Extract key metrics
+            oos_expectancy_r = _safe_get(
+                report, "metrics", "oos_expectancy_r", "value", default=0.0
+            )
+            oos_sharpe = _safe_get(
+                report, "metrics", "oos_sharpe", "value", default=0.0
+            )
+            oos_trade_count = _safe_get(
+                report, "metrics", "oos_trade_count", default=0
+            )
+
+            candidate: Dict[str, Any] = {
+                "rank": rank,
+                "report_id": report.get("report_id", "UNKNOWN"),
+                "verdict": verdict,
+                "is_promoted": is_promoted,
+                "is_rejected": is_rejected,
+                "is_research": is_research,
+                "primary_cause": primary_cause,
+                "failure_layer": failure_layer,
+                "evidence": evidence,
+                "next_recommendation": (
+                    ResearchRunSummary.next_experiment_recommendation(report)
+                ),
+                "oos_expectancy_r": oos_expectancy_r,
+                "oos_sharpe": oos_sharpe,
+                "oos_trade_count": oos_trade_count,
+            }
+            candidates.append(candidate)
+
+        return {
+            "total_candidates": len(candidates),
+            "promoted_count": promoted,
+            "rejected_count": rejected,
+            "research_count": research,
+            "candidates": candidates,
+        }
+
+    # ------------------------------------------------------------------
+    # Auto-generate summary (multi-directory)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def auto_generate_summary(
+        report_dirs: List[str | Path],
+        output_path: str | Path,
+    ) -> Dict[str, Any]:
+        """Scan one or more report directories and produce a consolidated
+        summary with trial ledger.
+
+        Args:
+            report_dirs: List of report directory paths to scan.
+            output_path: Destination for the consolidated summary JSON.
+                A companion Markdown file (same stem) is also written.
+
+        Returns:
+            Consolidated summary dict with merged reports, consistency
+            issues, root cause trees, recommendations, aggregate, and
+            trial ledger.
+        """
+        all_reports: List[dict] = []
+        all_consistency_issues: List[ConsistencyIssue] = []
+        all_root_trees: List[dict] = []
+        all_recommendations: List[str] = []
+
+        for d in report_dirs:
+            p = Path(d)
+            if not p.is_dir():
+                logger.warning("Report directory does not exist: %s", p)
+                continue
+
+            try:
+                summary = ResearchRunSummary.build_run_summary(
+                    report_dir=p, output_path=None
+                )
+                all_reports.extend(summary.get("reports", []))
+                all_consistency_issues.extend(
+                    summary.get("consistency_issues", [])
+                )
+                all_root_trees.extend(summary.get("root_cause_trees", []))
+                all_recommendations.extend(
+                    summary.get("recommendations", [])
+                )
+            except Exception as exc:
+                logger.error("Failed to process %s: %s", p, exc)
+                continue
+
+        # De-duplicate recommendations while preserving order
+        seen_recs: set = set()
+        deduped_recs: List[str] = []
+        for rec in all_recommendations:
+            if rec not in seen_recs:
+                seen_recs.add(rec)
+                deduped_recs.append(rec)
+
+        # Build trial ledger from raw reports (we need to load them again)
+        # Use build_run_summary outputs — we already have the loaded reports
+        # from the scan. Re-load from disk to get the raw report dicts.
+        raw_reports: List[dict] = []
+        for d in report_dirs:
+            p = Path(d)
+            if not p.is_dir():
+                continue
+            for rf in sorted(p.glob(REPORT_GLOB)):
+                try:
+                    with open(rf, "r", encoding="utf-8") as fh:
+                        raw_reports.append(json.load(fh))
+                except (json.JSONDecodeError, OSError):
+                    continue
+
+        trial_ledger = ResearchRunSummary.build_trial_ledger(raw_reports)
+
+        # Build aggregate from extracted report fields
+        aggregate = ResearchRunSummary._aggregate(
+            [ResearchRunSummary._extract_report_fields(r) for r in raw_reports]
+        )
+
+        merged: Dict[str, Any] = {
+            "metadata": {
+                "created_at": datetime.now(timezone.utc).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+                "report_dirs": [str(Path(d).resolve()) for d in report_dirs],
+                "report_count": len(all_reports),
+                "source_count": len(report_dirs),
+            },
+            "reports": all_reports,
+            "consistency_issues": ResearchRunSummary._sorted_issues(
+                all_consistency_issues
+            ),
+            "root_cause_trees": all_root_trees,
+            "recommendations": deduped_recs,
+            "aggregate": aggregate,
+            "trial_ledger": trial_ledger,
+        }
+
+        # Write output
+        output = Path(output_path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with open(output, "w", encoding="utf-8") as fh:
+            json.dump(merged, fh, indent=2, ensure_ascii=False, default=str)
+        logger.info("Wrote auto-generated summary JSON to %s", output)
+
+        md_path = output.with_suffix(".md")
+        ResearchRunSummary.generate_summary_report(merged, md_path)
+
+        return merged
