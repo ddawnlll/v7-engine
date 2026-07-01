@@ -34,13 +34,39 @@ from alphaforge.features.orderbook import (
     DEFAULT_DEPTH_RATIO_WINDOW,
     DEFAULT_LIQUIDITY_VACUUM_WINDOW,
     DEFAULT_MICROPRICE_WINDOW,
+    DEFAULT_MULTI_LEVEL_OBI_N,
+    DEFAULT_MULTI_LEVEL_OBI_STEP,
+    DEFAULT_MULTI_LEVEL_OBI_DECAY,
     DEFAULT_NOISE_WINDOW,
+    DEFAULT_OFI_WINDOW,
     DEFAULT_ORDERBOOK_WINDOW,
     DEFAULT_PRICE_IMPACT_WINDOW,
+    DEFAULT_QUOTED_SPREAD_WINDOW,
     DEFAULT_ROLL_SPREAD_WINDOW,
     DEFAULT_SERIAL_CORR_WINDOW,
+    DEFAULT_STOIKOV_MICRO_PRICE_WINDOW,
+    DEFAULT_TRADE_COUNT_WINDOW,
+    DEFAULT_VAMP_WINDOW,
+    DEFAULT_VOLUME_CONCENTRATION_WINDOW,
     DEFAULT_VPIN_WINDOW,
+    DEFAULT_VWAP_MID_WINDOW,
     compute_orderbook_group,
+)
+from alphaforge.features.regime import (
+    AGGRESSIVE_SCALP_CUSUM_THRESHOLD,
+    AGGRESSIVE_SCALP_HMM_VOL_WINDOW,
+    AGGRESSIVE_SCALP_VOL_REGIME_WINDOW,
+    SCALP_CUSUM_THRESHOLD,
+    SCALP_HMM_VOL_WINDOW,
+    SCALP_VOL_REGIME_WINDOW,
+    SWING_CUSUM_THRESHOLD,
+    SWING_HMM_VOL_WINDOW,
+    SWING_VOL_REGIME_WINDOW,
+    compute_regime_group,
+)
+from alphaforge.features.candle_pattern import (
+    DEFAULT_CANDLE_WINDOW,
+    compute_candle_pattern_group,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,6 +106,8 @@ class FeatureGroup(Enum):
 
     LEAD_LAG is marked DEFERRED because it requires cross-sectional data
     across symbols (P0.9B dependency). No compute function is mapped for it.
+    REGIME and CANDLE_PATTERN are active optional groups.
+    PERPETUAL_FUNDING is reserved for future funding data integration.
     Re-enablement conditions:
       (a) cross-sectional data pipeline available
       (b) correlation computation across symbols validated
@@ -92,6 +120,9 @@ class FeatureGroup(Enum):
     VOLUME = "volume"
     BREAKOUT = "breakout"
     ORDERBOOK = "orderbook"
+    REGIME = "regime"
+    CANDLE_PATTERN = "candle_pattern"
+    PERPETUAL_FUNDING = "perpetual_funding"
     LEAD_LAG = "lead_lag"  # DEFERRED — P0.9B cross-sectional data required
 
 
@@ -124,7 +155,9 @@ class FeatureMatrix:
     def __post_init__(self):
         if not self.feature_group_ids:
             # Infer from active group map
-            active = [g.value for g in FeatureGroup if g != FeatureGroup.LEAD_LAG]
+            # Exclude DEFERRED groups: LEAD_LAG and PERPETUAL_FUNDING
+            excluded = {FeatureGroup.LEAD_LAG, FeatureGroup.PERPETUAL_FUNDING}
+            active = [g.value for g in FeatureGroup if g not in excluded]
             self.feature_group_ids = active
         if not self.metadata:
             self.metadata["pipeline_version"] = PIPELINE_VERSION
@@ -154,6 +187,9 @@ FEATURE_GROUP_MAP: Dict[FeatureGroup, str] = {
     FeatureGroup.VOLUME: "compute_volume_group",
     FeatureGroup.BREAKOUT: "compute_breakout_group",
     FeatureGroup.ORDERBOOK: "compute_orderbook_group",
+    FeatureGroup.REGIME: "compute_regime_group",
+    FeatureGroup.CANDLE_PATTERN: "compute_candle_pattern_group",
+    FeatureGroup.PERPETUAL_FUNDING: "compute_perpetual_funding_group",
     # LEAD_LAG is mapped but DEFERRED — compute_features does not call it.
     # Active filtering (lines 119, 1257) keeps LEAD_LAG out of computation
     # until cross-sectional data support lands (P0.9B).
@@ -1129,6 +1165,23 @@ _MODE_DEFAULTS = {
         "microprice_window": DEFAULT_MICROPRICE_WINDOW,
         "liquidity_vacuum_window": DEFAULT_LIQUIDITY_VACUUM_WINDOW,
         "depth_ratio_window": DEFAULT_DEPTH_RATIO_WINDOW,
+        # OrderBook extended windows
+        "multi_level_obi_n": DEFAULT_MULTI_LEVEL_OBI_N,
+        "multi_level_obi_step": DEFAULT_MULTI_LEVEL_OBI_STEP,
+        "multi_level_obi_decay": DEFAULT_MULTI_LEVEL_OBI_DECAY,
+        "stoikov_micro_price_window": DEFAULT_STOIKOV_MICRO_PRICE_WINDOW,
+        "ofi_window": DEFAULT_OFI_WINDOW,
+        "vamp_window": DEFAULT_VAMP_WINDOW,
+        "quoted_spread_window": DEFAULT_QUOTED_SPREAD_WINDOW,
+        "vwap_mid_window": DEFAULT_VWAP_MID_WINDOW,
+        "trade_count_window": DEFAULT_TRADE_COUNT_WINDOW,
+        "volume_concentration_window": DEFAULT_VOLUME_CONCENTRATION_WINDOW,
+        # Regime windows
+        "cusum_threshold": SWING_CUSUM_THRESHOLD,
+        "hmm_vol_window": SWING_HMM_VOL_WINDOW,
+        "vol_regime_window": SWING_VOL_REGIME_WINDOW,
+        # Candle pattern window
+        "candle_window": 10,
     },
     "SCALP": {
         "n_returns": 12,
@@ -1154,6 +1207,23 @@ _MODE_DEFAULTS = {
         "microprice_window": 8,
         "liquidity_vacuum_window": 10,
         "depth_ratio_window": 8,
+        # OrderBook extended windows
+        "multi_level_obi_n": DEFAULT_MULTI_LEVEL_OBI_N,
+        "multi_level_obi_step": DEFAULT_MULTI_LEVEL_OBI_STEP,
+        "multi_level_obi_decay": DEFAULT_MULTI_LEVEL_OBI_DECAY,
+        "stoikov_micro_price_window": DEFAULT_STOIKOV_MICRO_PRICE_WINDOW,
+        "ofi_window": 10,
+        "vamp_window": 8,
+        "quoted_spread_window": 10,
+        "vwap_mid_window": 10,
+        "trade_count_window": 20,
+        "volume_concentration_window": 20,
+        # Regime windows
+        "cusum_threshold": SCALP_CUSUM_THRESHOLD,
+        "hmm_vol_window": SCALP_HMM_VOL_WINDOW,
+        "vol_regime_window": SCALP_VOL_REGIME_WINDOW,
+        # Candle pattern window
+        "candle_window": 12,
     },
     "AGGRESSIVE_SCALP": {
         "n_returns": 16,
@@ -1179,6 +1249,23 @@ _MODE_DEFAULTS = {
         "microprice_window": 5,
         "liquidity_vacuum_window": 10,
         "depth_ratio_window": 5,
+        # OrderBook extended windows
+        "multi_level_obi_n": DEFAULT_MULTI_LEVEL_OBI_N,
+        "multi_level_obi_step": DEFAULT_MULTI_LEVEL_OBI_STEP,
+        "multi_level_obi_decay": DEFAULT_MULTI_LEVEL_OBI_DECAY,
+        "stoikov_micro_price_window": DEFAULT_STOIKOV_MICRO_PRICE_WINDOW,
+        "ofi_window": 10,
+        "vamp_window": 5,
+        "quoted_spread_window": 10,
+        "vwap_mid_window": 10,
+        "trade_count_window": 20,
+        "volume_concentration_window": 20,
+        # Regime windows
+        "cusum_threshold": AGGRESSIVE_SCALP_CUSUM_THRESHOLD,
+        "hmm_vol_window": AGGRESSIVE_SCALP_HMM_VOL_WINDOW,
+        "vol_regime_window": AGGRESSIVE_SCALP_VOL_REGIME_WINDOW,
+        # Candle pattern window
+        "candle_window": 16,
     },
 }
 
@@ -1193,8 +1280,10 @@ def compute_features(
 ) -> FeatureMatrix:
     """Main feature pipeline entry point.
 
-    Computes all 7 active feature groups from OHLCV data.
-    Lead-Lag features are NOT computed (DEFERRED: P0.9B cross-sectional data).
+    Computes 9 active feature groups from OHLCV data:
+      RETURNS, VOLATILITY, ATR, MOMENTUM, VOLUME, BREAKOUT, ORDERBOOK,
+      REGIME, CANDLE_PATTERN.
+    Lead-Lag and PERPETUAL_FUNDING are NOT computed (DEFERRED).
 
     Args:
         ohlcv_data: dict with keys 'open', 'high', 'low', 'close', 'volume'.
@@ -1206,8 +1295,8 @@ def compute_features(
             Informational only — does not affect computation.
 
     Returns:
-        FeatureMatrix with features dict containing ~38 feature arrays
-        (35 core + 3 #119 OrderBook expansion),
+        FeatureMatrix with features dict containing ~57 feature arrays
+        (35 core + 9 OrderBook extended + 6 Regime + 7 Candle Pattern),
         each of shape (n_bars,). No Lead-Lag columns present.
 
     Raises:
@@ -1299,7 +1388,7 @@ def compute_features(
         )
     )
 
-    # 7. OrderBook Group (12 features — 9 core + 3 expansion #119)
+    # 7. OrderBook Group (21 features — 12 core + 9 extended)
     features.update(
         compute_orderbook_group(
             open_arr=open_arr,
@@ -1317,10 +1406,46 @@ def compute_features(
             microprice_window=defaults.get("microprice_window", DEFAULT_MICROPRICE_WINDOW),
             liquidity_vacuum_window=defaults.get("liquidity_vacuum_window", DEFAULT_LIQUIDITY_VACUUM_WINDOW),
             depth_ratio_window=defaults.get("depth_ratio_window", DEFAULT_DEPTH_RATIO_WINDOW),
+            # Extended windows
+            multi_level_obi_n=defaults.get("multi_level_obi_n", DEFAULT_MULTI_LEVEL_OBI_N),
+            multi_level_obi_step=defaults.get("multi_level_obi_step", DEFAULT_MULTI_LEVEL_OBI_STEP),
+            multi_level_obi_decay=defaults.get("multi_level_obi_decay", DEFAULT_MULTI_LEVEL_OBI_DECAY),
+            stoikov_micro_price_window=defaults.get("stoikov_micro_price_window", DEFAULT_STOIKOV_MICRO_PRICE_WINDOW),
+            ofi_window=defaults.get("ofi_window", DEFAULT_OFI_WINDOW),
+            vamp_window=defaults.get("vamp_window", DEFAULT_VAMP_WINDOW),
+            quoted_spread_window=defaults.get("quoted_spread_window", DEFAULT_QUOTED_SPREAD_WINDOW),
+            vwap_mid_window=defaults.get("vwap_mid_window", DEFAULT_VWAP_MID_WINDOW),
+            trade_count_window=defaults.get("trade_count_window", DEFAULT_TRADE_COUNT_WINDOW),
+            volume_concentration_window=defaults.get("volume_concentration_window", DEFAULT_VOLUME_CONCENTRATION_WINDOW),
+        )
+    )
+
+    # 8. Regime Group (6 features — CUSUM + HMM vol state + volatility regime)
+    # Uses close, high, low arrays. Reserved: high/low for future use.
+    features.update(
+        compute_regime_group(
+            close=close,
+            high=high,
+            low=low,
+            cusum_threshold=defaults.get("cusum_threshold", SWING_CUSUM_THRESHOLD),
+            hmm_vol_window=defaults.get("hmm_vol_window", SWING_HMM_VOL_WINDOW),
+            vol_regime_window=defaults.get("vol_regime_window", SWING_VOL_REGIME_WINDOW),
+        )
+    )
+
+    # 9. Candle Pattern Group (multi-bar pattern detection)
+    features.update(
+        compute_candle_pattern_group(
+            open_arr=open_arr,
+            high=high,
+            low=low,
+            close=close,
+            window=defaults.get("candle_window", DEFAULT_CANDLE_WINDOW),
         )
     )
 
     # Lead-Lag group is DEFERRED — not computed, no columns added.
+    # PERPETUAL_FUNDING group is DEFERRED — requires external funding data feed, not OHLCV-only.
 
     # Verify array length consistency
     for name, arr in features.items():
@@ -1330,9 +1455,12 @@ def compute_features(
             )
 
     # Assemble FeatureMatrix
+    # Exclude DEFERRED groups: LEAD_LAG (P0.9B cross-sectional data)
+    # and PERPETUAL_FUNDING (requires external funding data feed).
+    excluded = {FeatureGroup.LEAD_LAG, FeatureGroup.PERPETUAL_FUNDING}
     expected_groups = [
         g.value for g in FeatureGroup
-        if g != FeatureGroup.LEAD_LAG
+        if g not in excluded
     ]
 
     return FeatureMatrix(
@@ -1348,6 +1476,8 @@ def compute_features(
             "window_defaults": defaults,
             "lead_lag_status": "DEFERRED",
             "lead_lag_reason": "P0.9B cross-sectional data dependency",
-            "active_groups": 7,
+            "perpetual_funding_status": "DEFERRED",
+            "perpetual_funding_reason": "Requires external funding data feed",
+            "active_groups": 9,
         },
     )
