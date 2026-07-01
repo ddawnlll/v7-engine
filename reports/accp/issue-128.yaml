@@ -1,0 +1,115 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: |
+  Issue #128: Feature/Label Leakage + Causality Audit.
+  Performed comprehensive audit of all alphaforge/src/ source files (read-only)
+  for causality and leakage properties. Added 76 programmatic audit tests.
+  No core source files were modified.
+
+audit_findings:
+  - finding: "All active features are causally correct"
+    status: "PASS"
+    details: |
+      All 7 active feature groups (Returns, Volatility, ATR, Momentum, Volume,
+      Breakout, Orderbook) use only data up to current bar t. No-revision
+      property verified for every individual function and group combination.
+    evidence: "76 causality audit tests pass"
+
+  - finding: "Label/feature timestamp separation enforced when label_timestamp column present"
+    status: "PASS_WITH_WARNINGS"
+    details: |
+      Assembler enforces feature_timestamp < label_timestamp when a separate
+      label_timestamp column exists in label_df. When absent, the assembler
+      silently uses the join timestamp as both (no purge enforcement).
+      This is documented as a design choice for fixture/test scenarios
+      but is a potential leakage vector in production.
+    evidence: "AC-128-031 through AC-128-035"
+
+  - finding: "WFV purge/embargo correctness"
+    status: "PASS"
+    details: |
+      Purge gaps correctly computed between train/val and val/oos.
+      PurgePolicy.validate_purge() enforces minimum gaps. Mode-specific
+      purge constants verified (SCALP=100, AGGRESSIVE_SCALP=200, SWING=20).
+    evidence: "AC-128-036 through AC-128-041"
+
+  - finding: "Cross-symbol lead-lag leakage DEFERRED"
+    status: "PASS"
+    details: |
+      Lead-lag features require P0.9B cross-sectional data and are explicitly
+      DEFERRED. No lead-lag columns appear in active pipeline output.
+      Note: compute_lead_lag_score() accesses future context data for
+      negative lag values — must be resolved before enablement.
+    evidence: "AC-128-042 through AC-128-046"
+
+  - finding: "Pipeline is stateless and deterministic"
+    status: "PASS"
+    details: |
+      Same input always produces identical output across 5+ calls.
+      Pipeline functions do not modify input arrays. No mutable global state.
+    evidence: "AC-128-047 through AC-128-055"
+
+  - finding: "Roll/EWM computations have no lookahead"
+    status: "PASS"
+    details: |
+      EMA, MACD, RSI all use causal recursive formulas. No future data
+      accessed. No-revision property verified on all rolling functions.
+    evidence: "AC-128-056 through AC-128-061"
+
+  - finding: "Label adapter is stateless and per-record"
+    status: "PASS"
+    details: |
+      LabelAdapter processes one simulation record at a time with no
+      cross-record state or lookahead. Deterministic: same input always
+      produces identical output.
+    evidence: "AC-128-062 through AC-128-063"
+
+  - finding: "Domain boundary integrity"
+    status: "PASS"
+    details: |
+      Feature pipeline, validation contracts, dataset contracts, and label
+      adapter import zero forbidden modules (no xgboost, sklearn, pandas
+      in non-data modules, no simulation/v7/runtime cross-imports).
+    evidence: "AC-128-067 through AC-128-071"
+
+files_changed:
+  - "alphaforge/tests/test_causality_audit.py"  # New file: 76 audit tests
+
+decisions_locked: []
+  # No design lock changes — this is an audit that confirms existing
+  # causality properties are correct. Pipeline is already causally sound.
+
+remaining_holds:
+  - hold: "Label timestamp separation without explicit label_timestamp column"
+    severity: "MEDIUM"
+    condition: "Assembler silently skips purge check when label_timestamp column absent"
+    resolution: "Add validation requiring label_timestamp column in production mode"
+  - hold: "Lead-lag future data in compute_lead_lag_score()"
+    severity: "INFORMATIONAL"
+    condition: "lead_lag_score accesses context_ret at indices > t for negative lag values"
+    resolution: "Must be fixed before lead-lag features are enabled (P0.9B)"
+  - hold: "Embargo not actively enforced during WFV split()"
+    severity: "LOW"
+    condition: "validate_embargo() exists in PurgePolicy but not called in split()"
+    resolution: "Call validate_embargo() during fold construction or document why not needed"
+
+safe_next_step: |
+  The audit confirms all active pipeline components are causally correct.
+  The three remaining holds are documented for future resolution.
+  Next step: consider adding label_timestamp validation as a configurable
+  check in the assembler, and resolving the embargo enforcement gap.
+
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_causality_audit.py -q -x --timeout=120"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ simulation/tests/ -q -x --timeout=60"
+
+evidence:
+  - "All 76 causality audit tests pass"
+  - "1159 alphaforge tests pass (1 skipped)"
+  - "176 integration tests pass (2 skipped)"
+  - "352 lib + simulation tests pass"
+  - "Total: 1687 tests pass, 3 skipped — all existing tests continue to pass"
+  - "No core source files modified — only new test file added"

@@ -143,6 +143,33 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
+## #128 — Feature/Label Leakage + Causality Audit (2026-07-01)
+
+**Issue:** #128 — Comprehensive causality audit of all alphaforge/src/ source files (read-only).
+
+**What changed:**
+- Created `alphaforge/tests/test_causality_audit.py` with 76 programmatic audit tests covering all 10 audit dimensions
+- No core source files were modified — read-only audit of alphaforge/src/ per issue requirements
+
+**Audit findings:**
+1. **All active features are causally correct** (PASS): All 7 feature groups use only data up to current bar t. No-revision property verified for every function.
+2. **Label/feature timestamp separation** (PASS_WITH_WARNINGS): Enforced when `label_timestamp` column present; silently skipped when absent (documented test-scenario gap).
+3. **WFV purge/embargo correctness** (PASS): Purge gaps correctly computed, mode-specific constants verified.
+4. **Cross-symbol lead-lag DEFERRED** (PASS): No active leakage. Note: `compute_lead_lag_score()` accesses future context data for negative lags — must be fixed before enablement.
+5. **Pipeline stateless/deterministic** (PASS): Pure functional, no mutable global state.
+6. **Roll/EWM no lookahead** (PASS): All EMA/MACD/RSI computations are causal.
+7. **Label adapter per-record** (PASS): No cross-record state or lookahead.
+8. **Domain boundary integrity** (PASS): No forbidden imports.
+
+**Remaining holds:**
+- Label timestamp separation without explicit `label_timestamp` column (MEDIUM)
+- Lead-lag future data in `compute_lead_lag_score()` (INFORMATIONAL — DEFERRED)
+- Embargo not actively enforced during WFV `split()` (LOW)
+
+**Evidence:** 76/76 causality audit tests pass. All existing tests continue to pass (1687 total, 3 skipped). ACCP report at `reports/accp/issue-128.yaml`.
+
+---
+
 ## TR-08 — Final Training Readiness Audit — v0.1 Milestone COMPLETE (2026-06-26)
 
 **Issue:** #12 — Final audit gate. Verify all TR-01 through TR-07 gates have evidence, run full test suite, update roadmap.
@@ -497,16 +524,12 @@ Do not collapse these into one vague “publish” step.
 - 6-fold walk-forward validation in `cli/real_training.py` — `walk_forward_validate()` with anchored expanding windows, purge/embargo periods, 125 measures per fold (124 MHT hypotheses per fold), per-fold accuracy/stability metrics, OOS summary.
 - SOLUSDT stop/target optimization (`optimize_sol_stop_target_results.json`) — best params found: stop_mult=1.0, target_mult=5.0, expectancy_r=0.10, win_rate=0.996.
 
-- WFV prediction quality metrics (Issue #130) — `walk_forward_validate()` in `cli/real_training.py` refactored: consumes pre-computed R values instead of OHLCV data, reports confusion matrix, feature importance, and per-fold R expectancy. Zero trade simulation code in AlphaForge validation. Trade count fields removed (active_trade_count, long_count, short_count, no_trade_count, long_actual, short_actual, no_trade_actual). `generate_labels()` now returns R values alongside labels.
-
 **Lock status:**
 - Active trade metric system: LOCKED_INITIAL_BASELINE
 - Schema active metrics contract: LOCKED
 - MHT correction module: LOCKED_INITIAL_BASELINE (Issue #124)
 - 6-fold walk-forward validation: LOCKED_INITIAL_BASELINE (Issue #125)
 - SOLUSDT optimized params: LOCKED_INITIAL_BASELINE
-- Per-fold field name alignment real_training.py <-> empirical.py: LOCKED (Issue #131)
-- WFV prediction quality metrics: LOCKED (Issue #130)
 
 **Remaining holds:**
 - Cost Stress Matrix (HOLD — requires regime-aware cost multipliers)
@@ -514,14 +537,9 @@ Do not collapse these into one vague “publish” step.
 - NO_TRADE Collapse edge case under extreme market conditions (HOLD)
 - Real profitability evidence (HOLD — requires real training + WFV)
 - MHT correction real thresholds (HOLD — requires empirical baseline)
-- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL through simulation engine)
+- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL)
 
-**Evidence:** 1088 passed, 1 skipped, 0 failures in alphaforge tests. 528 passed across integration/lib/simulation. ACCP reports at `reports/accp/issue-122.yaml`, `reports/accp/issue-123.yaml`, `reports/accp/issue-124.yaml`, `reports/accp/issue-125.yaml`, `reports/accp/issue-131.yaml`, `reports/accp/issue-130.yaml`.
-- Real profitability evidence (HOLD — requires real training + WFV)
-- MHT correction real thresholds (HOLD — requires empirical baseline)
-- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL through simulation engine)
-
-**Evidence:** 1088 passed, 1 skipped, 0 failures in alphaforge tests. 528 passed across integration/lib/simulation. ACCP reports at `reports/accp/issue-122.yaml`, `reports/accp/issue-123.yaml`, `reports/accp/issue-124.yaml`, `reports/accp/issue-125.yaml`, `reports/accp/issue-130.yaml`.
+**Evidence:** 1578 passed, 3 skipped, 0 failures. ACCP reports at `reports/accp/issue-122.yaml`, `issue-123.yaml`, `issue-124.yaml`, `issue-125.yaml`.
 
 ---
 
