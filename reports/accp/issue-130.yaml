@@ -1,0 +1,26 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation:
+  original: "Remove all simulate_path() calls from walk_forward_validate(). WFV must consume pre-computed R values from labels, not re-simulate."
+  actual: "Refactored walk_forward_validate() in cli/real_training.py to accept R values instead of OHLCV data. Removed all trade count fields (active_trade_count, long_count, short_count, no_trade_count, long_actual, short_actual, no_trade_actual). Added prediction quality metrics: confusion matrix, feature importance, per-fold R expectancy. generate_labels() now returns R values alongside labels."
+  adherence: "FULL"
+files_changed:
+  - "cli/real_training.py"
+  - "alphaforge/tests/test_wfv.py"
+  - "v7/docs/roadmap.md"
+decisions_locked:
+  - "WFV prediction quality metrics: LOCKED"
+remaining_holds:
+  - "Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL through simulation engine)"
+  - "R expectancy uses label R values (HOLD — requires simulation engine R value integration)"
+safe_next_step: "Integrate simulation engine R values into label pipeline for authoritative economic truth"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ simulation/tests/ -q -x --timeout=60"
+evidence:
+  - "alphaforge/tests/: 1088 passed, 1 skipped"
+  - "integration/tests/: 176 passed, 2 skipped"
+  - "lib/tests/ + simulation/tests/: 352 passed"
+  - "Total: 1616 passed, 3 skipped"

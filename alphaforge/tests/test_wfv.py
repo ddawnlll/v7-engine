@@ -43,17 +43,12 @@ from cli.real_training import walk_forward_validate, _compute_stability
 # =========================================================================
 
 
-def _make_ohlcv(n: int) -> dict:
-    """Synthetic OHLCV dict with n bars."""
-    return {
-        "close": np.full(n, 50000.0, dtype=np.float64),
-        "high": np.full(n, 50100.0, dtype=np.float64),
-        "low": np.full(n, 49900.0, dtype=np.float64),
-        "open": np.full(n, 50000.0, dtype=np.float64),
-        "volume": np.full(n, 100.0, dtype=np.float64),
-        "timestamp": np.arange(n, dtype=np.int64) * 3600 * 1000,
-        "symbol": ["BTCUSDT"] * n,
-    }
+def _make_r_values(n: int, rng: np.random.RandomState | None = None) -> np.ndarray:
+    """Synthetic R values (gross return fraction) with n entries."""
+    if rng is None:
+        rng = np.random.RandomState(42)
+    # R values centered around 0, typical range [-0.5, 0.5]
+    return rng.uniform(-0.3, 0.5, size=n).astype(np.float64)
 
 
 def _make_labels(n: int, rng: np.random.RandomState | None = None) -> np.ndarray:
@@ -98,7 +93,14 @@ def _make_mock_result(
     model.predict.side_effect = _predict_side_effect
     return TrainingResult(
         model=model,
-        model_artifact={},
+        model_artifact={
+            "feature_importance": {
+                "feature_0": 0.4,
+                "feature_1": 0.3,
+                "feature_2": 0.2,
+                "feature_3": 0.1,
+            },
+        },
         model_binary_bytes=b"",
         train_metrics={"accuracy": train_accuracy, "logloss": train_logloss},
         val_metrics={"accuracy": val_accuracy, "logloss": val_logloss},
@@ -138,7 +140,7 @@ class TestMinFolds:
         """With 1000 bars and min_folds=6, returns >= 6 folds."""
         n = 1000
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
         assert len(results) >= 6, f"Expected >= 6 folds, got {len(results)}"
@@ -147,7 +149,7 @@ class TestMinFolds:
         """With min_folds=3, returns >= 3 folds."""
         n = 500
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=3,
         )
         assert len(results) >= 3, f"Expected >= 3 folds, got {len(results)}"
@@ -156,7 +158,7 @@ class TestMinFolds:
         """With ample data and min_folds=10, returns >= 10 folds."""
         n = 3000
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=10,
         )
         assert len(results) >= 10, f"Expected >= 10 folds, got {len(results)}"
@@ -170,8 +172,9 @@ class TestRequiredKeys:
         "purge_period", "embargo_period",
         "train_accuracy", "train_logloss",
         "val_accuracy", "val_logloss",
-        "active_trade_count", "long_count", "short_count", "no_trade_count",
-        "long_actual", "short_actual", "no_trade_actual",
+        "confusion_matrix",
+        "feature_importance",
+        "r_expectancy",
         "training_duration_seconds",
     })
 
@@ -179,7 +182,7 @@ class TestRequiredKeys:
     def results(self, mock_xgb):
         n = 1000
         return walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
 
@@ -225,6 +228,38 @@ class TestRequiredKeys:
                 f"Fold {r['fold']}: val_logloss not float"
             )
 
+    def test_confusion_matrix_is_3x3(self, results):
+        """confusion_matrix is a 3x3 list of lists."""
+        for r in results:
+            cm = r["confusion_matrix"]
+            assert isinstance(cm, list), f"Fold {r['fold']}: confusion_matrix not a list"
+            assert len(cm) == 3, f"Fold {r['fold']}: confusion_matrix has {len(cm)} rows"
+            for row in cm:
+                assert isinstance(row, list), f"Fold {r['fold']}: row not a list"
+                assert len(row) == 3, f"Fold {r['fold']}: row has {len(row)} elements"
+
+    def test_confusion_matrix_values_non_negative(self, results):
+        """All confusion matrix entries are >= 0."""
+        for r in results:
+            cm = r["confusion_matrix"]
+            for row in cm:
+                for val in row:
+                    assert isinstance(val, (int, float)), f"Fold {r['fold']}: value {val} not numeric"
+                    assert val >= 0, f"Fold {r['fold']}: negative value {val}"
+
+    def test_feature_importance_is_dict(self, results):
+        """feature_importance is a dict."""
+        for r in results:
+            fi = r["feature_importance"]
+            assert isinstance(fi, dict), f"Fold {r['fold']}: feature_importance not dict"
+
+    def test_r_expectancy_is_float(self, results):
+        """r_expectancy is a float."""
+        for r in results:
+            assert isinstance(r["r_expectancy"], float), (
+                f"Fold {r['fold']}: r_expectancy not float"
+            )
+
 
 class TestFoldIndicesSequential:
     """3. Fold indices are sequential (1-based)."""
@@ -233,7 +268,7 @@ class TestFoldIndicesSequential:
     def results(self, mock_xgb):
         n = 1000
         return walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
 
@@ -257,7 +292,7 @@ class TestFoldCountPositive:
         """fold_count > 0 with min_folds=6 and sufficient data."""
         n = 1000
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
         assert len(results) > 0, "fold_count must be > 0"
@@ -266,7 +301,7 @@ class TestFoldCountPositive:
         """fold_count > 0 with min_folds=1."""
         n = 200
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=1,
         )
         assert len(results) > 0, "fold_count must be > 0"
@@ -310,7 +345,7 @@ class TestStabilityScore:
         """
         n = 1000
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
         val_accs = [r["val_accuracy"] for r in results]
@@ -335,7 +370,7 @@ class TestHypothesisCountNotDivided:
         """
         n = 1000
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
         n_trains = [r["n_train"] for r in results]
@@ -357,7 +392,7 @@ class TestHypothesisCountNotDivided:
         mock_cls = mock_xgb
         n = 1000
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
         n_calls = mock_cls.return_value.train.call_count
@@ -378,11 +413,11 @@ class TestHypothesisCountNotDivided:
         # Fold count affects total hypotheses but NOT per-fold resolution.
         n = 1000
         results_a = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=3,
         )
         results_b = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
 
@@ -411,7 +446,7 @@ class TestEdgeCaseFewerFolds:
         """Small dataset returns empty list (not a crash)."""
         n = 200  # Too small for even 1 fold with min_folds=6
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
         assert isinstance(results, list), "Must return a list"
@@ -422,7 +457,7 @@ class TestEdgeCaseFewerFolds:
         n = 100
         try:
             results = walk_forward_validate(
-                _make_features(n), _make_labels(n), _make_ohlcv(n),
+                _make_features(n), _make_labels(n), _make_r_values(n),
                 "SWING", min_folds=6,
             )
             assert isinstance(results, list)
@@ -433,7 +468,7 @@ class TestEdgeCaseFewerFolds:
         """Dataset just below 6-fold threshold still returns gracefully."""
         n = 350  # May produce 0 or a few folds, but not 6
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
         # Must not crash, must return list
@@ -452,7 +487,7 @@ class TestPurgeEmbargo:
     def results(self, mock_xgb):
         n = 1000
         return walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
 
@@ -520,7 +555,7 @@ class TestStructural:
     def results(self, mock_xgb):
         n = 1000
         return walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
 
@@ -532,21 +567,24 @@ class TestStructural:
                 f"n_train[{i}] ({n_trains[i]}) <= n_train[{i-1}] ({n_trains[i-1]})"
             )
 
-    def test_trade_counts_non_negative(self, results):
-        """All trade count fields are >= 0."""
+    def test_confusion_matrix_present(self, results):
+        """confusion_matrix is a 3x3 list."""
         for r in results:
-            assert r["active_trade_count"] >= 0
-            assert r["long_count"] >= 0
-            assert r["short_count"] >= 0
-            assert r["no_trade_count"] >= 0
+            cm = r["confusion_matrix"]
+            assert isinstance(cm, list)
+            assert len(cm) == 3
+            for row in cm:
+                assert len(row) == 3
 
-    def test_trade_counts_sum(self, results):
-        """active_trade_count == long_count + short_count."""
+    def test_r_expectancy_present(self, results):
+        """r_expectancy is a float."""
         for r in results:
-            assert r["active_trade_count"] == r["long_count"] + r["short_count"], (
-                f"Fold {r['fold']}: {r['active_trade_count']} != "
-                f"{r['long_count']} + {r['short_count']}"
-            )
+            assert isinstance(r["r_expectancy"], float)
+
+    def test_feature_importance_present(self, results):
+        """feature_importance is a dict."""
+        for r in results:
+            assert isinstance(r["feature_importance"], dict)
 
     def test_training_duration_positive(self, results):
         """training_duration_seconds > 0."""
@@ -565,7 +603,7 @@ class TestStructural:
         """SWING mode with 1000 bars and min_folds=6."""
         n = 1000
         results = walk_forward_validate(
-            _make_features(n), _make_labels(n), _make_ohlcv(n),
+            _make_features(n), _make_labels(n), _make_r_values(n),
             "SWING", min_folds=6,
         )
         assert len(results) >= 6
@@ -579,7 +617,7 @@ class TestEmptyOrZeroData:
         results = walk_forward_validate(
             np.array([[]]).reshape(0, 5),
             np.array([], dtype=np.int32),
-            _make_ohlcv(1),
+            _make_r_values(1),
             "SWING", min_folds=6,
         )
         assert isinstance(results, list)
@@ -587,7 +625,7 @@ class TestEmptyOrZeroData:
     def test_single_bar(self, mock_xgb):
         """Call with n=1 does not crash."""
         results = walk_forward_validate(
-            _make_features(1), _make_labels(1), _make_ohlcv(1),
+            _make_features(1), _make_labels(1), _make_r_values(1),
             "SWING", min_folds=6,
         )
         assert isinstance(results, list)

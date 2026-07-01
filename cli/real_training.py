@@ -81,6 +81,11 @@ def generate_labels(ohlcv, mode: str):
     For each bar, simulate LONG and SHORT scenarios using future price path.
     Uses stop_mult/target_mult from mode config to determine exit points.
     Picks action with highest gross R. Applies costs afterward.
+
+    Returns:
+        Tuple of (labels_array, meta_dict, r_values_array) where r_values
+        contains the pre-computed R value (gross return fraction) for the
+        chosen action at each bar.
     """
     cfg = MODE_CONFIG[mode]
     n = len(ohlcv["close"])
@@ -89,7 +94,7 @@ def generate_labels(ohlcv, mode: str):
     target_mult = cfg["target_mult"]
     label_map = {"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}
     fee_pct = 0.04
-    labels_list, ints_list = [], []
+    labels_list, ints_list, r_values_list = [], [], []
 
     for i in range(n - max_hold - 1):
         entry_price = float(ohlcv["close"][i])
@@ -98,6 +103,7 @@ def generate_labels(ohlcv, mode: str):
         if atr <= 0 or atr > entry_price * 0.5:
             labels_list.append("NO_TRADE")
             ints_list.append(2)
+            r_values_list.append(0.0)
             continue
 
         stop_dist = atr * stop_mult
@@ -142,20 +148,26 @@ def generate_labels(ohlcv, mode: str):
         no_trade_gross = 0.0
 
         # Pick action with highest gross return (before costs)
+        # Track the R value of the chosen action
         if long_gross > short_gross and long_gross > no_trade_gross:
             best = "LONG_NOW"
+            r_value = long_gross
         elif short_gross > long_gross and short_gross > no_trade_gross:
             best = "SHORT_NOW"
+            r_value = short_gross
         else:
             best = "NO_TRADE"
+            r_value = 0.0
 
         labels_list.append(best)
         ints_list.append(label_map.get(best, 2))
+        r_values_list.append(r_value)
 
+    r_values = np.array(r_values_list, dtype=np.float64)
     uniq, cnt = np.unique(labels_list, return_counts=True)
     d = {str(k): int(v) for k, v in zip(uniq, cnt)}
     logger.info("Labels: %d samples, dist=%s", len(labels_list), d)
-    return np.array(labels_list), {"n_labels": len(labels_list), "label_distribution": d}
+    return np.array(labels_list), {"n_labels": len(labels_list), "label_distribution": d}, r_values
 
 
 def _compute_stability(values: list[float]) -> float:
@@ -178,7 +190,7 @@ def _compute_stability(values: list[float]) -> float:
 def walk_forward_validate(
     X: np.ndarray,
     y_int: np.ndarray,
-    ohlcv: dict[str, np.ndarray | list],
+    r_values: np.ndarray,
     mode: str,
     min_folds: int = 6,
 ) -> list[dict]:
@@ -186,18 +198,20 @@ def walk_forward_validate(
 
     Each fold trains on an anchored (expanding) window from bar 0 up to
     train_end, then validates on the next contiguous out-of-sample segment.
+    Consumes pre-computed R values from labels — does NOT re-simulate trades.
 
     Leakage prevention:
       - purge_period_bars = fold_size // 4  (removed from end of training set)
       - embargo_period_bars = fold_size // 8 (skipped at start of validation set)
 
-    125 measures per-fold candidate performance (NOT divided by fold_count).
-    MHT (124) handles hypothesis counting independently.
+    Reports prediction quality: accuracy, confusion matrix, logloss,
+    feature importance, and per-fold R expectancy from label data.
 
     Args:
         X: Feature matrix (n_samples, n_features).
         y_int: Integer labels (0=LONG_NOW, 1=SHORT_NOW, 2=NO_TRADE).
-        ohlcv: OHLCV data dict (passed for context / future regime use).
+        r_values: Pre-computed R values per sample (gross return fraction
+                  from label data). Used for R expectancy computation.
         mode: Trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
         min_folds: Minimum number of walk-forward folds (default 6).
 
@@ -205,12 +219,11 @@ def walk_forward_validate(
         List of per-fold result dicts with keys:
             fold, n_train, n_val, purge_period, embargo_period,
             train_accuracy, train_logloss, val_accuracy, val_logloss,
-            active_trade_count, long_count, short_count, no_trade_count,
-            long_actual, short_actual, no_trade_actual,
+            confusion_matrix, feature_importance, r_expectancy,
             training_duration_seconds.
     """
     from alphaforge.training.xgb_trainer import XGBoostTrainer
-    from collections import Counter
+    from sklearn.metrics import confusion_matrix as sk_confusion_matrix
     import xgboost as xgb
 
     n = len(X)
@@ -254,6 +267,7 @@ def walk_forward_validate(
         y_train = y_int[:effective_train_end]
         X_val = X[effective_val_start:val_end]
         y_val = y_int[effective_val_start:val_end]
+        r_val = r_values[effective_val_start:val_end]
 
         if len(X_train) < 50:
             logger.warning("Fold %d: train samples (%d) < 50 — stopping", fold + 1, len(X_train))
@@ -272,65 +286,22 @@ def walk_forward_validate(
         y_pred = np.argmax(y_pred_prob, axis=1)
 
         val_accuracy = float(np.mean(y_pred == y_val))
-
-        # ---- Financial metrics (follows walk_forward_runner canonical approach) ----
-        # Convert classification predictions to trade returns:
-        #   correct call = +1.0, wrong direction = -1.0,
-        #   false positive = -0.5, NO_TRADE = 0.0
-        fold_returns = np.zeros(len(y_val), dtype=np.float64)
-        for j in range(len(y_val)):
-            p, t = int(y_pred[j]), int(y_val[j])
-            if p == 2:  # NO_TRADE prediction
-                fold_returns[j] = 0.0
-            elif p == t:  # Correct directional call
-                fold_returns[j] = 1.0
-            elif (p == 0 and t == 1) or (p == 1 and t == 0):  # Wrong direction
-                fold_returns[j] = -1.0
-            else:  # False positive (predicted trade but true is NO_TRADE)
-                fold_returns[j] = -0.5
-
-        trade_mask = (y_pred == 0) | (y_pred == 1)
-        trade_count = int(np.sum(trade_mask))  # alias matching empirical.py expected key
-
-        # Win rate: correct active predictions / total active predictions
-        if trade_count > 0:
-            correct_trades = int(np.sum((y_pred == y_val) & trade_mask))
-            win_rate = float(correct_trades) / trade_count
-        else:
-            win_rate = 0.0
-
-        # Expectancy: average return per active trade
-        if trade_count > 0:
-            trade_returns = fold_returns[trade_mask]
-            expectancy_r = float(np.mean(trade_returns))
-            sum_gross_r = float(np.sum(trade_returns))
-        else:
-            expectancy_r = 0.0
-            sum_gross_r = 0.0
-
-        # Sharpe (annualized): mean/std * sqrt(ANNUALIZATION_FACTOR) using ALL returns (incl NO_TRADE)
-        ANNUALIZATION_FACTOR = 2190.0  # 365 * 6 bars/day for 4h bars
-        mu_r = float(np.mean(fold_returns))
-        sigma_r = float(np.std(fold_returns, ddof=1)) if len(fold_returns) > 1 else 0.0
-        if sigma_r > 1e-12:
-            sharpe = mu_r / sigma_r * np.sqrt(ANNUALIZATION_FACTOR)
-        elif abs(mu_r) < 1e-12:
-            sharpe = 0.0
-        else:
-            sharpe = float('inf') if mu_r > 0 else float('-inf')
-
         train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
         val_logloss = float(fold_result.val_metrics.get("logloss", 0.0))
         train_logloss = float(fold_result.train_metrics.get("logloss", 0.0))
 
-        # Trade counts
-        long_count = int(np.sum(y_pred == 0))
-        short_count = int(np.sum(y_pred == 1))
-        no_trade_count = int(np.sum(y_pred == 2))
-        active_trade_count = long_count + short_count
+        # Confusion matrix (3x3: LONG_NOW, SHORT_NOW, NO_TRADE)
+        cm = sk_confusion_matrix(y_val, y_pred, labels=[0, 1, 2]).tolist()
 
-        # Actual label distribution
-        true_counts = Counter(y_val)
+        # Feature importance from trained model
+        fi = fold_result.model_artifact.get("feature_importance", {})
+
+        # R expectancy: mean R value for trade predictions (class 0 or 1)
+        trade_mask = (y_pred == 0) | (y_pred == 1)
+        if np.any(trade_mask):
+            r_expectancy = float(np.mean(r_val[trade_mask]))
+        else:
+            r_expectancy = 0.0
 
         r: dict = {
             "fold": fold + 1,
@@ -342,30 +313,17 @@ def walk_forward_validate(
             "train_logloss": train_logloss,
             "val_accuracy": val_accuracy,
             "val_logloss": val_logloss,
-            "active_trade_count": active_trade_count,
-            "trade_count": trade_count,
-            "long_count": long_count,
-            "short_count": short_count,
-            "no_trade_count": no_trade_count,
-            "long_actual": int(true_counts.get(0, 0)),
-            "short_actual": int(true_counts.get(1, 0)),
-            "no_trade_actual": int(true_counts.get(2, 0)),
-            "win_rate": win_rate,
-            "expectancy_r": expectancy_r,
-            "sharpe": sharpe,
-            "sum_gross_r": sum_gross_r,
-            "sum_net_r": sum_gross_r,
-            "sum_cost_r": 0.0,
-            "_raw_returns": fold_returns,
+            "confusion_matrix": cm,
+            "feature_importance": fi,
+            "r_expectancy": r_expectancy,
             "training_duration_seconds": fold_result.training_duration_seconds,
         }
         results.append(r)
 
         logger.info(
-            "Fold %d/%d: train=%d, val=%d, val_acc=%.4f, active=%d, "
-            "long=%d, short=%d, no_trade=%d",
+            "Fold %d/%d: train=%d, val=%d, val_acc=%.4f, r_exp=%.4f",
             r["fold"], min_folds, r["n_train"], r["n_val"], val_accuracy,
-            active_trade_count, long_count, short_count, no_trade_count,
+            r_expectancy,
         )
 
     return results
@@ -388,7 +346,7 @@ def main():
     print(f"  {len(ohlcv['close'])} bars")
 
     print("[2/5] Generating simulation labels...")
-    labels, lm = generate_labels(ohlcv, mode)
+    labels, lm, r_values = generate_labels(ohlcv, mode)
 
     print("[3/5] Computing features...")
     from alphaforge.features.pipeline import compute_features
@@ -400,26 +358,22 @@ def main():
 
     cut = min(X.shape[0], len(labels))
     X, y_str = X[:cut], labels[:cut]
+    r_values = r_values[:cut]
     y_int = np.array([{"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}.get(str(l), 2) for l in y_str])
 
     print(f"[4/5] Walk-forward validating on {len(X)} samples (anchor=anchored_expanding)...")
-    wfv = walk_forward_validate(X, y_int, ohlcv, mode, min_folds=6)
+    wfv = walk_forward_validate(X, y_int, r_values, mode, min_folds=6)
 
     # Aggregate across folds
     val_accs = [r["val_accuracy"] for r in wfv]
     avg_val_accuracy = float(np.mean(val_accs)) if val_accs else 0.0
     stability_score = _compute_stability(val_accs)
-    total_active = sum(r["active_trade_count"] for r in wfv)
-    total_long = sum(r["long_count"] for r in wfv)
-    total_short = sum(r["short_count"] for r in wfv)
-    total_no_trade = sum(r["no_trade_count"] for r in wfv)
-    total_decisions = total_active + total_no_trade
     total_n_val = sum(r["n_val"] for r in wfv)
-    exposure_pct = (total_active / total_decisions * 100) if total_decisions > 0 else 0.0
+    avg_r_expectancy = float(np.mean([r["r_expectancy"] for r in wfv])) if wfv else 0.0
 
     print(
         f"  Walk-forward: {len(wfv)} folds | stability_score={stability_score:.4f} | "
-        f"avg_val_accuracy={avg_val_accuracy:.4f} | total_active_trades={total_active} "
+        f"avg_val_accuracy={avg_val_accuracy:.4f} | avg_r_expectancy={avg_r_expectancy:.4f} "
         f"| total_val_samples={total_n_val}"
     )
 
@@ -435,57 +389,19 @@ def main():
     from alphaforge.reports.writer import write_json_report
     from alphaforge.contracts.loader import load_schema
 
-    # Build per-fold metrics with keys matching empirical.py expectations
+    # Build wfv_results from walk-forward validation
     per_fold_metrics = []
     for r in wfv:
         per_fold_metrics.append({
             "fold": r["fold"],
-            "sharpe": r["sharpe"],
-            "expectancy_r": r["expectancy_r"],
-            "win_rate": r["win_rate"],
-            "trade_count": r["trade_count"],
-            "sum_gross_r": r["sum_gross_r"],
-            "sum_net_r": r["sum_net_r"],
-            "sum_cost_r": r["sum_cost_r"],
             "n_train": r["n_train"],
             "n_val": r["n_val"],
             "val_accuracy": r["val_accuracy"],
             "train_accuracy": r["train_accuracy"],
-            "active_trade_count": r["active_trade_count"],
-            "long_count": r["long_count"],
-            "short_count": r["short_count"],
-            "no_trade_count": r["no_trade_count"],
-            "label_distribution": {
-                "LONG_NOW": r["long_actual"],
-                "SHORT_NOW": r["short_actual"],
-                "NO_TRADE": r["no_trade_actual"],
-            },
+            "confusion_matrix": r["confusion_matrix"],
+            "feature_importance": r["feature_importance"],
+            "r_expectancy": r["r_expectancy"],
         })
-
-    # Compute OOS aggregate metrics from per-fold raw returns
-    all_raw_returns = np.concatenate([r["_raw_returns"] for r in wfv]) if wfv else np.array([])
-    if len(all_raw_returns) > 0:
-        mu_all = float(np.mean(all_raw_returns))
-        sigma_all = float(np.std(all_raw_returns, ddof=1)) if len(all_raw_returns) > 1 else 0.0
-        if sigma_all > 1e-12:
-            oos_sharpe = mu_all / sigma_all * np.sqrt(2190.0)
-        elif abs(mu_all) < 1e-12:
-            oos_sharpe = 0.0
-        else:
-            oos_sharpe = float('inf') if mu_all > 0 else float('-inf')
-    else:
-        oos_sharpe = 0.0
-
-    total_active_trades = sum(r["trade_count"] for r in wfv)
-    if total_active_trades > 0:
-        oos_expectancy_r = sum(r["expectancy_r"] * r["trade_count"] for r in wfv) / total_active_trades
-        oos_win_rate = sum(r["win_rate"] * r["trade_count"] for r in wfv) / total_active_trades
-    else:
-        oos_expectancy_r = 0.0
-        oos_win_rate = avg_val_accuracy
-
-    total_gross_R = sum(r["sum_gross_r"] for r in wfv)
-    total_net_R = total_gross_R  # No costs applied yet at this stage
 
     wfv_results = {
         "fold_count": len(wfv),
@@ -495,36 +411,11 @@ def main():
         "purge_period_bars": wfv[0]["purge_period"] if wfv else 0,
         "embargo_period_bars": wfv[0]["embargo_period"] if wfv else 0,
         "metrics": {
-            "active_trade_count": total_active,
-            "long_trade_count": total_long,
-            "short_trade_count": total_short,
-            "no_trade_count": total_no_trade,
-            "oos_trade_count": total_active,
-            "exposure_pct": round(exposure_pct, 2),
-            "total_gross_R": total_gross_R,
-            "total_fee_cost_R": 0.0,
-            "total_slippage_cost_R": 0.0,
-            "total_funding_cost_R": 0.0,
-            "total_net_R": total_net_R,
-            "avg_net_R_per_active_trade": round(total_net_R / max(1, total_active_trades), 6),
-            "avg_net_R_per_decision": round(total_net_R / max(1, total_decisions), 6),
-            "turnover": round(total_active / max(1, total_decisions * total_n_val), 6),
+            "avg_val_accuracy": avg_val_accuracy,
+            "avg_r_expectancy": avg_r_expectancy,
+            "stability_score": stability_score,
+            "oos_sample_count": total_n_val,
             "avg_hold_bars": cfg["max_hold"] / 2.0,
-        },
-        "oos_summary": {
-            "oos_accuracy": avg_val_accuracy,
-            "oos_sample_count": max(1, total_n_val),
-            "oos_max_drawdown_r": -1.0,
-            "oos_sharpe": round(oos_sharpe, 4),
-            "oos_expectancy_r": round(oos_expectancy_r, 4),
-            "oos_win_rate": round(oos_win_rate, 4),
-            "oos_profit_factor": 1.0,
-            "oos_trade_count": total_active,
-            "active_trade_count": total_active,
-            "long_trade_count": total_long,
-            "short_trade_count": total_short,
-            "no_trade_count": total_no_trade,
-            "exposure_pct": round(exposure_pct, 2),
         },
         "multiple_hypothesis_control": {
             "tested_hypothesis_count": len(wfv) * 124,  # MHT: 124 hypotheses per fold (independent)

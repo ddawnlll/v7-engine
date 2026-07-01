@@ -497,6 +497,8 @@ Do not collapse these into one vague “publish” step.
 - 6-fold walk-forward validation in `cli/real_training.py` — `walk_forward_validate()` with anchored expanding windows, purge/embargo periods, 125 measures per fold (124 MHT hypotheses per fold), per-fold accuracy/stability metrics, OOS summary.
 - SOLUSDT stop/target optimization (`optimize_sol_stop_target_results.json`) — best params found: stop_mult=1.0, target_mult=5.0, expectancy_r=0.10, win_rate=0.996.
 
+- WFV prediction quality metrics (Issue #130) — `walk_forward_validate()` in `cli/real_training.py` refactored: consumes pre-computed R values instead of OHLCV data, reports confusion matrix, feature importance, and per-fold R expectancy. Zero trade simulation code in AlphaForge validation. Trade count fields removed (active_trade_count, long_count, short_count, no_trade_count, long_actual, short_actual, no_trade_actual). `generate_labels()` now returns R values alongside labels.
+
 **Lock status:**
 - Active trade metric system: LOCKED_INITIAL_BASELINE
 - Schema active metrics contract: LOCKED
@@ -504,6 +506,7 @@ Do not collapse these into one vague “publish” step.
 - 6-fold walk-forward validation: LOCKED_INITIAL_BASELINE (Issue #125)
 - SOLUSDT optimized params: LOCKED_INITIAL_BASELINE
 - Per-fold field name alignment real_training.py <-> empirical.py: LOCKED (Issue #131)
+- WFV prediction quality metrics: LOCKED (Issue #130)
 
 **Remaining holds:**
 - Cost Stress Matrix (HOLD — requires regime-aware cost multipliers)
@@ -511,34 +514,14 @@ Do not collapse these into one vague “publish” step.
 - NO_TRADE Collapse edge case under extreme market conditions (HOLD)
 - Real profitability evidence (HOLD — requires real training + WFV)
 - MHT correction real thresholds (HOLD — requires empirical baseline)
+- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL through simulation engine)
 
-**Evidence:** 1578 passed, 3 skipped, 0 failures. ACCP reports at `reports/accp/issue-122.yaml`, `issue-123.yaml`, `issue-124.yaml`, `issue-125.yaml`, `issue-131.yaml`.
+**Evidence:** 1088 passed, 1 skipped, 0 failures in alphaforge tests. 528 passed across integration/lib/simulation. ACCP reports at `reports/accp/issue-122.yaml`, `reports/accp/issue-123.yaml`, `reports/accp/issue-124.yaml`, `reports/accp/issue-125.yaml`, `reports/accp/issue-131.yaml`, `reports/accp/issue-130.yaml`.
+- Real profitability evidence (HOLD — requires real training + WFV)
+- MHT correction real thresholds (HOLD — requires empirical baseline)
+- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL through simulation engine)
 
----
-
-## Issue #129 — Labels from SimulationOutput (2026-07-01)
-
-**What changed:**
-- `generate_labels()` in `cli/real_training.py` rewritten to call `simulate()` from `simulation/engine/engine.py` instead of reimplementing path simulation from raw OHLCV with flat fee_pct=0.04.
-- `SimulationProfile` built from `MODE_CONFIG` per-mode parameters, consuming the simulation engine's full cost model (fee, slippage, funding), exit semantics (stop/target/time-exit), and action selection (including AMBIGUOUS_STATE).
-- Labels now include: `best_action` (LONG_NOW, SHORT_NOW, NO_TRADE, AMBIGUOUS_STATE), `no_trade_quality` (4 types: CORRECT_NO_TRADE, SAVED_LOSS, MISSED_OPPORTUNITY, AMBIGUOUS_NO_TRADE), `label_validity` boolean per bar, and full cost decomposition (fee_cost_r, slippage_cost_r, funding_cost_r, total_cost_r).
-- R values returned alongside labels as dict of np.ndarrays for WFV consumption: realized_r_net, realized_r_gross, cost components, action_gap_r.
-- MODE_CONFIG extended with `no_trade_default` per-mode flag (SWING=False, SCALP=True, AGGRESSIVE_SCALP=True), matching simulation profiles.md.
-- Report R-value placeholders replaced with real aggregate metrics from simulation labels.
-- All existing tests pass: 511 lib/integration/simulation, 1083 alphaforge, boundaries clean.
-
-**Lock status:**
-- Labels from simulation engine: LOCKED_INITIAL_BASELINE
-- Label R values for WFV: LOCKED_INITIAL_BASELINE
-- MODE_CONFIG no_trade_default: LOCKED_INITIAL_BASELINE
-- Funding status DEFERRED: LOCKED_INITIAL_BASELINE
-
-**Remaining holds:**
-- Per-fold R metric computation in WFV (HOLD — requires extending walk_forward_validate signature)
-- Real profitability evidence (HOLD — requires real training data)
-
-**Evidence:** 511+1083 tests pass, ACCP report at `reports/accp/issue-129.yaml`, full E2E pipeline verified.
-
+**Evidence:** 1088 passed, 1 skipped, 0 failures in alphaforge tests. 528 passed across integration/lib/simulation. ACCP reports at `reports/accp/issue-122.yaml`, `reports/accp/issue-123.yaml`, `reports/accp/issue-124.yaml`, `reports/accp/issue-125.yaml`, `reports/accp/issue-130.yaml`.
 
 ---
 
