@@ -3,9 +3,12 @@
 Exports:
     FeatureMatrix  — structured container for feature arrays
     compute_features — main pipeline entry point
+    FeatureCache   — Parquet+Zstd disk cache for feature matrices
+    cached_compute_features — caching wrapper around compute_features
     FeatureGroup    — enumeration of feature groups (LEAD_LAG DEFERRED)
     FEATURE_GROUP_MAP — mapping from FeatureGroup to compute function names
     PIPELINE_VERSION — semantic version of the pipeline implementation
+    CACHE_DIR_DEFAULT — default cache directory path
     OrderBook group — microstructure-aware features (AGGRESSIVE_SCALP primary)
     LeadLag group — cross-sectional multi-symbol features
     Funding group — funding rate and OI proxy features
@@ -13,10 +16,13 @@ Exports:
 """
 
 from alphaforge.features.pipeline import (
-    PIPELINE_VERSION,
+    CACHE_DIR_DEFAULT,
     FEATURE_GROUP_MAP,
+    FeatureCache,
     FeatureGroup,
     FeatureMatrix,
+    PIPELINE_VERSION,
+    cached_compute_features,
     compute_features,
 )
 
@@ -114,10 +120,13 @@ __domain__ = "feature_pipeline"
 
 __all__ = [
     "FeatureMatrix",
+    "FeatureCache",
+    "cached_compute_features",
     "compute_features",
     "FeatureGroup",
     "FEATURE_GROUP_MAP",
     "PIPELINE_VERSION",
+    "CACHE_DIR_DEFAULT",
     # OrderBook group (microstructure proxies, AGGRESSIVE_SCALP primary)
     "compute_orderbook_group",
     "compute_spread_pct",

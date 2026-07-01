@@ -943,7 +943,7 @@ class TestAudit5StatelessDeterministic:
 
     def test_pipeline_version_constant(self):
         """AC-128-055: Pipeline version is a constant string."""
-        assert PIPELINE_VERSION == "0.1.0"
+        assert PIPELINE_VERSION == "0.2.0"
 
 
 # ===========================================================================

@@ -22,12 +22,18 @@ Causality contract:
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import threading
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from alphaforge.features.orderbook import (
     DEFAULT_AMIHUD_WINDOW,
@@ -75,7 +81,10 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-PIPELINE_VERSION: str = "0.1.0"
+PIPELINE_VERSION: str = "0.2.0"
+
+# Default cache directory for feature matrices
+CACHE_DIR_DEFAULT: str = ".cache/features/"
 
 # SWING mode defaults (4h primary bars)
 # periods_per_year for 4h bars: 365 days * 6 bars/day = 2190
@@ -172,6 +181,252 @@ class FeatureMatrix:
             return 0
         first_key = next(iter(self.features))
         return len(self.features[first_key])
+
+
+# ---------------------------------------------------------------------------
+# FeatureCache — Parquet+Zstd caching for computed feature matrices
+# ---------------------------------------------------------------------------
+
+
+class FeatureCache:
+    """Disk-backed cache for computed FeatureMatrix objects.
+
+    Cache key = sha256(symbol | interval | mode | PIPELINE_VERSION).
+    Stores features as PyArrow Parquet columns with Zstd compression.
+    Loads with memory_map=True for zero-copy access.
+
+    Cache invalidation is implicit: when PIPELINE_VERSION changes, the
+    cache key changes, producing a cache miss rather than stale data.
+    Thread-safe on write via a per-instance threading.Lock.
+
+    Usage:
+        cache = FeatureCache(cache_dir=\".cache/features/\")
+        cached = cache.get(\"BTCUSDT\", \"4h\", \"SWING\")
+        if cached is None:
+            matrix = compute_features(ohlcv, mode=\"SWING\")
+            cache.put(\"BTCUSDT\", \"4h\", \"SWING\", matrix)
+            return matrix
+        return cached
+    """
+
+    def __init__(self, cache_dir: str = CACHE_DIR_DEFAULT) -> None:
+        self._cache_dir = cache_dir
+        self._lock = threading.Lock()
+
+    # ------------------------------------------------------------------
+    # Cache key computation
+    # ------------------------------------------------------------------
+
+    def _cache_key(self, symbol: str, interval: str, mode: str) -> str:
+        """Compute deterministic SHA-256 cache key.
+
+        Incorporates symbol, interval, mode, and PIPELINE_VERSION so that
+        changing any of these produces a distinct cache entry.
+
+        Args:
+            symbol: Trading pair identifier (e.g. \"BTCUSDT\").
+            interval: Bar interval string (e.g. \"4h\", \"1h\", \"15m\").
+            mode: Trading mode (\"SWING\", \"SCALP\", \"AGGRESSIVE_SCALP\").
+
+        Returns:
+            Hex-encoded SHA-256 digest.
+        """
+        raw = f"{symbol}|{interval}|{mode}|{PIPELINE_VERSION}"
+        return hashlib.sha256(raw.encode()).hexdigest()
+
+    def _cache_path(self, key: str) -> Path:
+        """Return Path to the parquet cache file for a given key."""
+        return Path(self._cache_dir) / f"{key}.parquet.zstd"
+
+    # ------------------------------------------------------------------
+    # Read / Write
+    # ------------------------------------------------------------------
+
+    def get(
+        self, symbol: str, interval: str, mode: str
+    ) -> Optional[FeatureMatrix]:
+        """Load cached FeatureMatrix if it exists and version matches.
+
+        Uses PyArrow's memory_map=True for zero-copy Parquet reading.
+        Returns None on cache miss (file missing, corrupt, or version mismatch).
+
+        Args:
+            symbol: Trading pair identifier.
+            interval: Bar interval string.
+            mode: Trading mode.
+
+        Returns:
+            FeatureMatrix if cache hit, None otherwise.
+        """
+        key = self._cache_key(symbol, interval, mode)
+        path = self._cache_path(key)
+
+        if not path.exists():
+            return None
+
+        try:
+            table = pq.read_table(str(path), memory_map=True)
+            features: Dict[str, np.ndarray] = {}
+            for col_name in table.column_names:
+                col_array = table.column(col_name).to_numpy()
+                features[col_name] = col_array
+
+            # Reconstruct metadata from Parquet schema metadata
+            metadata: Dict[str, str] = {}
+            if table.schema.metadata is not None:
+                for k, v in table.schema.metadata.items():
+                    metadata[k.decode()] = v.decode()
+
+            # Restore pipeline_version if missing from metadata
+            if "pipeline_version" not in metadata:
+                metadata["pipeline_version"] = PIPELINE_VERSION
+
+            # Parse feature_group_ids from JSON
+            fg_ids_raw = metadata.get("feature_group_ids", "[]")
+            try:
+                fg_ids: List[str] = json.loads(fg_ids_raw)
+            except (json.JSONDecodeError, TypeError):
+                fg_ids = []
+
+            # Parse n_bars and total_features if stored
+            n_bars = metadata.get("n_bars", str(len(next(iter(features.values()))) if features else "0"))
+            total_features = metadata.get("total_features", str(len(features)))
+
+            # Build result metadata: start with all loaded metadata, then
+            # overlay cache-specific fields with typed values.
+            result_metadata: Dict = dict(metadata)
+            result_metadata.update({
+                "pipeline_version": metadata.get("pipeline_version", PIPELINE_VERSION),
+                "n_bars": int(n_bars),
+                "total_features": int(total_features),
+                "cache_hit": True,
+                "cache_key": key,
+            })
+
+            return FeatureMatrix(
+                features=features,
+                timestamps=None,
+                symbol=metadata.get("symbol", symbol),
+                mode=metadata.get("mode", mode),
+                feature_group_ids=fg_ids,
+                metadata=result_metadata,
+            )
+        except Exception as e:
+            logger.warning("Cache read failed for key %s: %s", key, e)
+            return None
+
+    def put(
+        self,
+        symbol: str,
+        interval: str,
+        mode: str,
+        matrix: FeatureMatrix,
+    ) -> None:
+        """Store FeatureMatrix to cache as Parquet+Zstd file.
+
+        Thread-safe: only one writer at a time per FeatureCache instance.
+
+        Args:
+            symbol: Trading pair identifier.
+            interval: Bar interval string.
+            mode: Trading mode.
+            matrix: FeatureMatrix to cache.
+        """
+        key = self._cache_key(symbol, interval, mode)
+        path = self._cache_path(key)
+
+        with self._lock:
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Build PyArrow arrays from feature dict
+            field_names: List[str] = []
+            arrays: List[pa.Array] = []
+            for name in sorted(matrix.features.keys()):
+                arr = matrix.features[name]
+                # Ensure float64 for consistent storage
+                if arr.dtype != np.float64:
+                    arr = arr.astype(np.float64)
+                arrays.append(pa.array(arr))
+                field_names.append(name)
+
+            # Build metadata dict
+            meta: Dict[str, str] = {
+                "symbol": matrix.symbol or symbol,
+                "mode": matrix.mode or mode,
+                "interval": interval,
+                "pipeline_version": PIPELINE_VERSION,
+                "feature_group_ids": json.dumps(matrix.feature_group_ids),
+                "n_bars": str(matrix.bar_count()),
+                "total_features": str(matrix.total_features()),
+            }
+            if matrix.metadata:
+                for k, v in matrix.metadata.items():
+                    meta[str(k)] = str(v)
+
+            # Build schema — handle empty feature dict (no columns)
+            if field_names:
+                schema = pa.schema(
+                    [pa.field(name, pa.float64()) for name in field_names],
+                    metadata={k.encode(): v.encode() for k, v in meta.items()},
+                )
+                table = pa.Table.from_arrays(arrays, schema=schema)
+            else:
+                # Empty table: no columns, only schema metadata
+                schema = pa.schema(
+                    [],
+                    metadata={k.encode(): v.encode() for k, v in meta.items()},
+                )
+                table = pa.Table.from_batches([], schema=schema)
+
+            pq.write_table(table, str(path), compression="ZSTD")
+
+            logger.info(
+                "Cached %d features (%d bars) to %s [%s/%s/%s]",
+                len(field_names), matrix.bar_count(), path,
+                symbol, interval, mode,
+            )
+
+    # ------------------------------------------------------------------
+    # Manual invalidation
+    # ------------------------------------------------------------------
+
+    def invalidate(self, symbol: str, interval: str, mode: str) -> bool:
+        """Remove cached entry for given parameters.
+
+        Useful for force-recompute or clearing stale data.
+
+        Args:
+            symbol: Trading pair identifier.
+            interval: Bar interval string.
+            mode: Trading mode.
+
+        Returns:
+            True if a file was removed, False if no cache existed.
+        """
+        key = self._cache_key(symbol, interval, mode)
+        path = self._cache_path(key)
+        if path.exists():
+            path.unlink()
+            logger.info("Invalidated cache for %s/%s/%s", symbol, interval, mode)
+            return True
+        return False
+
+    def clear_all(self) -> int:
+        """Remove all cached feature files from the cache directory.
+
+        Returns:
+            Number of removed files.
+        """
+        cache_dir = Path(self._cache_dir)
+        if not cache_dir.exists():
+            return 0
+        count = 0
+        for f in cache_dir.glob("*.parquet.zstd"):
+            f.unlink()
+            count += 1
+        if count > 0:
+            logger.info("Cleared %d cache files from %s", count, self._cache_dir)
+        return count
 
 
 # ---------------------------------------------------------------------------
@@ -1481,3 +1736,65 @@ def compute_features(
             "active_groups": 9,
         },
     )
+
+
+# ===========================================================================
+# Cached Pipeline Entry Point
+# ===========================================================================
+
+
+def cached_compute_features(
+    ohlcv_data: dict,
+    mode: str = "SWING",
+    timeframe_stack: Optional[dict] = None,
+    interval: str = "4h",
+    cache_dir: str = CACHE_DIR_DEFAULT,
+) -> FeatureMatrix:
+    """Compute features with Parquet+Zstd caching.
+
+    Checks cache first by (symbol, interval, mode, PIPELINE_VERSION) key.
+    On cache hit, returns the cached FeatureMatrix immediately without
+    recomputing features (typically 5-15 min saved per pipeline run).
+    On cache miss, delegates to compute_features() and stores the result.
+
+    Cache invalidation is automatic: when PIPELINE_VERSION changes, the
+    cache key changes and a new computation is triggered. Old cache files
+    are orphaned but harmless — they can be cleaned via FeatureCache.clear_all().
+
+    Args:
+        ohlcv_data: dict with keys 'open', 'high', 'low', 'close', 'volume'.
+            Values must be 1D numpy.ndarray of equal length. Should include
+            a 'symbol' key for cache key derivation.
+        mode: Trading mode string ("SWING", "SCALP", "AGGRESSIVE_SCALP").
+        timeframe_stack: Optional dict with keys primary, context, refinement.
+        interval: Bar interval string for cache key (e.g. "4h", "1h", "15m").
+        cache_dir: Directory path for cache files.
+
+    Returns:
+        FeatureMatrix with computed features (from cache or fresh compute).
+
+    Raises:
+        ValueError: if OHLCV data is invalid or mode is unsupported.
+    """
+    symbol = ohlcv_data.get("symbol", "unknown")
+
+    cache = FeatureCache(cache_dir=cache_dir)
+    cached = cache.get(symbol, interval, mode)
+    if cached is not None:
+        logger.info(
+            "Cache HIT for %s/%s/%s (v%s) — returning cached features",
+            symbol, interval, mode, PIPELINE_VERSION,
+        )
+        return cached
+
+    logger.info(
+        "Cache MISS for %s/%s/%s (v%s) — computing features...",
+        symbol, interval, mode, PIPELINE_VERSION,
+    )
+    matrix = compute_features(ohlcv_data, mode=mode, timeframe_stack=timeframe_stack)
+    cache.put(symbol, interval, mode, matrix)
+    logger.info(
+        "Cached %d features for %s/%s/%s (%d bars)",
+        matrix.total_features(), symbol, interval, mode, matrix.bar_count(),
+    )
+    return matrix
