@@ -1,36 +1,32 @@
-"""AlphaForge Tuning — hyperparameter search space and Optuna integration.
+"""AlphaForge Tuning — hyperparameter optimization and multi-objective tuning.
 
-This module defines mode-specific XGBoost hyperparameter search spaces
-for financial time-series optimisation. It integrates with Optuna for
-automated hyperparameter tuning.
+This subpackage provides:
+1. Objective functions (Sharpe ratio, Profit Factor) for Optuna studies.
+2. NSGAII-based multi-objective optimization with Pareto frontier extraction.
+3. Visualization support for Pareto-optimal trade fronts.
 
-Modules:
-    search_space: XGBoost search space definitions per mode, Optuna
-        integration via suggest_params() and build_objective().
+Domain boundary: AlphaForge owns hyperparameter search and evidence collection.
+V7 owns final model acceptance decisions.
 """
 
-from alphaforge.tuning.search_space import (
-    AGGRESSIVE_SCALP_SEARCH_SPACE,
-    SCALP_SEARCH_SPACE,
-    SWING_SEARCH_SPACE,
-    ParameterRange,
-    SearchSpace,
-    all_search_spaces,
-    build_objective,
-    get_search_space,
-    param_bounds,
-    suggest_params,
+from alphaforge.tuning.objectives import (
+    compute_profit_factor,
+    compute_sharpe_ratio,
+    make_moo_objective,
+)
+from alphaforge.tuning.optuna_tuner import (
+    create_moo_study,
+    extract_pareto_front,
+    optimize_moo_study,
+    pareto_front_summary,
 )
 
 __all__ = [
-    "AGGRESSIVE_SCALP_SEARCH_SPACE",
-    "ParameterRange",
-    "SCALP_SEARCH_SPACE",
-    "SearchSpace",
-    "SWING_SEARCH_SPACE",
-    "all_search_spaces",
-    "build_objective",
-    "get_search_space",
-    "param_bounds",
-    "suggest_params",
+    "compute_profit_factor",
+    "compute_sharpe_ratio",
+    "create_moo_study",
+    "extract_pareto_front",
+    "make_moo_objective",
+    "optimize_moo_study",
+    "pareto_front_summary",
 ]
