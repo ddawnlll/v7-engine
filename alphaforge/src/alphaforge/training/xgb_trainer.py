@@ -569,6 +569,282 @@ class XGBoostTrainer:
         return {k: float(v) for k, v in score_map.items()}
 
 
+# ===========================================================================
+# SHAP Analysis (using XGBoost native gain as SHAP proxy)
+# ===========================================================================
+
+DEFAULT_SHAP_SUBSAMPLE: int = 1000
+
+
+def compute_shap_analysis(
+    boosters: List[xgb.Booster],
+    X: np.ndarray,
+    feature_names: Optional[List[str]] = None,
+    subsample: int = DEFAULT_SHAP_SUBSAMPLE,
+) -> Dict[str, Any]:
+    """Compute SHAP-like feature attribution from XGBoost boosters.
+
+    Uses XGBoost's native total_gain importance as an aggregate proxy for
+    SHAP values (the SHAP package is not required). When the SHAP package
+    is available, falls back to TreeExplainer for per-sample attribution.
+
+    Args:
+        boosters: List of trained XGBoost Boosters (one per walk-forward fold).
+        X: Feature matrix used for training.
+        feature_names: Optional list of feature names for human-readable keys.
+        subsample: Number of samples for SHAP estimation (default 1000).
+            Only used when shap package is available.
+
+    Returns:
+        Dict with keys:
+            method: str — "xgboost_total_gain" or "shap".
+            n_folds: int — number of boosters.
+            mean_importance: Dict[str, float] — mean importance per feature.
+            std_importance: Dict[str, float] — std importance per feature.
+            top_features: List[str] — top-10 features by mean importance.
+
+    Raises:
+        ValueError: If boosters list is empty.
+    """
+    if not boosters:
+        raise ValueError("boosters list cannot be empty")
+
+    # Try shap package first
+    try:
+        import shap
+        has_shap = True
+    except ImportError:
+        has_shap = False
+
+    if has_shap:
+        # Use TreeExplainer on the first booster
+        n_samples = min(subsample, len(X))
+        idx = np.random.RandomState(42).choice(len(X), size=n_samples, replace=False)
+        X_sub = X[idx]
+
+        try:
+            explainer = shap.TreeExplainer(boosters[0])
+            shap_values = explainer.shap_values(X_sub)
+
+            # shap_values shape: (n_samples, n_features, n_classes) or (n_samples, n_features)
+            if shap_values.ndim == 3:
+                # Multi-class: average absolute SHAP across classes
+                imp = np.mean(np.abs(shap_values), axis=(0, 2))
+            else:
+                imp = np.mean(np.abs(shap_values), axis=0)
+
+            importance = {str(i): float(imp[i]) for i in range(len(imp))}
+            method = "shap"
+        except Exception:
+            # Fallback to gain importance
+            has_shap = False
+
+    if not has_shap:
+        # Fallback: aggregate total_gain across all boosters
+        all_importance: List[Dict[str, float]] = []
+        for booster in boosters:
+            imp = compute_per_fold_importance(booster, feature_names)
+            all_importance.append(imp)
+
+        # Aggregate
+        from alphaforge.research.feature_importance import aggregate_fold_importance
+        aggregated = aggregate_fold_importance(all_importance, normalize=True)
+        importance = aggregated.get("mean", {})
+        method = "xgboost_total_gain"
+
+    # Sort by importance descending
+    sorted_imp = sorted(importance.items(), key=lambda x: x[1], reverse=True)
+    mean_imp = dict(sorted_imp)
+
+    # Top-10 features
+    top_features = [name for name, _ in sorted_imp[:10]]
+
+    # Compute std if not already present
+    if method == "xgboost_total_gain":
+        std_imp = aggregated.get("std", {})
+    else:
+        std_imp = {name: 0.0 for name in importance}
+
+    return {
+        "method": method,
+        "n_folds": len(boosters),
+        "mean_importance": mean_imp,
+        "std_importance": std_imp,
+        "top_features": top_features,
+    }
+
+
+def compute_per_fold_importance(
+    booster: xgb.Booster,
+    feature_names: Optional[List[str]] = None,
+) -> Dict[str, float]:
+    """Compute per-fold feature importance from a booster.
+
+    Delegates to the feature_importance module for consistency.
+    """
+    from alphaforge.research.feature_importance import compute_per_fold_importance as _per_fold
+    return _per_fold(booster, feature_names)
+
+
+# ===========================================================================
+# MetaLabelingTrainer — two-stage meta-labeling
+# ===========================================================================
+
+
+class MetaLabelingTrainer:
+    """Two-stage meta-labeling trainer wrapping two XGBoostTrainer instances.
+
+    Stage 1 (primary): Multi-class classifier predicting LONG_NOW / SHORT_NOW / NO_TRADE.
+    Stage 2 (meta):    Binary classifier predicting whether the primary label
+                       will succeed (1) or fail (0).
+
+    Usage:
+        meta_trainer = MetaLabelingTrainer(mode="SWING")
+        meta_trainer.train(X, y_primary, y_meta_binary)
+        result = meta_trainer.predict(X)
+
+    Reference:
+        Lopez de Prado, M. (2018). Advances in Financial Machine Learning.
+        Chapter 9: Meta-Labeling.
+    """
+
+    def __init__(
+        self,
+        mode: str = "SWING",
+        random_seed: int = RANDOM_SEED,
+        primary_hyperparams: Optional[Dict[str, Any]] = None,
+        meta_hyperparams: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Initialize MetaLabelingTrainer.
+
+        Args:
+            mode: Trading mode.
+            random_seed: Random seed for reproducibility.
+            primary_hyperparams: Hyperparameters for the primary classifier.
+                If None, uses SWING_DEFAULT_HYPERPARAMS.
+            meta_hyperparams: Hyperparameters for the meta classifier.
+                If None, uses SWING_DEFAULT_HYPERPARAMS with binary objective.
+        """
+        primary_hp = primary_hyperparams or SWING_DEFAULT_HYPERPARAMS.copy()
+        meta_hp = meta_hyperparams or SWING_DEFAULT_HYPERPARAMS.copy()
+        meta_hp["objective"] = "binary:logistic"
+        meta_hp.pop("num_class", None)
+
+        self._primary = XGBoostTrainer(
+            mode=mode,
+            random_seed=random_seed,
+            hyperparameters=primary_hp,
+        )
+        self._meta = XGBoostTrainer(
+            mode=mode,
+            random_seed=random_seed,
+            hyperparameters=meta_hp,
+        )
+        self._primary_result: Optional[TrainingResult] = None
+        self._meta_result: Optional[TrainingResult] = None
+
+    @property
+    def primary_trainer(self) -> XGBoostTrainer:
+        return self._primary
+
+    @property
+    def meta_trainer(self) -> XGBoostTrainer:
+        return self._meta
+
+    def train(
+        self,
+        X: np.ndarray,
+        y_primary: np.ndarray,
+        y_meta_binary: np.ndarray,
+        feature_names: Optional[List[str]] = None,
+    ) -> Dict[str, TrainingResult]:
+        """Train both stages sequentially.
+
+        Args:
+            X: Feature matrix of shape (n_samples, n_features).
+            y_primary: Primary labels (LONG_NOW / SHORT_NOW / NO_TRADE or 0/1/2).
+            y_meta_binary: Meta-labels (0 = fail, 1 = succeed).
+            feature_names: Optional list of feature names.
+
+        Returns:
+            Dict with keys 'primary' and 'meta' mapping to TrainingResult.
+        """
+        self._primary_result = self._primary.train(
+            X, y_primary, feature_names=feature_names,
+        )
+        self._meta_result = self._meta.train(
+            X, y_meta_binary, feature_names=feature_names,
+        )
+        return {"primary": self._primary_result, "meta": self._meta_result}
+
+    def predict(
+        self,
+        X: np.ndarray,
+        feature_names: Optional[List[str]] = None,
+    ) -> np.ndarray:
+        """Predict using meta-labeling decision logic.
+
+        Returns the primary prediction only when meta predicts 1 (success).
+
+        Args:
+            X: Feature matrix of shape (n_samples, n_features).
+            feature_names: Optional feature names (used for DMatrix only).
+
+        Returns:
+            numpy array of shape (n_samples,) with final predictions:
+            - Primary label when meta predicts success (1).
+            - NO_TRADE (2) when meta predicts failure (0).
+        """
+        if self._primary_result is None or self._meta_result is None:
+            raise RuntimeError("Train must be called before predict")
+
+        dmat = xgb.DMatrix(X)
+        if feature_names:
+            dmat.feature_names = feature_names
+
+        primary_pred = self._primary_result.model.predict(dmat)
+        meta_pred = self._meta_result.model.predict(dmat)
+
+        # Primary: argmax over 3 classes
+        if primary_pred.ndim == 1:
+            primary_pred = primary_pred.reshape(-1, NUM_CLASSES)
+        primary_label = np.argmax(primary_pred, axis=1)
+
+        # Meta: binary probability, threshold 0.5
+        meta_label = (meta_pred > 0.5).astype(int).flatten()
+
+        # Final: only take primary when meta says success
+        final = np.where(meta_label == 1, primary_label, 2)  # 2 = NO_TRADE
+        return final.astype(np.int64)
+
+    def save_artifacts(
+        self,
+        artifact_dir: str = ARTIFACT_DIR_DEFAULT,
+    ) -> Dict[str, Path]:
+        """Save both model artifacts.
+
+        Args:
+            artifact_dir: Directory to save models.
+
+        Returns:
+            Dict with keys 'primary' and 'meta' mapping to Path.
+        """
+        from datetime import datetime, timezone
+
+        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        primary_path = self._primary.save_artifact(
+            self._primary_result,
+            artifact_dir=artifact_dir,
+            artifact_filename=f"xgb_meta_primary_{ts}.json",
+        )
+        meta_path = self._meta.save_artifact(
+            self._meta_result,
+            artifact_dir=artifact_dir,
+            artifact_filename=f"xgb_meta_meta_{ts}.json",
+        )
+        return {"primary": primary_path, "meta": meta_path}
+
+
 # ---------------------------------------------------------------------------
 # Convenience function
 # ---------------------------------------------------------------------------

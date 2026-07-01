@@ -446,9 +446,128 @@ class LabelAdapter:
         return list(self._warnings)
 
 
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# Triple-Barrier Labeling (from OHLCV)
+# ===========================================================================
+
+TRIPLE_BARRIER_DEFAULT_VOLATILITY_SCALAR: float = 1.5
+TRIPLE_BARRIER_DEFAULT_MAX_HOLDING_BARS: int = 20
+
+TripleBarrierLabelOutput = Dict[str, Any]
+
+
+def compute_triple_barrier_labels(
+    close: np.ndarray,
+    high: np.ndarray,
+    low: np.ndarray,
+    atr_pct: np.ndarray,
+    volatility_scalar: float = TRIPLE_BARRIER_DEFAULT_VOLATILITY_SCALAR,
+    max_holding_bars: int = TRIPLE_BARRIER_DEFAULT_MAX_HOLDING_BARS,
+) -> TripleBarrierLabelOutput:
+    """Compute triple-barrier labels from OHLCV + ATR data.
+
+    For each bar t where atr_pct[t] is valid (not NaN), two barriers are
+    placed above and below the entry price (close[t]):
+      - Upper barrier: close[t] * (1 + atr_pct[t] * volatility_scalar)
+      - Lower barrier: close[t] * (1 - atr_pct[t] * volatility_scalar)
+
+    The label at bar t is determined by which barrier is hit first within
+    ``max_holding_bars`` forward bars:
+      - 0 (LONG_WIN):   Upper barrier hit first (price rose to target).
+      - 1 (SHORT_WIN):  Lower barrier hit first (price fell to target).
+      - 2 (NO_TRADE):   Neither barrier hit within max_holding_bars (timeout).
+
+    This is suitable for use as the y_target for XGBoostTrainer or
+    MetaLabelingTrainer. The triple_barrier_label is NaN for the last
+    ``max_holding_bars`` bars (insufficient forward data).
+
+    Args:
+        close: Close prices.
+        high: High prices (for barrier hit detection).
+        low: Low prices (for barrier hit detection).
+        atr_pct: ATR as percentage of close (from compute_atr_pct).
+        volatility_scalar: Multiplier for ATR to set barrier distance (default 1.5).
+        max_holding_bars: Maximum number of forward bars to hold (default 20).
+
+    Returns:
+        Dict with keys:
+          triple_barrier_label: numpy array of int64, same length as close.
+            Values: 0=LONG_WIN, 1=SHORT_WIN, 2=NO_TRADE (timeout).
+            NaN for bars where label cannot be determined.
+          triple_barrier_upper: numpy array of float64, upper barrier price.
+          triple_barrier_lower: numpy array of float64, lower barrier price.
+          triple_barrier_hit_bar: numpy array of int64, bar index when hit.
+            -1 if timeout (NO_TRADE).
+
+    Causality: label at t uses close, high, low up to t + max_holding_bars.
+    This is a FORWARD-LOOKING labeler — the label at bar t is NOT causal.
+    Training pipelines must mask the last max_holding_bars bars.
+    """
+    import numpy as np  # Ensure numpy available
+
+    n = len(close)
+    label = np.full(n, np.nan, dtype=np.float64)
+    upper = np.full(n, np.nan, dtype=np.float64)
+    lower = np.full(n, np.nan, dtype=np.float64)
+    hit_bar = np.full(n, -1, dtype=np.int64)
+
+    if n < max_holding_bars + 1:
+        return {
+            "triple_barrier_label": label,
+            "triple_barrier_upper": upper,
+            "triple_barrier_lower": lower,
+            "triple_barrier_hit_bar": hit_bar,
+        }
+
+    for t in range(n - max_holding_bars):
+        if np.isnan(atr_pct[t]) or atr_pct[t] <= 0 or close[t] <= 0:
+            continue
+
+        barrier_dist = close[t] * atr_pct[t] * volatility_scalar / 100.0
+        upper[t] = close[t] + barrier_dist
+        lower[t] = close[t] - barrier_dist
+
+        # Scan forward up to max_holding_bars
+        label_assigned = False
+        for fwd in range(1, max_holding_bars + 1):
+            idx = t + fwd
+            if idx >= n:
+                break
+            if high[idx] >= upper[t] and low[idx] <= lower[t]:
+                # Both barriers hit in the same bar — ambiguous
+                # Check which was touched first (bar open direction heuristic)
+                if close[idx] >= close[t]:
+                    label[t] = 0.0  # LONG_WIN (upward close)
+                else:
+                    label[t] = 1.0  # SHORT_WIN (downward close)
+                hit_bar[t] = fwd
+                label_assigned = True
+                break
+            if high[idx] >= upper[t]:
+                label[t] = 0.0  # LONG_WIN
+                hit_bar[t] = fwd
+                label_assigned = True
+                break
+            if low[idx] <= lower[t]:
+                label[t] = 1.0  # SHORT_WIN
+                hit_bar[t] = fwd
+                label_assigned = True
+                break
+
+        if not label_assigned:
+            label[t] = 2.0  # NO_TRADE (timeout)
+
+    return {
+        "triple_barrier_label": label,
+        "triple_barrier_upper": upper,
+        "triple_barrier_lower": lower,
+        "triple_barrier_hit_bar": hit_bar,
+    }
+
+
+# ===========================================================================
 # Top-level convenience functions
-# ---------------------------------------------------------------------------
+# ===========================================================================
 
 _DEFAULT_ADAPTER: Optional[LabelAdapter] = None
 
