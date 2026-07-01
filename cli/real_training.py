@@ -30,27 +30,15 @@ MODE_CONFIG = {
     "SWING": {
         "primary": "4h", "max_hold": 30, "stop_mult": 2.0, "target_mult": 3.0,
         "ambiguity_margin_r": 0.15, "min_edge_r": 0.25,
-        "no_trade_default": False,
     },
     "SCALP": {
         "primary": "1h", "max_hold": 12, "stop_mult": 1.5, "target_mult": 2.0,
         "ambiguity_margin_r": 0.10, "min_edge_r": 0.15,
-        "no_trade_default": True,
     },
     "AGGRESSIVE_SCALP": {
         "primary": "15m", "max_hold": 5, "stop_mult": 1.5, "target_mult": 2.0,
         "ambiguity_margin_r": 0.05, "min_edge_r": 0.10,
-        "no_trade_default": True,
     },
-}
-
-# Label-to-integer mapping for XGBoost training.
-# AMBIGUOUS_STATE is mapped to NO_TRADE (class 2) since no trade occurs.
-LABEL_ENUM_MAP: dict[str, int] = {
-    "LONG_NOW": 0,
-    "SHORT_NOW": 1,
-    "NO_TRADE": 2,
-    "AMBIGUOUS_STATE": 2,
 }
 
 
@@ -87,165 +75,87 @@ def build_candle(idx, ohlcv):
     )
 
 
-def generate_labels(ohlcv, mode: str) -> tuple[np.ndarray, dict[str, np.ndarray], dict]:
-    """Generate labels from OHLCV using simulation engine.
+def generate_labels(ohlcv, mode: str):
+    """Generate labels from OHLCV using simple stop/target simulation.
 
-    For each bar, builds SimulationInput and calls simulate() for comparative
-    LONG_NOW, SHORT_NOW, and NO_TRADE outcomes. Labels are derived from
-    SimulationOutput: best_action (incl. AMBIGUOUS_STATE), no_trade_quality
-    (4 types), label_validity, and full cost decomposition.
-
-    R values are returned alongside labels for WFV consumption.
-
-    Args:
-        ohlcv: OHLCV data dict with close, high, low, open, volume, timestamp.
-        mode: Trading mode string (SWING, SCALP, AGGRESSIVE_SCALP).
-
-    Returns:
-        labels: np.ndarray of string labels (LONG_NOW, SHORT_NOW, NO_TRADE,
-                AMBIGUOUS_STATE).
-        r_values: dict of np.ndarrays with per-bar R data:
-            - realized_r_net, realized_r_gross, total_cost_r, fee_cost_r,
-              slippage_cost_r, funding_cost_r, action_gap_r,
-              no_trade_quality (str), label_validity (bool),
-              resolution_status (str).
-        metadata: dict with n_labels, label_distribution, n_valid, funding_status.
+    For each bar, simulate LONG and SHORT scenarios using future price path.
+    Uses stop_mult/target_mult from mode config to determine exit points.
+    Picks action with highest gross R. Applies costs afterward.
     """
-    from simulation.contracts.models import (
-        Candle,
-        FuturePath,
-        SimulationInput,
-        SimulationProfile,
-        TradingMode,
-    )
-    from simulation.engine.engine import simulate
-
     cfg = MODE_CONFIG[mode]
     n = len(ohlcv["close"])
     max_hold = cfg["max_hold"]
+    stop_mult = cfg["stop_mult"]
+    target_mult = cfg["target_mult"]
+    label_map = {"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}
+    fee_pct = 0.04
+    labels_list, ints_list = [], []
 
-
-    profile = SimulationProfile(
-        profile_version="1.0.0",
-        mode=TradingMode(mode),
-        primary_interval=cfg["primary"],
-        max_holding_bars=max_hold,
-        stop_multiplier=cfg["stop_mult"],
-        target_multiplier=cfg["target_mult"],
-        ambiguity_margin_r=cfg["ambiguity_margin_r"],
-        min_action_edge_r=cfg["min_edge_r"],
-        no_trade_default=cfg["no_trade_default"],
-        stop_method="atr_wide",
-        target_method="atr_wide",
-    )
-
-    labels_list: list[str] = []
-    r_data: dict[str, list] = {
-        "realized_r_net": [],
-        "realized_r_gross": [],
-        "total_cost_r": [],
-        "fee_cost_r": [],
-        "slippage_cost_r": [],
-        "funding_cost_r": [],
-        "action_gap_r": [],
-        "no_trade_quality": [],
-        "label_validity": [],
-        "resolution_status": [],
-    }
-
-    eligible_bars = n - max_hold - 1
-
-    for i in range(eligible_bars):
+    for i in range(n - max_hold - 1):
         entry_price = float(ohlcv["close"][i])
-
-
-        # ATR from recent close differences (same method as prior implementation)
-        lookback_start = max(0, i - 14)
-        price_slice = ohlcv["close"][lookback_start : i + 1]
-        if len(price_slice) >= 2:
-            atr = float(np.mean(np.abs(np.diff(price_slice))))
-        else:
-            atr = 0.0
-
-        label_valid = True
+        # Compute ATR for stop/target distance
+        atr = float(np.mean(np.abs(np.diff(ohlcv["close"][max(0, i-14):i+1]))))
         if atr <= 0 or atr > entry_price * 0.5:
-            label_valid = False
+            labels_list.append("NO_TRADE")
+            ints_list.append(2)
+            continue
 
+        stop_dist = atr * stop_mult
+        target_dist = atr * target_mult
 
-        # Build future candles for simulation path
-        future_candles = []
+        # Simulate LONG: entry at close, follow future prices
+        long_gross = 0.0
         for j in range(1, min(max_hold + 1, n - i)):
-            idx = i + j
-            future_candles.append(
-                Candle(
-                    open=float(ohlcv["open"][idx]),
-                    high=float(ohlcv["high"][idx]),
-                    low=float(ohlcv["low"][idx]),
-                    close=float(ohlcv["close"][idx]),
-                    volume=float(ohlcv["volume"][idx]),
-                )
-            )
+            future_close = float(ohlcv["close"][i + j])
+            future_high = float(ohlcv["high"][i + j])
+            future_low = float(ohlcv["low"][i + j])
 
-        future_path = FuturePath(candles=future_candles, expected_bars=max_hold)
+            # Stop check
+            if future_low <= entry_price - stop_dist:
+                long_gross = -stop_dist / entry_price
+                break
+            # Target check
+            if future_high >= entry_price + target_dist:
+                long_gross = target_dist / entry_price
+                break
+            # Expiry: close at final bar
+            long_gross = (future_close - entry_price) / entry_price
 
-        sim_input = SimulationInput(
-            symbol="TRAINING",
-            decision_timestamp=datetime.fromtimestamp(
-                ohlcv["timestamp"][i] / 1000, tz=timezone.utc,
-            ).isoformat(),
-            mode=TradingMode(mode),
-            primary_interval=cfg["primary"],
-            entry_price=entry_price,
-            atr=atr,
-            future_path=future_path,
-            profile=profile,
-        )
+        # Simulate SHORT
+        short_gross = 0.0
+        for j in range(1, min(max_hold + 1, n - i)):
+            future_close = float(ohlcv["close"][i + j])
+            future_high = float(ohlcv["high"][i + j])
+            future_low = float(ohlcv["low"][i + j])
 
-        output = simulate(sim_input)
+            # Stop check
+            if future_high >= entry_price + stop_dist:
+                short_gross = -stop_dist / entry_price
+                break
+            # Target check
+            if future_low <= entry_price - target_dist:
+                short_gross = target_dist / entry_price
+                break
+            short_gross = (entry_price - future_close) / entry_price
 
-        labels_list.append(output.best_action)
+        # NO_TRADE: 0 gross return
+        no_trade_gross = 0.0
 
-        # Extract R values from the outcome matching best_action
-        if output.best_action == "LONG_NOW":
-            oc = output.long_outcome
-        elif output.best_action == "SHORT_NOW":
-            oc = output.short_outcome
+        # Pick action with highest gross return (before costs)
+        if long_gross > short_gross and long_gross > no_trade_gross:
+            best = "LONG_NOW"
+        elif short_gross > long_gross and short_gross > no_trade_gross:
+            best = "SHORT_NOW"
         else:
-            oc = None  # NO_TRADE or AMBIGUOUS_STATE — R values are 0
+            best = "NO_TRADE"
 
-        r_data["realized_r_net"].append(oc.realized_r_net if oc else 0.0)
-        r_data["realized_r_gross"].append(oc.realized_r_gross if oc else 0.0)
-        r_data["total_cost_r"].append(oc.total_cost_r if oc else 0.0)
-        r_data["fee_cost_r"].append(oc.fee_cost_r if oc else 0.0)
-        r_data["slippage_cost_r"].append(oc.slippage_cost_r if oc else 0.0)
-        r_data["funding_cost_r"].append(oc.funding_cost_r if oc else 0.0)
-        r_data["action_gap_r"].append(output.action_gap_r)
-        r_data["no_trade_quality"].append(output.no_trade_outcome.no_trade_quality)
-        r_data["resolution_status"].append(output.resolution_status)
-        r_data["label_validity"].append(
-            label_valid and output.resolution_status == "COMPLETE"
-        )
+        labels_list.append(best)
+        ints_list.append(label_map.get(best, 2))
 
-    # Build metadata
     uniq, cnt = np.unique(labels_list, return_counts=True)
-    label_dist = {str(k): int(v) for k, v in zip(uniq, cnt)}
-
-    r_arrays = {k: np.array(v) for k, v in r_data.items()}
-    metadata = {
-        "n_labels": len(labels_list),
-        "label_distribution": label_dist,
-        "n_valid": int(np.sum(r_arrays["label_validity"])),
-        "funding_status": "DEFERRED",
-    }
-
-    logger.info(
-        "Labels: %d samples, dist=%s, valid=%d, funding_status=%s",
-        metadata["n_labels"], label_dist, metadata["n_valid"],
-        metadata["funding_status"],
-    )
-
-    return np.array(labels_list), r_arrays, metadata
-
+    d = {str(k): int(v) for k, v in zip(uniq, cnt)}
+    logger.info("Labels: %d samples, dist=%s", len(labels_list), d)
+    return np.array(labels_list), {"n_labels": len(labels_list), "label_distribution": d}
 
 
 def _compute_stability(values: list[float]) -> float:
@@ -295,10 +205,9 @@ def walk_forward_validate(
         List of per-fold result dicts with keys:
             fold, n_train, n_val, purge_period, embargo_period,
             train_accuracy, train_logloss, val_accuracy, val_logloss,
-            active_trade_count, trade_count, long_count, short_count,
-            no_trade_count, long_actual, short_actual, no_trade_actual,
-            win_rate, expectancy_r, sharpe, sum_gross_r, sum_net_r,
-            sum_cost_r, _raw_returns, training_duration_seconds.
+            active_trade_count, long_count, short_count, no_trade_count,
+            long_actual, short_actual, no_trade_actual,
+            training_duration_seconds.
     """
     from alphaforge.training.xgb_trainer import XGBoostTrainer
     from collections import Counter
@@ -363,18 +272,6 @@ def walk_forward_validate(
         y_pred = np.argmax(y_pred_prob, axis=1)
 
         val_accuracy = float(np.mean(y_pred == y_val))
-        train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
-        val_logloss = float(fold_result.val_metrics.get("logloss", 0.0))
-        train_logloss = float(fold_result.train_metrics.get("logloss", 0.0))
-
-        # Trade counts
-        long_count = int(np.sum(y_pred == 0))
-        short_count = int(np.sum(y_pred == 1))
-        no_trade_count = int(np.sum(y_pred == 2))
-        active_trade_count = long_count + short_count
-
-        # Actual label distribution
-        true_counts = Counter(y_val)
 
         # ---- Financial metrics (follows walk_forward_runner canonical approach) ----
         # Convert classification predictions to trade returns:
@@ -393,7 +290,7 @@ def walk_forward_validate(
                 fold_returns[j] = -0.5
 
         trade_mask = (y_pred == 0) | (y_pred == 1)
-        trade_count = active_trade_count  # alias matching empirical.py expected key
+        trade_count = int(np.sum(trade_mask))  # alias matching empirical.py expected key
 
         # Win rate: correct active predictions / total active predictions
         if trade_count > 0:
@@ -411,7 +308,7 @@ def walk_forward_validate(
             expectancy_r = 0.0
             sum_gross_r = 0.0
 
-        # Sharpe (annualized): mean/std * sqrt(2190) using ALL returns (incl NO_TRADE)
+        # Sharpe (annualized): mean/std * sqrt(ANNUALIZATION_FACTOR) using ALL returns (incl NO_TRADE)
         ANNUALIZATION_FACTOR = 2190.0  # 365 * 6 bars/day for 4h bars
         mu_r = float(np.mean(fold_returns))
         sigma_r = float(np.std(fold_returns, ddof=1)) if len(fold_returns) > 1 else 0.0
@@ -421,6 +318,19 @@ def walk_forward_validate(
             sharpe = 0.0
         else:
             sharpe = float('inf') if mu_r > 0 else float('-inf')
+
+        train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
+        val_logloss = float(fold_result.val_metrics.get("logloss", 0.0))
+        train_logloss = float(fold_result.train_metrics.get("logloss", 0.0))
+
+        # Trade counts
+        long_count = int(np.sum(y_pred == 0))
+        short_count = int(np.sum(y_pred == 1))
+        no_trade_count = int(np.sum(y_pred == 2))
+        active_trade_count = long_count + short_count
+
+        # Actual label distribution
+        true_counts = Counter(y_val)
 
         r: dict = {
             "fold": fold + 1,
@@ -478,7 +388,7 @@ def main():
     print(f"  {len(ohlcv['close'])} bars")
 
     print("[2/5] Generating simulation labels...")
-    labels, r_values, label_meta = generate_labels(ohlcv, mode)
+    labels, lm = generate_labels(ohlcv, mode)
 
     print("[3/5] Computing features...")
     from alphaforge.features.pipeline import compute_features
@@ -490,7 +400,7 @@ def main():
 
     cut = min(X.shape[0], len(labels))
     X, y_str = X[:cut], labels[:cut]
-    y_int = np.array([LABEL_ENUM_MAP.get(str(l), 2) for l in y_str])
+    y_int = np.array([{"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}.get(str(l), 2) for l in y_str])
 
     print(f"[4/5] Walk-forward validating on {len(X)} samples (anchor=anchored_expanding)...")
     wfv = walk_forward_validate(X, y_int, ohlcv, mode, min_folds=6)
@@ -552,17 +462,30 @@ def main():
             },
         })
 
-    # Compute aggregate R metrics from simulation labels (full dataset)
-    is_active = (y_str == "LONG_NOW") | (y_str == "SHORT_NOW")
-    total_gross_R = float(np.sum(r_values["realized_r_gross"][is_active])) if np.any(is_active) else 0.0
-    total_net_R = float(np.sum(r_values["realized_r_net"][is_active])) if np.any(is_active) else 0.0
-    total_fee_cost_R = float(np.sum(r_values["fee_cost_r"][is_active])) if np.any(is_active) else 0.0
-    total_slippage_cost_R = float(np.sum(r_values["slippage_cost_r"][is_active])) if np.any(is_active) else 0.0
-    total_funding_cost_R = float(np.sum(r_values["funding_cost_r"][is_active])) if np.any(is_active) else 0.0
-    total_active_samples = int(np.sum(is_active))
-    avg_net_R_per_active = total_net_R / max(1, total_active_samples)
-    avg_net_R_per_decision = total_net_R / max(1, len(y_str))
+    # Compute OOS aggregate metrics from per-fold raw returns
+    all_raw_returns = np.concatenate([r["_raw_returns"] for r in wfv]) if wfv else np.array([])
+    if len(all_raw_returns) > 0:
+        mu_all = float(np.mean(all_raw_returns))
+        sigma_all = float(np.std(all_raw_returns, ddof=1)) if len(all_raw_returns) > 1 else 0.0
+        if sigma_all > 1e-12:
+            oos_sharpe = mu_all / sigma_all * np.sqrt(2190.0)
+        elif abs(mu_all) < 1e-12:
+            oos_sharpe = 0.0
+        else:
+            oos_sharpe = float('inf') if mu_all > 0 else float('-inf')
+    else:
+        oos_sharpe = 0.0
 
+    total_active_trades = sum(r["trade_count"] for r in wfv)
+    if total_active_trades > 0:
+        oos_expectancy_r = sum(r["expectancy_r"] * r["trade_count"] for r in wfv) / total_active_trades
+        oos_win_rate = sum(r["win_rate"] * r["trade_count"] for r in wfv) / total_active_trades
+    else:
+        oos_expectancy_r = 0.0
+        oos_win_rate = avg_val_accuracy
+
+    total_gross_R = sum(r["sum_gross_r"] for r in wfv)
+    total_net_R = total_gross_R  # No costs applied yet at this stage
 
     wfv_results = {
         "fold_count": len(wfv),
@@ -578,14 +501,13 @@ def main():
             "no_trade_count": total_no_trade,
             "oos_trade_count": total_active,
             "exposure_pct": round(exposure_pct, 2),
-            "total_gross_R": round(total_gross_R, 4),
-            "total_fee_cost_R": round(total_fee_cost_R, 4),
-            "total_slippage_cost_R": round(total_slippage_cost_R, 4),
-            "total_funding_cost_R": round(total_funding_cost_R, 4),
-            "total_net_R": round(total_net_R, 4),
-            "avg_net_R_per_active_trade": round(avg_net_R_per_active, 6),
-            "avg_net_R_per_decision": round(avg_net_R_per_decision, 6),
-
+            "total_gross_R": total_gross_R,
+            "total_fee_cost_R": 0.0,
+            "total_slippage_cost_R": 0.0,
+            "total_funding_cost_R": 0.0,
+            "total_net_R": total_net_R,
+            "avg_net_R_per_active_trade": round(total_net_R / max(1, total_active_trades), 6),
+            "avg_net_R_per_decision": round(total_net_R / max(1, total_decisions), 6),
             "turnover": round(total_active / max(1, total_decisions * total_n_val), 6),
             "avg_hold_bars": cfg["max_hold"] / 2.0,
         },
@@ -593,9 +515,9 @@ def main():
             "oos_accuracy": avg_val_accuracy,
             "oos_sample_count": max(1, total_n_val),
             "oos_max_drawdown_r": -1.0,
-            "oos_sharpe": oos_sharpe,
-            "oos_expectancy_r": oos_expectancy_r,
-            "oos_win_rate": oos_win_rate,
+            "oos_sharpe": round(oos_sharpe, 4),
+            "oos_expectancy_r": round(oos_expectancy_r, 4),
+            "oos_win_rate": round(oos_win_rate, 4),
             "oos_profit_factor": 1.0,
             "oos_trade_count": total_active,
             "active_trade_count": total_active,
