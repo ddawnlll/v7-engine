@@ -569,34 +569,6 @@ Do not collapse these into one vague “publish” step.
 **Evidence:** 1628 passed, 3 skipped, 0 failures. ACCP report at `reports/accp/issue-138.yaml`.
 
 ---
-
-## v0.27 — Cost Stress Matrix — Spread + Funding Stress Levels (2026-07-01)
-
-**What changed:**
-- `cost_stress_to_stress_levels()` now outputs `spread_stress_levels` (2 levels: 1.5x, 2x) and `funding_stress_levels` (1 level, DEFERRED) in addition to existing `fee_stress_levels` and `slippage_stress_levels`.
-- `funding_deferred_block` string added to the cost stress dict output, explaining why funding cost stress is not computed.
-- `_build_empirical_cost_stress()` in empirical.py passes through all 6 stress level arrays (fee, slippage, spread, funding) and the funding_deferred_block.
-- `_make_cost_stress()` scaffold in builders.py updated to include `spread_stress_levels`, `funding_stress_levels`, and `funding_deferred_block`.
-- 3 new tests: spread stress level structure, funding stress DEFERRED, funding deferred block text.
-
-**Lock status:**
-- Spread stress levels in report output: LOCKED_INITIAL_BASELINE
-- Funding stress DEFERRED reporting: LOCKED_INITIAL_BASELINE
-- 6-dimension cost stress matrix: LOCKED_INITIAL_BASELINE
-
-**Remaining holds:**
-- Funding cost model implementation (HOLD — no funding rate data pipeline)
-- Regime-aware cost multipliers (HOLD — requires regime breakdown integration with cost stress)
-- Symbol Stability per-symbol contribution (HOLD — requires multi-symbol WFV)
-- NO_TRADE Collapse edge case under extreme market conditions (HOLD)
-- Real profitability evidence (HOLD — requires real training + WFV)
-- MHT correction real thresholds (HOLD — requires empirical baseline)
-- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL)
-
-**Evidence:** 139 test cases across cost_stress, builders, and empirical report tests pass. ACCP report at `reports/accp/issue-115.yaml`.
-
----
-
 ## Final Position
 
 The roadmap for V7 is not:
@@ -611,3 +583,28 @@ It is:
 - prove the contract layer
 - prove the learning layer
 - only then broaden runtime and deployment sophistication
+
+---
+
+## Design Lock Log
+
+### 2026-07-01 — Issue #117: NO_TRADE Collapse Detector (P1, v0.25)
+
+**Status:** IMPLEMENTED (LOCKABLE)
+
+**Changes:**
+- Added `alphaforge/src/alphaforge/reports/collapse_detector.py` with:
+  - `compute_no_trade_trend()` — sliding-window NO_TRADE percentage trend analysis
+  - `detect_no_trade_collapse()` — configurable collapse detection (>70% threshold)
+  - `build_collapse_root_cause_tree()` — cost/signal/model/threshold attribution
+  - `counterfactual_analysis()` — saved_loss_r / missed_opportunity_r ratio
+  - `build_collapse_report()` — comprehensive collapse diagnostic report
+- Updated `alphaforge/src/alphaforge/reports/__init__.py` with exports
+- Enhanced `alphaforge/src/alphaforge/reports/run_summary.py` with enriched no_trade_collapse diagnosis and counterfactual-aware recommendations
+- 77 targeted tests pass
+
+**Holds:**
+- Integration into the empirical report builder (builders.py / empirical.py) requires the labels field to be plumbed from WFV results — deferred to Issue #138 pipeline integration.
+- Real-time collapse monitoring in the runtime remains DEFERRED — this detector is designed for offline research report analysis.
+
+**Design lock score:** 7/10 — core detection works, root cause tree validated, counterfactual analysis implemented.

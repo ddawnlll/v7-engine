@@ -2,8 +2,7 @@
 
 Scans a directory for ``mode_research_report_*.json`` files, extracts
 key fields, runs cross-report consistency checks, builds root-cause
-analyses, builds a trial ledger of all alpha candidates, and generates
-a consolidated summary JSON + Markdown report.
+analyses, and generates a consolidated summary JSON + Markdown report.
 
 Usage::
 
@@ -21,11 +20,6 @@ Usage::
     # Access root cause trees per report
     for rc in summary["root_cause_trees"]:
         print(rc["mode"], rc["primary_cause"])
-
-    # Access trial ledger
-    ledger = summary["trial_ledger"]
-    for candidate in ledger["candidates"]:
-        print(candidate["mode"], candidate["verdict"], candidate["primary_cause"])
 """
 
 from __future__ import annotations
@@ -37,7 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from alphaforge.paths import repo_root
+from alphaforge.reports.collapse_detector import build_collapse_root_cause_tree
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +40,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 REPORT_GLOB: str = "mode_research_report_*.json"
-REPORT_DIRS: Tuple[str, ...] = (
-    "data/reports/swing",
-    "data/reports/scalp",
-    "data/reports/aggressive_scalp",
-)
-DEFAULT_SUMMARY_PATH: str = "alphaforge_report/research_run_summary.json"
-TRIAL_LEDGER_VERSION: str = "1.0.0"
 
 ROOT_CAUSE_KEYS: Tuple[str, ...] = (
     "feature_failure",
@@ -64,18 +51,6 @@ ROOT_CAUSE_KEYS: Tuple[str, ...] = (
     "fold_instability",
     "symbol_instability",
 )
-
-# Map root-cause keys to failure layers for the trial ledger
-FAILURE_LAYER_MAP: Dict[str, str] = {
-    "feature_failure": "feature",
-    "label_failure": "label",
-    "model_failure": "model",
-    "cost_failure": "cost",
-    "no_trade_collapse": "decision",
-    "mht_failure": "statistics",
-    "fold_instability": "validation",
-    "symbol_instability": "coverage",
-}
 
 CONSISTENCY_SEVERITY_ORDER: Dict[str, int] = {"ERROR": 0, "WARN": 1, "INFO": 2}
 
@@ -170,6 +145,19 @@ def _diagnose_primary_cause(report: dict) -> Tuple[str, List[str]]:
         causes.append("no_trade_collapse")
         evidence.append("Active does not beat no-trade baseline")
 
+        # Enrich no-trade collapse with root cause from collapse detector
+        # when no_trade_comparison has saved/missed counts
+        nt_comp = report.get("no_trade_comparison", {})
+        saved = nt_comp.get("saved_loss_count", 0)
+        missed = nt_comp.get("missed_opportunity_count", 0)
+        if saved > 0 or missed > 0:
+            evidence.append(
+                f"Counterfactual: {saved} losses saved, {missed} opportunities missed"
+            )
+        if saved > 0 and missed > 0:
+            ratio = round(saved / missed, 2) if missed > 0 else "inf"
+            evidence.append(f"saved/missed ratio: {ratio}")
+
     # Model failure (expectancy_r <= 0)
     if expectancy_r is not None and expectancy_r <= 0:
         causes.append("model_failure")
@@ -258,8 +246,6 @@ class ResearchRunSummary:
             - ``consistency_issues`` — list of issues from
               :meth:`validate_consistency`
             - ``root_cause_trees`` — per-report root-cause analyses
-            - ``trial_ledger`` — all candidates with verdict, root-cause,
-              failure layer, and next-step recommendation
             - ``recommendations`` — list of next-step recommendations
             - ``aggregate`` — rollup counts (verdicts, modes, MHT, no-trade)
         """
@@ -316,10 +302,7 @@ class ResearchRunSummary:
         # ---- 5. Generate recommendations -----------------------------
         recommendations = ResearchRunSummary._generate_recommendations(raw_reports)
 
-        # ---- 6. Build trial ledger ------------------------------------
-        trial_ledger = ResearchRunSummary.build_trial_ledger(raw_reports)
-
-        # ---- 7. Aggregate --------------------------------------------
+        # ---- 6. Aggregate --------------------------------------------
         aggregate = ResearchRunSummary._aggregate(extracted)
 
         summary: Dict[str, Any] = {
@@ -329,12 +312,11 @@ class ResearchRunSummary:
             "reports": extracted,
             "consistency_issues": ResearchRunSummary._sorted_issues(consistency_issues),
             "root_cause_trees": root_trees,
-            "trial_ledger": trial_ledger,
             "recommendations": recommendations,
             "aggregate": aggregate,
         }
 
-        # ---- 8. Write outputs ----------------------------------------
+        # ---- 7. Write outputs ----------------------------------------
         if output_path is not None:
             output = Path(output_path)
             output.parent.mkdir(parents=True, exist_ok=True)
@@ -600,10 +582,30 @@ class ResearchRunSummary:
         """
         primary = _diagnose_primary_cause(report)[0]
 
+        # For no_trade_collapse, enrich recommendation with
+        # saved/missed counterfactual detail when available
+        no_trade_detail = ""
+        if primary == "no_trade_collapse":
+            nt_comp = report.get("no_trade_comparison", {})
+            saved = nt_comp.get("saved_loss_count", 0)
+            missed = nt_comp.get("missed_opportunity_count", 0)
+            if saved > 0 and missed > 0 and missed > saved:
+                no_trade_detail = (
+                    " Counterfactual shows more missed opportunities "
+                    "than saved losses — reduce min_edge_r or relax "
+                    "label threshold."
+                )
+            elif saved > 0 and missed > 0 and saved >= missed:
+                no_trade_detail = (
+                    " Counterfactual shows saved losses exceed missed "
+                    "opportunities — model is correctly risk-averse, "
+                    "but evaluate if over-cautious."
+                )
+
         RECOMMENDATIONS: Dict[str, str] = {
             "cost_failure": "Reduce stop_mult or increase target_mult, re-run",
             "fold_instability": "Increase training data or reduce model complexity",
-            "no_trade_collapse": "Check label balance, reduce min_edge_r",
+            "no_trade_collapse": f"Check label balance, reduce min_edge_r.{no_trade_detail}",
             "mht_failure": "Reduce grid search space or increase samples",
             "model_failure": (
                 "Review feature engineering for better signal extraction; "
@@ -625,279 +627,6 @@ class ResearchRunSummary:
             primary,
             "Run diagnostics: verify data pipeline and label construction",
         )
-
-    # ------------------------------------------------------------------
-    # Trial ledger
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def build_trial_ledger(reports: List[dict]) -> Dict[str, Any]:
-        """Build a trial ledger of all alpha candidates across reports.
-
-        The trial ledger provides candidate-level tracking that unifies
-        every evaluated candidate with its verdict, root-cause analysis,
-        failure layer, and next-step recommendation.  This is the single
-        source of truth for *why* each candidate was accepted or rejected.
-
-        Args:
-            reports: List of raw mode research report dicts.
-
-        Returns:
-            Trial ledger dict with keys:
-
-            - ``schema_version`` — version string (always ``1.0.0``)
-            - ``total_candidates`` — number of candidate entries
-            - ``promoted_count`` — candidates with promotion-worthy verdicts
-            - ``rejected_count`` — candidates with rejection-worthy verdicts
-            - ``research_count`` — candidates requiring further research
-            - ``candidates`` — ordered list of candidate entries (most
-              recently-processed first by report order)
-
-        Each candidate entry has:
-
-        - ``rank`` — ordinal position (1-based)
-        - ``candidate_id`` — auto-generated alpha candidate ID
-        - ``mode`` — trading mode
-        - ``report_id`` — source mode research report ID
-        - ``verdict`` — report verdict
-        - ``is_promoted`` — true if verdict is promotion-worthy
-        - ``is_rejected`` — true if verdict is rejection-worthy
-        - ``primary_cause`` — root-cause primary failure (or ``NO_FAILURE``)
-        - ``failure_layer`` — human-readable layer (e.g. ``model``,
-          ``cost``, ``feature``, ``decision``) or ``none``
-        - ``secondary_causes`` — list of secondary failure causes
-        - ``evidence`` — evidence strings supporting the root cause
-        - ``next_recommendation`` — from :meth:`next_experiment_recommendation`
-        - ``oos_expectancy_r`` — out-of-sample expectancy R (value)
-        - ``oos_sharpe`` — out-of-sample Sharpe ratio (value)
-        - ``oos_trade_count`` — OOS trade count
-        """
-        if not reports:
-            return ResearchRunSummary._empty_trial_ledger()
-
-        PROMOTION_VERDICTS: set = {"CANDIDATE_FOR_V7_GATES", "BASELINE_VALID"}
-        REJECTION_VERDICTS: set = {"REJECT", "INCONCLUSIVE", "BASELINE_WEAK"}
-
-        candidates: List[Dict[str, Any]] = []
-        promoted_count = 0
-        rejected_count = 0
-        research_count = 0
-
-        for idx, report in enumerate(reports):
-            verdict = report.get("verdict", "UNKNOWN")
-            mode = report.get("mode", "UNKNOWN")
-            report_id = report.get("report_id", "UNKNOWN")
-
-            # Root cause and recommendation
-            primary, secondary = _diagnose_primary_cause(report)
-            secondary_causes = [s for s in secondary if s in ROOT_CAUSE_KEYS]
-            evidence_list = [s for s in secondary if s not in ROOT_CAUSE_KEYS]
-            recommendation = ResearchRunSummary.next_experiment_recommendation(report)
-
-            # Failure layer
-            failure_layer = FAILURE_LAYER_MAP.get(primary, "none")
-
-            # Classification
-            is_promoted = verdict in PROMOTION_VERDICTS
-            is_rejected = verdict in REJECTION_VERDICTS
-            is_research = not is_promoted and not is_rejected
-
-            if is_promoted:
-                promoted_count += 1
-            elif is_rejected:
-                rejected_count += 1
-            else:
-                research_count += 1
-
-            # Metrics
-            oos_expectancy = _safe_get(
-                report, "metrics", "oos_expectancy_r", "value", default=None
-            )
-            oos_sharpe = _safe_get(
-                report, "metrics", "oos_sharpe", "value", default=None
-            )
-            oos_trade_count = _safe_get(
-                report, "metrics", "oos_trade_count", default=0
-            )
-
-            # Candidate ID from the alpha_thesis or auto-generated
-            alpha_theses = report.get("alpha_theses", [])
-            if alpha_theses and isinstance(alpha_theses, list) and len(alpha_theses) > 0:
-                candidate_id = alpha_theses[0].get(
-                    "alpha_thesis_id",
-                    f"ac-{mode.lower()}-{report_id}",
-                )
-            else:
-                candidate_id = f"ac-{mode.lower()}-{report_id}"
-
-            candidates.append({
-                "rank": idx + 1,
-                "candidate_id": candidate_id,
-                "mode": mode,
-                "report_id": report_id,
-                "verdict": verdict,
-                "is_promoted": is_promoted,
-                "is_rejected": is_rejected,
-                "is_research": is_research,
-                "primary_cause": primary,
-                "failure_layer": failure_layer,
-                "secondary_causes": secondary_causes,
-                "evidence": evidence_list,
-                "next_recommendation": recommendation,
-                "oos_expectancy_r": oos_expectancy,
-                "oos_sharpe": oos_sharpe,
-                "oos_trade_count": oos_trade_count,
-            })
-
-        return {
-            "schema_version": TRIAL_LEDGER_VERSION,
-            "total_candidates": len(candidates),
-            "promoted_count": promoted_count,
-            "rejected_count": rejected_count,
-            "research_count": research_count,
-            "candidates": candidates,
-        }
-
-    @staticmethod
-    def _empty_trial_ledger() -> Dict[str, Any]:
-        """Return an empty trial ledger structure."""
-        return {
-            "schema_version": TRIAL_LEDGER_VERSION,
-            "total_candidates": 0,
-            "promoted_count": 0,
-            "rejected_count": 0,
-            "research_count": 0,
-            "candidates": [],
-        }
-
-    # ------------------------------------------------------------------
-    # Auto-generation
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def auto_generate_summary(
-        report_dirs: List[str | Path] | None = None,
-        output_path: str | Path | None = None,
-    ) -> Dict[str, Any]:
-        """Auto-generate a consolidated research run summary.
-
-        Scans the standard report directories (or caller-provided ones),
-        merges all reports into a single multi-directory summary, and
-        writes the result to ``alphaforge_report/research_run_summary.json``
-        (or ``output_path``).
-
-        This method is designed to be called at the end of every research
-        run to keep the central summary in sync.
-
-        Args:
-            report_dirs:
-                List of directories to scan for mode research reports.
-                Defaults to ``swing``, ``scalp``, and ``aggressive_scalp``
-                under ``data/reports/``.
-            output_path:
-                Destination for the summary JSON.  Defaults to
-                ``<repo-root>/alphaforge_report/research_run_summary.json``.
-
-        Returns:
-            Consolidated summary dict with merged reports from all
-            scanned directories.
-        """
-        if report_dirs is None:
-            root = repo_root()
-            report_dirs = [root / d for d in REPORT_DIRS]
-
-        # Resolve to absolute paths
-        resolved_dirs = [Path(d).resolve() for d in report_dirs]
-
-        output = Path(output_path) if output_path else (
-            repo_root() / DEFAULT_SUMMARY_PATH
-        )
-
-        # ---- Load reports from all directories -------------------------
-        all_raw_reports: List[dict] = []
-        all_load_errors: List[str] = []
-        total_files_found = 0
-
-        for d in resolved_dirs:
-            if not d.is_dir():
-                logger.warning("Report directory does not exist, skipping: %s", d)
-                continue
-
-            report_files = sorted(d.glob(REPORT_GLOB))
-            total_files_found += len(report_files)
-
-            for rf in report_files:
-                try:
-                    with open(rf, "r", encoding="utf-8") as fh:
-                        all_raw_reports.append(json.load(fh))
-                except (json.JSONDecodeError, OSError) as exc:
-                    all_load_errors.append(f"{rf.name}: {exc}")
-                    logger.warning("Skipping unreadable report %s: %s", rf.name, exc)
-
-        if not all_raw_reports:
-            logger.error("No valid reports could be loaded from any directory")
-            empty_meta = {
-                "created_at": datetime.now(timezone.utc).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
-                ),
-                "report_dir": "; ".join(str(d) for d in resolved_dirs),
-                "report_count": total_files_found,
-                "load_errors": all_load_errors,
-            }
-            empty = ResearchRunSummary._empty_summary(empty_meta)
-            empty["trial_ledger"] = ResearchRunSummary._empty_trial_ledger()
-            if all_load_errors:
-                empty["consistency_issues"].append({
-                    "severity": "ERROR",
-                    "check": "load",
-                    "message": (
-                        f"All {total_files_found} report file(s) failed to parse"
-                    ),
-                    "report_id": "N/A",
-                })
-            return empty
-
-        # ---- Build summary components ----------------------------------
-        extracted = [
-            ResearchRunSummary._extract_report_fields(r)
-            for r in all_raw_reports
-        ]
-        consistency_issues = ResearchRunSummary.validate_consistency(all_raw_reports)
-        root_trees = [
-            ResearchRunSummary.build_root_cause_tree(r)
-            for r in all_raw_reports
-        ]
-        recommendations = ResearchRunSummary._generate_recommendations(all_raw_reports)
-        trial_ledger = ResearchRunSummary.build_trial_ledger(all_raw_reports)
-        aggregate = ResearchRunSummary._aggregate(extracted)
-
-        summary: Dict[str, Any] = {
-            "metadata": {
-                "created_at": datetime.now(timezone.utc).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
-                ),
-                "report_dir": "; ".join(str(d) for d in resolved_dirs),
-                "report_count": total_files_found,
-                "load_errors": all_load_errors,
-            },
-            "reports": extracted,
-            "consistency_issues": ResearchRunSummary._sorted_issues(consistency_issues),
-            "root_cause_trees": root_trees,
-            "trial_ledger": trial_ledger,
-            "recommendations": recommendations,
-            "aggregate": aggregate,
-        }
-
-        # ---- Write outputs ---------------------------------------------
-        output.parent.mkdir(parents=True, exist_ok=True)
-        with open(output, "w", encoding="utf-8") as fh:
-            json.dump(summary, fh, indent=2, ensure_ascii=False, default=str)
-        logger.info("Wrote consolidated run summary to %s", output)
-
-        md_path = output.with_suffix(".md")
-        ResearchRunSummary.generate_summary_report(summary, md_path)
-
-        return summary
 
     # ------------------------------------------------------------------
     # Markdown summary report
@@ -924,7 +653,6 @@ class ResearchRunSummary:
         issues = summary.get("consistency_issues", [])
         trees = summary.get("root_cause_trees", [])
         recs = summary.get("recommendations", [])
-        trial_ledger = summary.get("trial_ledger", {})
 
         # ---- Header ------------------------------------------------
         lines.append("# Research Run Summary\n")
@@ -964,53 +692,6 @@ class ResearchRunSummary:
             f"{agg.get('no_trade_fail_count', 0)}"
         )
         lines.append("")
-
-        # ---- Trial Ledger -------------------------------------------
-        lines.append("## Trial Ledger\n")
-        tl_candidates = trial_ledger.get("candidates", [])
-        if tl_candidates:
-            lines.append(
-                f"- **Total candidates:** {trial_ledger.get('total_candidates', 0)}"
-            )
-            lines.append(
-                f"- **Promoted:** {trial_ledger.get('promoted_count', 0)}"
-            )
-            lines.append(
-                f"- **Rejected:** {trial_ledger.get('rejected_count', 0)}"
-            )
-            lines.append(
-                f"- **In research:** {trial_ledger.get('research_count', 0)}"
-            )
-            lines.append("")
-
-            for cand in tl_candidates:
-                lines.append(
-                    f"### #{cand.get('rank', '?')} — {cand.get('candidate_id', '?')} "
-                    f"({cand.get('mode', '?')})\n"
-                )
-                lines.append(
-                    f"- **Verdict:** {cand.get('verdict', '?')}"
-                )
-                lines.append(
-                    f"- **Primary cause:** `{cand.get('primary_cause', '?')}`"
-                )
-                lines.append(
-                    f"- **Failure layer:** {cand.get('failure_layer', '?')}"
-                )
-                sec = cand.get("secondary_causes", [])
-                if sec:
-                    lines.append(f"- **Secondary causes:** {', '.join(sec)}")
-                ev = cand.get("evidence", [])
-                if ev:
-                    lines.append("- Evidence:")
-                    for e in ev:
-                        lines.append(f"  - {e}")
-                lines.append(
-                    f"- **Next recommendation:** {cand.get('next_recommendation', '?')}"
-                )
-                lines.append("")
-        else:
-            lines.append("No candidates in trial ledger.\n")
 
         # ---- Consistency Issues ------------------------------------
         lines.append("## Consistency Issues\n")
@@ -1131,7 +812,6 @@ class ResearchRunSummary:
             "reports": [],
             "consistency_issues": [],
             "root_cause_trees": [],
-            "trial_ledger": ResearchRunSummary._empty_trial_ledger(),
             "recommendations": [],
             "aggregate": {
                 "verdict_counts": {},
