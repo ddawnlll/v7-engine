@@ -1,116 +1,143 @@
-"""Optuna multi-objective tuner — NSGAII-based Pareto optimization.
+"""Optuna hyperparameter tuner with ASHA-style Median Pruning.
 
-Provides:
-1. `create_moo_study` — factory for a multi-objective Optuna study.
-2. `optimize_moo_study` — run n_trials with progress logging.
-3. `extract_pareto_front` — collect Pareto-optimal trials as structured dicts.
-4. `pareto_front_summary` — compact numeric summary of the Pareto frontier.
+Designed for aggressive early termination of bad hyperparameter trials
+during XGBoost alpha model training.
 
-Uses optuna.samplers.NSGAIISampler (NSGA-II genetic algorithm) which is
-available in Optuna >= 3.0 and is the recommended sampler for multi-objective
-optimization. MOTPESampler was deprecated in Optuna v4; NSGAII is the
-production-grade replacement.
-
-Domain boundary: AlphaForge owns hyperparameter optimization evidence.
-V7 owns final acceptance of Pareto-optimal models.
+Key design decisions:
+  - MedianPruner prunes trials whose intermediate performance falls below
+    the running median of other trials at the same boosting round.
+  - Custom XGBoostPruningCallback translates xgboost eval metrics into
+    Optuna intermediate reports so the pruner can make per-round decisions.
+  - Trials are expected to complete or be pruned in ~2s each, enabling
+    60+ trial studies well under the 120s budget.
+  - The objective function uses xgb.train() directly (not XGBoostTrainer)
+    to avoid coupling the search to production-mode defaults.
 """
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+import optuna
+import xgboost as xgb
+from optuna.pruners import MedianPruner
+from optuna.samplers import TPESampler
+from xgboost.callback import TrainingCallback
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Optuna lazy import — NSGAIISampler is the go-to multi-objective sampler
-# ---------------------------------------------------------------------------
-
-try:
-    import optuna
-    from optuna.samplers import NSGAIISampler
-
-    _HAS_OPTUNA = True
-except ImportError:
-    NSGAIISampler = None  # type: ignore
-    _HAS_OPTUNA = False
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-DEFAULT_N_TRIALS: int = 100
-DEFAULT_N_WARMUP_STARTUPS: int = 10
-DEFAULT_POPULATION_SIZE: int = 50
+# Default MedianPruner configuration (ASHA-style aggressive pruning)
+PRUNER_CONFIG: Dict[str, Any] = {
+    "n_startup_trials": 5,  # Let first 5 trials run fully before pruning
+    "n_warmup_steps": 3,    # Let first 3 boosting rounds complete before pruning
+    "interval_steps": 1,    # Check pruning eligibility every round
+}
+
+# Early stopping rounds for XGBoost training within each trial
+EARLY_STOPPING_ROUNDS: int = 10
+
+# Default number of tuning trials
+DEFAULT_N_TRIALS: int = 60
+
+# Target: 60 trials < 120s total
+TARGET_TRIALS: int = 60
+TARGET_DURATION_SECONDS: int = 120
+
+# Observation key for pruning (matches xgboost eval metric name)
+PRUNING_OBSERVATION_KEY: str = "val-mlogloss"
+
+LABEL_TO_INT: Dict[str, int] = {
+    "LONG_NOW": 0,
+    "SHORT_NOW": 1,
+    "NO_TRADE": 2,
+}
+
+NUM_CLASSES: int = 3
+
+RANDOM_SEED: int = 42
 
 # ---------------------------------------------------------------------------
-# Data structures
+# Custom XGBoostPruningCallback (standalone — avoids optuna-integration dep)
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class ParetoPoint:
-    """A single Pareto-optimal trial result.
+class XGBoostPruningCallback(TrainingCallback):
+    """XGBoost training callback that reports metrics to an Optuna trial.
 
-    Attributes:
-        trial_number: Optuna trial number.
-        sharpe: Annualized Sharpe ratio.
-        profit_factor: Profit factor (gross profit / gross loss).
-        params: The hyperparameter dict that produced this result.
+    At each boosting iteration, the callback reads the evaluation metric
+    from the xgboost evals log and reports it to the Optuna trial via
+    ``trial.report()``. If the trial should be pruned (determined by the
+    study's pruner), the callback returns ``True`` to halt training early.
+
+    Args:
+        trial: The Optuna trial to report intermediate values to.
+        observation_key: The metric key to monitor in the evals log.
+            Uses ``"data_name-metric_name"`` or bare ``"metric_name"``
+            format. Default is ``"val-mlogloss"``.
+
+    Usage::
+
+        pruning_cb = XGBoostPruningCallback(trial=trial)
+        xgb.train(params, dtrain, evals=[(dtrain, "train"), (dval, "val")],
+                  callbacks=[pruning_cb])
     """
 
-    trial_number: int
-    sharpe: float
-    profit_factor: float
-    params: Dict[str, Any] = field(default_factory=dict)
+    def __init__(
+        self,
+        trial: optuna.Trial,
+        observation_key: str = PRUNING_OBSERVATION_KEY,
+    ) -> None:
+        super().__init__()
+        self._trial = trial
+        self._observation_key = observation_key
+        self.pruned: bool = False
 
+    def after_iteration(
+        self,
+        model: xgb.Booster,
+        epoch: int,
+        evals_log: xgb.callback.EvalsLog,
+    ) -> bool:
+        """Check if trial should be pruned after each boosting round.
 
-@dataclass
-class ParetoFrontier:
-    """The Pareto frontier from a multi-objective study.
+        Sets ``self.pruned = True`` and returns ``True`` to stop xgboost
+        when the pruner decides to kill this trial. The caller's objective
+        function is responsible for raising ``optuna.TrialPruned()`` after
+        training finishes (checked via ``callback.pruned``).
 
-    Attributes:
-        points: List of Pareto-optimal points, sorted by descending Sharpe.
-        n_trials_total: Total number of trials run.
-        n_pareto: Number of points on the Pareto frontier.
-    """
+        Args:
+            model: The trained booster (or CVPack for cv).
+            epoch: Current boosting round (0-indexed).
+            evals_log: Evaluation history dict, structured as
+                ``{"data_name": {"metric_name": [values_list]}}``.
 
-    points: List[ParetoPoint] = field(default_factory=list)
-    n_trials_total: int = 0
-    n_pareto: int = 0
-
-    def best_sharpe(self) -> Optional[ParetoPoint]:
-        """Return the Pareto point with the highest Sharpe ratio."""
-        if not self.points:
-            return None
-        return max(self.points, key=lambda p: p.sharpe)
-
-    def best_profit_factor(self) -> Optional[ParetoPoint]:
-        """Return the Pareto point with the highest Profit Factor."""
-        if not self.points:
-            return None
-        return max(self.points, key=lambda p: p.profit_factor)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Serialize to a JSON-compatible dictionary."""
-        return {
-            "n_trials_total": self.n_trials_total,
-            "n_pareto": self.n_pareto,
-            "points": [
-                {
-                    "trial_number": p.trial_number,
-                    "sharpe": round(p.sharpe, 6),
-                    "profit_factor": round(p.profit_factor, 6),
-                    "params": p.params,
-                }
-                for p in self.points
-            ],
-        }
+        Returns:
+            ``True`` if training should stop (trial pruned), ``False`` otherwise.
+        """
+        for data_name, metrics in evals_log.items():
+            for metric_name, values in metrics.items():
+                full_key = f"{data_name}-{metric_name}"
+                if full_key == self._observation_key or metric_name == self._observation_key:
+                    if values:
+                        score = values[-1]
+                        self._trial.report(score, epoch)
+                        if self._trial.should_prune():
+                            self.pruned = True
+                            logger.debug(
+                                "Trial %d pruned at epoch %d (score=%.4f)",
+                                self._trial.number,
+                                epoch,
+                                score,
+                            )
+                            return True  # signal xgboost to stop
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -118,333 +145,321 @@ class ParetoFrontier:
 # ---------------------------------------------------------------------------
 
 
-def create_moo_study(
+def create_study(
     study_name: Optional[str] = None,
-    storage: Optional[str] = None,
+    direction: str = "minimize",
+    n_startup_trials: int = PRUNER_CONFIG["n_startup_trials"],
+    n_warmup_steps: int = PRUNER_CONFIG["n_warmup_steps"],
+    interval_steps: int = PRUNER_CONFIG["interval_steps"],
+    seed: int = RANDOM_SEED,
     load_if_exists: bool = False,
-    population_size: int = DEFAULT_POPULATION_SIZE,
-    n_startup_trials: int = DEFAULT_N_WARMUP_STARTUPS,
-    seed: Optional[int] = None,
-) -> Any:
-    """Create a multi-objective Optuna study maximizing Sharpe and Profit Factor.
+) -> optuna.Study:
+    """Create an Optuna study configured with MedianPruner.
 
-    Uses NSGAIISampler with directions=['maximize', 'maximize'].
+    The MedianPruner implements ASHA-style pruning: it tracks the median
+    intermediate value across all completed trials at each step and prunes
+    any trial that falls below that median.
 
     Args:
-        study_name: Optional name for the study. Auto-generated if None.
-        storage: Optional database URL for persistent storage (e.g., 'sqlite:///...').
-                 If None, uses in-memory storage.
-        load_if_exists: If True and a study with the same name exists in storage,
-                        load it instead of raising DuplicatedStudyError.
-        population_size: NSGAII population size (default 50).
-        n_startup_trials: Number of random-start trials before NSGAII kicks in.
-        seed: Random seed for reproducibility.
+        study_name: Optional name for storage/recall.
+        direction: ``"minimize"`` (default) for loss metrics like logloss;
+            ``"maximize"`` for accuracy-like metrics.
+        n_startup_trials: Number of trials that run fully before pruning
+            begins (default 5).
+        n_warmup_steps: Number of initial boosting rounds where pruning
+            is disabled (default 3). Prevents premature pruning of trials
+            that start poorly but improve later.
+        interval_steps: Check pruning eligibility every N steps (default 1).
+        seed: Random seed for the TPE sampler.
+        load_if_exists: If True and study_name is given, load existing
+            study instead of creating a new one.
 
     Returns:
-        optuna.Study object configured for multi-objective optimization.
-
-    Raises:
-        RuntimeError: If optuna is not installed.
+        Configured Optuna study ready for ``study.optimize()``.
     """
-    if not _HAS_OPTUNA:
-        raise RuntimeError(
-            "optuna is not installed. Install it with: pip install optuna"
-        )
-
-    sampler = NSGAIISampler(
-        population_size=population_size,
-        seed=seed,
+    pruner = MedianPruner(
+        n_startup_trials=n_startup_trials,
+        n_warmup_steps=n_warmup_steps,
+        interval_steps=interval_steps,
     )
+    sampler = TPESampler(seed=seed)
 
     study = optuna.create_study(
         study_name=study_name,
-        storage=storage,
-        load_if_exists=load_if_exists,
-        directions=["maximize", "maximize"],
+        direction=direction,
+        pruner=pruner,
         sampler=sampler,
+        load_if_exists=load_if_exists,
     )
-
     logger.info(
-        "Created MOO study '%s' with NSGAIISampler (pop=%d, directions=max,max)",
+        "Created study '%s' (direction=%s, pruner=MedianPruner(%d,%d,%d))",
         study.study_name,
-        population_size,
+        direction,
+        n_startup_trials,
+        n_warmup_steps,
+        interval_steps,
     )
     return study
 
 
 # ---------------------------------------------------------------------------
-# Optimization
+# Search spaces
 # ---------------------------------------------------------------------------
 
 
-def optimize_moo_study(
-    study: Any,
-    objective_fn: Callable[[Any], Tuple[float, float]],
-    n_trials: int = DEFAULT_N_TRIALS,
-    callbacks: Optional[List[Callable]] = None,
-    gc_after_trial: bool = False,
-) -> Any:
-    """Run multi-objective optimization on a study.
+def default_swing_search_space(trial: optuna.Trial) -> Dict[str, Any]:
+    """Default hyperparameter search space for SWING mode XGBoost.
+
+    Provides a reasonable range for each hyperparameter. Uses Optuna's
+    ``suggest_*`` methods so the TPE sampler can explore efficiently.
 
     Args:
-        study: An optuna.Study created by `create_moo_study`.
-        objective_fn: A callable(trial) -> Tuple[float, float] returning
-                      (sharpe, profit_factor). Both values are maximized.
-        n_trials: Number of optimization trials to run.
-        callbacks: Optional list of Optuna callbacks.
-        gc_after_trial: Run gc.collect() after each trial (useful for large models).
+        trial: Optuna trial for suggesting parameter values.
 
     Returns:
-        The study with completed trials (same object, modified in-place).
-
-    Raises:
-        RuntimeError: If optuna is not installed.
+        Dict of XGBoost-compatible hyperparameters (without objective/num_class
+        which are set by the caller).
     """
-    if not _HAS_OPTUNA:
-        raise RuntimeError("optuna is not installed")
-
-    if study is None:
-        raise ValueError("study is required — call create_moo_study() first")
-
-    logger.info(
-        "Starting MOO optimization: study='%s', n_trials=%d",
-        study.study_name,
-        n_trials,
-    )
-
-    study.optimize(
-        objective_fn,
-        n_trials=n_trials,
-        callbacks=callbacks,
-        gc_after_trial=gc_after_trial,
-    )
-
-    n_complete = len(study.trials)
-    n_pareto = len(study.best_trials)
-    logger.info(
-        "MOO optimization complete: %d trials, %d Pareto-optimal",
-        n_complete,
-        n_pareto,
-    )
-
-    return study
-
-
-# ---------------------------------------------------------------------------
-# Pareto frontier extraction
-# ---------------------------------------------------------------------------
-
-
-def extract_pareto_front(study: Any) -> ParetoFrontier:
-    """Extract the Pareto frontier from a completed multi-objective study.
-
-    Iterates over `study.best_trials` and builds a structured `ParetoFrontier`
-    with points sorted by descending Sharpe ratio.
-
-    Args:
-        study: An optuna.Study with directions=['maximize', 'maximize'].
-
-    Returns:
-        ParetoFrontier dataclass containing all Pareto-optimal points.
-
-    Raises:
-        RuntimeError: If optuna is not installed.
-        ValueError: If the study has no completed trials.
-    """
-    if not _HAS_OPTUNA:
-        raise RuntimeError("optuna is not installed")
-
-    if study is None:
-        raise ValueError("study is required")
-
-    trials = study.trials
-    if not trials:
-        raise ValueError("Study has no completed trials")
-
-    # best_trials gives the Pareto-optimal set
-    best = study.best_trials
-    points: List[ParetoPoint] = []
-
-    for t in best:
-        # values[0] = sharpe, values[1] = profit_factor
-        sharpe_val = float(t.values[0]) if t.values is not None else -1e6
-        pf_val = float(t.values[1]) if t.values is not None else -1.0
-        points.append(
-            ParetoPoint(
-                trial_number=t.number,
-                sharpe=sharpe_val,
-                profit_factor=pf_val,
-                params=dict(t.params),
-            )
-        )
-
-    # Sort by descending Sharpe
-    points.sort(key=lambda p: p.sharpe, reverse=True)
-
-    return ParetoFrontier(
-        points=points,
-        n_trials_total=len(trials),
-        n_pareto=len(points),
-    )
-
-
-def pareto_front_summary(study: Any) -> Dict[str, Any]:
-    """Return a compact JSON-serializable summary of the Pareto frontier.
-
-    Args:
-        study: An optuna.Study with directions=['maximize', 'maximize'].
-
-    Returns:
-        Dict with keys:
-            n_trials_total: Total completed trials.
-            n_pareto: Number of points on the Pareto frontier.
-            sharpe_range: [min, max] Sharpe on the frontier.
-            profit_factor_range: [min, max] Profit Factor on the frontier.
-            best_sharpe_point: Dict with trial_number, sharpe, profit_factor, params.
-            best_profit_factor_point: Dict with trial_number, sharpe, profit_factor, params.
-    """
-    frontier = extract_pareto_front(study)
-
-    result: Dict[str, Any] = {
-        "n_trials_total": frontier.n_trials_total,
-        "n_pareto": frontier.n_pareto,
+    return {
+        "max_depth": trial.suggest_int("max_depth", 3, 8),
+        "learning_rate": trial.suggest_float(
+            "learning_rate", 0.01, 0.3, log=True
+        ),
+        "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+        "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
+        "gamma": trial.suggest_float("gamma", 0.0, 1.0),
+        "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 10.0, log=True),
+        "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10.0, log=True),
+        "n_estimators": trial.suggest_int("n_estimators", 100, 500),
     }
 
-    if frontier.points:
-        sharpe_vals = [p.sharpe for p in frontier.points]
-        pf_vals = [p.profit_factor for p in frontier.points]
-        result["sharpe_range"] = [round(min(sharpe_vals), 6), round(max(sharpe_vals), 6)]
-        result["profit_factor_range"] = [
-            round(min(pf_vals), 6),
-            round(max(pf_vals), 6),
-        ]
 
-        best_s = frontier.best_sharpe()
-        if best_s is not None:
-            result["best_sharpe_point"] = {
-                "trial_number": best_s.trial_number,
-                "sharpe": round(best_s.sharpe, 6),
-                "profit_factor": round(best_s.profit_factor, 6),
-                "params": best_s.params,
-            }
+def default_scalp_search_space(trial: optuna.Trial) -> Dict[str, Any]:
+    """Hyperparameter search space for SCALP mode XGBoost.
 
-        best_pf = frontier.best_profit_factor()
-        if best_pf is not None:
-            result["best_profit_factor_point"] = {
-                "trial_number": best_pf.trial_number,
-                "sharpe": round(best_pf.sharpe, 6),
-                "profit_factor": round(best_pf.profit_factor, 6),
-                "params": best_pf.params,
-            }
-    else:
-        result["sharpe_range"] = [0.0, 0.0]
-        result["profit_factor_range"] = [0.0, 0.0]
-
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Pareto frontier visualization (optional — requires plotly)
-# ---------------------------------------------------------------------------
-
-
-def plot_pareto_frontier(
-    study: Any,
-    save_path: Optional[str] = None,
-    target_names: Optional[List[str]] = None,
-) -> Optional[bytes]:
-    """Plot the Pareto frontier using optuna's built-in visualization.
-
-    Requires `plotly` to be installed.
+    SCALP models typically benefit from deeper trees and faster learning
+    compared to SWING, since they operate on shorter timeframes.
 
     Args:
-        study: An optuna.Study with directions=['maximize', 'maximize'].
-        save_path: If provided, save the plot as an HTML file at this path.
-        target_names: Axis labels for the Pareto front plot.
-                      Defaults to ['Sharpe', 'Profit Factor'].
+        trial: Optuna trial for suggesting parameter values.
 
     Returns:
-        If save_path is None, returns the HTML bytes of the plot.
-        If save_path is set, saves to file and returns None.
-
-    Raises:
-        ImportError: If plotly is not installed.
-        RuntimeError: If optuna is not installed.
+        Dict of XGBoost-compatible hyperparameters.
     """
-    if not _HAS_OPTUNA:
-        raise RuntimeError("optuna is not installed")
-
-    try:
-        from optuna.visualization import plot_pareto_front
-    except ImportError:
-        raise ImportError(
-            "plotly is required for Pareto front visualization. "
-            "Install it with: pip install plotly"
-        )
-
-    if target_names is None:
-        target_names = ["Sharpe", "Profit Factor"]
-
-    fig = plot_pareto_front(study, target_names=target_names)
-
-    if save_path:
-        fig.write_html(save_path)
-        logger.info("Pareto front plot saved to %s", save_path)
-        return None
-    else:
-        return fig.to_html().encode("utf-8")
+    return {
+        "max_depth": trial.suggest_int("max_depth", 4, 10),
+        "learning_rate": trial.suggest_float(
+            "learning_rate", 0.05, 0.4, log=True
+        ),
+        "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+        "min_child_weight": trial.suggest_int("min_child_weight", 1, 8),
+        "gamma": trial.suggest_float("gamma", 0.0, 0.5),
+        "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 5.0, log=True),
+        "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 5.0, log=True),
+        "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+    }
 
 
 # ---------------------------------------------------------------------------
-# Serialization helpers
+# Core tuning function
 # ---------------------------------------------------------------------------
 
 
-def save_pareto_frontier(
-    frontier: ParetoFrontier,
-    path: Path,
-) -> None:
-    """Save the Pareto frontier to a JSON file.
+def _encode_labels(y: np.ndarray) -> np.ndarray:
+    """Encode string labels to integers for training."""
+    if y.dtype.kind in ("i", "u"):
+        return y.astype(int)
+    if y.dtype.kind in ("U", "S"):
+        result = np.zeros(len(y), dtype=int)
+        for i, label in enumerate(y):
+            result[i] = LABEL_TO_INT[str(label)]
+        return result
+    raise ValueError(f"Unsupported label dtype: {y.dtype}")
+
+
+def run_tuning(
+    X: np.ndarray,
+    y: np.ndarray,
+    n_trials: int = DEFAULT_N_TRIALS,
+    search_space: Optional[Callable[[optuna.Trial], Dict[str, Any]]] = None,
+    study: Optional[optuna.Study] = None,
+    study_name: Optional[str] = None,
+    feature_names: Optional[List[str]] = None,
+    val_fraction: float = 0.2,
+    random_state: int = RANDOM_SEED,
+    early_stopping_rounds: int = EARLY_STOPPING_ROUNDS,
+    direction: str = "minimize",
+) -> optuna.Study:
+    """Run hyperparameter tuning with aggressive MedianPruning.
+
+    Splits data once (fixed train/val split), then runs ``n_trials``
+    Optuna trials. Each trial trains an XGBoost model and reports
+    intermediate validation logloss to the study's pruner. Bad trials
+    are pruned early, typically by fold/round 3.
 
     Args:
-        frontier: ParetoFrontier dataclass to serialize.
-        path: Filesystem path for the JSON output.
-
-    Raises:
-        IOError: If the file cannot be written.
-    """
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(frontier.to_dict(), f, indent=2)
-    logger.info("Pareto frontier saved to %s (%d points)", path, frontier.n_pareto)
-
-
-def load_pareto_frontier(path: Path) -> ParetoFrontier:
-    """Load a Pareto frontier from a JSON file.
-
-    Args:
-        path: Path to a JSON file produced by `save_pareto_frontier`.
+        X: Feature matrix of shape ``(n_samples, n_features)``.
+        y: Label vector — string or integer labels mapped to {0, 1, 2}.
+        n_trials: Maximum number of hyperparameter trials (default 60).
+        search_space: Function defining the search space. If ``None``,
+            uses :func:`default_swing_search_space`.
+        study: Existing Optuna study. If ``None``, creates one with
+            MedianPruner via :func:`create_study`.
+        study_name: Optional study name (used when creating new study).
+        feature_names: Optional feature names for the DMatrix.
+        val_fraction: Fraction of data to hold out for validation.
+        random_state: Random seed for reproducibility.
+        early_stopping_rounds: XGBoost ``early_stopping_rounds`` per trial.
+        direction: ``"minimize"`` (logloss) or ``"maximize"`` (accuracy).
 
     Returns:
-        ParetoFrontier dataclass.
+        Completed Optuna study with ``study.best_params``,
+        ``study.best_value``, and ``study.trials_dataframe()`` available.
+
+    Raises:
+        ValueError: If inputs are invalid.
+        RuntimeError: If no trials complete successfully.
     """
-    path = Path(path)
-    with open(path, "r") as f:
-        data = json.load(f)
-
-    points = [
-        ParetoPoint(
-            trial_number=p["trial_number"],
-            sharpe=p["sharpe"],
-            profit_factor=p["profit_factor"],
-            params=p.get("params", {}),
+    # --- Validate inputs ---
+    if not isinstance(X, np.ndarray) or not isinstance(y, np.ndarray):
+        raise TypeError("X and y must be numpy arrays")
+    if X.ndim != 2:
+        raise ValueError(f"X must be 2D, got {X.ndim}D")
+    if y.ndim != 1:
+        raise ValueError(f"y must be 1D, got {y.ndim}D")
+    if len(X) != len(y):
+        raise ValueError(
+            f"X and y must have same length, got {len(X)} and {len(y)}"
         )
-        for p in data.get("points", [])
-    ]
+    if len(X) < 10:
+        raise ValueError(
+            f"Need at least 10 samples for tuning, got {len(X)}"
+        )
 
-    return ParetoFrontier(
-        points=points,
-        n_trials_total=data.get("n_trials_total", 0),
-        n_pareto=data.get("n_pareto", 0),
+    y_int = _encode_labels(y)
+
+    # --- Fixed train/val split ---
+    n_samples = len(y_int)
+    n_val = max(1, int(n_samples * val_fraction))
+    indices = np.arange(n_samples)
+    rng = np.random.RandomState(random_state)
+    rng.shuffle(indices)
+
+    val_idx = indices[:n_val]
+    train_idx = indices[n_val:]
+
+    X_train = X[train_idx]
+    y_train = y_int[train_idx]
+    X_val = X[val_idx]
+    y_val = y_int[val_idx]
+
+    # --- Create study if needed ---
+    if study is None:
+        study = create_study(
+            study_name=study_name,
+            direction=direction,
+            seed=random_state,
+        )
+
+    if search_space is None:
+        search_space = default_swing_search_space
+
+    # --- Objective function ---
+    def objective(trial: optuna.Trial) -> float:
+        params = search_space(trial)
+
+        xgb_params = {
+            "objective": "multi:softprob",
+            "num_class": NUM_CLASSES,
+            "verbosity": 0,
+            "random_state": random_state,
+            **params,
+        }
+
+        dtrain = xgb.DMatrix(X_train, label=y_train)
+        dval = xgb.DMatrix(X_val, label=y_val)
+        if feature_names:
+            dtrain.feature_names = feature_names
+            dval.feature_names = feature_names
+
+        pruning_cb = XGBoostPruningCallback(
+            trial=trial,
+            observation_key=PRUNING_OBSERVATION_KEY,
+        )
+
+        evals_result: Dict[str, Any] = {}
+
+        booster = xgb.train(
+            params=xgb_params,
+            dtrain=dtrain,
+            num_boost_round=params.get("n_estimators", 200),
+            evals=[(dtrain, "train"), (dval, "val")],
+            evals_result=evals_result,
+            early_stopping_rounds=early_stopping_rounds,
+            callbacks=[pruning_cb],
+            verbose_eval=False,
+        )
+
+        # Raise TrialPruned so Optuna marks this trial as PRUNED instead of
+        # COMPLETE. This is required because the callback stops xgboost early
+        # but does not itself raise the exception (xgboost handles the return
+        # value cleanly).
+        if pruning_cb.pruned:
+            raise optuna.TrialPruned()
+
+        # Return best validation score
+        val_mlogloss = evals_result.get("val", {}).get("mlogloss", [])
+        if val_mlogloss:
+            return float(min(val_mlogloss))
+        # Fallback: compute from booster
+        y_pred_prob = booster.predict(dval)
+        return float(np.mean((y_pred_prob.argmax(axis=1) != y_val).astype(float)))
+
+    # --- Run optimization ---
+    logger.info(
+        "Starting tuning: %d trials, early_stopping_rounds=%d, val_fraction=%.2f",
+        n_trials,
+        early_stopping_rounds,
+        val_fraction,
     )
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+
+    n_completed = len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE])
+    n_pruned = len([t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED])
+    logger.info(
+        "Tuning complete: %d trials (%d complete, %d pruned). Best value: %.4f",
+        len(study.trials),
+        n_completed,
+        n_pruned,
+        study.best_value,
+    )
+
+    return study
+
+
+def get_best_params(
+    study: optuna.Study,
+    with_fixed: bool = True,
+) -> Dict[str, Any]:
+    """Extract best hyperparameters from a completed study.
+
+    Args:
+        study: Completed Optuna study.
+        with_fixed: If True, includes fixed params like ``objective``,
+            ``num_class``, ``random_state``, and ``verbosity``.
+
+    Returns:
+        Dict of best hyperparameters ready to pass to XGBoostTrainer
+        or directly to ``xgb.train()``.
+    """
+    params = study.best_params.copy()
+
+    if with_fixed:
+        params["objective"] = "multi:softprob"
+        params["num_class"] = NUM_CLASSES
+        params["random_state"] = RANDOM_SEED
+        params["verbosity"] = 0
+
+    return params

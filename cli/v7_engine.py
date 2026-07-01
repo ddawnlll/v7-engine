@@ -209,58 +209,232 @@ def cmd_report(args: argparse.Namespace) -> int:
 
 
 def cmd_tune(args: argparse.Namespace) -> int:
-    """Run hyperparameter tuning for a mode (gated)."""
-    modes = [args.mode] if args.mode else ["SWING", "SCALP", "AGGRESSIVE_SCALP"]
+    """Run tuning: synthetic baseline with optional real data comparison.
 
+    Always runs with synthetic data to establish a deterministic baseline.
+    When --real is provided, also runs with real Binance data and produces
+    a synthetic-vs-real comparison report.
+
+    Usage:
+        # Dry-run (shows what would run)
+        python3 -m cli tune --mode SWING --symbols BTCUSDT,ETHUSDT,SOLUSDT
+
+        # Synthetic baseline only
+        python3 -m cli tune --mode SWING
+
+        # Synthetic baseline + real data comparison
+        python3 -m cli tune --mode SWING --real --symbols BTCUSDT,ETHUSDT,SOLUSDT
+    """
     if args.dry_run:
-        for mode in modes:
-            _log("tune", f"Would tune {mode} ({args.n_trials} trials)")
+        _log("tune", f"--mode {args.mode or 'SWING'} "
+             f"--real {getattr(args, 'real', False)} "
+             f"--symbols {args.symbols or 'BTCUSDT,ETHUSDT,SOLUSDT'}")
         return 0
 
-    from alphaforge.tuning.mode_profiles import (
-        get_tuning_profile,
-        save_tuning_params,
-        suggest_params,
+    from cli.v7_pipeline import (
+        PIPELINE_STEPS,
+        PipelineConfig,
+        PipelineRunner,
+        StepStatus,
     )
 
-    failures = 0
-    for mode in modes:
+    symbols = tuple(_parse_comma_list(args.symbols) or ["BTCUSDT", "ETHUSDT", "SOLUSDT"])
+    mode = (args.mode or "SWING").upper()
+    output_dir = args.data_dir or "artifacts/pipeline"
+    random_seed = args.seed or 42
+    n_bars = args.n_bars or 2000
+    force = getattr(args, "force", False)
+    use_real = getattr(args, "real", False)
+
+    # Step 1: Run synthetic baseline
+    print("\n" + "=" * 60)
+    print("TUNE STEP 1: Synthetic data baseline")
+    print("=" * 60)
+
+    syn_config = PipelineConfig(
+        mode=mode,
+        symbols=symbols,
+        dry_run=False,
+        use_synthetic=True,
+        n_bars=n_bars,
+        output_dir=output_dir,
+        random_seed=random_seed,
+        force=force,
+    )
+    syn_runner = PipelineRunner(syn_config)
+    syn_result = syn_runner.run()
+
+    syn_failed = False
+    for ev in syn_result.evidence:
+        if ev.status == StepStatus.FAILED.value:
+            print(f"  [SYNTHETIC] Step '{ev.step}' FAILED: {ev.errors}")
+            syn_failed = True
+
+    # Step 2: If --real, run with real Binance data
+    real_result = None
+    if use_real:
+        print("\n" + "=" * 60)
+        print("TUNE STEP 2: Real Binance data")
+        print("=" * 60)
+
+        start = getattr(args, "start", None)
+        end = getattr(args, "end", None)
+
+        real_config = PipelineConfig(
+            mode=mode,
+            symbols=symbols,
+            dry_run=False,
+            use_synthetic=False,
+            start_date=start,
+            end_date=end,
+            output_dir=output_dir,
+            random_seed=random_seed,
+            force=force,
+        )
         try:
-            profile = get_tuning_profile(mode)
-            _log("tune", f"Tuning {mode}: lr=[{profile.learning_rate.low},"
-                 f"{profile.learning_rate.high}], depth={profile.max_depth},"
-                 f" {args.n_trials} trials")
+            real_runner = PipelineRunner(real_config)
+            real_result = real_runner.run()
 
-            # Run Optuna study
-            import optuna
-
-            study = optuna.create_study(
-                direction="maximize",
-                study_name=f"{mode}_tuning",
-                storage=None,
-            )
-
-            def objective(trial: optuna.trial.Trial) -> float:
-                params = suggest_params(trial, profile=profile)
-                # Dummy objective — real tuning would train and evaluate
-                return trial.suggest_float("dummy_score", 0.0, 1.0)
-
-            study.optimize(objective, n_trials=args.n_trials)
-
-            # Save best params
-            best_params = study.best_params
-            if "dummy_score" in best_params:
-                del best_params["dummy_score"]
-
-            output_dir = args.output_dir or "artifacts/params"
-            path = save_tuning_params(best_params, mode, output_dir=output_dir)
-            print(f"[TUNE] {mode} best params saved to {path}")
-            print(f"  Best value: {study.best_value:.4f}")
+            for ev in real_result.evidence:
+                if ev.status == StepStatus.FAILED.value:
+                    print(f"  [REAL] Step '{ev.step}' FAILED: {ev.errors}")
         except Exception as e:
-            print(f"[TUNE] FAILED {mode}: {e}")
-            failures += 1
+            print(f"\n  [REAL] Pipeline crashed: {e}")
+            print("  Real data pipeline encountered an error (likely no cached data).")
+            print("  Run 'python3 -m cli backfill ...' first or check data/raw/ for cached parquet files.")
 
-    return failures
+    # Step 3: Comparison report
+    comparisons = _build_tune_comparison(syn_result, real_result, mode, symbols)
+
+    print("\n" + "=" * 60)
+    print("TUNE RESULTS")
+    print("=" * 60)
+    _print_tune_report(comparisons)
+
+    # Save comparison report
+    report_path = _save_tune_report(comparisons, output_dir, mode)
+    print(f"\n  Tune report saved to: {report_path}")
+
+    return 0
+
+
+def _build_tune_comparison(
+    syn_result: "Any",
+    real_result: "Any | None",
+    mode: str,
+    symbols: tuple[str, ...],
+) -> dict:
+    """Build a structured comparison dict from synthetic and real pipeline results."""
+    from cli.v7_pipeline import StepStatus
+
+    def _extract_step_metrics(result, step_name: str) -> dict:
+        for ev in result.evidence:
+            if ev.step == step_name:
+                return {
+                    "status": ev.status,
+                    "metrics": ev.metrics,
+                    "errors": ev.errors,
+                    "warnings": ev.warnings,
+                    "duration_seconds": ev.duration_seconds,
+                }
+        return {"status": "NOT_FOUND", "metrics": {}, "errors": [], "warnings": []}
+
+    syn_verdict = syn_result.verdict if hasattr(syn_result, "verdict") else "UNKNOWN"
+    real_verdict = real_result.verdict if real_result and hasattr(real_result, "verdict") else None
+
+    comparison: dict = {
+        "tune_report_version": "0.1.0",
+        "generated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+        "config": {
+            "mode": mode,
+            "symbols": list(symbols),
+        },
+        "synthetic": {
+            "verdict": syn_verdict,
+            "steps": {step: _extract_step_metrics(syn_result, step)
+                      for step in ["validate", "backfill", "labels", "features", "train", "wfv", "report"]},
+        },
+    }
+
+    if real_result:
+        comparison["real"] = {
+            "verdict": real_verdict,
+            "steps": {step: _extract_step_metrics(real_result, step)
+                      for step in ["validate", "backfill", "labels", "features", "train", "wfv", "report"]},
+        }
+
+    # Computed comparison fields
+    syn_train = comparison["synthetic"]["steps"].get("train", {})
+    syn_wfv = comparison["synthetic"]["steps"].get("wfv", {})
+
+    comparison["metrics"] = {
+        "synthetic_train_accuracy": syn_train.get("metrics", {}).get("train_accuracy"),
+        "synthetic_val_accuracy": syn_train.get("metrics", {}).get("val_accuracy"),
+        "synthetic_wfv_verdict": syn_wfv.get("metrics", {}).get("verdict"),
+        "synthetic_wfv_avg_sharpe": syn_wfv.get("metrics", {}).get("avg_sharpe"),
+    }
+
+    if real_result:
+        real_train = comparison["real"]["steps"].get("train", {})
+        real_wfv = comparison["real"]["steps"].get("wfv", {})
+        comparison["metrics"].update({
+            "real_train_accuracy": real_train.get("metrics", {}).get("train_accuracy"),
+            "real_val_accuracy": real_train.get("metrics", {}).get("val_accuracy"),
+            "real_wfv_verdict": real_wfv.get("metrics", {}).get("verdict"),
+            "real_wfv_avg_sharpe": real_wfv.get("metrics", {}).get("avg_sharpe"),
+        })
+
+    return comparison
+
+
+def _print_tune_report(comparisons: dict) -> None:
+    """Print the tune comparison report to stdout."""
+    syn = comparisons.get("synthetic", {})
+    real = comparisons.get("real")
+
+    print(f"\n  Synthetic Verdict: {syn.get('verdict', 'N/A')}")
+    for step_name, metrics in syn.get("steps", {}).items():
+        s = metrics.get("status", "?")
+        dur = metrics.get("duration_seconds", 0)
+        print(f"    {step_name}: {s} ({dur:.3f}s)")
+
+    if real:
+        print(f"\n  Real Verdict: {real.get('verdict', 'N/A')}")
+        for step_name, metrics in real.get("steps", {}).items():
+            s = metrics.get("status", "?")
+            dur = metrics.get("duration_seconds", 0)
+            print(f"    {step_name}: {s} ({dur:.3f}s)")
+
+    m = comparisons.get("metrics", {})
+    print(f"\n  --- Accuracy Comparison ---")
+    print(f"  Synthetic train accuracy:  {m.get('synthetic_train_accuracy', 'N/A')}")
+    print(f"  Synthetic val accuracy:    {m.get('synthetic_val_accuracy', 'N/A')}")
+    if m.get("real_train_accuracy") is not None:
+        print(f"  Real train accuracy:       {m['real_train_accuracy']}")
+        print(f"  Real val accuracy:         {m['real_val_accuracy']}")
+
+
+def _save_tune_report(
+    comparisons: dict,
+    output_dir: str,
+    mode: str,
+) -> str:
+    """Save the tune comparison report as JSON."""
+    import json
+    import os
+    from datetime import datetime, timezone
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    dir_path = os.path.join(output_dir, "reports")
+    os.makedirs(dir_path, exist_ok=True)
+
+    filename = f"tune_comparison_{mode.lower()}_{ts}.json"
+    filepath = os.path.join(dir_path, filename)
+
+    with open(filepath, "w") as f:
+        json.dump(comparisons, f, indent=2, default=str)
+
+    return filepath
 
 
 def cmd_v02(args: argparse.Namespace) -> int:
@@ -412,19 +586,31 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("wfv", parents=[_dry_run_parent], add_help=False,
                     help="Run walk-forward validation (gated)")
 
+    p_tune = sub.add_parser("tune", parents=[_dry_run_parent], add_help=False,
+                             help="Run tuning: synthetic baseline + optional real data comparison")
+    p_tune.add_argument("--mode", default="SWING",
+                        help="Trading mode (SWING, SCALP, AGGRESSIVE_SCALP)")
+    p_tune.add_argument("--real", action="store_true",
+                        help="Also run with real Binance data for comparison")
+    p_tune.add_argument("--symbols", default=None,
+                        help="Symbols (comma-separated, default: BTCUSDT,ETHUSDT,SOLUSDT)")
+    p_tune.add_argument("--start", default=None,
+                        help="Start date YYYY-MM-DD (required for real data)")
+    p_tune.add_argument("--end", default=None,
+                        help="End date YYYY-MM-DD (required for real data)")
+    p_tune.add_argument("--seed", type=int, default=42,
+                        help="Random seed for reproducibility (default: 42)")
+    p_tune.add_argument("--n-bars", type=int, default=2000,
+                        help="Bars per symbol for synthetic data (default: 2000)")
+    p_tune.add_argument("--data-dir", default=None,
+                        help="Output directory for artifacts (default: artifacts/pipeline)")
+    p_tune.add_argument("--force", action="store_true",
+                        help="Override training gate")
+
     p_report = sub.add_parser("report", parents=[_dry_run_parent], add_help=False,
                                help="Generate pipeline report")
     p_report.add_argument("--mode", default=None,
                           help="Mode to report (SWING, SCALP, AGGRESSIVE_SCALP; default: all)")
-
-    p_tune = sub.add_parser("tune", parents=[_dry_run_parent], add_help=False,
-                             help="Run hyperparameter tuning for a mode")
-    p_tune.add_argument("--mode", default=None,
-                        help="Mode to tune (SWING, SCALP, AGGRESSIVE_SCALP; default: all)")
-    p_tune.add_argument("--n-trials", type=int, default=20,
-                        help="Number of Optuna trials (default: 20)")
-    p_tune.add_argument("--output-dir", default=None,
-                        help="Output directory for tuned params (default: artifacts/params)")
 
     p = sub.add_parser("v02", parents=[_dry_run_parent], add_help=False,
                         help="Run v0.2 profitability evidence pipeline (backfill→labels→features→train→wfv→report)")

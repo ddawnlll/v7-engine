@@ -1,40 +1,28 @@
-"""AlphaForge Tuning — mode-specific hyperparameter optimisation.
+"""AlphaForge Tuning — hyperparameter optimization with Optuna pruning.
 
-This package defines canonical parameter search spaces for Optuna-based
-hyperparameter tuning. Each mode (SWING, SCALP, AGGRESSIVE_SCALP) has a
-dedicated profile encoding its learning rate range, tree depth bounds,
-and regularisation levels.
+This package provides Optuna-based hyperparameter tuning with aggressive
+ASHA-style trial pruning (MedianPruner) and early stopping callbacks.
 
 Modules:
-    mode_profiles: ModeTuningProfile, canonical profiles, suggest + save helpers.
+    optuna_tuner: Optuna study management, pruning callbacks, search spaces.
 """
 
-from alphaforge.tuning.mode_profiles import (
-    AGGRESSIVE_SCALP_TUNING,
-    DEFAULT_PARAMS_DIR,
-    ModeTuningProfile,
-    SCALP_TUNING,
-    SWING_TUNING,
-    TuningCategoricalParam,
-    TuningParamRange,
-    all_tuning_profiles,
-    get_tuning_profile,
-    load_tuning_params,
-    save_tuning_params,
-    suggest_params,
+from alphaforge.tuning.optuna_tuner import (
+    EARLY_STOPPING_ROUNDS,
+    PRUNER_CONFIG,
+    XGBoostPruningCallback,
+    create_study,
+    default_swing_search_space,
+    get_best_params,
+    run_tuning,
 )
 
 __all__ = [
-    "AGGRESSIVE_SCALP_TUNING",
-    "DEFAULT_PARAMS_DIR",
-    "ModeTuningProfile",
-    "SCALP_TUNING",
-    "SWING_TUNING",
-    "TuningCategoricalParam",
-    "TuningParamRange",
-    "all_tuning_profiles",
-    "get_tuning_profile",
-    "load_tuning_params",
-    "save_tuning_params",
-    "suggest_params",
+    "EARLY_STOPPING_ROUNDS",
+    "PRUNER_CONFIG",
+    "XGBoostPruningCallback",
+    "create_study",
+    "default_swing_search_space",
+    "get_best_params",
+    "run_tuning",
 ]

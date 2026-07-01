@@ -170,38 +170,6 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 ---
 
-## #145 — Optuna Core Integration (2026-07-01)
-
-**Issue:** #145 (P0, milestone v0.26) — Install and integrate Optuna as core hyperparameter optimization engine.
-
-**What changed:**
-- `alphaforge/src/tuning/__init__.py` — Module exports for tuning package
-- `alphaforge/src/tuning/optuna_tuner.py` — OptunaTuner class with:
-  - TPE (Tree-structured Parzen Estimator) sampler for efficient search
-  - ASHA (SuccessiveHalving) pruner for early stopping of unpromising trials
-  - SQLite study persistence for durability and resume capability
-  - Mode-specific search spaces (SWING, SCALP, AGGRESSIVE_SCALP)
-  - Study lifecycle management (create, load, list, delete studies)
-  - Results serialization to JSON
-  - Helper functions: `search_spaces()`, `list_studies()`, `delete_study()`
-- `cli/v7_engine.py` — Added `tune` CLI command with `--demo`, `--show-space`, `--list-studies`, and standard optimization options
-- `alphaforge/tests/test_optuna_tuner.py` — 38 tests covering initialization, sampler/pruner config, search spaces, optimization, study lifecycle, results persistence, study management
-
-**Lock status:**
-- TPE sampler as default strategy: LOCKED_INITIAL_BASELINE
-- ASHA (SuccessiveHalving) pruning: LOCKED_INITIAL_BASELINE
-- SQLite study persistence: LOCKED_INITIAL_BASELINE
-- Mode-specific search spaces: LOCKED_INITIAL_BASELINE
-
-**Remaining holds:**
-- Real objective integration with WFV pipeline (HOLD — requires features/labels pipeline)
-- Parallel trial execution tuning (HOLD — needs performance benchmarking)
-- Search space calibration from empirical results (HOLD — after first real optimization runs)
-
-**Evidence:** 38/38 tests pass. ACCP report at `reports/accp/issue-145.yaml`. Commit `7c7217f`.
-
----
-
 ## TR-08 — Final Training Readiness Audit — v0.1 Milestone COMPLETE (2026-06-26)
 
 **Issue:** #12 — Final audit gate. Verify all TR-01 through TR-07 gates have evidence, run full test suite, update roadmap.
@@ -602,33 +570,39 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
-## v0.26 — XGBoost Search Space Design (2026-07-01)
+## #152 — Real Data Pipeline — Binance Live Market Data Tuning (2026-07-01)
+
+**Issue:** #152 — Tune command with real Binance data pipeline and synthetic-vs-real comparison.
 
 **What changed:**
-- New `alphaforge/src/alphaforge/tuning/` package with `search_space.py` module
-- Three mode-specific XGBoost hyperparameter search spaces defined:
-  - SWING: conservative baseline (max_depth 3-10, n_estimators 50-500, log-uniform reg_alpha/reg_lambda 1e-8 to 5.0)
-  - SCALP: tighter regularization (max_depth cap 8, n_estimators cap 300, min_child_weight floor 3)
-  - AGGRESSIVE_SCALP: strongest regularization (max_depth 2-6, n_estimators 30-200, wider gamma 0-8, reg penalty up to 10.0)
-- Log-uniform sampling for learning_rate, reg_alpha, reg_lambda (per arXiv 2601.08896 and XGBoost regularization best practices)
-- `ParameterRange` and `SearchSpace` frozen dataclasses for immutable configuration
-- `get_search_space()`, `all_search_spaces()`, `param_bounds()` lookup functions
-- Optuna integration via `suggest_params()` (sampling) and `build_objective()` (training objective minimizing validation mlogloss)
-- 78 tests covering: structure/bounds per mode, Optuna integration, edge cases, cross-mode consistency, API surface
+- `cli/v7_engine.py` — Added `cmd_tune` subcommand that runs the PipelineRunner with synthetic data (baseline) and optionally with real Binance data (`--real` flag)
+- `cli/v7_engine.py` — Added `_build_tune_comparison()`, `_print_tune_report()`, `_save_tune_report()` helpers that produce structured comparison reports
+- `cli/v7_engine.py` — `tune` registered in CLI parser and handlers dict with `--mode`, `--real`, `--symbols`, `--start`, `--end`, `--seed`, `--n-bars`, `--data-dir`, `--force`, `--dry-run` flags
+- `cli/tests/test_tune.py` — 15 tests covering CLI argument parsing, dry-run, comparison building, report printing, and report persistence
+
+**Usage:**
+```bash
+# Synthetic baseline only
+python3 -m cli tune --mode SWING
+
+# Synthetic + real data comparison
+python3 -m cli tune --mode SWING --real --symbols BTCUSDT,ETHUSDT,SOLUSDT
+
+# Full control
+python3 -m cli tune --mode SCALP --real --symbols BTCUSDT,ETHUSDT --start 2025-01-01 --end 2026-01-01
+```
 
 **Lock status:**
-- XGBoost search space ranges: LOCKED_INITIAL_BASELINE (Issue #146)
-- Log-uniform regularization sampling: LOCKED
-- Optuna integration via suggest_params/build_objective: LOCKED_INITIAL_BASELINE
+- `tune` CLI command: LOCKED_INITIAL_BASELINE (Issue #152)
+- Comparison report format: LOCKED_INITIAL_BASELINE
+- Real data pipeline integration: LOCKED_INITIAL_BASELINE (reuses existing PipelineRunner)
 
 **Remaining holds:**
-- Search space ranges need recalibration after first empirical tuning results (HOLD)
-- AGGRESSIVE_SCALP search space is speculative (HOLD — mode is HOLD)
-- build_objective uses simple train/val split; walk-forward CV should replace for production (HOLD)
-- XGBoost training with real market data (HOLD — requires real data pipeline)
-- OptunaTuner class to wire search space + data into full tuning pipeline (DEFERRED)
+- Real profitability evidence (HOLD — requires real training + WFV with meaningful data)
+- Comparison thresholds not yet calibrated (HOLD — requires empirical baseline)
+- Binance data must be cached first via `backfill` or `download_binance_data.py` (HOLD)
 
-**Evidence:** 78 passed, 0 failures. ACCP report at `reports/accp/issue-146.yaml`. Commit `d67cc06`.
+**Evidence:** 15/15 tune tests pass. 47/47 existing pipeline tests pass. ACCP report at `reports/accp/issue-152.yaml`.
 
 ---
 

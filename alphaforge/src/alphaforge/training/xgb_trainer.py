@@ -208,6 +208,7 @@ class XGBoostTrainer:
         y: np.ndarray,
         feature_names: Optional[List[str]] = None,
         val_fraction: float = VAL_FRACTION,
+        pruning_callback: Optional["xgb.callback.TrainingCallback"] = None,
     ) -> TrainingResult:
         """Train an XGBoost classifier model.
 
@@ -217,6 +218,9 @@ class XGBoostTrainer:
                (LONG_NOW/SHORT_NOW/NO_TRADE) or integer labels (0/1/2).
             feature_names: Optional list of feature names for importance.
             val_fraction: Fraction of training data to use for validation.
+            pruning_callback: Optional Optuna/XGBoost pruning callback.
+                When provided, it is passed as a training callback so that
+                the pruner can kill bad trials during hyperparameter search.
 
         Returns:
             TrainingResult with trained model, artifact metadata, and metrics.
@@ -254,6 +258,11 @@ class XGBoostTrainer:
         # Extract training params (strip non-xgb params)
         params = self._extract_xgb_params()
 
+        # Build callbacks list (only pruning_callback if provided)
+        callbacks: List = []
+        if pruning_callback is not None:
+            callbacks.append(pruning_callback)
+
         # Train
         start_time = time.monotonic()
 
@@ -265,6 +274,7 @@ class XGBoostTrainer:
             evals=[(dtrain, "train"), (dval, "val")],
             evals_result=evals_result,
             early_stopping_rounds=self._hyperparameters.get("early_stopping_rounds", 20),
+            callbacks=callbacks if callbacks else None,
             verbose_eval=False,
         )
 
