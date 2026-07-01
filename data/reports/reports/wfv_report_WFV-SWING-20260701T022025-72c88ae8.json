@@ -1,0 +1,803 @@
+{
+  "report_id": "WFV-SWING-20260701T022025-72c88ae8",
+  "generated_at": "2026-07-01T02:20:25.200282+00:00",
+  "verdict": "FAIL_OVERFIT",
+  "config_summary": {
+    "mode": "SWING",
+    "train_window_bars": 2000,
+    "test_window_bars": 500,
+    "purge_bars": 20,
+    "embargo_bars": 20,
+    "window_type": "ANCHORED",
+    "min_folds": 3,
+    "actual_folds": 7
+  },
+  "data_summary": {
+    "total_bars": 6000,
+    "n_symbols": 3,
+    "n_features": 35,
+    "feature_names": [
+      "amihud_illiquidity_N",
+      "atr_N",
+      "atr_expansion_N",
+      "atr_pct_N",
+      "bb_position",
+      "bb_width",
+      "garman_klass_vol_N",
+      "high_low_range_N",
+      "highest_N",
+      "log_return_1",
+      "log_return_N",
+      "lowest_N",
+      "macd",
+      "macd_histogram",
+      "macd_signal",
+      "microstructure_noise_N",
+      "momentum_N",
+      "obv_N",
+      "parkinson_vol_N",
+      "price_impact_slope_N",
+      "range_breakout_N",
+      "realized_volatility_N",
+      "return_volatility_N",
+      "return_zscore_N",
+      "roc_N",
+      "roll_spread_N",
+      "rsi_N",
+      "serial_correlation_N",
+      "spread_pct_N",
+      "trade_intensity_N",
+      "volume_imbalance_N",
+      "volume_ratio_N",
+      "volume_trend_N",
+      "vpin_N",
+      "vwap_deviation"
+    ],
+    "valid_rows": 5959,
+    "label_distribution": {
+      "LONG_NOW": 2035,
+      "SHORT_NOW": 1961,
+      "NO_TRADE": 1963
+    }
+  },
+  "feature_importance": {
+    "top_features": [
+      "atr_pct_N",
+      "realized_volatility_N",
+      "spread_pct_N",
+      "volume_imbalance_N",
+      "bb_width"
+    ],
+    "noise_features": [
+      "amihud_illiquidity_N",
+      "atr_N",
+      "atr_expansion_N",
+      "bb_position",
+      "garman_klass_vol_N",
+      "high_low_range_N",
+      "highest_N",
+      "log_return_1",
+      "log_return_N",
+      "lowest_N"
+    ],
+    "method": "xgboost_total_gain",
+    "importance_scores": {
+      "atr_pct_N": 303.99969482421875,
+      "realized_volatility_N": 260.24420166015625,
+      "spread_pct_N": 259.2904357910156,
+      "volume_imbalance_N": 257.5646667480469,
+      "bb_width": 245.93215942382812,
+      "macd_signal": 228.59384155273438,
+      "volume_trend_N": 204.5004425048828,
+      "volume_ratio_N": 198.19732666015625,
+      "serial_correlation_N": 187.6737823486328,
+      "microstructure_noise_N": 169.5371856689453,
+      "trade_intensity_N": 169.31585693359375,
+      "log_return_1": 163.62619018554688,
+      "atr_expansion_N": 163.5335235595703,
+      "log_return_N": 162.30438232421875,
+      "macd": 161.65440368652344,
+      "price_impact_slope_N": 159.50682067871094,
+      "return_zscore_N": 135.8901824951172,
+      "obv_N": 133.14187622070312,
+      "amihud_illiquidity_N": 130.81283569335938,
+      "rsi_N": 130.2384796142578,
+      "vwap_deviation": 128.18792724609375,
+      "range_breakout_N": 127.76519012451172,
+      "momentum_N": 125.3935317993164,
+      "high_low_range_N": 121.97714233398438,
+      "bb_position": 105.5631103515625,
+      "atr_N": 93.6241683959961,
+      "garman_klass_vol_N": 89.10009002685547,
+      "lowest_N": 87.92194366455078,
+      "highest_N": 81.29866790771484,
+      "roll_spread_N": 78.87273406982422,
+      "macd_histogram": 74.93086242675781,
+      "return_volatility_N": 52.23203659057617,
+      "parkinson_vol_N": 35.448246002197266,
+      "roc_N": 24.113542556762695
+    }
+  },
+  "aggregate_metrics": {
+    "n_folds": 7,
+    "total_oos_trades": 1420,
+    "avg_train_accuracy": 0.6178129923824843,
+    "avg_val_accuracy": 0.33749999999999997,
+    "avg_accuracy_gap": 0.28031299238248447,
+    "avg_logloss_gap": 0.07902090435682294,
+    "avg_sharpe": -9.285153126179694,
+    "sharpe_stability_std": 3.0246583431497194,
+    "avg_win_rate": 0.32470641315413895,
+    "avg_max_drawdown": -39.92857142857143,
+    "avg_profit_factor": 0.6416627648492634,
+    "fold_stability_score": 0.6742478770089824,
+    "folds_passing": 0,
+    "majority_pass": false,
+    "pass_ratio": 0.0
+  },
+  "fold_metrics": [
+    {
+      "fold_index": 0,
+      "sample_counts": {
+        "train": 2000,
+        "val": 240,
+        "oos": 240
+      },
+      "training_metrics": {
+        "train_accuracy": 0.666,
+        "val_accuracy": 0.3375,
+        "train_logloss": 0.9987604082524777,
+        "val_logloss": 1.1021733519931634
+      },
+      "oos_financial_metrics": {
+        "sharpe": -6.971937487731659,
+        "win_rate": 0.35398230088495575,
+        "max_drawdown": -29.5,
+        "profit_factor": 0.7272727272727273
+      },
+      "oos_trade_counts": {
+        "total_trades": 226,
+        "long_trades": 191,
+        "short_trades": 35,
+        "no_trade_count": 14
+      },
+      "overfitting_indicators": {
+        "accuracy_gap": 0.3285,
+        "logloss_gap": 0.10341294374068566
+      },
+      "feature_importance": {
+        "top_features": [
+          "atr_pct_N",
+          "realized_volatility_N",
+          "spread_pct_N",
+          "volume_imbalance_N",
+          "bb_width"
+        ],
+        "noise_features": [
+          "amihud_illiquidity_N",
+          "atr_N",
+          "atr_expansion_N",
+          "bb_position",
+          "garman_klass_vol_N",
+          "high_low_range_N",
+          "highest_N",
+          "log_return_1",
+          "log_return_N",
+          "lowest_N"
+        ],
+        "method": "xgboost_total_gain",
+        "importance_scores": {
+          "atr_pct_N": 303.99969482421875,
+          "realized_volatility_N": 260.24420166015625,
+          "spread_pct_N": 259.2904357910156,
+          "volume_imbalance_N": 257.5646667480469,
+          "bb_width": 245.93215942382812,
+          "macd_signal": 228.59384155273438,
+          "volume_trend_N": 204.5004425048828,
+          "volume_ratio_N": 198.19732666015625,
+          "serial_correlation_N": 187.6737823486328,
+          "microstructure_noise_N": 169.5371856689453,
+          "trade_intensity_N": 169.31585693359375,
+          "log_return_1": 163.62619018554688,
+          "atr_expansion_N": 163.5335235595703,
+          "log_return_N": 162.30438232421875,
+          "macd": 161.65440368652344,
+          "price_impact_slope_N": 159.50682067871094,
+          "return_zscore_N": 135.8901824951172,
+          "obv_N": 133.14187622070312,
+          "amihud_illiquidity_N": 130.81283569335938,
+          "rsi_N": 130.2384796142578,
+          "vwap_deviation": 128.18792724609375,
+          "range_breakout_N": 127.76519012451172,
+          "momentum_N": 125.3935317993164,
+          "high_low_range_N": 121.97714233398438,
+          "bb_position": 105.5631103515625,
+          "atr_N": 93.6241683959961,
+          "garman_klass_vol_N": 89.10009002685547,
+          "lowest_N": 87.92194366455078,
+          "highest_N": 81.29866790771484,
+          "roll_spread_N": 78.87273406982422,
+          "macd_histogram": 74.93086242675781,
+          "return_volatility_N": 52.23203659057617,
+          "parkinson_vol_N": 35.448246002197266,
+          "roc_N": 24.113542556762695
+        }
+      }
+    },
+    {
+      "fold_index": 1,
+      "sample_counts": {
+        "train": 2520,
+        "val": 240,
+        "oos": 240
+      },
+      "training_metrics": {
+        "train_accuracy": 0.7166666666666667,
+        "val_accuracy": 0.39166666666666666,
+        "train_logloss": 0.9467516601558715,
+        "val_logloss": 1.0826189247270426
+      },
+      "oos_financial_metrics": {
+        "sharpe": -11.067122905488356,
+        "win_rate": 0.2773722627737226,
+        "max_drawdown": -36.0,
+        "profit_factor": 0.5170068027210885
+      },
+      "oos_trade_counts": {
+        "total_trades": 137,
+        "long_trades": 88,
+        "short_trades": 49,
+        "no_trade_count": 103
+      },
+      "overfitting_indicators": {
+        "accuracy_gap": 0.325,
+        "logloss_gap": 0.13586726457117104
+      },
+      "feature_importance": {
+        "top_features": [
+          "atr_pct_N",
+          "realized_volatility_N",
+          "spread_pct_N",
+          "volume_imbalance_N",
+          "bb_width"
+        ],
+        "noise_features": [
+          "amihud_illiquidity_N",
+          "atr_N",
+          "atr_expansion_N",
+          "bb_position",
+          "garman_klass_vol_N",
+          "high_low_range_N",
+          "highest_N",
+          "log_return_1",
+          "log_return_N",
+          "lowest_N"
+        ],
+        "method": "xgboost_total_gain",
+        "importance_scores": {
+          "atr_pct_N": 303.99969482421875,
+          "realized_volatility_N": 260.24420166015625,
+          "spread_pct_N": 259.2904357910156,
+          "volume_imbalance_N": 257.5646667480469,
+          "bb_width": 245.93215942382812,
+          "macd_signal": 228.59384155273438,
+          "volume_trend_N": 204.5004425048828,
+          "volume_ratio_N": 198.19732666015625,
+          "serial_correlation_N": 187.6737823486328,
+          "microstructure_noise_N": 169.5371856689453,
+          "trade_intensity_N": 169.31585693359375,
+          "log_return_1": 163.62619018554688,
+          "atr_expansion_N": 163.5335235595703,
+          "log_return_N": 162.30438232421875,
+          "macd": 161.65440368652344,
+          "price_impact_slope_N": 159.50682067871094,
+          "return_zscore_N": 135.8901824951172,
+          "obv_N": 133.14187622070312,
+          "amihud_illiquidity_N": 130.81283569335938,
+          "rsi_N": 130.2384796142578,
+          "vwap_deviation": 128.18792724609375,
+          "range_breakout_N": 127.76519012451172,
+          "momentum_N": 125.3935317993164,
+          "high_low_range_N": 121.97714233398438,
+          "bb_position": 105.5631103515625,
+          "atr_N": 93.6241683959961,
+          "garman_klass_vol_N": 89.10009002685547,
+          "lowest_N": 87.92194366455078,
+          "highest_N": 81.29866790771484,
+          "roll_spread_N": 78.87273406982422,
+          "macd_histogram": 74.93086242675781,
+          "return_volatility_N": 52.23203659057617,
+          "parkinson_vol_N": 35.448246002197266,
+          "roc_N": 24.113542556762695
+        }
+      }
+    },
+    {
+      "fold_index": 2,
+      "sample_counts": {
+        "train": 3040,
+        "val": 240,
+        "oos": 240
+      },
+      "training_metrics": {
+        "train_accuracy": 0.5694078947368421,
+        "val_accuracy": 0.3416666666666667,
+        "train_logloss": 1.048628946883898,
+        "val_logloss": 1.1038212237258753
+      },
+      "oos_financial_metrics": {
+        "sharpe": -10.258244469528428,
+        "win_rate": 0.329004329004329,
+        "max_drawdown": -48.5,
+        "profit_factor": 0.6307053941908713
+      },
+      "oos_trade_counts": {
+        "total_trades": 231,
+        "long_trades": 136,
+        "short_trades": 95,
+        "no_trade_count": 9
+      },
+      "overfitting_indicators": {
+        "accuracy_gap": 0.22774122807017538,
+        "logloss_gap": 0.05519227684197725
+      },
+      "feature_importance": {
+        "top_features": [
+          "atr_pct_N",
+          "realized_volatility_N",
+          "spread_pct_N",
+          "volume_imbalance_N",
+          "bb_width"
+        ],
+        "noise_features": [
+          "amihud_illiquidity_N",
+          "atr_N",
+          "atr_expansion_N",
+          "bb_position",
+          "garman_klass_vol_N",
+          "high_low_range_N",
+          "highest_N",
+          "log_return_1",
+          "log_return_N",
+          "lowest_N"
+        ],
+        "method": "xgboost_total_gain",
+        "importance_scores": {
+          "atr_pct_N": 303.99969482421875,
+          "realized_volatility_N": 260.24420166015625,
+          "spread_pct_N": 259.2904357910156,
+          "volume_imbalance_N": 257.5646667480469,
+          "bb_width": 245.93215942382812,
+          "macd_signal": 228.59384155273438,
+          "volume_trend_N": 204.5004425048828,
+          "volume_ratio_N": 198.19732666015625,
+          "serial_correlation_N": 187.6737823486328,
+          "microstructure_noise_N": 169.5371856689453,
+          "trade_intensity_N": 169.31585693359375,
+          "log_return_1": 163.62619018554688,
+          "atr_expansion_N": 163.5335235595703,
+          "log_return_N": 162.30438232421875,
+          "macd": 161.65440368652344,
+          "price_impact_slope_N": 159.50682067871094,
+          "return_zscore_N": 135.8901824951172,
+          "obv_N": 133.14187622070312,
+          "amihud_illiquidity_N": 130.81283569335938,
+          "rsi_N": 130.2384796142578,
+          "vwap_deviation": 128.18792724609375,
+          "range_breakout_N": 127.76519012451172,
+          "momentum_N": 125.3935317993164,
+          "high_low_range_N": 121.97714233398438,
+          "bb_position": 105.5631103515625,
+          "atr_N": 93.6241683959961,
+          "garman_klass_vol_N": 89.10009002685547,
+          "lowest_N": 87.92194366455078,
+          "highest_N": 81.29866790771484,
+          "roll_spread_N": 78.87273406982422,
+          "macd_histogram": 74.93086242675781,
+          "return_volatility_N": 52.23203659057617,
+          "parkinson_vol_N": 35.448246002197266,
+          "roc_N": 24.113542556762695
+        }
+      }
+    },
+    {
+      "fold_index": 3,
+      "sample_counts": {
+        "train": 3560,
+        "val": 240,
+        "oos": 240
+      },
+      "training_metrics": {
+        "train_accuracy": 0.5595505617977528,
+        "val_accuracy": 0.3416666666666667,
+        "train_logloss": 1.050445717958252,
+        "val_logloss": 1.1061010171969732
+      },
+      "oos_financial_metrics": {
+        "sharpe": -10.432746061712134,
+        "win_rate": 0.32608695652173914,
+        "max_drawdown": -48.0,
+        "profit_factor": 0.625
+      },
+      "oos_trade_counts": {
+        "total_trades": 230,
+        "long_trades": 149,
+        "short_trades": 81,
+        "no_trade_count": 10
+      },
+      "overfitting_indicators": {
+        "accuracy_gap": 0.21788389513108608,
+        "logloss_gap": 0.055655299238721145
+      },
+      "feature_importance": {
+        "top_features": [
+          "atr_pct_N",
+          "realized_volatility_N",
+          "spread_pct_N",
+          "volume_imbalance_N",
+          "bb_width"
+        ],
+        "noise_features": [
+          "amihud_illiquidity_N",
+          "atr_N",
+          "atr_expansion_N",
+          "bb_position",
+          "garman_klass_vol_N",
+          "high_low_range_N",
+          "highest_N",
+          "log_return_1",
+          "log_return_N",
+          "lowest_N"
+        ],
+        "method": "xgboost_total_gain",
+        "importance_scores": {
+          "atr_pct_N": 303.99969482421875,
+          "realized_volatility_N": 260.24420166015625,
+          "spread_pct_N": 259.2904357910156,
+          "volume_imbalance_N": 257.5646667480469,
+          "bb_width": 245.93215942382812,
+          "macd_signal": 228.59384155273438,
+          "volume_trend_N": 204.5004425048828,
+          "volume_ratio_N": 198.19732666015625,
+          "serial_correlation_N": 187.6737823486328,
+          "microstructure_noise_N": 169.5371856689453,
+          "trade_intensity_N": 169.31585693359375,
+          "log_return_1": 163.62619018554688,
+          "atr_expansion_N": 163.5335235595703,
+          "log_return_N": 162.30438232421875,
+          "macd": 161.65440368652344,
+          "price_impact_slope_N": 159.50682067871094,
+          "return_zscore_N": 135.8901824951172,
+          "obv_N": 133.14187622070312,
+          "amihud_illiquidity_N": 130.81283569335938,
+          "rsi_N": 130.2384796142578,
+          "vwap_deviation": 128.18792724609375,
+          "range_breakout_N": 127.76519012451172,
+          "momentum_N": 125.3935317993164,
+          "high_low_range_N": 121.97714233398438,
+          "bb_position": 105.5631103515625,
+          "atr_N": 93.6241683959961,
+          "garman_klass_vol_N": 89.10009002685547,
+          "lowest_N": 87.92194366455078,
+          "highest_N": 81.29866790771484,
+          "roll_spread_N": 78.87273406982422,
+          "macd_histogram": 74.93086242675781,
+          "return_volatility_N": 52.23203659057617,
+          "parkinson_vol_N": 35.448246002197266,
+          "roc_N": 24.113542556762695
+        }
+      }
+    },
+    {
+      "fold_index": 4,
+      "sample_counts": {
+        "train": 4080,
+        "val": 240,
+        "oos": 240
+      },
+      "training_metrics": {
+        "train_accuracy": 0.6563725490196078,
+        "val_accuracy": 0.32916666666666666,
+        "train_logloss": 1.0023564286383928,
+        "val_logloss": 1.092499732474486
+      },
+      "oos_financial_metrics": {
+        "sharpe": -10.623206796399502,
+        "win_rate": 0.3027027027027027,
+        "max_drawdown": -45.0,
+        "profit_factor": 0.5833333333333334
+      },
+      "oos_trade_counts": {
+        "total_trades": 185,
+        "long_trades": 112,
+        "short_trades": 73,
+        "no_trade_count": 55
+      },
+      "overfitting_indicators": {
+        "accuracy_gap": 0.3272058823529412,
+        "logloss_gap": 0.09014330383609326
+      },
+      "feature_importance": {
+        "top_features": [
+          "atr_pct_N",
+          "realized_volatility_N",
+          "spread_pct_N",
+          "volume_imbalance_N",
+          "bb_width"
+        ],
+        "noise_features": [
+          "amihud_illiquidity_N",
+          "atr_N",
+          "atr_expansion_N",
+          "bb_position",
+          "garman_klass_vol_N",
+          "high_low_range_N",
+          "highest_N",
+          "log_return_1",
+          "log_return_N",
+          "lowest_N"
+        ],
+        "method": "xgboost_total_gain",
+        "importance_scores": {
+          "atr_pct_N": 303.99969482421875,
+          "realized_volatility_N": 260.24420166015625,
+          "spread_pct_N": 259.2904357910156,
+          "volume_imbalance_N": 257.5646667480469,
+          "bb_width": 245.93215942382812,
+          "macd_signal": 228.59384155273438,
+          "volume_trend_N": 204.5004425048828,
+          "volume_ratio_N": 198.19732666015625,
+          "serial_correlation_N": 187.6737823486328,
+          "microstructure_noise_N": 169.5371856689453,
+          "trade_intensity_N": 169.31585693359375,
+          "log_return_1": 163.62619018554688,
+          "atr_expansion_N": 163.5335235595703,
+          "log_return_N": 162.30438232421875,
+          "macd": 161.65440368652344,
+          "price_impact_slope_N": 159.50682067871094,
+          "return_zscore_N": 135.8901824951172,
+          "obv_N": 133.14187622070312,
+          "amihud_illiquidity_N": 130.81283569335938,
+          "rsi_N": 130.2384796142578,
+          "vwap_deviation": 128.18792724609375,
+          "range_breakout_N": 127.76519012451172,
+          "momentum_N": 125.3935317993164,
+          "high_low_range_N": 121.97714233398438,
+          "bb_position": 105.5631103515625,
+          "atr_N": 93.6241683959961,
+          "garman_klass_vol_N": 89.10009002685547,
+          "lowest_N": 87.92194366455078,
+          "highest_N": 81.29866790771484,
+          "roll_spread_N": 78.87273406982422,
+          "macd_histogram": 74.93086242675781,
+          "return_volatility_N": 52.23203659057617,
+          "parkinson_vol_N": 35.448246002197266,
+          "roc_N": 24.113542556762695
+        }
+      }
+    },
+    {
+      "fold_index": 5,
+      "sample_counts": {
+        "train": 4600,
+        "val": 240,
+        "oos": 240
+      },
+      "training_metrics": {
+        "train_accuracy": 0.5928260869565217,
+        "val_accuracy": 0.30833333333333335,
+        "train_logloss": 1.0358971332726272,
+        "val_logloss": 1.0996583571036658
+      },
+      "oos_financial_metrics": {
+        "sharpe": -3.461040309273934,
+        "win_rate": 0.38190954773869346,
+        "max_drawdown": -21.0,
+        "profit_factor": 0.8444444444444444
+      },
+      "oos_trade_counts": {
+        "total_trades": 199,
+        "long_trades": 128,
+        "short_trades": 71,
+        "no_trade_count": 41
+      },
+      "overfitting_indicators": {
+        "accuracy_gap": 0.2844927536231884,
+        "logloss_gap": 0.06376122383103855
+      },
+      "feature_importance": {
+        "top_features": [
+          "atr_pct_N",
+          "realized_volatility_N",
+          "spread_pct_N",
+          "volume_imbalance_N",
+          "bb_width"
+        ],
+        "noise_features": [
+          "amihud_illiquidity_N",
+          "atr_N",
+          "atr_expansion_N",
+          "bb_position",
+          "garman_klass_vol_N",
+          "high_low_range_N",
+          "highest_N",
+          "log_return_1",
+          "log_return_N",
+          "lowest_N"
+        ],
+        "method": "xgboost_total_gain",
+        "importance_scores": {
+          "atr_pct_N": 303.99969482421875,
+          "realized_volatility_N": 260.24420166015625,
+          "spread_pct_N": 259.2904357910156,
+          "volume_imbalance_N": 257.5646667480469,
+          "bb_width": 245.93215942382812,
+          "macd_signal": 228.59384155273438,
+          "volume_trend_N": 204.5004425048828,
+          "volume_ratio_N": 198.19732666015625,
+          "serial_correlation_N": 187.6737823486328,
+          "microstructure_noise_N": 169.5371856689453,
+          "trade_intensity_N": 169.31585693359375,
+          "log_return_1": 163.62619018554688,
+          "atr_expansion_N": 163.5335235595703,
+          "log_return_N": 162.30438232421875,
+          "macd": 161.65440368652344,
+          "price_impact_slope_N": 159.50682067871094,
+          "return_zscore_N": 135.8901824951172,
+          "obv_N": 133.14187622070312,
+          "amihud_illiquidity_N": 130.81283569335938,
+          "rsi_N": 130.2384796142578,
+          "vwap_deviation": 128.18792724609375,
+          "range_breakout_N": 127.76519012451172,
+          "momentum_N": 125.3935317993164,
+          "high_low_range_N": 121.97714233398438,
+          "bb_position": 105.5631103515625,
+          "atr_N": 93.6241683959961,
+          "garman_klass_vol_N": 89.10009002685547,
+          "lowest_N": 87.92194366455078,
+          "highest_N": 81.29866790771484,
+          "roll_spread_N": 78.87273406982422,
+          "macd_histogram": 74.93086242675781,
+          "return_volatility_N": 52.23203659057617,
+          "parkinson_vol_N": 35.448246002197266,
+          "roc_N": 24.113542556762695
+        }
+      }
+    },
+    {
+      "fold_index": 6,
+      "sample_counts": {
+        "train": 5120,
+        "val": 240,
+        "oos": 240
+      },
+      "training_metrics": {
+        "train_accuracy": 0.5638671875,
+        "val_accuracy": 0.3125,
+        "train_logloss": 1.0505190042080357,
+        "val_logloss": 1.0996330226461093
+      },
+      "oos_financial_metrics": {
+        "sharpe": -12.181773853123847,
+        "win_rate": 0.3018867924528302,
+        "max_drawdown": -51.5,
+        "profit_factor": 0.5638766519823789
+      },
+      "oos_trade_counts": {
+        "total_trades": 212,
+        "long_trades": 86,
+        "short_trades": 126,
+        "no_trade_count": 28
+      },
+      "overfitting_indicators": {
+        "accuracy_gap": 0.2513671875,
+        "logloss_gap": 0.049114018438073614
+      },
+      "feature_importance": {
+        "top_features": [
+          "atr_pct_N",
+          "realized_volatility_N",
+          "spread_pct_N",
+          "volume_imbalance_N",
+          "bb_width"
+        ],
+        "noise_features": [
+          "amihud_illiquidity_N",
+          "atr_N",
+          "atr_expansion_N",
+          "bb_position",
+          "garman_klass_vol_N",
+          "high_low_range_N",
+          "highest_N",
+          "log_return_1",
+          "log_return_N",
+          "lowest_N"
+        ],
+        "method": "xgboost_total_gain",
+        "importance_scores": {
+          "atr_pct_N": 303.99969482421875,
+          "realized_volatility_N": 260.24420166015625,
+          "spread_pct_N": 259.2904357910156,
+          "volume_imbalance_N": 257.5646667480469,
+          "bb_width": 245.93215942382812,
+          "macd_signal": 228.59384155273438,
+          "volume_trend_N": 204.5004425048828,
+          "volume_ratio_N": 198.19732666015625,
+          "serial_correlation_N": 187.6737823486328,
+          "microstructure_noise_N": 169.5371856689453,
+          "trade_intensity_N": 169.31585693359375,
+          "log_return_1": 163.62619018554688,
+          "atr_expansion_N": 163.5335235595703,
+          "log_return_N": 162.30438232421875,
+          "macd": 161.65440368652344,
+          "price_impact_slope_N": 159.50682067871094,
+          "return_zscore_N": 135.8901824951172,
+          "obv_N": 133.14187622070312,
+          "amihud_illiquidity_N": 130.81283569335938,
+          "rsi_N": 130.2384796142578,
+          "vwap_deviation": 128.18792724609375,
+          "range_breakout_N": 127.76519012451172,
+          "momentum_N": 125.3935317993164,
+          "high_low_range_N": 121.97714233398438,
+          "bb_position": 105.5631103515625,
+          "atr_N": 93.6241683959961,
+          "garman_klass_vol_N": 89.10009002685547,
+          "lowest_N": 87.92194366455078,
+          "highest_N": 81.29866790771484,
+          "roll_spread_N": 78.87273406982422,
+          "macd_histogram": 74.93086242675781,
+          "return_volatility_N": 52.23203659057617,
+          "parkinson_vol_N": 35.448246002197266,
+          "roc_N": 24.113542556762695
+        }
+      }
+    }
+  ],
+  "overfit_risk_flags": [
+    {
+      "indicator": "train_oos_gap",
+      "severity": "HIGH",
+      "description": "Fold 0: accuracy gap 0.3285 exceeds threshold 0.15. Train acc=0.6660, Val acc=0.3375"
+    },
+    {
+      "indicator": "train_oos_gap",
+      "severity": "MEDIUM",
+      "description": "Fold 0: logloss gap 0.1034 exceeds threshold 0.1. Train ll=0.9988, Val ll=1.1022"
+    },
+    {
+      "indicator": "train_oos_gap",
+      "severity": "HIGH",
+      "description": "Fold 1: accuracy gap 0.3250 exceeds threshold 0.15. Train acc=0.7167, Val acc=0.3917"
+    },
+    {
+      "indicator": "train_oos_gap",
+      "severity": "MEDIUM",
+      "description": "Fold 1: logloss gap 0.1359 exceeds threshold 0.1. Train ll=0.9468, Val ll=1.0826"
+    },
+    {
+      "indicator": "train_oos_gap",
+      "severity": "HIGH",
+      "description": "Fold 2: accuracy gap 0.2277 exceeds threshold 0.15. Train acc=0.5694, Val acc=0.3417"
+    },
+    {
+      "indicator": "train_oos_gap",
+      "severity": "HIGH",
+      "description": "Fold 3: accuracy gap 0.2179 exceeds threshold 0.15. Train acc=0.5596, Val acc=0.3417"
+    },
+    {
+      "indicator": "train_oos_gap",
+      "severity": "HIGH",
+      "description": "Fold 4: accuracy gap 0.3272 exceeds threshold 0.15. Train acc=0.6564, Val acc=0.3292"
+    },
+    {
+      "indicator": "train_oos_gap",
+      "severity": "HIGH",
+      "description": "Fold 5: accuracy gap 0.2845 exceeds threshold 0.15. Train acc=0.5928, Val acc=0.3083"
+    },
+    {
+      "indicator": "train_oos_gap",
+      "severity": "HIGH",
+      "description": "Fold 6: accuracy gap 0.2514 exceeds threshold 0.15. Train acc=0.5639, Val acc=0.3125"
+    }
+  ]
+}

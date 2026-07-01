@@ -1,0 +1,83 @@
+{
+  "pipeline_version": "0.2.0",
+  "schema_version": "1.0.0",
+  "generated_at": "2026-07-01T02:20:25.202376+00:00",
+  "config": {
+    "pipeline_version": "0.2.0",
+    "mode": "SWING",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "start_date": null,
+    "end_date": null,
+    "output_dir": "data/reports",
+    "random_seed": 42,
+    "dry_run": false,
+    "force": true,
+    "use_synthetic": true,
+    "n_bars": 2000,
+    "steps": [
+      "validate",
+      "backfill",
+      "labels",
+      "features",
+      "train",
+      "wfv",
+      "report"
+    ]
+  },
+  "step_results": {
+    "validate": "COMPLETED",
+    "backfill": "COMPLETED",
+    "labels": "COMPLETED",
+    "features": "COMPLETED",
+    "train": "COMPLETED",
+    "wfv": "COMPLETED"
+  },
+  "metrics": {
+    "mode": "SWING",
+    "pipeline_version": "0.2.0",
+    "output_dir": "data/reports",
+    "step_results": {
+      "validate": "COMPLETED",
+      "backfill": "COMPLETED",
+      "labels": "COMPLETED",
+      "features": "COMPLETED",
+      "train": "COMPLETED",
+      "wfv": "COMPLETED"
+    },
+    "train_accuracy": 0.5318791946308725,
+    "val_accuracy": 0.31821998320738876,
+    "wfv_verdict": "FAIL_OVERFIT",
+    "wfv_n_folds": 7,
+    "wfv_avg_sharpe": -9.285153126179694
+  },
+  "evidence_checksums": [
+    {
+      "step": "validate",
+      "checksum": "2dc4369866d63705"
+    },
+    {
+      "step": "backfill",
+      "checksum": "7f30d544078ab925"
+    },
+    {
+      "step": "labels",
+      "checksum": "6000e0b197d5f62a"
+    },
+    {
+      "step": "features",
+      "checksum": "da65f33c3acef916"
+    },
+    {
+      "step": "train",
+      "checksum": "1385f7186fe3fb84"
+    },
+    {
+      "step": "wfv",
+      "checksum": "29cdb816af810c74"
+    }
+  ]
+}
