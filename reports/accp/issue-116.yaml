@@ -1,0 +1,26 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Issue #116: Symbol + Regime Stability Real Metrics — per-symbol metrics, per-regime win_rate, concentration ratios, regime classification from OHLCV"
+files_changed:
+  - "alphaforge/src/alphaforge/reports/stability.py (new — stability metrics module)"
+  - "alphaforge/src/alphaforge/reports/empirical.py (updated — added symbol stability section, win_rate in regime entries, G5 gate mapping)"
+  - "alphaforge/src/alphaforge/reports/__init__.py (updated — exported stability module functions)"
+  - "alphaforge/tests/test_stability.py (new — 31 tests)"
+  - "v7/docs/roadmap.md (updated — added v0.27 section)"
+decisions_locked:
+  - "stability_metrics: LOCKED_INITIAL_BASELINE"
+  - "regime_concentration: LOCKED_INITIAL_BASELINE"
+  - "per_symbol_oos_fallback: LOCKED_INITIAL_BASELINE"
+remaining_holds:
+  - "Multi-symbol WFV pipeline producing per_symbol_oos (HOLD)"
+  - "Cross-symbol correlation and cluster analysis (HOLD)"
+safe_next_step: "Run multi-symbol WFV pipeline and verify per_symbol_oos flows through to empirical report"
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_stability.py -q -v --timeout=30"
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_empirical_report.py -q -v --timeout=30"
+evidence:
+  - "31/31 stability tests passed"
+  - "60/60 empirical report tests passed (no regressions)"
+  - "65/65 report builder + run_summary tests passed"
+  - "All metrics produce JSON-serializable output"

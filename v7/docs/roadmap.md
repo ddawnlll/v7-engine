@@ -569,6 +569,35 @@ Do not collapse these into one vague “publish” step.
 **Evidence:** 1628 passed, 3 skipped, 0 failures. ACCP report at `reports/accp/issue-138.yaml`.
 
 ---
+
+## v0.27 — Symbol + Regime Stability Real Metrics (2026-07-01)
+
+**What changed:**
+- New module `alphaforge/src/alphaforge/reports/stability.py` with:
+  - `compute_symbol_metrics()` — per-symbol expectancy_r, win_rate, trade_count
+  - `compute_symbol_concentration()` — top symbol share % and HHI
+  - `compute_regime_concentration()` — top regime share % and HHI
+  - `build_stability_section()` — combined section builder for WFV results
+  - `classify_symbol_regimes_from_ohlcv()` — regime classification from price data
+- `_build_empirical_regime_breakdown()` in `empirical.py` now includes per-regime win_rate and concentration ratios
+- `_build_symbol_stability()` added to empirical report builder — produces `symbol_stability` section with per-symbol metrics and concentration ratios
+- `_build_gate_readiness()` maps G5_symbol_stability when symbol_count > 1
+- Report `__init__.py` exports all 5 new functions
+- Tests: `alphaforge/tests/test_stability.py` — 31 tests covering per-symbol metrics, concentration ratios, HHI, regime classification, empty/edge cases, and integration with empirical report builder
+
+**Lock status:**
+- Symbol stability metrics: LOCKED_INITIAL_BASELINE
+- Regime concentration ratios: LOCKED_INITIAL_BASELINE
+- Per-symbol OOS metrics: LOCKED_INITIAL_BASELINE (fallback to aggregate when per_symbol_oos not in WFV results)
+
+**Remaining holds:**
+- Multi-symbol WFV pipeline producing per_symbol_oos (HOLD — needs pipeline change)
+- Cross-symbol correlation and cluster analysis (HOLD — future enhancement)
+
+**Evidence:** 31/31 stability tests passed, 60/60 empirical report tests passed. ACCP report at `reports/accp/issue-116.yaml`.
+
+---
+
 ## Final Position
 
 The roadmap for V7 is not:
@@ -583,28 +612,3 @@ It is:
 - prove the contract layer
 - prove the learning layer
 - only then broaden runtime and deployment sophistication
-
----
-
-## Design Lock Log
-
-### 2026-07-01 — Issue #117: NO_TRADE Collapse Detector (P1, v0.25)
-
-**Status:** IMPLEMENTED (LOCKABLE)
-
-**Changes:**
-- Added `alphaforge/src/alphaforge/reports/collapse_detector.py` with:
-  - `compute_no_trade_trend()` — sliding-window NO_TRADE percentage trend analysis
-  - `detect_no_trade_collapse()` — configurable collapse detection (>70% threshold)
-  - `build_collapse_root_cause_tree()` — cost/signal/model/threshold attribution
-  - `counterfactual_analysis()` — saved_loss_r / missed_opportunity_r ratio
-  - `build_collapse_report()` — comprehensive collapse diagnostic report
-- Updated `alphaforge/src/alphaforge/reports/__init__.py` with exports
-- Enhanced `alphaforge/src/alphaforge/reports/run_summary.py` with enriched no_trade_collapse diagnosis and counterfactual-aware recommendations
-- 77 targeted tests pass
-
-**Holds:**
-- Integration into the empirical report builder (builders.py / empirical.py) requires the labels field to be plumbed from WFV results — deferred to Issue #138 pipeline integration.
-- Real-time collapse monitoring in the runtime remains DEFERRED — this detector is designed for offline research report analysis.
-
-**Design lock score:** 7/10 — core detection works, root cause tree validated, counterfactual analysis implemented.

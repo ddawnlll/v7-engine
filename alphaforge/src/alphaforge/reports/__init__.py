@@ -23,13 +23,13 @@ from alphaforge.reports.empirical import (
 from alphaforge.reports.builders import (
     build_alphaforge_research_report,
 )
-# Issue #117: NO_TRADE Collapse Detector
-from alphaforge.reports.collapse_detector import (
-    build_collapse_report,
-    build_collapse_root_cause_tree,
-    compute_no_trade_trend,
-    counterfactual_analysis,
-    detect_no_trade_collapse,
+# P0.9E: stability metrics (Issue #116)
+from alphaforge.reports.stability import (
+    build_stability_section,
+    classify_symbol_regimes_from_ohlcv,
+    compute_regime_concentration,
+    compute_symbol_concentration,
+    compute_symbol_metrics,
 )
 from alphaforge.constants import CANONICAL_V7_GATES, FORBIDDEN_GATE_NAMES
 
@@ -44,11 +44,11 @@ __all__ = [
     "build_minimal_handoff_package",
     "build_empirical_mode_research_report",
     "build_alphaforge_research_report",
-    "build_collapse_report",
-    "build_collapse_root_cause_tree",
-    "compute_no_trade_trend",
-    "counterfactual_analysis",
-    "detect_no_trade_collapse",
+    "build_stability_section",
+    "classify_symbol_regimes_from_ohlcv",
+    "compute_regime_concentration",
+    "compute_symbol_concentration",
+    "compute_symbol_metrics",
     "CANONICAL_V7_GATES",
     "FORBIDDEN_GATE_NAMES",
 ]

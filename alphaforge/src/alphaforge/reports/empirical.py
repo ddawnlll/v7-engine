@@ -34,34 +34,26 @@ from alphaforge.contracts.loader import load_schema
 from alphaforge.contracts.validator import validate_payload
 from alphaforge.errors import ReportBuildError, ModeError
 from alphaforge.modes.profiles import get_mode_profile
+from alphaforge.reports.stability import (
+    build_stability_section,
+    compute_regime_concentration,
+    compute_symbol_concentration,
+    compute_symbol_metrics,
+)
 
 # Try importing MHT correction functions; fall back gracefully when mht.py
 # is not available (e.g., during partial-checkout development).
 try:
     from alphaforge.reports.mht import (
-        TrialLedger,
         benjamini_hochberg,
         bonferroni_correction,
-        build_mht_section_from_ledger,
         compute_data_snooping_risk,
         deflated_sharpe,
     )
     _MHT_AVAILABLE = True
 except ImportError:
-    TrialLedger = None  # type: ignore[assignment,misc]
     benjamini_hochberg = lambda p, a: []  # noqa: E731
     bonferroni_correction = lambda alpha, n: alpha  # noqa: E731
-    build_mht_section_from_ledger = lambda l, cm="NONE_APPLIED", fc=6, **kw: {  # noqa: E731
-        "tested_hypothesis_count": max(1, (l.num_symbols if hasattr(l, "num_symbols") else 1)),
-        "correction_method": cm,
-        "corrected_significance": None,
-        "data_snooping_risk_flag": "HIGH",
-        "deflated_sharpe_or_equivalent": None,
-        "pbo_or_backtest_overfit_risk": "NOT_RUN",
-        "trial_count_disclosure": max(1, (l.trial_count_disclosure if hasattr(l, "trial_count_disclosure") else 1)),
-        "rejected_candidate_count": 0,
-        "notes": f"Fallback MHT section — build_mht_section_from_ledger unavailable.",
-    }
     compute_data_snooping_risk = lambda n, a, f: "HIGH"  # noqa: E731
     deflated_sharpe = lambda s, t, n, g=0.5: s  # noqa: E731
     _MHT_AVAILABLE = False
@@ -412,19 +404,23 @@ def _build_empirical_no_trade_comparison(
 # ---------------------------------------------------------------------------
 
 def _build_empirical_regime_breakdown(wfv_results: dict) -> dict:
-    """Build regime_breakdown section from WFV results."""
+    """Build regime_breakdown section from WFV results.
+
+    Includes per-regime win_rate and concentration ratios (Issue #116).
+    """
     regime_data = wfv_results.get("regime_breakdown", {})
 
     regimes_raw = regime_data.get("regimes", [])
     edge_only_rare = regime_data.get("edge_only_in_rare_regime", True)
 
-    # Build regime entries
+    # Build regime entries with win_rate
     regime_entries = []
     for r in regimes_raw:
         regime_entries.append({
             "regime": r.get("regime", "UNKNOWN"),
             "sample_pct": r.get("sample_pct", 0.0),
             "oos_expectancy_r": r.get("oos_expectancy_r", 0.0),
+            "oos_win_rate": r.get("oos_win_rate", r.get("win_rate", 0.5)),
             "edge_present": r.get("edge_present", False),
         })
 
@@ -439,6 +435,7 @@ def _build_empirical_regime_breakdown(wfv_results: dict) -> dict:
                 "regime": regime,
                 "sample_pct": 0.25,
                 "oos_expectancy_r": 0.0,
+                "oos_win_rate": 0.5,
                 "edge_present": False,
             })
 
@@ -456,6 +453,9 @@ def _build_empirical_regime_breakdown(wfv_results: dict) -> dict:
             worst_r = er
             worst_regime = r["regime"]
 
+    # Compute regime concentration ratios (Issue #116)
+    regime_concentration = compute_regime_concentration(regime_entries)
+
     return {
         "regimes_tested": list(V7_REGIMES),
         "regimes": regime_entries,
@@ -466,13 +466,37 @@ def _build_empirical_regime_breakdown(wfv_results: dict) -> dict:
             "EDGE_ONLY_IN_RARE_REGIME" if edge_only_rare
             else "EDGE_PRESENT_ACROSS_REGIMES"
         ),
+        "regime_concentration": regime_concentration,
         "summary": (
             f"Regime analysis over {len(regime_entries)} regimes. "
             f"Best: {best_regime} (expectancy_r={best_r:.4f}). "
             f"Worst: {worst_regime} (expectancy_r={worst_r:.4f}). "
+            f"Top regime: {regime_concentration['top_regime']} "
+            f"(share={regime_concentration['top_regime_share']:.2%}). "
             f"Edge {'only in rare regime' if edge_only_rare else 'present across regimes'}."
         ),
     }
+
+
+# ---------------------------------------------------------------------------
+# Symbol stability builder (Issue #116)
+# ---------------------------------------------------------------------------
+
+def _build_symbol_stability(wfv_results: dict) -> dict:
+    """Build symbol_stability section from WFV results.
+
+    Provides per-symbol metrics (expectancy_r, win_rate, trade_count)
+    and concentration ratios.  Reads ``per_symbol_oos`` from WFV results
+    when available; falls back to aggregate data.
+
+    Returns:
+        Dict with keys:
+            symbol_metrics: Dict[str, dict] — per-symbol metrics.
+            symbol_concentration: dict — concentration ratios.
+            num_symbols: int
+    """
+    stability = build_stability_section(wfv_results)
+    return stability
 
 
 # ---------------------------------------------------------------------------
@@ -485,7 +509,6 @@ def _build_empirical_mht_control(
     hypotheses_per_fold: int = 1,
     oos_sharpe: float | None = None,
     oos_trade_count: int | None = None,
-    ledger: TrialLedger | None = None,
 ) -> dict:
     """Build multiple_hypothesis_control section from WFV results.
 
@@ -498,10 +521,6 @@ def _build_empirical_mht_control(
     Computes deflated Sharpe from actual OOS data when MHT is applied
     and sufficient OOS observations are available.
 
-    When a TrialLedger is provided, its dimensions are used for
-    tested_hypothesis_count and trial_count_disclosure. Otherwise the
-    function falls back to trial_context or fold-based computation.
-
     Args:
         wfv_results: Walk-forward validation results dict.
         fold_count: Number of walk-forward folds.
@@ -510,38 +529,12 @@ def _build_empirical_mht_control(
             computation (default None).
         oos_trade_count: Number of OOS trades for deflated Sharpe
             n_samples (default None).
-        ledger: Optional TrialLedger. When provided, its dimensions
-            override trial_context-based computation (default None).
 
     Returns:
         Dict with schema-aligned MHT control fields.
     """
     mht_data = wfv_results.get("multiple_hypothesis_control", {})
 
-    # When a TrialLedger is provided, use it directly
-    if ledger is not None:
-        # Respect pipeline's explicit correction_method
-        pipeline_method = mht_data.get("correction_method")
-        method = pipeline_method if pipeline_method and pipeline_method != "NONE_APPLIED" else "NONE_APPLIED"
-
-        section = build_mht_section_from_ledger(
-            ledger=ledger,
-            correction_method=method,
-            fold_count=fold_count,
-            oos_sharpe=oos_sharpe,
-            oos_trade_count=oos_trade_count,
-            alpha=0.05,
-            gamma=0.5,
-            rejected_candidate_count=mht_data.get("rejected_candidate_count", 0),
-        )
-        # Add mht_status for compatibility
-        section["mht_status"] = "APPLIED" if method != "NONE_APPLIED" else "NONE_APPLIED"
-        # Add tested_feature_count / tested_thesis_count from ledger
-        section["tested_feature_count"] = mht_data.get("tested_feature_count", ledger.num_feature_sets)
-        section["tested_thesis_count"] = mht_data.get("tested_thesis_count", ledger.num_theses)
-        return section
-
-    # Legacy path (no ledger) — keep existing behavior
     # Read trial_count from wfv_results trial_context (v0.25+)
     trial_context = wfv_results.get("trial_context", {})
     trial_count = trial_context.get("trial_count", 0)
@@ -779,9 +772,13 @@ def build_empirical_mode_research_report(
         oos_trade_count=oos_trade_count,
     )
 
+    # --- Symbol stability section (Issue #116) ---
+    symbol_stability_section = _build_symbol_stability(wfv_results)
+
     # --- V7 gate readiness ---
     gate_readiness = _build_gate_readiness(
         mode, verdict, cost_stress_section, regime_section,
+        symbol_count=len(symbols),
     )
 
     # --- Build payload ---
@@ -858,6 +855,7 @@ def build_empirical_mode_research_report(
         "cost_stress": cost_stress_section,
         "no_trade_comparison": no_trade_section,
         "regime_breakdown": regime_section,
+        "symbol_stability": symbol_stability_section,
         "v7_gate_readiness": gate_readiness,
         "multiple_hypothesis_control": mht_section,
         "verdict": verdict,
@@ -888,6 +886,7 @@ def _build_gate_readiness(
     verdict: str,
     cost_stress: dict,
     regime_breakdown: dict,
+    symbol_count: int = 1,
 ) -> dict:
     """Build V7 gate readiness assessment."""
     gates_mapped = ["G0_doc_ready", "G1_research_backtest"]
@@ -900,6 +899,9 @@ def _build_gate_readiness(
 
     if not regime_breakdown.get("edge_only_in_rare_regime", True):
         gates_mapped.append("G4_regime_breakdown")
+
+    if symbol_count > 1:
+        gates_mapped.append("G5_symbol_stability")
 
     gates_not_ready = [
         g for g in [
