@@ -9,11 +9,12 @@ the OHLCV data dict), features are computed from the actual funding rates.
 When funding_rate data is absent, features use an OHLCV-derived proxy that
 estimates the funding rate direction from price action.
 
-Features (6 — 4 core + 2 Funding-OI expansion #119):
+Features (7 — 5 core + 2 Funding-OI expansion #119):
   - funding_rate:              Raw funding rate (passthrough or OHLCV proxy).
   - funding_rate_ma_N:         Rolling mean of funding rate.
   - funding_rate_vol_N:        Rolling standard deviation of funding rate.
   - funding_rate_zscore_N:     Rolling z-score of funding rate — extremes detected.
+  - funding_rate_change_N:     Period-over-period change in funding rate.
   - open_interest_proxy_N:     OI proxy from volume * |price change| (#119).
   - funding_oi_divergence_N:   Divergence between funding rate and OI proxy (#119).
 
@@ -71,6 +72,9 @@ AGGRESSIVE_SCALP_FUNDING_WINDOW: int = 16
 
 # Generic default
 DEFAULT_FUNDING_WINDOW: int = 10
+
+# Funding rate change window
+DEFAULT_FUNDING_CHANGE_N: int = 1
 
 # OI proxy windows (#119)
 DEFAULT_OI_PROXY_WINDOW: int = 10
@@ -346,6 +350,42 @@ def compute_funding_rate_zscore(
 
 
 # ===========================================================================
+# Feature 4b: funding_rate_change — period-over-period change
+# ===========================================================================
+
+
+def compute_funding_rate_change(
+    funding_rate: np.ndarray,
+    n: int = DEFAULT_FUNDING_CHANGE_N,
+) -> np.ndarray:
+    """Compute period-over-period change in funding rate.
+
+    change[t] = funding_rate[t] - funding_rate[t-n]
+
+    Positive change -> funding rate increasing (bears pay more).
+    Negative change -> funding rate decreasing (bulls pay more).
+
+    This captures the momentum of funding costs, which can precede
+    positioning shifts. Large positive changes may indicate rapidly
+    increasing long positioning premium.
+
+    Args:
+        funding_rate: Funding rate array (from compute_funding_rate).
+        n: Lookback periods for the change (default 1).
+
+    Returns:
+        numpy array of funding rate changes, same length as input.
+        First ``n`` values are NaN.
+    """
+    length = len(funding_rate)
+    result = np.full(length, np.nan, dtype=np.float64)
+    if length <= n:
+        return result
+    result[n:] = funding_rate[n:] - funding_rate[:-n]
+    return result
+
+
+# ===========================================================================
 # Feature 5: open_interest_proxy (OI proxy from volume * |price change|) — #119
 # ===========================================================================
 
@@ -525,6 +565,7 @@ def compute_funding_group(
         "funding_rate_ma_N": compute_funding_rate_ma(fr, window=window),
         "funding_rate_vol_N": compute_funding_rate_volatility(fr, window=window),
         "funding_rate_zscore_N": compute_funding_rate_zscore(fr, window=window),
+        "funding_rate_change_N": compute_funding_rate_change(fr, n=1),
         "open_interest_proxy_N": oi_proxy,
         "funding_oi_divergence_N": fwd,
     }
