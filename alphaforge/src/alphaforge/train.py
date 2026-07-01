@@ -157,10 +157,12 @@ def load_cached_data(
 # Label generation (triple-barrier)
 # ---------------------------------------------------------------------------
 
-def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, dict]:
+def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
     """Generate triple-barrier labels with stop/target simulation.
 
-    Returns (int_labels, r_values, metrics_dict).
+    Returns (int_labels, gross_r_values, net_r_values, metrics_dict).
+    Label DECISION uses net_R (cost-aware); gross_R is exported for analysis
+    and net_R is exported for downstream economic metrics.
     """
     cfg = MODE_CONFIG[mode]
     n = len(ohlcv["close"])
@@ -169,7 +171,7 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, dic
     target_mult = cfg["target_mult"]
     label_map = {"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}
     fee_pct = 0.04
-    labels_list, ints_list, r_vals = [], [], []
+    labels_list, ints_list, gross_r_vals, net_r_vals = [], [], [], []
 
     for i in range(n - max_hold - 1):
         entry_price = float(ohlcv["close"][i])
@@ -177,7 +179,8 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, dic
         if atr <= 0 or atr > entry_price * 0.5:
             labels_list.append("NO_TRADE")
             ints_list.append(2)
-            r_vals.append(0.0)
+            gross_r_vals.append(0.0)
+            net_r_vals.append(0.0)
             continue
 
         stop_dist = atr * stop_mult
@@ -220,22 +223,26 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, dic
 
         if net_long > net_short and net_long > no_trade_net:
             best = "LONG_NOW"
-            best_r = long_gross  # store gross for analysis, but decision uses net
+            best_gross_r = long_gross
+            best_net_r = net_long
         elif net_short > net_long and net_short > no_trade_net:
             best = "SHORT_NOW"
-            best_r = short_gross
+            best_gross_r = short_gross
+            best_net_r = net_short
         else:
             best = "NO_TRADE"
-            best_r = 0.0
+            best_gross_r = 0.0
+            best_net_r = 0.0
 
         labels_list.append(best)
         ints_list.append(label_map[best])
-        r_vals.append(best_r)
+        gross_r_vals.append(best_gross_r)
+        net_r_vals.append(best_net_r)
 
     uniq, cnt = np.unique(labels_list, return_counts=True)
     d = {str(k): int(v) for k, v in zip(uniq, cnt)}
     logger.info("Labels: %d samples, dist=%s", len(labels_list), d)
-    return np.array(ints_list), np.array(r_vals, dtype=float), {
+    return np.array(ints_list), np.array(gross_r_vals, dtype=float), np.array(net_r_vals, dtype=float), {
         "n_labels": len(labels_list),
         "label_distribution": d,
     }
@@ -299,7 +306,7 @@ def _compute_stability(values: list[float]) -> float:
 def walk_forward_validate(
     X: np.ndarray,
     y_int: np.ndarray,
-    r_values: np.ndarray,
+    net_r_values: np.ndarray,
     mode: str,
     min_folds: int = 6,
 ) -> List[dict]:
@@ -373,8 +380,8 @@ def walk_forward_validate(
         for t, p in zip(y_val, y_pred):
             cm[t, p] += 1
 
-        val_r_values = r_values[effective_val_start:val_end]
-        r_expectancy_val = float(np.mean(val_r_values)) if len(val_r_values) > 0 else 0.0
+        val_net_r_values = net_r_values[effective_val_start:val_end]
+        net_r_expectancy_val = float(np.mean(val_net_r_values)) if len(val_net_r_values) > 0 else 0.0
 
         results.append({
             "fold": fold + 1,
@@ -394,7 +401,7 @@ def walk_forward_validate(
             "short_actual": int(true_counts.get(1, 0)),
             "no_trade_actual": int(true_counts.get(2, 0)),
             "confusion_matrix": cm.tolist(),
-            "r_expectancy": r_expectancy_val,
+            "net_r_expectancy": net_r_expectancy_val,
             "low_conf_count": low_conf_count,
             "low_conf_pct": round(low_conf_pct, 2),
             "training_duration_seconds": fold_result.training_duration_seconds,
@@ -452,8 +459,8 @@ def compute_overfit_gap(wfv_results: List[dict]) -> dict:
 # ---------------------------------------------------------------------------
 
 def compute_oos_sharpe(wfv_results: List[dict]) -> float:
-    """Compute OOS Sharpe ratio from per-fold R-expectancy values."""
-    r_exps = [r["r_expectancy"] for r in wfv_results if abs(r["r_expectancy"]) > 1e-12]
+    """Compute OOS Sharpe ratio from per-fold net R-expectancy values."""
+    r_exps = [r["net_r_expectancy"] for r in wfv_results if abs(r["net_r_expectancy"]) > 1e-12]
     if len(r_exps) < 2:
         return 0.0
     mean_r = float(np.mean(r_exps))
@@ -483,7 +490,15 @@ def collect_metrics(
     stability = _compute_stability(val_accs)
 
     overfit = compute_overfit_gap(wfv_results)
-    sharpe = compute_oos_sharpe(wfv_results)
+    net_sharpe = compute_oos_sharpe(wfv_results)
+
+    # R-expectancy decomposition: net is primary; gross is recovered from net + cost
+    net_r_exps = [r["net_r_expectancy"] for r in wfv_results]
+    round_trip_cost_r = fee_pct * 2 / 100  # R units (same cost every bar)
+    gross_r_exps = [nr + round_trip_cost_r for nr in net_r_exps]
+    net_expectancy_r = float(np.mean(net_r_exps)) if net_r_exps else 0.0
+    gross_expectancy_r = float(np.mean(gross_r_exps)) if gross_r_exps else 0.0
+    net_sharpe_ratio = net_sharpe
 
     total_active = sum(r["active_trade_count"] for r in wfv_results)
     total_long = sum(r["long_count"] for r in wfv_results)
@@ -500,14 +515,16 @@ def collect_metrics(
 
     # Cost decomposition
     round_trip_cost_bps = fee_pct * 2  # bps
-    round_trip_cost_r = fee_pct * 2 / 100  # R units
 
     return {
         "mode": mode.upper(),
         "accuracy": round(accuracy, 4),
         "train_accuracy": round(train_accuracy, 4),
         "accuracy_stability": round(stability, 4),
-        "sharpe_ratio": sharpe,
+        "sharpe_ratio": net_sharpe_ratio,
+        "net_sharpe_ratio": net_sharpe_ratio,
+        "net_expectancy_r": round(net_expectancy_r, 6),
+        "gross_expectancy_r": round(gross_expectancy_r, 6),
         "overfit_gap": overfit["overfit_gap"],
         "train_oos_correlation": overfit["train_oos_correlation"],
         "pbo_risk": overfit["pbo_risk"],

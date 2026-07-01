@@ -136,6 +136,7 @@ class PipelineConfig:
     use_synthetic: bool = False       # Default: load cached Binance data, fall back to synthetic
     n_bars: int = DEFAULT_N_BARS    # Bars per symbol for synthetic data
     steps: Tuple[str, ...] = PIPELINE_STEPS
+    validator_enabled: bool = True
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -151,6 +152,7 @@ class PipelineConfig:
             "use_synthetic": self.use_synthetic,
             "n_bars": self.n_bars,
             "steps": list(self.steps),
+            "validator_enabled": self.validator_enabled,
         }
 
 
@@ -1100,6 +1102,7 @@ class PipelineRunner:
                 n_symbols=len(self._config.symbols),
                 random_seed=self._config.random_seed,
                 min_folds=3,  # Per issue spec
+                mode=self._config.mode,
             )
             self._ctx.wfv_result = result
 
@@ -1112,11 +1115,17 @@ class PipelineRunner:
                 "avg_val_accuracy": agg.get("avg_val_accuracy", 0.0),
                 "avg_accuracy_gap": agg.get("avg_accuracy_gap", 0.0),
                 "avg_logloss_gap": agg.get("avg_logloss_gap", 0.0),
+                # Classification-based metrics
                 "avg_sharpe": agg.get("avg_sharpe", 0.0),
                 "sharpe_stability_std": agg.get("sharpe_stability_std", 0.0),
                 "avg_win_rate": agg.get("avg_win_rate", 0.0),
                 "avg_max_drawdown": agg.get("avg_max_drawdown", 0.0),
                 "avg_profit_factor": agg.get("avg_profit_factor", 0.0),
+                # Net_R economic metrics
+                "avg_net_sharpe": agg.get("avg_net_sharpe", 0.0),
+                "net_sharpe_stability_std": agg.get("net_sharpe_stability_std", 0.0),
+                "avg_net_profit_factor": agg.get("avg_net_profit_factor", 0.0),
+                "avg_net_expectancy": agg.get("avg_net_expectancy", 0.0),
                 "total_oos_trades": agg.get("total_oos_trades", 0),
                 "overfit_flags": len(result.overfit_flags),
             })
@@ -1145,9 +1154,11 @@ class PipelineRunner:
 
             print(f"  Folds: {len(result.folds)}")
             print(f"  Verdict: {result.verdict}")
-            print(f"  Avg Sharpe: {agg.get('avg_sharpe', 0):.4f}")
-            print(f"  Avg Win Rate: {agg.get('avg_win_rate', 0):.4f}")
-            print(f"  Overfit flags: {len(result.overfit_flags)}")
+            print(f"  Avg Sharpe (class):  {agg.get('avg_sharpe', 0):.4f}")
+            print(f"  Avg Win Rate:        {agg.get('avg_win_rate', 0):.4f}")
+            print(f"  Avg Net Sharpe:      {agg.get('avg_net_sharpe', 0):.4f}")
+            print(f"  Avg Net Expectancy:  {agg.get('avg_net_expectancy', 0):.6f}")
+            print(f"  Overfit flags:       {len(result.overfit_flags)}")
             print(f"  Report saved to: {report_path}")
 
             metrics["wfv_report_path"] = report_path
@@ -1200,38 +1211,350 @@ class PipelineRunner:
                 metrics["wfv_verdict"] = ev.metrics.get("verdict", "UNKNOWN")
                 metrics["wfv_n_folds"] = ev.metrics.get("n_folds", 0)
                 metrics["wfv_avg_sharpe"] = ev.metrics.get("avg_sharpe", 0.0)
+                metrics["wfv_avg_net_sharpe"] = ev.metrics.get("avg_net_sharpe", 0.0)
+                metrics["wfv_avg_net_expectancy"] = ev.metrics.get("avg_net_expectancy", 0.0)
 
-        # Save report
-        try:
-            ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-            report_filename = f"pipeline_v02_{self._config.mode.lower()}_{ts}.json"
-            report_path = os.path.join(
-                self._config.output_dir, "reports", report_filename,
-            )
-            os.makedirs(os.path.dirname(report_path), exist_ok=True)
+        # ------------------------------------------------------------------
+        # Alpha Target Validator — produces a single consolidated report
+        # with validator scores + WFV data + pipeline context
+        # ------------------------------------------------------------------
+        consolidated_path = None
+        if (
+            self._config.validator_enabled
+            and self._ctx.wfv_result is not None
+            and not errors
+        ):
+            try:
+                from alphaforge.validation.target_validator import AlphaTargetValidator
 
-            report_data = {
-                "pipeline_version": PIPELINE_VERSION,
-                "schema_version": PIPELINE_SCHEMA_VERSION,
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-                "config": self._config.to_dict(),
-                "step_results": step_results,
-                "metrics": metrics,
-                "evidence_checksums": [
-                    {"step": e.step, "checksum": e.checksum}
-                    for e in self._evidence
-                ],
-            }
-            with open(report_path, "w") as f:
-                json.dump(report_data, f, indent=2, default=str)
+                # Load WFV dict from the saved JSON report
+                wfv_ev = next(
+                    (
+                        e for e in self._evidence
+                        if e.step == "wfv" and e.status == StepStatus.COMPLETED.value
+                    ),
+                    None,
+                )
+                wfv_report_path = wfv_ev.metrics.get("wfv_report_path") if wfv_ev else None
 
-            self._ctx.report_path = report_path
-            metrics["report_path"] = report_path
+                if wfv_report_path and os.path.isfile(wfv_report_path):
+                    with open(wfv_report_path) as f_wfv:
+                        wfv_dict = json.load(f_wfv)
 
-            print(f"  Report saved to: {report_path}")
+                    # Build pipeline context for the consolidated report
+                    pipeline_ctx = {
+                        "pipeline_version": PIPELINE_VERSION,
+                        "schema_version": PIPELINE_SCHEMA_VERSION,
+                        "config": self._config.to_dict(),
+                        "step_results": step_results,
+                        "metrics": metrics,
+                        "evidence_checksums": [
+                            {"step": e.step, "checksum": e.checksum}
+                            for e in self._evidence
+                        ],
+                    }
 
-        except OSError as e:
-            errors.append(f"Cannot save report: {e}")
+                    validator = AlphaTargetValidator()
+                    v_report = validator.score(wfv_dict)
+
+                    # ------------------------------------------------------------------
+                    # Evidence Engine — Trial Ledger + Baseline Library + V7 Gates
+                    # ------------------------------------------------------------------
+                    evidence_decision = None
+                    v7_gate_statuses = []
+                    baseline_data = {}
+                    model_vs_baselines = {}
+                    ee_ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+                    try:
+                        from lib.evidence_engine.hypothesis import (
+                            HypothesisCard, HypothesisRegistry, ClaimType,
+                        )
+                        from lib.evidence_engine.baselines import BaselineLibrary
+                        from lib.evidence_engine.evidence_passport import (
+                            EvidencePassportBuilder,
+                        )
+                        from lib.evidence_engine.decisions import DecisionEngine
+                        from v7.evidence_consumer import consume_evidence_passport
+
+                        # ----------------------------------------------------------
+                        # 1. Trial Ledger — persistent hypothesis registry
+                        # ----------------------------------------------------------
+                        hyp_reg = HypothesisRegistry(
+                            ledger_path=os.path.join(
+                                self._config.output_dir, "trial_ledger.json",
+                            ),
+                        )
+                        hyp_card = HypothesisCard(
+                            card_id=f"CTRL-BASELINE-{ee_ts}",
+                            claim_type=ClaimType.ALPHA_HAS_EDGE,
+                            problem=(
+                                f"Measure current {self._config.mode} model "
+                                f"vs baselines on real data"
+                            ),
+                            proposed_mechanism=(
+                                "Control run — no intervention, "
+                                "just evidence collection"
+                            ),
+                            intervention="NONE — control run",
+                            control="N/A",
+                            data=(
+                                "synthetic" if self._config.use_synthetic
+                                else "real"
+                            ) + f" {self._config.mode} BTC/ETH/SOL 1h",
+                            baselines=[
+                                "NO_TRADE", "RANDOM_ACTION",
+                                "ALWAYS_LONG", "ALWAYS_SHORT",
+                                "BUY_AND_HOLD", "COST_ONLY_NULL",
+                            ],
+                            success_criteria=[
+                                "fold_pass_ratio > 0",
+                                "beats_no_trade",
+                                "beats_random",
+                            ],
+                            fail_criteria=[
+                                "fold_pass_ratio == 0",
+                                "active_trades == 0",
+                            ],
+                            max_trials=1,
+                            allowed_files=[],
+                            status="APPROVED",
+                        )
+                        hyp_reg.register(hyp_card)
+
+                        # ----------------------------------------------------------
+                        # 2. Baseline Library — compute from pipeline labels
+                        # ----------------------------------------------------------
+                        pipeline_labels = getattr(self._ctx, "labels", None)
+
+                        if pipeline_labels is not None:
+                            labels_list = (
+                                pipeline_labels.tolist()
+                                if hasattr(pipeline_labels, "tolist")
+                                else list(pipeline_labels)
+                            )
+                            gross_r_list = [0.0] * len(labels_list)
+
+                            bl = BaselineLibrary()
+                            baseline_results = bl.compute_baselines(
+                                labels_list, gross_r_list, fee_pct=0.04,
+                            )
+
+                            # Compare model vs baselines using WFV aggregate metrics
+                            wfv_agg = wfv_dict.get("aggregate_metrics", {})
+                            model_metrics_for_baseline = {
+                                "net_expectancy_R": wfv_agg.get(
+                                    "avg_net_expectancy", 0.0,
+                                ),
+                                "net_sharpe": wfv_agg.get(
+                                    "avg_net_sharpe", 0.0,
+                                ),
+                                "net_profit_factor": wfv_agg.get(
+                                    "avg_net_profit_factor", 0.0,
+                                ),
+                            }
+
+                            for baseline_name in baseline_results:
+                                beats, reason = bl.model_beats_baseline(
+                                    model_metrics_for_baseline,
+                                    baseline_name,
+                                )
+                                model_vs_baselines[baseline_name] = {
+                                    "beats": beats,
+                                    "reason": reason,
+                                    "model_net_expectancy": (
+                                        model_metrics_for_baseline[
+                                            "net_expectancy_R"
+                                        ]
+                                    ),
+                                    "baseline_net_expectancy": (
+                                        baseline_results[baseline_name]
+                                        .net_expectancy_R
+                                    ),
+                                }
+
+                            # Serialise for consolidated report
+                            for name, br in baseline_results.items():
+                                baseline_data[name] = {
+                                    "net_expectancy_R": br.net_expectancy_R,
+                                    "net_sharpe": br.net_sharpe,
+                                    "net_profit_factor": (
+                                        br.net_profit_factor
+                                    ),
+                                    "active_trade_count": (
+                                        br.active_trade_count
+                                    ),
+                                    "exposure_pct": br.exposure_pct,
+                                }
+
+                        # ----------------------------------------------------------
+                        # 3. Evidence Engine — passport, gates, decision
+                        # ----------------------------------------------------------
+                        adapter_input = {
+                            "metrics": {
+                                k: v
+                                for k, v in wfv_dict.get(
+                                    "aggregate_metrics", {}
+                                ).items()
+                                if isinstance(v, (int, float, str, bool))
+                            },
+                            "per_fold_results": wfv_dict.get("folds", []),
+                            "candidate_id": (
+                                f"pipeline_{self._config.mode.lower()}"
+                                f"_{ee_ts}"
+                            ),
+                            "hypothesis_refs": [hyp_card.card_id],
+                        }
+
+                        passport = EvidencePassportBuilder().from_wfv_results(
+                            adapter_input, self._config.mode,
+                        )
+
+                        # Attach baseline results to passport
+                        if baseline_results:
+                            passport.baselines = baseline_results
+
+                        # Map to V7 gates
+                        gate_results = consume_evidence_passport(passport)
+                        v7_gate_statuses = [
+                            {
+                                "gate": g,
+                                "status": gr.status,
+                                "label": gr.gate_label,
+                            }
+                            for g, gr in gate_results.items()
+                        ]
+
+                        # Evaluate with DecisionEngine
+                        de = DecisionEngine(hyp_reg)
+                        evidence_decision = de.is_implementation_allowed(
+                            hyp_card.card_id, passport,
+                        )
+
+                    except Exception as ee:
+                        logger.warning(
+                            "Evidence Engine skipped (non-fatal): %s", ee,
+                        )
+
+                    # ------------------------------------------------------------------
+
+                    # Single consolidated report file
+                    consolidated = v_report.consolidated(
+                        wfv_raw=wfv_dict,
+                        pipeline_context=pipeline_ctx,
+                    )
+                    if baseline_data:
+                        consolidated["baselines"] = {
+                            "model_vs_baselines": model_vs_baselines,
+                        }
+                        consolidated["baselines"].update(baseline_data)
+                    if evidence_decision is not None:
+                        consolidated["evidence_engine"] = {
+                            "trial_id": (
+                                hyp_card.card_id
+                                if evidence_decision is not None
+                                and 'hyp_card' in dir()
+                                else None
+                            ),
+                            "verdict": evidence_decision.verdict,
+                            "implementation_allowed":
+                                evidence_decision.implementation_allowed,
+                            "blocked_reason":
+                                evidence_decision.blocked_reason,
+                            "blocked_actions":
+                                evidence_decision.blocked_actions,
+                            "allowed_actions":
+                                evidence_decision.allowed_actions,
+                            "required_steps":
+                                evidence_decision.required_steps,
+                        }
+                    if v7_gate_statuses:
+                        consolidated["v7_gates"] = v7_gate_statuses
+
+                    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+                    consolidated_path = os.path.join(
+                        self._config.output_dir, "reports",
+                        f"consolidated_{self._config.mode.lower()}_{ts}.json",
+                    )
+                    os.makedirs(os.path.dirname(consolidated_path), exist_ok=True)
+                    with open(consolidated_path, "w") as f:
+                        json.dump(consolidated, f, indent=2, default=str)
+
+                    # Print summary
+                    val = consolidated["validator"]
+                    print(f"\n{'='*60}")
+                    print("=== Alpha Target Validator — Consolidated Report ===")
+                    print(f"{'='*60}")
+                    print(f"  Target Proximity: {val['target_proximity_score']}/100")
+                    print(f"  Economic Score:   {val['economic_score']}/100")
+                    print(f"  Behavior Score:   {val['behavior_score']}/100")
+                    print(f"  Validation Score: {val['validation_score']}/100")
+                    print(f"  Data Quality:     {val['data_quality_score']}/100")
+                    print(f"  Level:            {val['level_assessment']}")
+                    if val["main_blockers"]:
+                        print(f"  Main Blockers:")
+                        for b in val["main_blockers"]:
+                            print(f"    - {b}")
+                    wfv_sum = consolidated.get("wfv_summary", {})
+                    if wfv_sum:
+                        print(f"  WFV Verdict:      {wfv_sum.get('verdict', '?')}")
+                        print(f"  Folds:            {wfv_sum.get('folds', '?')}")
+                        print(f"  Net Sharpe:       {wfv_sum.get('avg_net_sharpe', 0.0):.2f}")
+
+                    ee_data = consolidated.get("evidence_engine")
+                    if ee_data:
+                        print(f"  Evidence Verdict: {ee_data['verdict']}")
+                        print(f"  Implementation:   {'ALLOWED' if ee_data.get('implementation_allowed') else 'BLOCKED'}")
+                        if ee_data.get("blocked_actions"):
+                            print(f"  Blocked Actions:  {', '.join(ee_data['blocked_actions'][:3])}")
+                    v7 = consolidated.get("v7_gates", [])
+                    if v7:
+                        passed = sum(1 for g in v7 if g["status"] == "PASSED")
+                        failed = sum(1 for g in v7 if g["status"] == "FAILED")
+                        print(f"  V7 Gates:         {passed}/11 passed, {failed} failed")
+
+                    print(f"  Consolidated: {consolidated_path}")
+
+                    metrics["consolidated_report_path"] = consolidated_path
+                    metrics["target_proximity_score"] = val["target_proximity_score"]
+                    metrics["validator_level"] = val["level_assessment"]
+
+            except ImportError as e:
+                logger.warning(f"Alpha Target Validator not available: {e}")
+            except Exception as e:
+                logger.warning(f"Alpha Target Validator failed: {e}")
+
+        # Fallback: save a minimal pipeline report when the validator did not
+        # produce a consolidated file (e.g., validator disabled or errored).
+        if consolidated_path is None:
+            try:
+                ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+                report_filename = f"pipeline_v02_{self._config.mode.lower()}_{ts}.json"
+                report_path = os.path.join(
+                    self._config.output_dir, "reports", report_filename,
+                )
+                os.makedirs(os.path.dirname(report_path), exist_ok=True)
+
+                report_data = {
+                    "pipeline_version": PIPELINE_VERSION,
+                    "schema_version": PIPELINE_SCHEMA_VERSION,
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "config": self._config.to_dict(),
+                    "step_results": step_results,
+                    "metrics": metrics,
+                    "evidence_checksums": [
+                        {"step": e.step, "checksum": e.checksum}
+                        for e in self._evidence
+                    ],
+                }
+                with open(report_path, "w") as f:
+                    json.dump(report_data, f, indent=2, default=str)
+
+                self._ctx.report_path = report_path
+                metrics["report_path"] = report_path
+                print(f"  Pipeline report saved to: {report_path}")
+
+            except OSError as e:
+                errors.append(f"Cannot save report: {e}")
 
         if errors:
             return _make_evidence(

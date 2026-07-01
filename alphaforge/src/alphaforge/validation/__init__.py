@@ -44,10 +44,15 @@ from alphaforge.validation.cross_timeframe import (
     compute_pairwise_correlation,
 )
 from alphaforge.validation.regime_eval import RegimeEvaluator
+from alphaforge.validation.target_validator import (
+    AlphaTargetValidator,
+    TargetValidatorReport,
+)
 from alphaforge.validation.walk_forward import WalkForwardValidator
 
 __all__ = [
     "NOT_EVALUATED",
+    "AlphaTargetValidator",
     "CostStressResult",
     "CrossTimeframeComparison",
     "DEFAULT_FOLD_CONFIGS",
@@ -61,6 +66,7 @@ __all__ = [
     "RegimeBreakdown",
     "RegimeEvaluator",
     "SymbolStability",
+    "TargetValidatorReport",
     "TimeframeEdge",
     "ValidationError",
     "ValidationReport",

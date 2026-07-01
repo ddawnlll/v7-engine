@@ -168,6 +168,13 @@ MODE_ANNUALIZATION: Dict[str, float] = {
 # Backward-compatible alias for SWING annualization (used in function defaults)
 ANNUALIZATION_FACTOR: float = 2190.0
 
+# Mode-specific triple-barrier parameters for net_R generation
+MODE_RUNNER_TRIPLE_BARRIER: Dict[str, Dict[str, Any]] = {
+    "SWING": {"max_hold": 30, "stop_mult": 2.0, "target_mult": 3.0},
+    "SCALP": {"max_hold": 12, "stop_mult": 1.5, "target_mult": 2.0},
+    "AGGRESSIVE_SCALP": {"max_hold": 5, "stop_mult": 1.5, "target_mult": 2.0},
+}
+
 # Default purge/embargo bars per mode for walk_forward_runner test configs
 MODE_RUNNER_PURGE_BARS: Dict[str, int] = {
     "SWING": 20,
@@ -200,7 +207,7 @@ class FoldMetrics:
     val_accuracy: float
     train_logloss: float
     val_logloss: float
-    # OOS financial metrics
+    # OOS financial metrics (classification-based)
     sharpe: float
     win_rate: float
     max_drawdown: float
@@ -213,6 +220,14 @@ class FoldMetrics:
     # Overfitting indicators
     accuracy_gap: float  # train_acc - val_acc
     logloss_gap: float  # val_logloss - train_logloss
+    # Net_R economic metrics (PRIMARY)
+    net_sharpe: float = 0.0
+    net_profit_factor: float = 0.0
+    net_expectancy: float = 0.0
+    # Gross_R economic metrics (SECONDARY)
+    gross_sharpe: float = 0.0
+    gross_profit_factor: float = 0.0
+    gross_expectancy: float = 0.0
 
 
 @dataclass
@@ -314,6 +329,97 @@ def generate_walk_forward_labels(
     rng = np.random.RandomState(random_seed)
     labels = rng.choice(["LONG_NOW", "SHORT_NOW", "NO_TRADE"], size=n_samples)
     return labels
+
+
+def generate_net_r_from_ohlcv(
+    ohlcv_data: Dict[str, np.ndarray],
+    n_bars: int,
+    mode: str = "SWING",
+    fee_pct: float = 0.04,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Generate synthetic net_R and gross_R values from OHLCV data.
+
+    Uses triple-barrier simulation on each symbol group:
+    - For each bar, simulates LONG and SHORT scenarios looking forward
+      up to max_hold bars
+    - Applies stop-loss and take-profit barriers
+    - Subtracts round-trip cost from gross_R to get net_R
+    - Picks the better of LONG/SHORT (or NO_TRADE if both negative after cost)
+
+    Args:
+        ohlcv_data: OHLCV data dict with close/high/low/symbol arrays.
+        n_bars: Number of bars per symbol (symbols are concatenated).
+        mode: Trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
+        fee_pct: Per-trade fee in percent (default 0.04 = 4 bps).
+
+    Returns:
+        Tuple of (gross_r_values, net_r_values) arrays aligned with input.
+    """
+    params = MODE_RUNNER_TRIPLE_BARRIER.get(mode, MODE_RUNNER_TRIPLE_BARRIER["SWING"])
+    max_hold = params["max_hold"]
+    stop_mult = params["stop_mult"]
+    target_mult = params["target_mult"]
+
+    close_arr = ohlcv_data["close"]
+    high_arr = ohlcv_data["high"]
+    low_arr = ohlcv_data["low"]
+    n = len(close_arr)
+    round_trip_cost = fee_pct * 2 / 100  # e.g. 0.0008 for fee_pct=0.04
+
+    gross_r = np.zeros(n, dtype=np.float64)
+    net_r = np.zeros(n, dtype=np.float64)
+
+    # Process per symbol group (symbols are concatenated sequentially)
+    for sym_start in range(0, n, n_bars):
+        sym_end = min(sym_start + n_bars, n)
+        for i in range(sym_start, sym_end - max_hold - 1):
+            entry_price = float(close_arr[i])
+            # Simple ATR over last 14 bars
+            lookback_start = max(sym_start, i - 14)
+            if i - lookback_start < 3:
+                continue
+            atr = float(np.mean(np.abs(np.diff(close_arr[lookback_start:i + 1]))))
+            if atr <= 0 or atr > entry_price * 0.5:
+                continue
+
+            stop_dist = atr * stop_mult
+            target_dist = atr * target_mult
+
+            # Simulate LONG
+            long_gross = 0.0
+            for j in range(1, min(max_hold + 1, sym_end - i)):
+                if low_arr[i + j] <= entry_price - stop_dist:
+                    long_gross = -stop_dist / entry_price
+                    break
+                if high_arr[i + j] >= entry_price + target_dist:
+                    long_gross = target_dist / entry_price
+                    break
+                long_gross = (close_arr[i + j] - entry_price) / entry_price
+
+            # Simulate SHORT
+            short_gross = 0.0
+            for j in range(1, min(max_hold + 1, sym_end - i)):
+                if high_arr[i + j] >= entry_price + stop_dist:
+                    short_gross = -stop_dist / entry_price
+                    break
+                if low_arr[i + j] <= entry_price - target_dist:
+                    short_gross = target_dist / entry_price
+                    break
+                short_gross = (entry_price - close_arr[i + j]) / entry_price
+
+            # Pick best net_R (cost-aware)
+            net_long = long_gross - round_trip_cost
+            net_short = short_gross - round_trip_cost
+
+            if net_long > net_short and net_long > 0.0:
+                gross_r[i] = long_gross
+                net_r[i] = net_long
+            elif net_short > net_long and net_short > 0.0:
+                gross_r[i] = short_gross
+                net_r[i] = net_short
+            # else: NO_TRADE — both zero
+
+    return gross_r, net_r
 
 
 # ---------------------------------------------------------------------------
@@ -426,6 +532,16 @@ def compute_profit_factor(returns: np.ndarray) -> float:
     return float(positive / negative)
 
 
+def compute_net_expectancy(r_values: np.ndarray) -> float:
+    """Compute mean net R-expectancy from per-bar R-multiple values.
+
+    Returns 0.0 for empty arrays.
+    """
+    if len(r_values) == 0:
+        return 0.0
+    return float(np.mean(r_values))
+
+
 def compute_all_metrics(
     y_pred: np.ndarray,
     y_true: np.ndarray,
@@ -460,6 +576,96 @@ def compute_all_metrics(
         "short_trades": short_trades,
         "no_trade_count": no_trade_count,
     }
+
+
+def compute_economic_metrics(
+    y_pred: np.ndarray,
+    y_true: np.ndarray,
+    net_r_values: np.ndarray | None = None,
+    gross_r_values: np.ndarray | None = None,
+    annualization_factor: float = ANNUALIZATION_FACTOR,
+) -> Dict[str, Any]:
+    """Compute complete economic metrics from predictions and R-values.
+
+    Returns both backward-compatible classification-based metrics AND
+    the new net_R-based economic metrics.
+
+    Classification metrics use the old names (sharpe, win_rate, etc.) for
+    backward compatibility AND are also aliased with "classification_" prefix.
+
+    Net_R metrics (PRIMARY) use "net_" prefix.
+    Gross_R metrics (SECONDARY) use "gross_" prefix.
+
+    Args:
+        y_pred: Integer predicted labels (0/1/2).
+        y_true: Integer true labels (0/1/2).
+        net_r_values: Per-bar net R-multiple values (0.0 for NO_TRADE bars).
+            If None, net_R metrics return 0.0.
+        gross_r_values: Per-bar gross R-multiple values (0.0 for NO_TRADE bars).
+            If None, gross_R metrics return 0.0.
+        annualization_factor: Periods per year for Sharpe annualization.
+
+    Returns:
+        Dict with both classification and economic metrics.
+    """
+    trade_mask = (y_pred == 0) | (y_pred == 1)
+    total_trades = int(np.sum(trade_mask))
+    long_trades = int(np.sum(y_pred == 0))
+    short_trades = int(np.sum(y_pred == 1))
+    no_trade_count = int(np.sum(y_pred == 2))
+
+    # --- Classification-based metrics (backward-compatible names) ---
+    class_returns = _class_predictions_to_returns(y_pred, y_true)
+    class_sharpe = compute_sharpe_ratio(class_returns, annualization_factor=annualization_factor)
+    class_pf = compute_profit_factor(class_returns)
+    class_max_dd = compute_max_drawdown(class_returns)
+    class_win_rate = compute_win_rate(y_pred, y_true)
+
+    result: Dict[str, Any] = {
+        # Backward-compatible names
+        "sharpe": class_sharpe,
+        "win_rate": class_win_rate,
+        "max_drawdown": class_max_dd,
+        "profit_factor": class_pf,
+        "total_trades": total_trades,
+        "long_trades": long_trades,
+        "short_trades": short_trades,
+        "no_trade_count": no_trade_count,
+        # Explicit classification aliases
+        "classification_sharpe": class_sharpe,
+        "classification_profit_factor": class_pf,
+        "classification_win_rate": class_win_rate,
+        "classification_max_drawdown": class_max_dd,
+        # Net_R defaults (overridden below if values provided)
+        "net_sharpe": 0.0,
+        "net_profit_factor": 0.0,
+        "net_expectancy": 0.0,
+        # Gross_R defaults (overridden below if values provided)
+        "gross_sharpe": 0.0,
+        "gross_profit_factor": 0.0,
+        "gross_expectancy": 0.0,
+        # Cost decomposition
+        "cost_decomposition": {
+            "fee_pct": 0.04,
+            "round_trip_cost_r": 0.0008,
+        },
+    }
+
+    # --- Net_R-based metrics (PRIMARY) ---
+    if net_r_values is not None and len(net_r_values) > 0:
+        net_r = net_r_values * trade_mask
+        result["net_sharpe"] = compute_sharpe_ratio(net_r, annualization_factor=annualization_factor)
+        result["net_profit_factor"] = compute_profit_factor(net_r)
+        result["net_expectancy"] = compute_net_expectancy(net_r)
+
+    # --- Gross_R-based metrics (SECONDARY) ---
+    if gross_r_values is not None and len(gross_r_values) > 0:
+        gross_r = gross_r_values * trade_mask
+        result["gross_sharpe"] = compute_sharpe_ratio(gross_r, annualization_factor=annualization_factor)
+        result["gross_profit_factor"] = compute_profit_factor(gross_r)
+        result["gross_expectancy"] = compute_net_expectancy(gross_r)
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -591,6 +797,18 @@ def run_walk_forward(
     logger.info(f"[{mode_str}] Generated {total_bars} bars across {len(symbols)} symbols")
 
     # ------------------------------------------------------------------
+    # 1b. Generate net_R values from OHLCV (for economic metrics)
+    # ------------------------------------------------------------------
+    gross_r_raw, net_r_raw = generate_net_r_from_ohlcv(
+        ohlcv_data, n_bars=n_bars, mode=mode_str,
+    )
+    logger.info(
+        f"[{mode_str}] Generated net_R: "
+        f"mean={float(np.mean(net_r_raw[net_r_raw != 0])):.6f} "
+        f"(non-zero), {int(np.sum(net_r_raw != 0))} active bars"
+    )
+
+    # ------------------------------------------------------------------
     # 2. Compute features (mode-aware)
     # ------------------------------------------------------------------
     from alphaforge.features.pipeline import compute_features
@@ -623,8 +841,15 @@ def run_walk_forward(
             timestamp_list.append(f"2025-01-01T{i:06d}")
 
     # ------------------------------------------------------------------
-    # 3. Generate synthetic labels
+    # 3. Align net_R with valid rows and generate synthetic labels
     # ------------------------------------------------------------------
+    net_r = net_r_raw[~nan_mask]
+    gross_r = gross_r_raw[~nan_mask]
+    logger.info(
+        f"[{mode_str}] net_R aligned: {len(net_r)} valid rows "
+        f"(dropped {int(nan_mask.sum())})"
+    )
+
     y_labels = generate_walk_forward_labels(len(X), random_seed=random_seed)
     y_int = np.array([_LABEL_TO_INT[str(lbl)] for lbl in y_labels], dtype=int)
 
@@ -762,8 +987,13 @@ def run_walk_forward(
             pass
 
         # OOS financial metrics
-        oos_fin_metrics = compute_all_metrics(
-            oos_pred, y_oos, annualization_factor=annualization
+        oos_net_r = net_r[oos_idx]
+        oos_gross_r = gross_r[oos_idx]
+        oos_fin_metrics = compute_economic_metrics(
+            oos_pred, y_oos,
+            net_r_values=oos_net_r,
+            gross_r_values=oos_gross_r,
+            annualization_factor=annualization,
         )
 
         # Overfitting indicators
@@ -811,6 +1041,12 @@ def run_walk_forward(
             no_trade_count=oos_fin_metrics["no_trade_count"],
             accuracy_gap=acc_gap,
             logloss_gap=ll_gap,
+            net_sharpe=oos_fin_metrics["net_sharpe"],
+            net_profit_factor=oos_fin_metrics["net_profit_factor"],
+            net_expectancy=oos_fin_metrics["net_expectancy"],
+            gross_sharpe=oos_fin_metrics["gross_sharpe"],
+            gross_profit_factor=oos_fin_metrics["gross_profit_factor"],
+            gross_expectancy=oos_fin_metrics["gross_expectancy"],
         )
         fold_metrics.append(fm)
         last_booster = booster
@@ -820,6 +1056,8 @@ def run_walk_forward(
             f"oos_win_rate={oos_fin_metrics['win_rate']:.4f}, "
             f"oos_max_dd={oos_fin_metrics['max_drawdown']:.4f}, "
             f"oos_pf={oos_fin_metrics['profit_factor']:.4f}, "
+            f"net_sharpe={oos_fin_metrics['net_sharpe']:.4f}, "
+            f"net_expectancy={oos_fin_metrics['net_expectancy']:.6f}, "
             f"time={elapsed:.3f}s"
         )
 
@@ -868,8 +1106,17 @@ def run_walk_forward(
     avg_logloss_gap = float(np.mean([f.logloss_gap for f in fold_metrics]))
     total_oos_trades = sum(f.total_trades for f in fold_metrics)
 
+    # Net_R aggregate metrics
+    avg_net_sharpe = float(np.mean([f.net_sharpe for f in fold_metrics]))
+    avg_net_pf = float(np.mean([
+        min(f.net_profit_factor, 100.0) if f.net_profit_factor == float("inf") else f.net_profit_factor
+        for f in fold_metrics
+    ]))
+    avg_net_expectancy = float(np.mean([f.net_expectancy for f in fold_metrics]))
+
     # Sharpe stability (std of Sharpe across folds)
     sharpe_std = float(np.std([f.sharpe for f in fold_metrics], ddof=1)) if len(fold_metrics) > 1 else 0.0
+    net_sharpe_std = float(np.std([f.net_sharpe for f in fold_metrics], ddof=1)) if len(fold_metrics) > 1 else 0.0
 
     # ------------------------------------------------------------------
     # 8. Determine verdict
@@ -923,11 +1170,17 @@ def run_walk_forward(
         "avg_val_accuracy": avg_val_acc,
         "avg_accuracy_gap": avg_accuracy_gap,
         "avg_logloss_gap": avg_logloss_gap,
+        # Classification-based metrics (backward compat)
         "avg_sharpe": avg_sharpe,
         "sharpe_stability_std": sharpe_std,
         "avg_win_rate": avg_win_rate,
         "avg_max_drawdown": avg_max_dd,
         "avg_profit_factor": avg_pf_raw,
+        # Net_R economic metrics (PRIMARY)
+        "avg_net_sharpe": avg_net_sharpe,
+        "net_sharpe_stability_std": net_sharpe_std,
+        "avg_net_profit_factor": avg_net_pf,
+        "avg_net_expectancy": avg_net_expectancy,
         "fold_stability_score": fold_stability_score,
         "folds_passing": folds_passing,
         "majority_pass": majority_pass,
@@ -1004,6 +1257,12 @@ def walk_forward_result_to_dict(result: WalkForwardResult) -> Dict[str, Any]:
                     "win_rate": fm.win_rate,
                     "max_drawdown": fm.max_drawdown,
                     "profit_factor": fm.profit_factor,
+                    "net_sharpe": fm.net_sharpe,
+                    "net_profit_factor": fm.net_profit_factor,
+                    "net_expectancy": fm.net_expectancy,
+                    "gross_sharpe": fm.gross_sharpe,
+                    "gross_profit_factor": fm.gross_profit_factor,
+                    "gross_expectancy": fm.gross_expectancy,
                 },
                 "oos_trade_counts": {
                     "total_trades": fm.total_trades,
@@ -1126,16 +1385,22 @@ def main() -> int:
     if result.folds:
         agg = result.aggregate_metrics
         print(f"Aggregate Metrics:")
-        print(f"  Avg Train Accuracy:  {agg['avg_train_accuracy']:.4f}")
-        print(f"  Avg Val Accuracy:    {agg['avg_val_accuracy']:.4f}")
-        print(f"  Avg Accuracy Gap:    {agg['avg_accuracy_gap']:.4f}")
-        print(f"  Avg Logloss Gap:     {agg['avg_logloss_gap']:.4f}")
-        print(f"  Avg Sharpe:          {agg['avg_sharpe']:.4f}")
-        print(f"  Sharpe Stability:    {agg['sharpe_stability_std']:.4f}")
-        print(f"  Avg Win Rate:        {agg['avg_win_rate']:.4f}")
-        print(f"  Avg Max Drawdown:    {agg['avg_max_drawdown']:.4f}")
-        print(f"  Avg Profit Factor:   {agg['avg_profit_factor']:.4f}")
-        print(f"  Total OOS Trades:    {agg['total_oos_trades']}")
+        print(f"  Avg Train Accuracy:        {agg['avg_train_accuracy']:.4f}")
+        print(f"  Avg Val Accuracy:          {agg['avg_val_accuracy']:.4f}")
+        print(f"  Avg Accuracy Gap:          {agg['avg_accuracy_gap']:.4f}")
+        print(f"  Avg Logloss Gap:           {agg['avg_logloss_gap']:.4f}")
+        print(f"  --- Classification-based ---")
+        print(f"  Avg Sharpe:                {agg['avg_sharpe']:.4f}")
+        print(f"  Sharpe Stability:          {agg['sharpe_stability_std']:.4f}")
+        print(f"  Avg Win Rate:              {agg['avg_win_rate']:.4f}")
+        print(f"  Avg Max Drawdown:          {agg['avg_max_drawdown']:.4f}")
+        print(f"  Avg Profit Factor:         {agg['avg_profit_factor']:.4f}")
+        print(f"  --- Economic (net_R) ---")
+        print(f"  Avg Net Sharpe:            {agg['avg_net_sharpe']:.4f}")
+        print(f"  Net Sharpe Stability:      {agg['net_sharpe_stability_std']:.4f}")
+        print(f"  Avg Net Profit Factor:     {agg['avg_net_profit_factor']:.4f}")
+        print(f"  Avg Net Expectancy:        {agg['avg_net_expectancy']:.6f}")
+        print(f"  Total OOS Trades:          {agg['total_oos_trades']}")
         print()
 
         print("Per-Fold Metrics:")
