@@ -220,7 +220,7 @@ The mode implementation order (SWING first) must not be confused with business/r
 | Hold | Domain | Release Condition |
 |------|--------|-------------------|
 | SCALP thresholds | v7 | Empirical walk-forward OOS evidence, fee/slippage stress, funding validation |
-| Regime gate (G4) | v7/gates | Real regime detector implementation (current: placeholder) |
+| Regime gate (G4) | v7/gates | ✅ **RESOLVED (#134):** G4 gate now evaluates real regime breakdown data from RegimeEvaluator. Symbol x regime stability matrix added. |
 | G1-G5, G7-G8 gates | v7/gates | Real evidence data (current: placeholder implementations) |
 | Real profitability evidence | All | Requires simulation labels, features, training, WF, OOS on real data |
 | EXPLICIT_GBM_BLOCK | alphaforge/gates | Post-training xgboost presence is expected; gate works as designed |

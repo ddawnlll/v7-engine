@@ -82,6 +82,125 @@ class TestEvaluateGate:
         result = evaluate_gate("G3", candidate, ctx)
         assert result.status == GateStatus.FAIL
 
+    # ── G4: REGIME_BREAKDOWN ────────────────────────────────────────
+
+    def test_g4_regime_breakdown_pass_no_data(self):
+        """G4 should pass when no regime breakdown data is available."""
+        candidate = self._swing_candidate()
+        result = evaluate_gate("G4", candidate)
+        assert result.status == GateStatus.PASS
+        assert result.name == "REGIME_BREAKDOWN"
+
+    def test_g4_regime_breakdown_pass_balanced(self):
+        """G4 should pass when all regimes have positive edge."""
+        candidate = self._swing_candidate()
+        ctx = {
+            "regime_breakdown": {
+                "catastrophic_loss_in_single_regime": False,
+                "catastrophic_loss_regime": None,
+                "edge_only_in_rare_regime": False,
+                "rare_regime_untradeable": False,
+                "total_folds_evaluated": 6,
+                "regimes": {
+                    "TREND_UP": {"expectancy_r": 0.4, "fold_count": 2},
+                    "TREND_DOWN": {"expectancy_r": 0.3, "fold_count": 1},
+                    "RANGE": {"expectancy_r": 0.2, "fold_count": 2},
+                    "TRANSITION": {"expectancy_r": 0.15, "fold_count": 1},
+                },
+            }
+        }
+        result = evaluate_gate("G4", candidate, ctx)
+        assert result.status == GateStatus.PASS
+        assert result.score == 1.0  # 4/4 positive
+
+    def test_g4_regime_breakdown_fail_catastrophic(self):
+        """G4 should fail when catastrophic loss is detected in one regime."""
+        candidate = self._swing_candidate()
+        ctx = {
+            "regime_breakdown": {
+                "catastrophic_loss_in_single_regime": True,
+                "catastrophic_loss_regime": "TREND_DOWN",
+                "edge_only_in_rare_regime": False,
+                "rare_regime_untradeable": False,
+                "total_folds_evaluated": 8,
+                "regimes": {
+                    "TREND_UP": {"expectancy_r": 0.4, "fold_count": 3},
+                    "TREND_DOWN": {"expectancy_r": -1.2, "fold_count": 2},
+                    "RANGE": {"expectancy_r": 0.25, "fold_count": 2},
+                    "TRANSITION": {"expectancy_r": 0.1, "fold_count": 1},
+                },
+            }
+        }
+        result = evaluate_gate("G4", candidate, ctx)
+        assert result.status == GateStatus.FAIL
+        assert result.score == 0.0
+        assert "TREND_DOWN" in result.detail
+
+    def test_g4_regime_breakdown_pass_warnings(self):
+        """G4 should pass with score < 1 when warnings are present."""
+        candidate = self._swing_candidate()
+        ctx = {
+            "regime_breakdown": {
+                "catastrophic_loss_in_single_regime": False,
+                "catastrophic_loss_regime": None,
+                "edge_only_in_rare_regime": True,
+                "rare_regime_untradeable": True,
+                "total_folds_evaluated": 20,
+                "regimes": {
+                    "TREND_UP": {"expectancy_r": 0.5, "fold_count": 2},
+                    "TREND_DOWN": {"expectancy_r": 0.3, "fold_count": 8},
+                    "RANGE": {"expectancy_r": -0.05, "fold_count": 7},
+                    "TRANSITION": {"expectancy_r": 0.0, "fold_count": 3},
+                },
+            }
+        }
+        result = evaluate_gate("G4", candidate, ctx)
+        assert result.status == GateStatus.PASS  # 2/4 positive, score=0.5 >= 0.5
+        assert result.score == 0.5
+
+    def test_g4_regime_breakdown_fail_too_many_negative(self):
+        """G4 should fail when fewer than half of regimes have positive edge."""
+        candidate = self._swing_candidate()
+        ctx = {
+            "regime_breakdown": {
+                "catastrophic_loss_in_single_regime": False,
+                "catastrophic_loss_regime": None,
+                "edge_only_in_rare_regime": False,
+                "rare_regime_untradeable": False,
+                "total_folds_evaluated": 6,
+                "regimes": {
+                    "TREND_UP": {"expectancy_r": 0.2, "fold_count": 1},
+                    "TREND_DOWN": {"expectancy_r": -0.1, "fold_count": 2},
+                    "RANGE": {"expectancy_r": -0.1, "fold_count": 2},
+                    "TRANSITION": {"expectancy_r": -0.05, "fold_count": 1},
+                },
+            }
+        }
+        result = evaluate_gate("G4", candidate, ctx)
+        assert result.status == GateStatus.FAIL
+
+    def test_g4_regime_breakdown_empty_regimes(self):
+        """G4 should pass when regime dict has no folds evaluated."""
+        candidate = self._swing_candidate()
+        ctx = {
+            "regime_breakdown": {
+                "catastrophic_loss_in_single_regime": False,
+                "catastrophic_loss_regime": None,
+                "edge_only_in_rare_regime": False,
+                "rare_regime_untradeable": False,
+                "total_folds_evaluated": 0,
+                "regimes": {
+                    "TREND_UP": {"expectancy_r": None, "fold_count": 0},
+                    "TREND_DOWN": {"expectancy_r": None, "fold_count": 0},
+                    "RANGE": {"expectancy_r": None, "fold_count": 0},
+                    "TRANSITION": {"expectancy_r": None, "fold_count": 0},
+                },
+            }
+        }
+        result = evaluate_gate("G4", candidate, ctx)
+        assert result.status == GateStatus.PASS
+        assert result.score == 1.0
+
     # ── G7/G8/G9/G10: infrastructure gates ─────────────────────────
 
     def test_g7_shadow_na(self):

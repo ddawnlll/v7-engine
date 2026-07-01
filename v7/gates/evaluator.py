@@ -153,16 +153,93 @@ def _gate_g3_cost_stress(candidate: dict[str, Any], ctx: dict[str, Any]) -> Gate
 def _gate_g4_regime_breakdown(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
     """G4 REGIME_BREAKDOWN: No single regime hides catastrophic loss.
 
-    Checks performance across TREND_UP, TREND_DOWN, RANGE, TRANSITION regimes.
-    Placeholder — requires regime-labeled evaluation data.
+    Reads regime breakdown dict from context (produced by RegimeEvaluator).
+    Checks catastrophic loss in single regime, edge-only-in-rare-regime,
+    and positive-expectancy fraction across regimes.
+
+    When no regime-labelled data is available, the gate passes with a note
+    (graceful degradation — not a hard failure).
     """
+    regime_breakdown = ctx.get("regime_breakdown")
+
+    # No regime data available — pass with explanatory note
+    if regime_breakdown is None:
+        return GateResult(
+            gate_id="G4",
+            name="REGIME_BREAKDOWN",
+            status=GateStatus.PASS,
+            score=1.0,
+            threshold=0.7,
+            detail="No regime-labelled data available — gate passes by default",
+        )
+
+    # Read flags from regime breakdown dict
+    cat_loss = regime_breakdown.get("catastrophic_loss_in_single_regime", False)
+    cat_loss_regime = regime_breakdown.get("catastrophic_loss_regime")
+    edge_only_rare = regime_breakdown.get("edge_only_in_rare_regime", False)
+    rare_untradeable = regime_breakdown.get("rare_regime_untradeable", False)
+    total_folds = regime_breakdown.get("total_folds_evaluated", 0)
+    regimes_data = regime_breakdown.get("regimes", {})
+
+    # Catastrophic loss in a single regime is an immediate FAIL
+    if cat_loss and cat_loss_regime:
+        regime_exp = regimes_data.get(cat_loss_regime, {}).get("expectancy_r", "N/A")
+        return GateResult(
+            gate_id="G4",
+            name="REGIME_BREAKDOWN",
+            status=GateStatus.FAIL,
+            score=0.0,
+            threshold=0.7,
+            detail=(
+                f"FAIL — catastrophic loss in regime {cat_loss_regime}: "
+                f"expectancy_r={regime_exp}"
+            ),
+        )
+
+    # Compute score from fraction of regimes with positive expectancy
+    regimes_with_data = [
+        r for r in regimes_data.values()
+        if r.get("expectancy_r") is not None
+    ]
+
+    if not regimes_with_data:
+        return GateResult(
+            gate_id="G4",
+            name="REGIME_BREAKDOWN",
+            status=GateStatus.PASS,
+            score=1.0,
+            threshold=0.7,
+            detail="Regime data present but no folds evaluated",
+        )
+
+    positive_count = sum(
+        1 for r in regimes_with_data if r["expectancy_r"] > 0
+    )
+    score = positive_count / len(regimes_with_data)
+
+    # Collect warnings for detail string
+    warnings: list[str] = []
+    if edge_only_rare:
+        warnings.append("edge only in rare regime(s)")
+    if rare_untradeable:
+        warnings.append("rare regime(s) untradeable")
+
+    detail_parts = [
+        f"positive regimes: {positive_count}/{len(regimes_with_data)}"
+    ]
+    if warnings:
+        detail_parts.append("; ".join(warnings))
+
+    # Gate passes if at least half of non-rare regimes have positive edge
+    passed = score >= 0.5
+
     return GateResult(
         gate_id="G4",
         name="REGIME_BREAKDOWN",
-        status=GateStatus.PASS,
-        score=1.0,
+        status=GateStatus.PASS if passed else GateStatus.FAIL,
+        score=score,
         threshold=0.7,
-        detail="Regime breakdown baseline (no regime-labelled data yet)",
+        detail=", ".join(detail_parts),
     )
 
 

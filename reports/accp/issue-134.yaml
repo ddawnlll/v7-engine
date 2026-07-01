@@ -1,0 +1,38 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: |
+  Replaced the G4 REGIME_BREAKDOWN placeholder gate with real regime
+  breakdown evaluation using RegimeEvaluator output from context. Added
+  compute_symbol_regime_matrix() for per-symbol regime distribution
+  analysis. All existing and new tests pass.
+files_changed:
+  - alphaforge/src/alphaforge/validation/regime_eval.py
+  - alphaforge/src/alphaforge/validation/__init__.py
+  - v7/gates/evaluator.py
+  - alphaforge/tests/test_regime_eval.py
+  - v7/tests/test_gates.py
+  - v7/docs/roadmap.md
+decisions_locked:
+  - G4 gate: REGIME_BREAKDOWN now evaluates catastrophic loss, edge-only-in-rare-regime, and positive-edge fraction from regime breakdown data
+  - compute_symbol_regime_matrix: public API for per-symbol regime distribution, stability, cross-symbol consistency
+remaining_holds:
+  - G1-G5, G7-G8 gates still use placeholder data for non-regime metrics
+  - G5 symbol stability still placeholder (separate tracked issue)
+  - G6 calibration reliability still placeholder (separate tracked issue)
+safe_next_step:
+  - Wire real regime breakdown data from RegimeEvaluator into the ctx dict
+    passed to evaluate_gate during WFV report assembly
+  - Implement real symbol stability gate (G5)
+commands_run:
+  - PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=60 (1093 passed)
+  - PYTHONPATH=. python3 -m pytest integration/tests/ -q -x --timeout=60 (176 passed)
+  - PYTHONPATH=. python3 -m pytest lib/tests/ simulation/tests/ -q -x --timeout=60 (352 passed)
+  - PYTHONPATH=.:alphaforge/src python3 -m pytest alphaforge/tests/test_regime.py alphaforge/tests/test_regime_eval.py v7/tests/test_gates.py -q -x --timeout=60 (129 passed)
+evidence:
+  - "All alphaforge tests pass (1093 passed, 1 skipped)"
+  - "All integration tests pass (176 passed, 2 skipped)"
+  - "All lib/simulation tests pass (352 passed)"
+  - "16 new tests (6 G4 gate + 10 symbol_regime_matrix)"
+  - "G4 gate no longer a placeholder — evaluates real regime breakdown data"
+  - "compute_symbol_regime_matrix() added with full test coverage"

@@ -23,10 +23,12 @@ from alphaforge.validation.regime_eval import (
     CATASTROPHIC_LOSS_EXPECTANCY_R_THRESHOLD,
     MIN_TOTAL_FOLDS_FOR_FLAGS,
     RARE_REGIME_FOLD_FRACTION,
+    STABILITY_REGIME_LABELS,
     RegimeEvaluator,
     _detect_catastrophic_loss,
     _detect_edge_in_rare_regime,
     _safe_mean,
+    compute_symbol_regime_matrix,
 )
 
 
@@ -602,6 +604,107 @@ class TestDeterminismAndStructure:
             assert set(reg_data.keys()) == {
                 "expectancy_r", "win_rate", "trade_count", "fold_count"
             }
+
+
+# =========================================================================
+# Symbol x Regime stability matrix tests
+# =========================================================================
+
+
+class TestSymbolRegimeMatrix:
+    """Tests for compute_symbol_regime_matrix()."""
+
+    def test_single_symbol_all_uptrend(self):
+        """Single symbol, all TREND_UP produces stable matrix."""
+        labels = {"BTC": ["TREND_UP"] * 50}
+        result = compute_symbol_regime_matrix(labels)
+
+        assert result["num_symbols"] == 1
+        assert result["matrix"]["BTC"]["TREND_UP"] == 1.0
+        assert result["matrix"]["BTC"]["RANGE"] == 0.0
+        assert result["stability_scores"]["BTC"] == 1.0
+        assert result["dominant_regime"]["BTC"] == "TREND_UP"
+        assert result["avg_stability"] == 1.0
+
+    def test_two_symbols_different_distributions(self):
+        """Two symbols with different regime mixes produce different matrices."""
+        labels = {
+            "BTC": ["TREND_UP"] * 30 + ["RANGE"] * 20,
+            "ETH": ["TREND_DOWN"] * 25 + ["TRANSITION"] * 25,
+        }
+        result = compute_symbol_regime_matrix(labels)
+
+        assert result["num_symbols"] == 2
+        assert result["matrix"]["BTC"]["TREND_UP"] == pytest.approx(0.6)
+        assert result["matrix"]["BTC"]["RANGE"] == pytest.approx(0.4)
+        assert result["matrix"]["ETH"]["TREND_DOWN"] == pytest.approx(0.5)
+        assert result["matrix"]["ETH"]["TRANSITION"] == pytest.approx(0.5)
+
+    def test_unknown_regime_label(self):
+        """Labels not in the standard set go to OTHER."""
+        labels = {"TEST": ["TREND_UP", "MYSTERY_REGIME", "RANGE"]}
+        result = compute_symbol_regime_matrix(labels)
+        assert result["matrix"]["TEST"]["TREND_UP"] == pytest.approx(1 / 3)
+        assert result["matrix"]["TEST"]["OTHER"] == pytest.approx(1 / 3)
+
+    def test_empty_input(self):
+        """Empty dict returns empty matrix with zero stats."""
+        result = compute_symbol_regime_matrix({})
+        assert result["num_symbols"] == 0
+        assert result["matrix"] == {}
+        assert result["avg_stability"] == 0.0
+
+    def test_empty_symbol_list(self):
+        """Symbol with empty label list returns zero fractions."""
+        labels = {"BTC": []}
+        result = compute_symbol_regime_matrix(labels)
+        assert result["matrix"]["BTC"]["TREND_UP"] == 0.0
+        assert result["stability_scores"]["BTC"] == 1.0
+        assert result["dominant_regime"]["BTC"] == "NONE"
+
+    def test_stability_score_with_transitions(self):
+        """Frequent regime transitions produce low stability score."""
+        # Alternating regimes = max transitions
+        labels = {"BTC": ["TREND_UP", "TREND_DOWN"] * 25}
+        result = compute_symbol_regime_matrix(labels)
+        # 50 bars, 49 transitions out of 49 max = stability 0.0
+        assert result["stability_scores"]["BTC"] == 0.0
+
+    def test_stability_score_partial(self):
+        """Partial transitions produce intermediate stability."""
+        # 10 TREND_UP, then 10 RANGE = 1 transition out of 19 max
+        labels = {"BTC": ["TREND_UP"] * 10 + ["RANGE"] * 10}
+        result = compute_symbol_regime_matrix(labels)
+        expected = 1.0 - (1 / 19)
+        assert result["stability_scores"]["BTC"] == pytest.approx(expected)
+
+    def test_dominant_regime(self):
+        """Most frequent regime is correctly identified."""
+        labels = {"BTC": ["TREND_UP"] * 40 + ["RANGE"] * 10 + ["TREND_DOWN"] * 5}
+        result = compute_symbol_regime_matrix(labels)
+        assert result["dominant_regime"]["BTC"] == "TREND_UP"
+
+    def test_cross_symbol_consistency(self):
+        """Identically distributed symbols have CV=0."""
+        labels = {
+            "BTC": ["TREND_UP"] * 25 + ["RANGE"] * 25,
+            "ETH": ["TREND_UP"] * 25 + ["RANGE"] * 25,
+        }
+        result = compute_symbol_regime_matrix(labels)
+        # Both have 0.5 TREND_UP, so CV = 0
+        assert result["cross_symbol_consistency"]["TREND_UP"] == 0.0
+        assert result["cross_symbol_consistency"]["RANGE"] == 0.0
+
+    def test_cross_symbol_consistency_nonzero(self):
+        """Different distributions produce nonzero CV."""
+        labels = {
+            "BTC": ["TREND_UP"] * 50,
+            "ETH": ["RANGE"] * 50,
+        }
+        result = compute_symbol_regime_matrix(labels)
+        # One has 1.0 TREND_UP, other has 0.0 -> mean 0.5, std ~0.5, CV=1.0
+        assert result["cross_symbol_consistency"]["TREND_UP"] == pytest.approx(1.0)
+        assert result["cross_symbol_consistency"]["RANGE"] == pytest.approx(1.0)
 
 
 # =========================================================================

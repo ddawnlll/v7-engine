@@ -333,3 +333,124 @@ def _empty_breakdown() -> Dict[str, Any]:
         "total_folds_evaluated": 0,
         "folds_per_regime": {r.value: 0 for r in RegimeLabel},
     }
+
+
+# ---------------------------------------------------------------------------
+# Symbol x Regime stability matrix
+# ---------------------------------------------------------------------------
+
+STABILITY_REGIME_LABELS: List[str] = [
+    "TREND_UP",
+    "TREND_DOWN",
+    "RANGE",
+    "TRANSITION",
+]
+
+
+def compute_symbol_regime_matrix(
+    per_symbol_labels: Dict[str, List[str]],
+) -> Dict[str, Any]:
+    """Compute symbol x regime distribution matrix and cross-symbol stability.
+
+    For each symbol, computes the fraction of bars that fall into each regime.
+    Also computes a stability score per symbol (1 - transition_rate) and
+    cross-symbol correlation of regime distributions.
+
+    Args:
+        per_symbol_labels: Dict mapping symbol name -> list of regime label
+            strings (e.g. "TREND_UP", "TREND_DOWN").  Each list must have at
+            least one element.  Regime labels not in STABILITY_REGIME_LABELS
+            are aggregated under "OTHER".
+
+    Returns:
+        Dict with keys:
+            matrix: Dict[symbol, Dict[regime, fraction]] — fractions sum to 1.0
+                per symbol (or 0.0 for empty series).  All four canonical
+                regimes plus "OTHER" appear as columns.
+            stability_scores: Dict[symbol, float] — 1.0 means no regime
+                transitions (perfect stability), 0.0 means every bar is a
+                different regime from the previous.
+            dominant_regime: Dict[symbol, str] — most frequent regime per
+                symbol, or "NONE" for empty input.
+            num_symbols: int
+            avg_stability: float — mean stability score across symbols.
+            cross_symbol_consistency: Dict[regime, float] — coefficient of
+                variation (std/mean) of regime fractions across symbols.
+                Lower values mean more consistent regime distribution across
+                symbols.
+    """
+    if not per_symbol_labels:
+        return {
+            "matrix": {},
+            "stability_scores": {},
+            "dominant_regime": {},
+            "num_symbols": 0,
+            "avg_stability": 0.0,
+            "cross_symbol_consistency": {r: 0.0 for r in STABILITY_REGIME_LABELS},
+        }
+
+    # Allowed regime labels + OTHER catch-all
+    allowed = set(STABILITY_REGIME_LABELS)
+
+    matrix: Dict[str, Dict[str, float]] = {}
+    stability_scores: Dict[str, float] = {}
+    dominant_regime: Dict[str, str] = {}
+
+    for symbol, labels in per_symbol_labels.items():
+        n = len(labels)
+        if n == 0:
+            matrix[symbol] = {r: 0.0 for r in STABILITY_REGIME_LABELS}
+            matrix[symbol]["OTHER"] = 0.0
+            stability_scores[symbol] = 1.0
+            dominant_regime[symbol] = "NONE"
+            continue
+
+        # Count regime occurrences
+        counts: Dict[str, int] = {r: 0 for r in STABILITY_REGIME_LABELS}
+        counts["OTHER"] = 0
+        for lbl in labels:
+            if lbl in allowed:
+                counts[lbl] += 1
+            else:
+                counts["OTHER"] += 1
+
+        # Convert to fractions
+        matrix[symbol] = {r: c / n for r, c in counts.items()}
+
+        # Dominant regime
+        dominant = max(counts, key=lambda k: counts[k])  # type: ignore[arg-type]
+        dominant_regime[symbol] = dominant
+
+        # Stability: 1 - (transitions / max_possible_transitions)
+        transitions = sum(
+            1 for i in range(1, n) if labels[i] != labels[i - 1]
+        )
+        max_transitions = n - 1
+        stability_scores[symbol] = (
+            1.0 - (transitions / max_transitions) if max_transitions > 0 else 1.0
+        )
+
+    # Average stability
+    stability_vals = list(stability_scores.values())
+    avg_stability = sum(stability_vals) / len(stability_vals) if stability_vals else 0.0
+
+    # Cross-symbol consistency: coefficient of variation per regime
+    cross_symbol_consistency: Dict[str, float] = {}
+    for regime in STABILITY_REGIME_LABELS:
+        fractions = [matrix[s].get(regime, 0.0) for s in per_symbol_labels]
+        mean_frac = sum(fractions) / len(fractions) if fractions else 0.0
+        if mean_frac > 0:
+            variance = sum((f - mean_frac) ** 2 for f in fractions) / len(fractions)
+            std_dev = math.sqrt(variance)
+            cross_symbol_consistency[regime] = std_dev / mean_frac  # CV
+        else:
+            cross_symbol_consistency[regime] = 0.0  # No variance when all zero
+
+    return {
+        "matrix": matrix,
+        "stability_scores": stability_scores,
+        "dominant_regime": dominant_regime,
+        "num_symbols": len(per_symbol_labels),
+        "avg_stability": avg_stability,
+        "cross_symbol_consistency": cross_symbol_consistency,
+    }
