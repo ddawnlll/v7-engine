@@ -18,6 +18,9 @@ import pytest
 
 from alphaforge.features import (
     DEFAULT_AMIHUD_WINDOW,
+    DEFAULT_DEPTH_RATIO_WINDOW,
+    DEFAULT_LIQUIDITY_VACUUM_WINDOW,
+    DEFAULT_MICROPRICE_WINDOW,
     DEFAULT_NOISE_WINDOW,
     DEFAULT_ORDERBOOK_WINDOW,
     DEFAULT_PRICE_IMPACT_WINDOW,
@@ -25,6 +28,9 @@ from alphaforge.features import (
     DEFAULT_SERIAL_CORR_WINDOW,
     DEFAULT_VPIN_WINDOW,
     compute_amihud_illiquidity_numpy,
+    compute_depth_ratio,
+    compute_liquidity_vacuum,
+    compute_microprice,
     compute_microstructure_noise,
     compute_orderbook_group,
     compute_price_impact_slope,
@@ -35,7 +41,7 @@ from alphaforge.features import (
     compute_volume_imbalance,
     compute_vpin,
 )
-from alphaforge.features.orderbook import _classify_volume_direction
+from alphaforge.features.orderbook import _classify_volume_direction, _rolling_mean_nan_safe
 from alphaforge.features.pipeline import FeatureGroup, compute_features
 
 
@@ -577,11 +583,252 @@ class TestPriceImpactSlope:
 
 
 # ===========================================================================
-# test 6: compute_orderbook_group integration (updated for 9 features)
+# test 17: compute_microprice (NEW — #119)
+# ===========================================================================
+
+class TestMicroprice:
+    """#119-01: compute_microprice — volume-weighted true price estimate."""
+
+    def test_basic(self, ohlcv_100):
+        result = compute_microprice(
+            ohlcv_100["high"], ohlcv_100["low"], ohlcv_100["open"],
+            ohlcv_100["close"], ohlcv_100["volume"], window=5,
+        )
+        assert len(result) == len(ohlcv_100["close"])
+        # First 4 values NaN
+        for i in range(4):
+            assert np.isnan(result[i])
+        assert not np.isnan(result[4])
+
+    def test_range_between_high_low(self, ohlcv_100):
+        """Microprice should be between low and high for each bar."""
+        result = compute_microprice(
+            ohlcv_100["high"], ohlcv_100["low"], ohlcv_100["open"],
+            ohlcv_100["close"], ohlcv_100["volume"], window=1,
+        )
+        valid = ~np.isnan(result)
+        for i in np.where(valid)[0]:
+            assert result[i] >= ohlcv_100["low"][i] - 1e-10
+            assert result[i] <= ohlcv_100["high"][i] + 1e-10
+
+    def test_all_up_bars_microprice(self):
+        """All up bars: microprice shifts toward high."""
+        n = 50
+        high = np.full(n, 110.0)
+        low = np.full(n, 100.0)
+        open_arr = np.full(n, 102.0)
+        close = np.full(n, 108.0)  # all up bars
+        volume = np.ones(n)
+        result = compute_microprice(high, low, open_arr, close, volume, window=5)
+        valid = result[~np.isnan(result)]
+        # Up bars: weight_up = 1.0 -> microprice = low*0 + high*1 = high
+        # After smoothing at window=5: should be near high
+        assert np.mean(valid) > 105.0  # should be above midpoint
+
+    def test_all_down_bars_microprice(self):
+        """All down bars: microprice shifts toward low."""
+        n = 50
+        high = np.full(n, 110.0)
+        low = np.full(n, 100.0)
+        open_arr = np.full(n, 108.0)
+        close = np.full(n, 102.0)  # all down bars
+        volume = np.ones(n)
+        result = compute_microprice(high, low, open_arr, close, volume, window=5)
+        valid = result[~np.isnan(result)]
+        # Down bars: weight_up = 0.0 -> microprice = low*1 + high*0 = low
+        # After smoothing at window=5: should be near low
+        assert np.mean(valid) < 105.0  # should be below midpoint
+
+    def test_constant_prices(self):
+        """Constant prices give microprice = mid."""
+        n = 50
+        high = np.full(n, 105.0)
+        low = np.full(n, 95.0)
+        open_arr = np.full(n, 100.0)
+        close = np.full(n, 100.0)  # flat -> evenly split
+        volume = np.ones(n)
+        result = compute_microprice(high, low, open_arr, close, volume, window=5)
+        valid = result[~np.isnan(result)]
+        # Flat bars: up=0.5, down=0.5 -> midpoint = (95+105)/2 = 100
+        assert np.allclose(valid, 100.0, atol=1e-10)
+
+    def test_insufficient_data(self):
+        n = 3
+        high = np.ones(n) * 105.0
+        low = np.ones(n) * 95.0
+        open_arr = np.ones(n) * 100.0
+        close = np.ones(n) * 102.0
+        volume = np.ones(n)
+        result = compute_microprice(high, low, open_arr, close, volume, window=10)
+        assert np.all(np.isnan(result))
+
+    def test_determinism(self, ohlcv_100):
+        r1 = compute_microprice(
+            ohlcv_100["high"], ohlcv_100["low"], ohlcv_100["open"],
+            ohlcv_100["close"], ohlcv_100["volume"], window=5,
+        )
+        r2 = compute_microprice(
+            ohlcv_100["high"], ohlcv_100["low"], ohlcv_100["open"],
+            ohlcv_100["close"], ohlcv_100["volume"], window=5,
+        )
+        assert np.allclose(r1, r2, equal_nan=True)
+
+
+# ===========================================================================
+# test 18: compute_depth_ratio (NEW — #119)
+# ===========================================================================
+
+class TestDepthRatio:
+    """#119-02: compute_depth_ratio — bid/ask depth proxy."""
+
+    def test_basic(self, ohlcv_100):
+        result = compute_depth_ratio(
+            ohlcv_100["open"], ohlcv_100["close"], ohlcv_100["volume"], window=5,
+        )
+        assert len(result) == len(ohlcv_100["close"])
+        # First 4 values NaN
+        for i in range(4):
+            assert np.isnan(result[i])
+        assert not np.isnan(result[4])
+
+    def test_non_negative(self, ohlcv_100):
+        result = compute_depth_ratio(
+            ohlcv_100["open"], ohlcv_100["close"], ohlcv_100["volume"], window=5,
+        )
+        valid = result[~np.isnan(result)]
+        assert np.all(valid >= 0)
+
+    def test_all_up_bars(self):
+        """All up bars -> depth_ratio should be very high (no sell volume)."""
+        n = 50
+        open_arr = np.arange(n, dtype=np.float64)
+        close = np.arange(n, dtype=np.float64) + 2.0
+        volume = np.ones(n)
+        result = compute_depth_ratio(open_arr, close, volume, window=5)
+        valid = result[~np.isnan(result)]
+        # up_vol = 1, down_vol = 1e-10 epsilon -> ~1e10
+        assert np.all(valid > 1.0)
+
+    def test_all_down_bars(self):
+        """All down bars -> depth_ratio near 0."""
+        n = 50
+        open_arr = np.arange(n, dtype=np.float64) + 2.0
+        close = np.arange(n, dtype=np.float64)
+        volume = np.ones(n)
+        result = compute_depth_ratio(open_arr, close, volume, window=5)
+        valid = result[~np.isnan(result)]
+        # up_vol = 0, down_vol = 1 -> 0/1 = 0
+        assert np.allclose(valid, 0.0, atol=1e-10)
+
+    def test_balanced(self):
+        """Flat bars: up=down=0.5 -> ratio = 1."""
+        n = 50
+        open_arr = np.full(n, 100.0)
+        close = np.full(n, 100.0)
+        volume = np.ones(n)
+        result = compute_depth_ratio(open_arr, close, volume, window=5)
+        valid = result[~np.isnan(result)]
+        assert np.allclose(valid, 1.0, atol=1e-10)
+
+    def test_insufficient_data(self):
+        n = 3
+        open_arr = np.arange(n, dtype=np.float64)
+        close = np.arange(n, dtype=np.float64) + 1.0
+        volume = np.ones(n)
+        result = compute_depth_ratio(open_arr, close, volume, window=10)
+        assert np.all(np.isnan(result))
+
+
+# ===========================================================================
+# test 19: compute_liquidity_vacuum (NEW — #119)
+# ===========================================================================
+
+class TestLiquidityVacuum:
+    """#119-03: compute_liquidity_vacuum — low-liquidity detection."""
+
+    def test_basic(self, ohlcv_100):
+        result = compute_liquidity_vacuum(
+            ohlcv_100["high"], ohlcv_100["low"], ohlcv_100["close"],
+            ohlcv_100["volume"], window=10,
+        )
+        assert len(result) == len(ohlcv_100["close"])
+        # First 9 values NaN
+        for i in range(9):
+            assert np.isnan(result[i])
+        assert not np.isnan(result[9])
+
+    def test_non_negative(self, ohlcv_100):
+        result = compute_liquidity_vacuum(
+            ohlcv_100["high"], ohlcv_100["low"], ohlcv_100["close"],
+            ohlcv_100["volume"], window=10,
+        )
+        valid = result[~np.isnan(result)]
+        assert np.all(valid >= 0)
+
+    def test_normal_liquidity_zero(self):
+        """Constant volume and spread -> vacuum = 0."""
+        n = 100
+        high = np.full(n, 105.0)
+        low = np.full(n, 95.0)
+        close = np.full(n, 100.0)
+        volume = np.full(n, 100.0)
+        result = compute_liquidity_vacuum(high, low, close, volume, window=10)
+        valid = result[~np.isnan(result)]
+        # vol_ratio = 1 -> penalty = 0 -> vacuum = 0
+        assert np.allclose(valid, 0.0, atol=1e-10)
+
+    def test_low_volume_high_spread(self):
+        """Low volume + wide spread -> positive vacuum."""
+        n = 100
+        high = np.full(n, 105.0)
+        low = np.full(n, 95.0)
+        close = np.full(n, 100.0)
+        volume = np.full(n, 100.0)
+        # At bar 55, suddenly drop volume and widen spread.
+        # The window [46..55] has 9 normal + 1 low -> rolling mean ~ 91
+        # At bar 55: vol_ratio = 10/91 ~ 0.11 -> penalty = 0.89 -> vacuum > 0
+        volume[55:] = 10.0
+        high[55:] = 110.0
+        low[55:] = 90.0
+        result = compute_liquidity_vacuum(high, low, close, volume, window=10)
+        # At bar 55: first bar where 10-bar window contains the drop
+        # vol_ratio = 10/mean([100*9 + 10]) = 10/91 = 0.11 -> penalty = 0.89
+        # spread_ratio = 0.2/0.1 = 2 -> penalty = 1
+        # vacuum = 0.89 * 1 = 0.89 > 0
+        val55 = result[55]
+        assert not np.isnan(val55), "Expected non-NaN at bar 55"
+        assert val55 > 0, f"Expected vacuum > 0 at bar 55, got {val55}"
+
+    def test_high_volume_normal_spread(self):
+        """High volume with normal spread -> vacuum = 0."""
+        n = 100
+        high = np.full(n, 105.0)
+        low = np.full(n, 95.0)
+        close = np.full(n, 100.0)
+        volume = np.full(n, 100.0)
+        # Inject high volume
+        volume[50:60] = 500.0
+        result = compute_liquidity_vacuum(high, low, close, volume, window=10)
+        valid = result[~np.isnan(result)]
+        # vol_ratio > 1 -> penalty = 0 -> vacuum = 0
+        assert np.allclose(valid, 0.0, atol=1e-10)
+
+    def test_insufficient_data(self):
+        n = 3
+        high = np.ones(n) * 105.0
+        low = np.ones(n) * 95.0
+        close = np.ones(n) * 100.0
+        volume = np.ones(n)
+        result = compute_liquidity_vacuum(high, low, close, volume, window=10)
+        assert np.all(np.isnan(result))
+
+
+# ===========================================================================
+# test 6: compute_orderbook_group integration (updated for 12 features)
 # ===========================================================================
 
 class TestOrderbookGroup:
-    """#43-06: compute_orderbook_group integration (9 features)."""
+    """#43-06: compute_orderbook_group integration (12 features)."""
 
     def test_all_keys_present(self, ohlcv_100):
         result = compute_orderbook_group(
@@ -594,6 +841,7 @@ class TestOrderbookGroup:
             "roll_spread_N", "microstructure_noise_N",
             "serial_correlation_N", "vpin_N",
             "price_impact_slope_N",
+            "microprice_N", "liquidity_vacuum_N", "depth_ratio_N",
         }
         assert set(result.keys()) == expected
         for arr in result.values():
@@ -649,6 +897,10 @@ class TestPipelineIncludesOrderbook:
         assert "serial_correlation_N" in result.features
         assert "vpin_N" in result.features
         assert "price_impact_slope_N" in result.features
+        # New #119 OrderBook expansion features
+        assert "microprice_N" in result.features
+        assert "liquidity_vacuum_N" in result.features
+        assert "depth_ratio_N" in result.features
 
     def test_orderbook_in_feature_group_ids(self, ohlcv_100):
         result = compute_features(ohlcv_100, mode="SWING")

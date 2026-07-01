@@ -891,10 +891,10 @@ class TestDeterminism:
 class TestFeatureMatrixShape:
     """AC-03-044/045: Feature matrix shape and NaN counts."""
 
-    def test_500_bars_35_features(self, ohlcv_500):
-        """AC-03-044: 500 bars produces all arrays length 500, 35 features."""
+    def test_500_bars_38_features(self, ohlcv_500):
+        """AC-03-044: 500 bars produces all arrays length 500, 38 features (#119 expansion)."""
         result = compute_features(ohlcv_500, mode="SWING")
-        assert result.total_features() == 35
+        assert result.total_features() == 38
         assert result.bar_count() == 500
         for name, arr in result.features.items():
             assert len(arr) == 500, f"{name} has length {len(arr)}"
@@ -1146,9 +1146,9 @@ class TestImportBoundary:
 class TestFullPipeline:
     """AC-03-039: compute_features() assembles all 7 groups."""
 
-    def test_assembles_35_features(self, ohlcv_100):
+    def test_assembles_38_features(self, ohlcv_100):
         result = compute_features(ohlcv_100, mode="SWING")
-        assert result.total_features() == 35
+        assert result.total_features() == 38
         assert result.bar_count() == 100
 
     def test_7_active_groups(self, ohlcv_100):
@@ -1183,7 +1183,7 @@ class TestFeatureMatrixClass:
 
     def test_total_features(self, ohlcv_500):
         result = compute_features(ohlcv_500, mode="SWING")
-        assert result.total_features() == 35
+        assert result.total_features() == 38
 
     def test_bar_count(self, ohlcv_500):
         result = compute_features(ohlcv_500, mode="SWING")

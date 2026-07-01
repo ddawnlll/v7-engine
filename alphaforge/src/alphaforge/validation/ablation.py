@@ -65,7 +65,7 @@ FEATURE_NAME_TO_GROUP: Dict[str, str] = {
     "highest_N": "breakout",
     "lowest_N": "breakout",
     "range_breakout_N": "breakout",
-    # OrderBook group (9 features)
+    # OrderBook group (12 features — 9 core + 3 expansion #119)
     "spread_pct_N": "orderbook",
     "volume_imbalance_N": "orderbook",
     "trade_intensity_N": "orderbook",
@@ -75,6 +75,9 @@ FEATURE_NAME_TO_GROUP: Dict[str, str] = {
     "serial_correlation_N": "orderbook",
     "vpin_N": "orderbook",
     "price_impact_slope_N": "orderbook",
+    "microprice_N": "orderbook",
+    "liquidity_vacuum_N": "orderbook",
+    "depth_ratio_N": "orderbook",
 }
 
 # Reverse: group name -> list of feature names

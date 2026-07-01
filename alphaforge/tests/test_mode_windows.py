@@ -341,6 +341,10 @@ class TestToDict:
         "bb_window",
         "bb_num_std",
         "funding_window",
+        "microprice_window",
+        "liquidity_vacuum_window",
+        "depth_ratio_window",
+        "oi_proxy_window",
         "periods_per_year",
     }
 
@@ -506,11 +510,11 @@ class TestPipelineModeSpecific:
                 diff_count += 1
         assert diff_count > 0, "Expected SCALP and AGGRESSIVE features to differ"
 
-    def test_all_modes_produce_35_features(self):
+    def test_all_modes_produce_38_features(self):
         ohlcv = _make_ohlcv(200)
         for mode in ["SWING", "SCALP", "AGGRESSIVE_SCALP"]:
             fm = compute_features(ohlcv, mode=mode)
-            assert fm.total_features() == 35, f"{mode}: {fm.total_features()}"
+            assert fm.total_features() == 38, f"{mode}: {fm.total_features()}"
             assert fm.bar_count() == 200
             assert fm.mode == mode
 
@@ -649,7 +653,7 @@ class TestCrossModeConsistency:
         ohlcv = _make_ohlcv(200)
         for mode in ["SWING", "SCALP", "AGGRESSIVE_SCALP"]:
             fm = compute_features(ohlcv, mode=mode)
-            assert fm.total_features() == 35
+            assert fm.total_features() == 38
 
     def test_no_lead_lag_in_any_mode(self):
         ohlcv = _make_ohlcv(100)

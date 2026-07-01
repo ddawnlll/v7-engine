@@ -7,7 +7,7 @@ No real order book data is used in v0.2 — all features are OHLCV proxies.
 Primary target mode: AGGRESSIVE_SCALP (15m primary, 5m refinement).
 Secondary applicability: SCALP and SWING with adjusted window parameters.
 
-Features (9 total):
+Features (12 total — 9 core + 3 expansion #119):
   - spread_pct_N: rolling mean of (high-low)/close — spread proxy
   - volume_imbalance_N: rolling (up_volume - down_volume) / total_volume
   - trade_intensity_N: volume * (high-low)/close normalized by rolling mean
@@ -17,6 +17,9 @@ Features (9 total):
   - serial_correlation_N: rolling autocorrelation of returns at lag 1
   - vpin_N: VPIN-inspired order flow toxicity proxy
   - price_impact_slope_N: Kyle's lambda proxy (return-on-signed-volume slope)
+  - microprice_N: Estimate of true price from volume-weighted high/low (#119)
+  - liquidity_vacuum_N: Combined low-volume + wide-spread regime detector (#119)
+  - depth_ratio_N: Estimate of bid/ask depth ratio from volume classification (#119)
 
 Design constraints:
   - numpy only (no pandas, scipy, ta-lib) except lib/indicators bridge
@@ -61,6 +64,13 @@ AGGRESSIVE_VPIN_WINDOW: int = 50
 AGGRESSIVE_PRICE_IMPACT_WINDOW: int = 15
 AGGRESSIVE_PERIODS_PER_YEAR: int = 35040  # 365 * 24 * 4 (15m bars)
 
+# AGGRESSIVE_SCALP microprice window (very short, 5 bars at 15m = 75m)
+AGGRESSIVE_MICROPRICE_WINDOW: int = 5
+# AGGRESSIVE_SCALP liquidity vacuum window
+AGGRESSIVE_LIQUIDITY_VACUUM_WINDOW: int = 10
+# AGGRESSIVE_SCALP depth ratio window
+AGGRESSIVE_DEPTH_RATIO_WINDOW: int = 5
+
 # Generic defaults usable across modes
 DEFAULT_ORDERBOOK_WINDOW: int = 10
 DEFAULT_AMIHUD_WINDOW: int = 15
@@ -69,6 +79,9 @@ DEFAULT_NOISE_WINDOW: int = 20
 DEFAULT_SERIAL_CORR_WINDOW: int = 10
 DEFAULT_VPIN_WINDOW: int = 50
 DEFAULT_PRICE_IMPACT_WINDOW: int = 15
+DEFAULT_MICROPRICE_WINDOW: int = 5
+DEFAULT_LIQUIDITY_VACUUM_WINDOW: int = 10
+DEFAULT_DEPTH_RATIO_WINDOW: int = 5
 
 
 # ===========================================================================
@@ -701,6 +714,231 @@ def compute_price_impact_slope(
 
 
 # ===========================================================================
+# Feature: microprice (volume-weighted true price estimate) — #119
+# ===========================================================================
+
+def compute_microprice(
+    high: np.ndarray,
+    low: np.ndarray,
+    open_arr: np.ndarray,
+    close: np.ndarray,
+    volume: np.ndarray,
+    window: int = DEFAULT_MICROPRICE_WINDOW,
+) -> np.ndarray:
+    """Estimate microprice (true price between bid/ask) from OHLCV.
+
+    The microprice in limit-order-book markets is:
+      microprice = (bid_price * ask_qty + ask_price * bid_qty) / (bid_qty + ask_qty)
+
+    From OHLCV data, we estimate it using volume-weighted high/low:
+      weight_up = up_vol / max(up_vol + down_vol, 1)
+      microprice_raw_i = low_i * (1 - weight_up) + high_i * weight_up
+
+    When buying pressure dominates: microprice -> high (bid side active).
+    When selling pressure dominates: microprice -> low (ask side active).
+    When balanced: microprice -> midpoint.
+
+    The per-bar microprice is then smoothed with a rolling mean.
+
+    Suitable for AGGRESSIVE_SCALP at short windows (5 bars at 15m = 75m).
+
+    Args:
+        high: High prices.
+        low: Low prices.
+        open_arr: Open prices.
+        close: Close prices.
+        volume: Volume (base asset).
+        window: Smoothing window in bars (default 5).
+
+    Returns:
+        numpy array of estimated microprice values, same length as input.
+        First ``window - 1`` values are NaN. Values are in price units.
+    """
+    n = len(high)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < window:
+        return result
+
+    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+    total = up_vol + down_vol
+
+    # Per-bar raw microprice: low * (1 - up_weight) + high * up_weight
+    raw_mp = np.full(n, np.nan, dtype=np.float64)
+    for i in range(n):
+        if total[i] > 0:
+            weight_up = up_vol[i] / total[i]
+            raw_mp[i] = low[i] * (1.0 - weight_up) + high[i] * weight_up
+        else:
+            raw_mp[i] = (high[i] + low[i]) * 0.5
+
+    # Smooth with rolling mean
+    for i in range(window - 1, n):
+        seg = raw_mp[i - window + 1 : i + 1]
+        seg_clean = seg[~np.isnan(seg)]
+        if len(seg_clean) >= 2:
+            result[i] = np.mean(seg_clean)
+
+    return result
+
+
+# ===========================================================================
+# Feature: liquidity_vacuum (combined low-volume + wide-spread detector) — #119
+# ===========================================================================
+
+def _rolling_mean_nan_safe(arr: np.ndarray, window: int) -> np.ndarray:
+    """Compute rolling mean (causal, NaN-safe). Same pattern as pipeline."""
+    n = len(arr)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < window:
+        return result
+    for i in range(window - 1, n):
+        seg = arr[i - window + 1 : i + 1]
+        valid = seg[~np.isnan(seg)]
+        if len(valid) >= 2:
+            result[i] = np.mean(valid.astype(np.float64))
+    return result
+
+
+def compute_liquidity_vacuum(
+    high: np.ndarray,
+    low: np.ndarray,
+    close: np.ndarray,
+    volume: np.ndarray,
+    window: int = DEFAULT_LIQUIDITY_VACUUM_WINDOW,
+) -> np.ndarray:
+    """Detect low-liquidity episodes (liquidity vacuum) from OHLCV.
+
+    A liquidity vacuum occurs when volume drops and spreads widen
+    simultaneously — indicating thinning order books and higher
+    execution risk.
+
+    Algorithm per bar t:
+      1. Compute rolling mean of volume over ``window`` bars.
+      2. Compute volume ratio: vol[t] / mean_vol[t]. Low ratio = low volume.
+      3. Compute per-bar spread: (high[t] - low[t]) / close[t].
+      4. Compute rolling mean of spread, then spread ratio: spread[t] / mean_spread[t].
+      5. vacuum[t] = (1 - min(vol_ratio[t], 1)) * max(spread_ratio[t], 1)
+
+    Interpretation:
+      0.0         -> normal liquidity (either volume normal or spread normal).
+      > 0.0       -> liquidity vacuum intensifying.
+      Higher values -> stronger vacuum (drier book).
+
+    The signal is asymmetric: only combinations of low-volume AND wide-spread
+    produce non-zero values. Normal conditions map to zero.
+
+    Suitable for AGGRESSIVE_SCALP intraday microstructure monitoring.
+
+    Args:
+        high: High prices.
+        low: Low prices.
+        close: Close prices.
+        volume: Volume (base asset).
+        window: Rolling window for baselines (default 10).
+
+    Returns:
+        numpy array of liquidity vacuum scores >= 0, same length as input.
+        First ``window - 1`` values are NaN.
+    """
+    n = len(close)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < window:
+        return result
+
+    # 1. Volume ratio: vol / mean_vol
+    vol_mean = _rolling_mean_nan_safe(volume, window)
+    vol_ratio = np.full(n, np.nan, dtype=np.float64)
+    valid_vol = vol_mean > 0
+    vol_ratio[valid_vol] = volume[valid_vol] / vol_mean[valid_vol]
+
+    # 2. Per-bar spread
+    raw_spread = np.full(n, np.nan, dtype=np.float64)
+    valid_close = close > 0
+    with np.errstate(divide="ignore", invalid="ignore"):
+        raw_spread[valid_close] = (high[valid_close] - low[valid_close]) / close[valid_close]
+
+    spread_mean = _rolling_mean_nan_safe(raw_spread, window)
+    spread_ratio = np.full(n, np.nan, dtype=np.float64)
+    valid_spread = spread_mean > 0
+    spread_ratio[valid_spread] = raw_spread[valid_spread] / spread_mean[valid_spread]
+
+    # 3. Combine: low volume penalty * wide spread penalty
+    # Only activates when both conditions are adverse
+    for i in range(window - 1, n):
+        vr = vol_ratio[i]
+        sr = spread_ratio[i]
+        if np.isnan(vr) or np.isnan(sr):
+            continue
+        vol_penalty = max(0.0, 1.0 - vr)      # 0 when volume >= normal
+        spread_penalty = max(1.0, sr) - 1.0   # 0 when spread <= normal
+        result[i] = vol_penalty * spread_penalty
+
+    return result
+
+
+# ===========================================================================
+# Feature: depth_ratio (bid/ask depth proxy from volume classification) — #119
+# ===========================================================================
+
+def compute_depth_ratio(
+    open_arr: np.ndarray,
+    close: np.ndarray,
+    volume: np.ndarray,
+    window: int = DEFAULT_DEPTH_RATIO_WINDOW,
+) -> np.ndarray:
+    """Estimate bid/ask depth ratio from volume classification.
+
+    Uses OHLCV-based buy/sell volume classification to estimate the
+    ratio of buy depth to sell depth:
+
+      per_bar_ratio[t] = up_vol[t] / max(down_vol[t], epsilon)
+      depth_ratio[t] = mean(per_bar_ratio[t-window+1 .. t])
+
+    Interpretation:
+      > 1  -> more buy-side depth (bids dominate)
+      < 1  -> more sell-side depth (asks dominate)
+      ~ 1  -> balanced book
+
+    This provides a complementary perspective to volume_imbalance:
+    volume_imbalance measures net flow (up-down)/total, while depth_ratio
+    measures the ratio of buy to sell volume directly.
+
+    Suitable for AGGRESSIVE_SCALP at short windows (5 bars at 15m = 75m).
+
+    Args:
+        open_arr: Open prices.
+        close: Close prices.
+        volume: Volume (base asset).
+        window: Smoothing window in bars (default 5).
+
+    Returns:
+        numpy array of depth ratio estimates >= 0, same length as input.
+        First ``window - 1`` values are NaN.
+    """
+    n = len(close)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < window:
+        return result
+
+    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+
+    # Per-bar depth ratio (with epsilon to avoid division by zero)
+    per_bar = np.full(n, np.nan, dtype=np.float64)
+    for i in range(n):
+        short = max(down_vol[i], 1e-10)
+        per_bar[i] = up_vol[i] / short
+
+    # Smooth with rolling mean
+    for i in range(window - 1, n):
+        seg = per_bar[i - window + 1 : i + 1]
+        seg_clean = seg[~np.isnan(seg)]
+        if len(seg_clean) >= 2:
+            result[i] = np.mean(seg_clean)
+
+    return result
+
+
+# ===========================================================================
 # OrderBook Group
 # ===========================================================================
 
@@ -717,8 +955,11 @@ def compute_orderbook_group(
     serial_corr_window: int = DEFAULT_SERIAL_CORR_WINDOW,
     vpin_window: int = DEFAULT_VPIN_WINDOW,
     price_impact_window: int = DEFAULT_PRICE_IMPACT_WINDOW,
+    microprice_window: int = DEFAULT_MICROPRICE_WINDOW,
+    liquidity_vacuum_window: int = DEFAULT_LIQUIDITY_VACUUM_WINDOW,
+    depth_ratio_window: int = DEFAULT_DEPTH_RATIO_WINDOW,
 ) -> Dict[str, np.ndarray]:
-    """Compute all OrderBook microstructure proxy features (9 total).
+    """Compute all OrderBook microstructure proxy features (12 total).
 
     Returns dict with keys:
       - spread_pct_N: rolling mean of (high-low)/close
@@ -730,6 +971,9 @@ def compute_orderbook_group(
       - serial_correlation_N: return autocorrelation at lag 1
       - vpin_N: VPIN order flow toxicity proxy
       - price_impact_slope_N: Kyle's lambda proxy
+      - microprice_N: volume-weighted true price estimate (#119)
+      - liquidity_vacuum_N: low-volume + wide-spread detector (#119)
+      - depth_ratio_N: buy/sell depth ratio from volume classification (#119)
 
     All arrays are same length as input. NaN at start for insufficient
     lookback windows.
@@ -747,6 +991,9 @@ def compute_orderbook_group(
         serial_corr_window: Window for return autocorrelation (default 10).
         vpin_window: Window for VPIN (default 50).
         price_impact_window: Window for price impact slope (default 15).
+        microprice_window: Window for microprice smoothing (default 5).
+        liquidity_vacuum_window: Window for liquidity vacuum (default 10).
+        depth_ratio_window: Window for depth ratio (default 5).
 
     Returns:
         Dict mapping feature name to numpy array of shape (n_bars,).
@@ -763,4 +1010,7 @@ def compute_orderbook_group(
         "price_impact_slope_N": compute_price_impact_slope(
             open_arr, high, low, close, volume, price_impact_window,
         ),
+        "microprice_N": compute_microprice(high, low, open_arr, close, volume, microprice_window),
+        "liquidity_vacuum_N": compute_liquidity_vacuum(high, low, close, volume, liquidity_vacuum_window),
+        "depth_ratio_N": compute_depth_ratio(open_arr, close, volume, depth_ratio_window),
     }

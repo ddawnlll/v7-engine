@@ -136,10 +136,10 @@ class TestFeatureToGroupMapping:
         groups = set(FEATURE_NAME_TO_GROUP.values())
         assert groups == set(ALL_GROUPS), f"Expected {set(ALL_GROUPS)}, got {groups}"
 
-    def test_mapping_has_35_features(self):
-        """All 35 pipeline features are mapped."""
-        assert len(FEATURE_NAME_TO_GROUP) == 35, (
-            f"Expected 35 features, got {len(FEATURE_NAME_TO_GROUP)}"
+    def test_mapping_has_38_features(self):
+        """All 38 pipeline features (#119 expansion) are mapped."""
+        assert len(FEATURE_NAME_TO_GROUP) == 38, (
+            f"Expected 38 features, got {len(FEATURE_NAME_TO_GROUP)}"
         )
 
     def test_reverse_mapping_consistency(self):
@@ -161,7 +161,7 @@ class TestFeatureToGroupMapping:
             "momentum": 6,
             "volume": 4,
             "breakout": 5,
-            "orderbook": 9,
+            "orderbook": 12,
         }
         for group_name, expected_count in expected.items():
             actual = GROUP_TO_FEATURES.get(group_name, [])

@@ -4,10 +4,15 @@ Authority: AlphaForge owns feature discovery and specification.
 Status: HOLD-LEAD-LAG — implemented, but cannot be wired into the main
 pipeline until the cross-sectional data pipeline (P0.9B) exists.
 
-This module computes 3 lead-lag features that require at least 2 symbols:
-  tf_alignment          — timeframe volatility alignment between primary and context
-  correlation_pairwise  — rolling pairwise correlation over a lookback window
-  lead_lag_score        — does the primary symbol lead or lag the context?
+This module computes 5 lead-lag features that require at least 2 symbols:
+  tf_alignment            — timeframe volatility alignment between primary and context
+  correlation_pairwise    — rolling pairwise correlation over a lookback window
+  lead_lag_score          — does the primary symbol lead or lag the context?
+  relative_strength       — relative performance vs a context/basket (#119)
+  cluster_rotation        — correlation breakdown within a cluster (#119)
+
+SCALP-specific window constants provide shorter lookbacks tuned to 1h bars,
+enabling faster lead-lag detection for intraday scalping.
 
 Design constraints (consistent with pipeline.py):
 - numpy only (no pandas, scipy, ta-lib)
@@ -54,6 +59,12 @@ LL_VOLATILITY_WINDOW: int = 20
 LL_MIN_VALID: int = 5
 # Periods per year for annualization (consistent with SWING 4h bars)
 LL_PERIODS_PER_YEAR: int = 2190
+
+# SCALP-specific windows (narrower — 1h bars need faster detection) (#119)
+SCALP_LL_CORRELATION_WINDOW: int = 12
+SCALP_LL_MAX_LAG: int = 3
+SCALP_LL_VOLATILITY_WINDOW: int = 12
+SCALP_LL_PERIODS_PER_YEAR: int = 8760
 
 
 # ===========================================================================
@@ -394,10 +405,10 @@ def compute_lead_lag_score(
       4. lead_lag_score = sign(k*) * max_abs_corr.
 
     Interpretation:
-      Positive score  → primary LEADS context (context follows primary).
-      Negative score  → primary LAGS context (primary follows context).
-      Near-zero       → no clear lead-lag relationship.
-      |score| near 1  → strong lead-lag relationship.
+      Positive score  -> primary LEADS context (context follows primary).
+      Negative score  -> primary LAGS context (primary follows context).
+      Near-zero       -> no clear lead-lag relationship.
+      |score| near 1  -> strong lead-lag relationship.
 
     Args:
         multi_ohlcv: Dict mapping symbol to OHLCV dict.
@@ -499,6 +510,215 @@ def compute_lead_lag_score(
 
 
 # ===========================================================================
+# Feature 4: relative_strength — relative performance vs context (#119)
+# ===========================================================================
+
+
+def compute_relative_strength(
+    multi_ohlcv: Dict[str, Dict[str, np.ndarray]],
+    primary_symbol: str,
+    context_symbol: str,
+    window: int = LL_CORRELATION_WINDOW,
+) -> np.ndarray:
+    """Compute relative strength of primary symbol vs a context symbol.
+
+    Measures the cumulative return ratio between two symbols over a
+    rolling window. This identifies which asset is outperforming.
+
+    Algorithm per bar t:
+      1. Compute cumulative log returns over [t-window+1 .. t] for both symbols.
+      2. Convert to simple returns: cum_simple = exp(cum_log) - 1.
+      3. Relative strength = cum_return_primary / max(|cum_return_context|, epsilon).
+
+    Interpretation:
+      > 1  -> primary outperforming context (leading alpha).
+      < 1  -> primary underperforming context (lagging alpha).
+      ~ 1  -> performance parity.
+
+    Suitable for SCALP at shorter windows (e.g., 12 bars at 1h = 12h lookback).
+
+    Args:
+        multi_ohlcv: Dict mapping symbol to OHLCV dict.
+        primary_symbol: Identifier for the primary symbol.
+        context_symbol: Identifier for the context (benchmark) symbol.
+        window: Rolling window in bars (default 20).
+
+    Returns:
+        np.ndarray of shape (n_bars,) with relative strength values >= 0.
+        NaN for t < window. NaN when denominator is zero.
+        Values near 1 = parity. Above 1 = outperformance. Below 1 = underperformance.
+
+    Raises:
+        ValueError: if symbols are not in multi_ohlcv or data is invalid.
+    """
+    _validate_multi_symbol_ohlcv(multi_ohlcv)
+
+    if primary_symbol not in multi_ohlcv:
+        raise ValueError(f"Primary symbol '{primary_symbol}' not in multi_ohlcv")
+    if context_symbol not in multi_ohlcv:
+        raise ValueError(f"Context symbol '{context_symbol}' not in multi_ohlcv")
+    if primary_symbol == context_symbol:
+        raise ValueError("primary_symbol and context_symbol must be different")
+
+    n_bars = len(multi_ohlcv[primary_symbol]["close"])
+    result = np.full(n_bars, np.nan, dtype=np.float64)
+    if n_bars < window or window < 2:
+        return result
+
+    primary_close = multi_ohlcv[primary_symbol]["close"].astype(np.float64)
+    context_close = multi_ohlcv[context_symbol]["close"].astype(np.float64)
+
+    primary_ret = _compute_log_returns(primary_close)
+    context_ret = _compute_log_returns(context_close)
+
+    for i in range(window - 1, n_bars):
+        # Cumulative log return over window
+        seg_p = primary_ret[i - window + 1 : i + 1]
+        seg_c = context_ret[i - window + 1 : i + 1]
+
+        valid = ~np.isnan(seg_p) & ~np.isnan(seg_c)
+        n_valid = int(np.sum(valid))
+        if n_valid < 2:
+            continue
+
+        cum_p = np.sum(seg_p[valid])
+        cum_c = np.sum(seg_c[valid])
+
+        # Convert to simple returns
+        ret_p = np.expm1(cum_p)  # exp(cum_p) - 1
+        ret_c = np.expm1(cum_c)  # exp(cum_c) - 1
+
+        epsilon = 1e-10
+        if abs(ret_c) < epsilon:
+            continue
+
+        result[i] = ret_p / ret_c
+
+    return result
+
+
+# ===========================================================================
+# Feature 5: cluster_rotation — correlation breakdown within a cluster (#119)
+# ===========================================================================
+
+
+def compute_cluster_rotation(
+    multi_ohlcv: Dict[str, Dict[str, np.ndarray]],
+    primary_symbol: str,
+    cluster_symbols: List[str],
+    window: int = LL_CORRELATION_WINDOW,
+) -> np.ndarray:
+    """Detect cluster rotation via pairwise correlation breakdown.
+
+    Measures whether the primary symbol's correlation structure with a
+    cluster of related symbols is breaking down — a sign of sector rotation
+    or regime change.
+
+    Algorithm per bar t:
+      1. Compute rolling return correlation between primary and each
+         cluster symbol over ``window`` bars.
+      2. Average the pairwise correlations: avg_corr[t].
+      3. Cluster rotation score = 1 - avg_corr[t].
+
+    Interpretation:
+      Near 0  -> primary is tightly correlated to the cluster (no rotation).
+      Near 1  -> primary has broken away from the cluster (rotation detected).
+      Between -> partial rotation / weakening correlation.
+
+    This signal helps identify when a symbol's alpha is driven by
+    idiosyncratic factors rather than cluster-wide moves, and when
+    a position should be rotated out due to correlation breakdown.
+
+    Requires at least 3 symbols total (primary + 2 cluster members).
+    Suitable for SCALP at shorter windows.
+
+    Args:
+        multi_ohlcv: Dict mapping symbol to OHLCV dict. Must contain
+            primary_symbol and all symbols in cluster_symbols.
+        primary_symbol: Identifier for the primary symbol.
+        cluster_symbols: List of 2+ symbol identifiers in the same cluster
+            (e.g., ["ETHUSDT", "SOLUSDT"] for BTC's cluster).
+        window: Rolling window for pairwise correlations (default 20).
+
+    Returns:
+        np.ndarray of shape (n_bars,) with rotation scores in [0, 1].
+        NaN for t < window-1.
+        0 = tightly correlated, 1 = fully rotated/decoupled.
+
+    Raises:
+        ValueError: if cluster has fewer than 2 symbols, symbols are
+            missing, or data is invalid.
+    """
+    _validate_multi_symbol_ohlcv(multi_ohlcv)
+
+    if len(cluster_symbols) < 2:
+        raise ValueError(
+            f"cluster_rotation requires at least 2 cluster symbols, "
+            f"got {len(cluster_symbols)}"
+        )
+
+    if primary_symbol not in multi_ohlcv:
+        raise ValueError(f"Primary symbol '{primary_symbol}' not in multi_ohlcv")
+
+    for sym in cluster_symbols:
+        if sym not in multi_ohlcv:
+            raise ValueError(f"Cluster symbol '{sym}' not in multi_ohlcv")
+        if sym == primary_symbol:
+            raise ValueError(
+                f"Cluster symbol '{sym}' must not be the primary symbol"
+            )
+
+    n_bars = len(multi_ohlcv[primary_symbol]["close"])
+    result = np.full(n_bars, np.nan, dtype=np.float64)
+    if n_bars < window or window < 2:
+        return result
+
+    primary_close = multi_ohlcv[primary_symbol]["close"].astype(np.float64)
+    primary_ret = _compute_log_returns(primary_close)
+
+    # Pre-compute cluster symbol log returns
+    cluster_rets: Dict[str, np.ndarray] = {}
+    for sym in cluster_symbols:
+        cluster_rets[sym] = _compute_log_returns(
+            multi_ohlcv[sym]["close"].astype(np.float64)
+        )
+
+    for i in range(window - 1, n_bars):
+        # Primary returns segment
+        p_seg = primary_ret[i - window + 1 : i + 1]
+
+        corrs: List[float] = []
+        for sym in cluster_symbols:
+            c_seg = cluster_rets[sym][i - window + 1 : i + 1]
+
+            valid = ~np.isnan(p_seg) & ~np.isnan(c_seg)
+            n_valid = int(np.sum(valid))
+            if n_valid < LL_MIN_VALID:
+                continue
+
+            pv = p_seg[valid]
+            cv = c_seg[valid]
+            dp = pv - np.mean(pv)
+            dc = cv - np.mean(cv)
+            cov = np.sum(dp * dc) / n_valid
+            std_p = np.std(pv, ddof=0)
+            std_c = np.std(cv, ddof=0)
+            if std_p < 1e-14 or std_c < 1e-14:
+                continue
+
+            r = float(np.clip(cov / (std_p * std_c), -1.0, 1.0))
+            corrs.append(r)
+
+        if len(corrs) >= 1:
+            avg_corr = float(np.mean(corrs))
+            # Rotation score: 1 - avg_corr (decoupling from cluster)
+            # Clamp to [0, 1]
+            result[i] = float(np.clip(1.0 - avg_corr, 0.0, 1.0))
+
+    return result
+
+
+# ===========================================================================
 # Group compute function
 # ===========================================================================
 
@@ -511,15 +731,20 @@ def compute_lead_lag_group(
     volatility_window: int = LL_VOLATILITY_WINDOW,
     max_lag: int = LL_MAX_LAG,
     periods_per_year: int = LL_PERIODS_PER_YEAR,
+    cluster_symbols: List[str] | None = None,
 ) -> Dict[str, np.ndarray]:
     """Compute all Lead-Lag group features for a pair of symbols.
 
     This is the group-level entry point. It computes:
-      tf_alignment          — volatility alignment score [-1, 1]
-      correlation_pairwise  — rolling return correlation [-1, 1]
-      lead_lag_score        — lead/lag direction and strength [-1, 1]
+      tf_alignment            — volatility alignment score [-1, 1]
+      correlation_pairwise    — rolling return correlation [-1, 1]
+      lead_lag_score          — lead/lag direction and strength [-1, 1]
+      relative_strength       — relative performance vs context (#119)
+      cluster_rotation        — correlation breakdown within cluster (#119)
 
-    All three features are cross-sectional: they require at least 2 symbols.
+    5 features when cluster_symbols is provided; 4 otherwise.
+
+    All features are cross-sectional: they require at least 2 symbols.
 
     Args:
         multi_ohlcv: Dict mapping symbol -> OHLCV dict. Must contain
@@ -530,17 +755,21 @@ def compute_lead_lag_group(
         volatility_window: Window for volatility alignment (default 20).
         max_lag: Maximum lag offset for lead-lag detection (default 5).
         periods_per_year: Annualization factor (default 2190 for SWING 4h).
+        cluster_symbols: Optional list of additional cluster symbols for
+            cluster_rotation. Requires at least 2 symbols. (default None).
 
     Returns:
-        Dict with keys 'tf_alignment', 'correlation_pairwise', 'lead_lag_score'.
+        Dict with keys:
+          'tf_alignment', 'correlation_pairwise', 'lead_lag_score',
+          'relative_strength' (always present),
+          'cluster_rotation' (present when cluster_symbols provided).
         Each value is a numpy array of shape (n_bars,). NaN at start for
         insufficient lookback.
 
     Raises:
         ValueError: if symbols are missing, data is invalid, or lengths mismatch.
     """
-    # Validate once (all individual functions also validate, but this gives
-    # early failure with a clear message)
+    # Validate once
     _validate_multi_symbol_ohlcv(multi_ohlcv)
 
     if primary_symbol not in multi_ohlcv:
@@ -548,7 +777,7 @@ def compute_lead_lag_group(
     if context_symbol not in multi_ohlcv:
         raise ValueError(f"Context symbol '{context_symbol}' not in multi_ohlcv")
 
-    return {
+    result: Dict[str, np.ndarray] = {
         "tf_alignment": compute_tf_alignment(
             multi_ohlcv=multi_ohlcv,
             primary_symbol=primary_symbol,
@@ -570,4 +799,20 @@ def compute_lead_lag_group(
             window=correlation_window,
             max_lag=max_lag,
         ),
+        "relative_strength": compute_relative_strength(
+            multi_ohlcv=multi_ohlcv,
+            primary_symbol=primary_symbol,
+            context_symbol=context_symbol,
+            window=correlation_window,
+        ),
     }
+
+    if cluster_symbols is not None and len(cluster_symbols) >= 2:
+        result["cluster_rotation"] = compute_cluster_rotation(
+            multi_ohlcv=multi_ohlcv,
+            primary_symbol=primary_symbol,
+            cluster_symbols=cluster_symbols,
+            window=correlation_window,
+        )
+
+    return result

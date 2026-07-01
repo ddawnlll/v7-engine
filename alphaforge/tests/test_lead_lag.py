@@ -24,9 +24,11 @@ from alphaforge.features import (
     LL_MAX_LAG,
     LL_VOLATILITY_WINDOW,
     FeatureGroup,
+    compute_cluster_rotation,
     compute_correlation_pairwise,
     compute_lead_lag_group,
     compute_lead_lag_score,
+    compute_relative_strength,
     compute_tf_alignment,
 )
 
@@ -441,15 +443,17 @@ class TestLeadLagScore:
 class TestLeadLagGroup:
     """LL-05: compute_lead_lag_group integration."""
 
-    def test_all_three_keys_present(self, two_symbol_ohlcv_100):
+    def test_all_four_keys_present(self, two_symbol_ohlcv_100):
         result = compute_lead_lag_group(two_symbol_ohlcv_100, "BTCUSDT", "ETHUSDT")
-        assert set(result.keys()) == {"tf_alignment", "correlation_pairwise", "lead_lag_score"}
+        # 4 features: tf_alignment, correlation_pairwise, lead_lag_score, relative_strength
+        # cluster_rotation is only present when cluster_symbols is provided
+        assert set(result.keys()) == {"tf_alignment", "correlation_pairwise", "lead_lag_score", "relative_strength"}
         n_bars = 100
         for key, arr in result.items():
             assert len(arr) == n_bars, f"{key} has wrong length: {len(arr)} vs {n_bars}"
 
     def test_consistent_output_shape(self, two_symbol_ohlcv_500):
-        """All three feature arrays should have the same length."""
+        """All feature arrays should have the same length."""
         result = compute_lead_lag_group(two_symbol_ohlcv_500, "BTCUSDT", "ETHUSDT")
         lengths = {key: len(arr) for key, arr in result.items()}
         assert len(set(lengths.values())) == 1, f"Inconsistent lengths: {lengths}"
@@ -457,7 +461,7 @@ class TestLeadLagGroup:
     def test_with_three_symbols(self, three_symbol_ohlcv_100):
         """Works with three symbols — picks pair."""
         result = compute_lead_lag_group(three_symbol_ohlcv_100, "BTCUSDT", "SOLUSDT")
-        assert set(result.keys()) == {"tf_alignment", "correlation_pairwise", "lead_lag_score"}
+        assert set(result.keys()) == {"tf_alignment", "correlation_pairwise", "lead_lag_score", "relative_strength"}
         for arr in result.values():
             assert len(arr) == 100
 
@@ -629,3 +633,140 @@ class TestLeadLagImports:
         from alphaforge.features import FEATURE_GROUP_MAP, FeatureGroup
         assert FeatureGroup.LEAD_LAG in FEATURE_GROUP_MAP
         assert FEATURE_GROUP_MAP[FeatureGroup.LEAD_LAG] == "compute_lead_lag_group"
+
+
+# ===========================================================================
+# Relative Strength Tests (NEW — #119)
+# ===========================================================================
+
+class TestRelativeStrength:
+    """LL-10: compute_relative_strength — relative performance vs context."""
+
+    def test_output_shape(self, two_symbol_ohlcv_100):
+        result = compute_relative_strength(
+            two_symbol_ohlcv_100, "BTCUSDT", "ETHUSDT", window=10,
+        )
+        assert len(result) == 100
+        assert result.dtype == np.float64
+
+    def test_finite_values(self, two_symbol_ohlcv_100):
+        result = compute_relative_strength(
+            two_symbol_ohlcv_100, "BTCUSDT", "ETHUSDT", window=10,
+        )
+        valid = result[~np.isnan(result)]
+        assert np.all(np.isfinite(valid))
+
+    def test_nan_at_start(self, two_symbol_ohlcv_100):
+        """First window-1 values should be NaN."""
+        result = compute_relative_strength(
+            two_symbol_ohlcv_100, "BTCUSDT", "ETHUSDT", window=10,
+        )
+        for i in range(9):
+            assert np.isnan(result[i])
+        assert np.any(~np.isnan(result[10:]))
+
+    def test_parity_when_identical(self, perfect_positive_symbols):
+        """When symbols have identical return structure, RS should be near 1."""
+        # perfect_positive_symbols has CONTEXT = PRIMARY * 1.5 (perfect correlation)
+        result = compute_relative_strength(
+            perfect_positive_symbols, "PRIMARY", "CONTEXT", window=10,
+        )
+        valid = result[~np.isnan(result)]
+        if len(valid) > 0:
+            # Returns should be proportional -> RS near constant
+            assert np.allclose(valid, valid[0], atol=1e-10)
+
+    def test_determinism(self, two_symbol_ohlcv_100):
+        r1 = compute_relative_strength(
+            two_symbol_ohlcv_100, "BTCUSDT", "ETHUSDT", window=10,
+        )
+        r2 = compute_relative_strength(
+            two_symbol_ohlcv_100, "BTCUSDT", "ETHUSDT", window=10,
+        )
+        assert np.allclose(r1, r2, equal_nan=True)
+
+    def test_rejects_missing_symbol(self, two_symbol_ohlcv_100):
+        with pytest.raises(ValueError, match="not in multi_ohlcv"):
+            compute_relative_strength(two_symbol_ohlcv_100, "BTCUSDT", "NOPE")
+
+    def test_rejects_same_symbol(self, two_symbol_ohlcv_100):
+        with pytest.raises(ValueError, match="must be different"):
+            compute_relative_strength(two_symbol_ohlcv_100, "BTCUSDT", "BTCUSDT")
+
+
+# ===========================================================================
+# Cluster Rotation Tests (NEW — #119)
+# ===========================================================================
+
+class TestClusterRotation:
+    """LL-11: compute_cluster_rotation — correlation breakdown detection."""
+
+    def test_output_shape(self, three_symbol_ohlcv_100):
+        result = compute_cluster_rotation(
+            three_symbol_ohlcv_100, "BTCUSDT", ["ETHUSDT", "SOLUSDT"], window=10,
+        )
+        assert len(result) == 100
+        assert result.dtype == np.float64
+
+    def test_range_0_to_1(self, three_symbol_ohlcv_100):
+        """Rotation scores should be in [0, 1]."""
+        result = compute_cluster_rotation(
+            three_symbol_ohlcv_100, "BTCUSDT", ["ETHUSDT", "SOLUSDT"], window=20,
+        )
+        valid = result[~np.isnan(result)]
+        if len(valid) > 0:
+            assert np.all(valid >= 0.0)
+            assert np.all(valid <= 1.0)
+
+    def test_nan_at_start(self, three_symbol_ohlcv_100):
+        """First window-1 values should be NaN."""
+        result = compute_cluster_rotation(
+            three_symbol_ohlcv_100, "BTCUSDT", ["ETHUSDT", "SOLUSDT"], window=10,
+        )
+        for i in range(9):
+            assert np.isnan(result[i])
+
+    def test_tight_cluster_low_rotation(self, perfect_positive_symbols):
+        """Perfectly correlated cluster -> rotation near 0."""
+        # Build cluster with CONTEXT and a third
+        third = {
+            sym: {col: arr.copy() for col, arr in ohlcv.items()}
+            for sym, ohlcv in perfect_positive_symbols.items()
+        }
+        third["CLUSTER"] = {
+            col: arr.copy() * 2.0 for col, arr in perfect_positive_symbols["PRIMARY"].items()
+        }
+        result = compute_cluster_rotation(
+            third, "PRIMARY", ["CONTEXT", "CLUSTER"], window=10,
+        )
+        valid = result[~np.isnan(result)]
+        if len(valid) > 0:
+            # Perfect correlation -> avg_corr -> 1 -> rotation = 0
+            assert np.allclose(valid, 0.0, atol=1e-10)
+
+    def test_determinism(self, three_symbol_ohlcv_100):
+        r1 = compute_cluster_rotation(
+            three_symbol_ohlcv_100, "BTCUSDT", ["ETHUSDT", "SOLUSDT"], window=10,
+        )
+        r2 = compute_cluster_rotation(
+            three_symbol_ohlcv_100, "BTCUSDT", ["ETHUSDT", "SOLUSDT"], window=10,
+        )
+        assert np.allclose(r1, r2, equal_nan=True)
+
+    def test_rejects_fewer_than_two_cluster(self, three_symbol_ohlcv_100):
+        with pytest.raises(ValueError, match="at least 2 cluster"):
+            compute_cluster_rotation(
+                three_symbol_ohlcv_100, "BTCUSDT", ["SOLUSDT"], window=10,
+            )
+
+    def test_rejects_missing_cluster_symbol(self, two_symbol_ohlcv_100):
+        with pytest.raises(ValueError, match="not in multi_ohlcv"):
+            compute_cluster_rotation(
+                two_symbol_ohlcv_100, "BTCUSDT", ["ETHUSDT", "NOPE"], window=10,
+            )
+
+    def test_rejects_primary_in_cluster(self, three_symbol_ohlcv_100):
+        with pytest.raises(ValueError, match="must not be the primary"):
+            compute_cluster_rotation(
+                three_symbol_ohlcv_100, "BTCUSDT", ["ETHUSDT", "BTCUSDT"], window=10,
+            )

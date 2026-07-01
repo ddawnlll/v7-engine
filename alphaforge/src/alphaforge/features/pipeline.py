@@ -31,6 +31,9 @@ import numpy as np
 
 from alphaforge.features.orderbook import (
     DEFAULT_AMIHUD_WINDOW,
+    DEFAULT_DEPTH_RATIO_WINDOW,
+    DEFAULT_LIQUIDITY_VACUUM_WINDOW,
+    DEFAULT_MICROPRICE_WINDOW,
     DEFAULT_NOISE_WINDOW,
     DEFAULT_ORDERBOOK_WINDOW,
     DEFAULT_PRICE_IMPACT_WINDOW,
@@ -1123,6 +1126,9 @@ _MODE_DEFAULTS = {
         "serial_corr_window": 20,
         "vpin_window": 30,
         "price_impact_window": 20,
+        "microprice_window": DEFAULT_MICROPRICE_WINDOW,
+        "liquidity_vacuum_window": DEFAULT_LIQUIDITY_VACUUM_WINDOW,
+        "depth_ratio_window": DEFAULT_DEPTH_RATIO_WINDOW,
     },
     "SCALP": {
         "n_returns": 12,
@@ -1145,6 +1151,9 @@ _MODE_DEFAULTS = {
         "serial_corr_window": 12,
         "vpin_window": 40,
         "price_impact_window": 12,
+        "microprice_window": 8,
+        "liquidity_vacuum_window": 10,
+        "depth_ratio_window": 8,
     },
     "AGGRESSIVE_SCALP": {
         "n_returns": 16,
@@ -1167,6 +1176,9 @@ _MODE_DEFAULTS = {
         "serial_corr_window": 10,
         "vpin_window": 50,
         "price_impact_window": 15,
+        "microprice_window": 5,
+        "liquidity_vacuum_window": 10,
+        "depth_ratio_window": 5,
     },
 }
 
@@ -1194,7 +1206,8 @@ def compute_features(
             Informational only — does not affect computation.
 
     Returns:
-        FeatureMatrix with features dict containing ~35 feature arrays,
+        FeatureMatrix with features dict containing ~38 feature arrays
+        (35 core + 3 #119 OrderBook expansion),
         each of shape (n_bars,). No Lead-Lag columns present.
 
     Raises:
@@ -1286,7 +1299,7 @@ def compute_features(
         )
     )
 
-    # 7. OrderBook Group (9 features)
+    # 7. OrderBook Group (12 features — 9 core + 3 expansion #119)
     features.update(
         compute_orderbook_group(
             open_arr=open_arr,
@@ -1301,6 +1314,9 @@ def compute_features(
             serial_corr_window=defaults.get("serial_corr_window", DEFAULT_SERIAL_CORR_WINDOW),
             vpin_window=defaults.get("vpin_window", DEFAULT_VPIN_WINDOW),
             price_impact_window=defaults.get("price_impact_window", DEFAULT_PRICE_IMPACT_WINDOW),
+            microprice_window=defaults.get("microprice_window", DEFAULT_MICROPRICE_WINDOW),
+            liquidity_vacuum_window=defaults.get("liquidity_vacuum_window", DEFAULT_LIQUIDITY_VACUUM_WINDOW),
+            depth_ratio_window=defaults.get("depth_ratio_window", DEFAULT_DEPTH_RATIO_WINDOW),
         )
     )
 

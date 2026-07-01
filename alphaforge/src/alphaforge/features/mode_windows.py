@@ -89,6 +89,10 @@ class ModeWindowConfig:
         bb_window: Lookback bars for Bollinger Bands.
         bb_num_std: Standard deviation multiplier for Bollinger Bands.
         funding_window: Lookback bars for funding rate features.
+        microprice_window: Lookback bars for microprice smoothing (#119).
+        liquidity_vacuum_window: Lookback bars for liquidity vacuum (#119).
+        depth_ratio_window: Lookback bars for depth ratio (#119).
+        oi_proxy_window: Lookback bars for OI proxy (#119).
         description: Human-readable rationale for this mode's windows.
         threshold_status: Lock status (LOCKED_INITIAL_BASELINE for all).
     """
@@ -109,6 +113,10 @@ class ModeWindowConfig:
     bb_window: int
     bb_num_std: float
     funding_window: int = 10
+    microprice_window: int = 5
+    liquidity_vacuum_window: int = 10
+    depth_ratio_window: int = 5
+    oi_proxy_window: int = 10
     description: str = ""
     threshold_status: str = "LOCKED_INITIAL_BASELINE"
 
@@ -130,6 +138,10 @@ class ModeWindowConfig:
             ("volume_window", self.volume_window),
             ("breakout_window", self.breakout_window),
             ("bb_window", self.bb_window),
+            ("microprice_window", self.microprice_window),
+            ("liquidity_vacuum_window", self.liquidity_vacuum_window),
+            ("depth_ratio_window", self.depth_ratio_window),
+            ("oi_proxy_window", self.oi_proxy_window),
         ]
         for name, value in int_params:
             if not isinstance(value, int) or value <= 0:
@@ -189,6 +201,10 @@ class ModeWindowConfig:
             "bb_window": self.bb_window,
             "bb_num_std": self.bb_num_std,
             "funding_window": self.funding_window,
+            "microprice_window": self.microprice_window,
+            "liquidity_vacuum_window": self.liquidity_vacuum_window,
+            "depth_ratio_window": self.depth_ratio_window,
+            "oi_proxy_window": self.oi_proxy_window,
             "periods_per_year": self.periods_per_year,
         }
 
@@ -255,6 +271,10 @@ SCALP_WINDOWS = ModeWindowConfig(
     bb_window=20,
     bb_num_std=2.0,
     funding_window=12,
+    microprice_window=8,
+    liquidity_vacuum_window=10,
+    depth_ratio_window=8,
+    oi_proxy_window=12,
     description=(
         "SCALP 1h windows — compressed for intraday holding. "
         "n_returns=12 (12h), vol_window=24 (1d), MACD(8,17,9) at 1h. "
@@ -291,6 +311,10 @@ AGGRESSIVE_SCALP_WINDOWS = ModeWindowConfig(
     bb_window=12,
     bb_num_std=2.0,
     funding_window=16,
+    microprice_window=5,
+    liquidity_vacuum_window=10,
+    depth_ratio_window=5,
+    oi_proxy_window=16,
     description=(
         "AGGRESSIVE_SCALP 15m windows — very narrow, microstructure-aware. "
         "n_returns=16 (4h), vol_window=24 (6h), ATR(10), RSI(10), "
