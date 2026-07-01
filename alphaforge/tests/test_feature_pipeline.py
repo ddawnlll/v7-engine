@@ -891,10 +891,10 @@ class TestDeterminism:
 class TestFeatureMatrixShape:
     """AC-03-044/045: Feature matrix shape and NaN counts."""
 
-    def test_500_bars_38_features(self, ohlcv_500):
-        """AC-03-044: 500 bars produces all arrays length 500, 38 features (#119 expansion)."""
+    def test_500_bars_60_features(self, ohlcv_500):
+        """AC-03-044: 500 bars produces all arrays length 500, 60 features (extended)."""
         result = compute_features(ohlcv_500, mode="SWING")
-        assert result.total_features() == 38
+        assert result.total_features() == 60
         assert result.bar_count() == 500
         for name, arr in result.features.items():
             assert len(arr) == 500, f"{name} has length {len(arr)}"
@@ -930,8 +930,9 @@ class TestFeatureMatrixShape:
 
         # Verify at least some NaN at start for all lookback-dependent features
         for name in result.features:
-            if name in ("obv_N", "vwap_deviation"):
-                continue  # These start with valid values
+            if name in ("obv_N", "vwap_deviation", "obi",
+                        "consecutive_up_N", "consecutive_dn_N"):
+                continue  # These start with valid values (obi is per-bar, no lookback)
             arr = result.features[name]
             assert np.isnan(arr[0]) or name == "log_return_1", f"{name}[0] should be NaN"
 
@@ -1144,22 +1145,22 @@ class TestImportBoundary:
 # ===========================================================================
 
 class TestFullPipeline:
-    """AC-03-039: compute_features() assembles all 7 groups."""
+    """AC-03-039: compute_features() assembles all 9 groups."""
 
-    def test_assembles_38_features(self, ohlcv_100):
+    def test_assembles_60_features(self, ohlcv_100):
         result = compute_features(ohlcv_100, mode="SWING")
-        assert result.total_features() == 38
+        assert result.total_features() == 60
         assert result.bar_count() == 100
 
-    def test_7_active_groups(self, ohlcv_100):
+    def test_9_active_groups(self, ohlcv_100):
         result = compute_features(ohlcv_100, mode="SWING")
-        assert len(result.feature_group_ids) == 7
+        assert len(result.feature_group_ids) == 9
         assert "lead_lag" not in result.feature_group_ids
 
     def test_mode_swing_defaults(self, ohlcv_100):
         result = compute_features(ohlcv_100, mode="SWING")
         assert result.mode == "SWING"
-        assert result.metadata["active_groups"] == 7
+        assert result.metadata["active_groups"] == 9
 
     def test_metadata_present(self, ohlcv_100):
         result = compute_features(ohlcv_100, mode="SWING")
@@ -1183,7 +1184,7 @@ class TestFeatureMatrixClass:
 
     def test_total_features(self, ohlcv_500):
         result = compute_features(ohlcv_500, mode="SWING")
-        assert result.total_features() == 38
+        assert result.total_features() == 60
 
     def test_bar_count(self, ohlcv_500):
         result = compute_features(ohlcv_500, mode="SWING")

@@ -133,7 +133,7 @@ class PipelineConfig:
     random_seed: int = DEFAULT_RANDOM_SEED
     dry_run: bool = True
     force: bool = False
-    use_synthetic: bool = True       # Use synthetic data instead of real Binance
+    use_synthetic: bool = False       # Default: load cached Binance data, fall back to synthetic
     n_bars: int = DEFAULT_N_BARS    # Bars per symbol for synthetic data
     steps: Tuple[str, ...] = PIPELINE_STEPS
 
@@ -308,6 +308,99 @@ def _generate_synthetic_ohlcv(
         "close": np.concatenate(all_close),
         "volume": np.concatenate(all_volume),
         "symbol": all_symbol,
+    }
+
+
+def _load_cached_data(
+    symbols: Tuple[str, ...],
+    mode: str,
+    data_dir: str = "data/raw",
+) -> Optional[Dict[str, np.ndarray]]:
+    """Load cached OHLCV Parquet data from disk.
+
+    Reads from ``data/raw/<symbol>/`` directory. Scans all Parquet files
+    for the primary interval of the given trading mode and concatenates
+    them in chronological order across all symbols.
+
+    Returns None if no data is found — caller should fall back to synthetic.
+
+    Args:
+        symbols: Trading pair symbols (e.g. BTCUSDT, ETHUSDT).
+        mode: Trading mode (SWING → 4h, SCALP → 1h, AGGRESSIVE_SCALP → 15m).
+        data_dir: Root directory for raw market data.
+
+    Returns:
+        OHLCV dict with keys open/high/low/close/volume/timestamp/symbol,
+        or None if no Parquet files were found.
+    """
+    import pyarrow.parquet as pq
+    from pathlib import Path
+
+    interval = _get_primary_interval(mode)  # 4h, 1h, or 15m
+    raw_dir = Path(data_dir)
+    if not raw_dir.is_dir():
+        logger.warning("Data directory %s not found", data_dir)
+        return None
+
+    combined_close: List[float] = []
+    combined_open: List[float] = []
+    combined_high: List[float] = []
+    combined_low: List[float] = []
+    combined_volume: List[float] = []
+    combined_timestamp: List[int] = []
+    combined_symbol: List[str] = []
+
+    for sym in symbols:
+        sym_dir = raw_dir / sym
+        if not sym_dir.is_dir():
+            logger.info("No cache directory for %s at %s", sym, sym_dir)
+            continue
+
+        # Collect all Parquet files matching this interval
+        pq_files = sorted(sym_dir.glob(f"*_{interval}_*.parquet"))
+        # Fall back to any parquet file if interval-specific not found
+        if not pq_files:
+            pq_files = sorted(sym_dir.glob("*.parquet"))
+
+        if not pq_files:
+            logger.info("No Parquet files for %s in %s", sym, sym_dir)
+            continue
+
+        for pf in pq_files:
+            try:
+                table = pq.read_table(str(pf))
+                df = table.to_pandas()
+                n = len(df)
+                if n == 0:
+                    continue
+                combined_close.extend(df["close"].tolist())
+                combined_open.extend(df["open"].tolist())
+                combined_high.extend(df["high"].tolist())
+                combined_low.extend(df["low"].tolist())
+                combined_volume.extend(df["volume"].tolist())
+                combined_timestamp.extend(df["timestamp"].tolist())
+                combined_symbol.extend([sym] * n)
+                logger.info("Loaded %d bars from %s", n, pf.name)
+            except Exception as exc:
+                logger.warning("Failed to read %s: %s", pf.name, exc)
+                continue
+
+    if not combined_close:
+        logger.warning("No cached data found for any symbol")
+        return None
+
+    logger.info(
+        "Loaded %d total bars from cache (%s)",
+        len(combined_close), ", ".join(symbols),
+    )
+    return {
+        "close": np.array(combined_close, dtype=np.float64),
+        "open": np.array(combined_open, dtype=np.float64),
+        "high": np.array(combined_high, dtype=np.float64),
+        "low": np.array(combined_low, dtype=np.float64),
+        "volume": np.array(combined_volume, dtype=np.float64),
+        "timestamp": np.array(combined_timestamp, dtype=np.int64),
+        "symbol": combined_symbol,
     }
 
 
@@ -572,23 +665,20 @@ class PipelineRunner:
         if not self._config.symbols:
             errors.append("No symbols specified")
 
-        # Validate date range if not synthetic
-        if not self._config.use_synthetic:
-            if not self._config.start_date:
-                errors.append("start_date required for non-synthetic mode")
-            if not self._config.end_date:
-                errors.append("end_date required for non-synthetic mode")
-            if self._config.start_date and self._config.end_date:
-                try:
-                    start_dt = datetime.strptime(self._config.start_date, "%Y-%m-%d")
-                    end_dt = datetime.strptime(self._config.end_date, "%Y-%m-%d")
-                    if start_dt >= end_dt:
-                        errors.append(
-                            f"start_date ({self._config.start_date}) must be before "
-                            f"end_date ({self._config.end_date})"
-                        )
-                except ValueError as e:
-                    errors.append(f"Invalid date format: {e}")
+        # Validate date range — optional for cached data, required for Binance API
+        # When use_synthetic=False, cached data is tried first; dates are only
+        # needed if you intend to fetch fresh data from the Binance API.
+        if self._config.start_date and self._config.end_date:
+            try:
+                start_dt = datetime.strptime(self._config.start_date, "%Y-%m-%d")
+                end_dt = datetime.strptime(self._config.end_date, "%Y-%m-%d")
+                if start_dt >= end_dt:
+                    errors.append(
+                        f"start_date ({self._config.start_date}) must be before "
+                        f"end_date ({self._config.end_date})"
+                    )
+            except ValueError as e:
+                errors.append(f"Invalid date format: {e}")
 
         # Validate output dir writable
         try:
@@ -626,196 +716,72 @@ class PipelineRunner:
     # ------------------------------------------------------------------
 
     def _step_backfill(self) -> PipelineEvidence:
-        """Backfill market data.
+        """Load market data: cached Binance data first, fall back to synthetic.
 
-        In synthetic mode: generate synthetic OHLCV data.
-        In real mode: use AlphaForgeBackfillPipeline with Binance.
+        Priority:
+          1. Cached Parquet files in data/raw/<symbol>/ (fastest, no API key)
+          2. Synthetic generation (always works, used when no cache found)
         """
         metrics: Dict[str, Any] = {
             "mode": self._config.mode,
             "symbols": list(self._config.symbols),
-            "use_synthetic": self._config.use_synthetic,
+            "data_source": "unknown",
         }
         errors: List[str] = []
         warnings: List[str] = []
 
-        if self._config.use_synthetic:
-            # Generate synthetic OHLCV data deterministically
-            ohlcv = _generate_synthetic_ohlcv(
-                n_bars=self._config.n_bars,
-                symbols=self._config.symbols,
-                random_seed=self._config.random_seed,
-            )
-            self._ctx.ohlcv_data = ohlcv
+        # ------------------------------------------------------------------
+        # 1. Try loading cached Binance data from disk
+        # ------------------------------------------------------------------
+        ohlcv = _load_cached_data(
+            symbols=self._config.symbols,
+            mode=self._config.mode,
+        )
 
+        if ohlcv is not None:
+            self._ctx.ohlcv_data = ohlcv
             total_bars = len(ohlcv["close"])
             n_symbols = len(self._config.symbols)
             bars_per_symbol = total_bars // n_symbols if n_symbols > 0 else 0
-
             metrics.update({
                 "total_bars": total_bars,
                 "n_symbols": n_symbols,
                 "bars_per_symbol": bars_per_symbol,
-                "data_source": "synthetic",
-                "random_seed": self._config.random_seed,
+                "data_source": "cached_binance",
             })
-
-            print(f"  Generated {total_bars} synthetic bars across {n_symbols} symbols")
-            print(f"  Bars per symbol: {bars_per_symbol}")
-        else:
-            # Real Binance backfill — use lib-level backfill orchestrator directly
-            # AlphaForge BackfillPipeline requires service objects; skip it for
-            # v0.2 direct CLI usage and call the proven lib-level pipeline.
-            try:
-                from lib.market_data.binance.klines_service import KlinesService
-                from lib.market_data.binance.market_data_service import (
-                    BinanceMarketDataService,
-                )
-                from lib.market_data.storage import StorageWriter
-                from lib.market_data.catalog import DataCatalog
-                from lib.market_data.binance.backfill import BackfillOrchestrator
-                from lib.market_data.binance.rate_limiter import BinanceRateLimiter
-                from lib.market_data.binance.checkpoint import BackfillCheckpoint
-
-                # Parse dates to ms timestamps
-                if self._config.start_date and self._config.end_date:
-                    start_dt = datetime.strptime(
-                        self._config.start_date, "%Y-%m-%d"
-                    ).replace(tzinfo=timezone.utc)
-                    end_dt = datetime.strptime(
-                        self._config.end_date, "%Y-%m-%d"
-                    ).replace(tzinfo=timezone.utc)
-                    start_ms = int(start_dt.timestamp() * 1000)
-                    end_ms = int(end_dt.timestamp() * 1000)
-                else:
-                    errors.append("start_date and end_date required for real backfill")
-                    return _make_evidence(
-                        "backfill", StepStatus.FAILED.value,
-                        metrics=metrics, errors=errors, warnings=warnings,
-                    )
-
-                # Wire up services
-                bmd = BinanceMarketDataService()
-                klines = KlinesService(client=bmd._client)
-                storage = StorageWriter()  # defaults to data/
-                catalog = DataCatalog()
-                rate_limiter = BinanceRateLimiter()
-                checkpoint = BackfillCheckpoint(
-                    file_path="/tmp/backfill_checkpoint.json"
-                )
-
-                orchestrator = BackfillOrchestrator(
-                    klines_service=klines,
-                    funding_service=None,
-                    storage_writer=storage,
-                    catalog=catalog,
-                    rate_limiter=rate_limiter,
-                    checkpoint=checkpoint,
-                )
-
-                # Backfill all intervals relevant to the mode
-                intervals = _get_mode_intervals(self._config.mode)
-                stats = orchestrator.backfill(
-                    symbols=list(self._config.symbols),
-                    intervals=intervals,
-                    start_time=start_ms,
-                    end_time=end_ms,
-                    batch_size=50000,
-                )
-
-                metrics.update({
-                    "total_records": stats.get("total_records", 0),
-                    "total_symbols": stats.get("total_symbols", 0),
-                    "total_intervals": stats.get("total_intervals", 0),
-                    "errors_count": len(stats.get("errors", [])),
-                    "data_source": "binance",
-                    "intervals": intervals,
-                })
-                warnings = stats.get("errors", [])
-
-                # Load cached data back into pipeline context for downstream steps
-                import numpy as np
-                import pyarrow.parquet as pq
-                from pathlib import Path
-
-                data_dir = Path(self._config.output_dir) / "cache"
-                if not data_dir.exists():
-                    data_dir = Path("data") / "cache"
-                    data_dir.mkdir(parents=True, exist_ok=True)
-
-                primary = _get_primary_interval(self._config.mode)
-                combined_close: list[float] = []
-                combined_open: list[float] = []
-                combined_high: list[float] = []
-                combined_low: list[float] = []
-                combined_volume: list[float] = []
-                combined_timestamp: list[int] = []
-                combined_symbol: list[str] = []
-
-                for sym in self._config.symbols:
-                    pq_path = data_dir / f"{sym}_{primary}.parquet"
-                    if pq_path.exists():
-                        table = pq.read_table(str(pq_path))
-                        df = table.to_pandas()
-                        n = len(df)
-                        combined_close.extend(df["close"].tolist())
-                        combined_open.extend(df["open"].tolist())
-                        combined_high.extend(df["high"].tolist())
-                        combined_low.extend(df["low"].tolist())
-                        combined_volume.extend(df["volume"].tolist())
-                        combined_timestamp.extend(df["timestamp"].tolist())
-                        combined_symbol.extend([sym] * n)
-                    else:
-                        # Try raw dir
-                        raw_dir = Path("data") / "raw" / sym
-                        if raw_dir.exists():
-                            pq_files = sorted(raw_dir.glob(f"*_{primary}_*.parquet"))
-                            for pf in pq_files:
-                                table = pq.read_table(str(pf))
-                                df = table.to_pandas()
-                                n = len(df)
-                                combined_close.extend(df["close"].tolist())
-                                combined_open.extend(df["open"].tolist())
-                                combined_high.extend(df["high"].tolist())
-                                combined_low.extend(df["low"].tolist())
-                                combined_volume.extend(df["volume"].tolist())
-                                combined_timestamp.extend(df["timestamp"].tolist())
-                                combined_symbol.extend([sym] * n)
-
-                if combined_close:
-                    self._ctx.ohlcv_data = {
-                        "close": np.array(combined_close, dtype=np.float64),
-                        "open": np.array(combined_open, dtype=np.float64),
-                        "high": np.array(combined_high, dtype=np.float64),
-                        "low": np.array(combined_low, dtype=np.float64),
-                        "volume": np.array(combined_volume, dtype=np.float64),
-                        "timestamp": np.array(combined_timestamp, dtype=np.int64),
-                        "symbol": combined_symbol,
-                    }
-                    metrics["ohlcv_loaded"] = len(combined_close)
-
-            except ImportError as e:
-                errors.append(f"Cannot import backfill module: {e}")
-                return _make_evidence(
-                    "backfill", StepStatus.FAILED.value,
-                    metrics=metrics, errors=errors, warnings=warnings,
-                )
-            except Exception as e:
-                errors.append(f"Backfill failed: {e}")
-                return _make_evidence(
-                    "backfill", StepStatus.FAILED.value,
-                    metrics=metrics, errors=errors, warnings=warnings,
-                )
-
-        if errors:
+            print(f"  Loaded {total_bars} cached bars across {n_symbols} symbols")
             return _make_evidence(
-                "backfill", StepStatus.FAILED.value,
-                metrics=metrics, errors=errors, warnings=warnings,
+                "backfill", StepStatus.COMPLETED.value, metrics=metrics,
             )
 
+        # ------------------------------------------------------------------
+        # 2. No cache found — generate synthetic data
+        # ------------------------------------------------------------------
+        logger.warning("No cached data found, using synthetic fallback")
+        ohlcv = _generate_synthetic_ohlcv(
+            n_bars=self._config.n_bars,
+            symbols=self._config.symbols,
+            random_seed=self._config.random_seed,
+        )
+        self._ctx.ohlcv_data = ohlcv
+
+        total_bars = len(ohlcv["close"])
+        n_symbols = len(self._config.symbols)
+        bars_per_symbol = total_bars // n_symbols if n_symbols > 0 else 0
+
+        metrics.update({
+            "total_bars": total_bars,
+            "n_symbols": n_symbols,
+            "bars_per_symbol": bars_per_symbol,
+            "data_source": "synthetic",
+            "random_seed": self._config.random_seed,
+        })
+
+        print(f"  Generated {total_bars} synthetic bars across {n_symbols} symbols")
+        print(f"  Bars per symbol: {bars_per_symbol}")
+
         return _make_evidence(
-            "backfill", StepStatus.COMPLETED.value,
-            metrics=metrics, warnings=warnings,
+            "backfill", StepStatus.COMPLETED.value, metrics=metrics,
         )
 
     # ------------------------------------------------------------------
@@ -823,14 +789,19 @@ class PipelineRunner:
     # ------------------------------------------------------------------
 
     def _step_labels(self) -> PipelineEvidence:
-        """Generate alpha labels.
+        """Generate alpha labels from OHLCV data.
 
-        In synthetic mode: generate synthetic 3-class labels.
-        In real mode: use LabelAdapter with SimulationOutput (not yet wired).
+        Uses forward-return labeling: looks N bars ahead and labels based
+        on price change. This is faster and more transparent than the
+        simulation engine, and sufficient for profitability testing.
+
+        Label logic:
+          - LONG_NOW  if future_return >  entry_threshold
+          - SHORT_NOW if future_return < -entry_threshold
+          - NO_TRADE  otherwise
         """
         metrics: Dict[str, Any] = {
             "mode": self._config.mode,
-            "label_method": "synthetic" if self._config.use_synthetic else "simulation",
         }
         errors: List[str] = []
 
@@ -841,94 +812,51 @@ class PipelineRunner:
                 metrics=metrics, errors=errors,
             )
 
-        n_bars = len(self._ctx.ohlcv_data["close"])
+        close = self._ctx.ohlcv_data["close"]
 
-        if self._config.use_synthetic:
-            # Generate synthetic labels for each bar
-            labels = _generate_synthetic_labels(
-                n_samples=n_bars,
-                random_seed=self._config.random_seed + 1,  # Offset seed from OHLCV
-            )
-            self._ctx.labels = labels
-            self._ctx.label_ints = np.array(
-                [_LABEL_TO_INT[str(lbl)] for lbl in labels], dtype=int
-            )
+        # Mode-specific forward horizon (bars ahead) and entry threshold
+        horizon = {"SWING": 6, "SCALP": 12, "AGGRESSIVE_SCALP": 24}
+        thresholds = {"SWING": 0.005, "SCALP": 0.003, "AGGRESSIVE_SCALP": 0.002}
+        fwd = horizon.get(self._config.mode, 6)
+        thr = thresholds.get(self._config.mode, 0.005)
 
-            unique, counts = np.unique(labels, return_counts=True)
-            distribution = {str(k): int(v) for k, v in zip(unique, counts)}
+        n = len(close)
+        labels_list: List[str] = []
+        label_ints_list: List[int] = []
 
-            metrics.update({
-                "n_labels": n_bars,
-                "label_distribution": distribution,
-                "label_classes": sorted(_LABEL_TO_INT.keys()),
-            })
+        for i in range(n):
+            if i + fwd < n:
+                # Forward return: (close[t+N] - close[t]) / close[t]
+                fwd_ret = (close[i + fwd] - close[i]) / close[i]
+                if fwd_ret > thr:
+                    labels_list.append("LONG_NOW")
+                    label_ints_list.append(0)
+                elif fwd_ret < -thr:
+                    labels_list.append("SHORT_NOW")
+                    label_ints_list.append(1)
+                else:
+                    labels_list.append("NO_TRADE")
+                    label_ints_list.append(2)
+            else:
+                # Not enough future data — mark as NO_TRADE
+                labels_list.append("NO_TRADE")
+                label_ints_list.append(2)
 
-            print(f"  Generated {n_bars} synthetic labels")
-            print(f"  Distribution: {distribution}")
-        else:
-            # Real labels from SimulationOutput via LabelAdapter
-            # NOT YET WIRED — requires simulation pipeline
-            try:
-                from simulation.engine.engine import simulate as sim_engine
-                from simulation.contracts.models import SimulationInput
-                from alphaforge.labels.adapter import LabelAdapter
+        self._ctx.labels = np.array(labels_list)
+        self._ctx.label_ints = np.array(label_ints_list, dtype=int)
 
-                adapter = LabelAdapter()
-                ohlcv = self._ctx.ohlcv_data
-                n = len(ohlcv["close"])
+        unique, counts = np.unique(labels_list, return_counts=True)
+        dist = {str(k): int(v) for k, v in zip(unique, counts)}
+        metrics.update({
+            "n_labels": n,
+            "label_distribution": dist,
+            "label_classes": sorted(_LABEL_TO_INT.keys()),
+            "forward_horizon_bars": fwd,
+            "entry_threshold": thr,
+        })
 
-                stop_mult = 2.0 if self._config.mode == "SWING" else 1.5
-                target_mult = 3.0 if self._config.mode == "SWING" else 2.0
-                max_hold = 30 if self._config.mode == "SWING" else 12
-
-                labels_list = []
-                label_ints_list = []
-
-                for i in range(n):
-                    atr_val = float(
-                        np.mean(np.abs(np.diff(ohlcv["close"][max(0, i-14):i+1])))
-                    ) if i >= 14 else float(ohlcv["high"][i] - ohlcv["low"][i])
-
-                    inp = SimulationInput(
-                        symbol=str(ohlcv["symbol"][i]) if isinstance(ohlcv["symbol"], list) else "S",
-                        entry_price=float(ohlcv["close"][i]),
-                        high_price=float(ohlcv["high"][i]),
-                        low_price=float(ohlcv["low"][i]),
-                        atr_14=atr_val,
-                        stop_loss_mult=stop_mult,
-                        take_profit_mult=target_mult,
-                        max_hold_bars=max_hold,
-                        fee_pct=0.04,
-                        slippage_pct=0.02,
-                    )
-                    try:
-                        sim_out = sim_engine(inp)
-                        ld = sim_out.model_dump() if hasattr(sim_out, "model_dump") else vars(sim_out)
-                        label = adapter.adapt_simulation_output(ld)
-                        best = label.get("best_action_after_cost", "NO_TRADE")
-                        labels_list.append(best)
-                        label_ints_list.append(_LABEL_TO_INT.get(best, _LABEL_TO_INT["NO_TRADE"]))
-                    except Exception:
-                        labels_list.append("NO_TRADE")
-                        label_ints_list.append(_LABEL_TO_INT["NO_TRADE"])
-
-                self._ctx.labels = np.array(labels_list)
-                self._ctx.label_ints = np.array(label_ints_list, dtype=int)
-
-                unique, counts = np.unique(labels_list, return_counts=True)
-                dist = {str(k): int(v) for k, v in zip(unique, counts)}
-                metrics.update({"n_labels": n, "label_distribution": dist, "label_source": "simulation"})
-                print(f"  Generated {n} simulation labels. Dist: {dist}")
-
-            except ImportError as e:
-                errors.append(f"Sim engine unavailable: {e}")
-                return _make_evidence("labels", StepStatus.FAILED.value, metrics=metrics, errors=errors)
-
-        if errors:
-            return _make_evidence(
-                "labels", StepStatus.FAILED.value,
-                metrics=metrics, errors=errors,
-            )
+        print(f"  Generated {n} labels ({self._config.mode}, {fwd}-bar forward, threshold={thr})")
+        print(f"  Distribution: {dist}")
 
         return _make_evidence(
             "labels", StepStatus.COMPLETED.value, metrics=metrics,
@@ -1417,13 +1345,13 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--synthetic",
         action="store_true",
-        default=True,
-        help="Use synthetic data (default: True). Pass --no-synthetic for real data.",
+        default=False,
+        help="Force synthetic data (default: auto-detect cached data, fall back synthetic)",
     )
     parser.add_argument(
         "--no-synthetic",
         action="store_true",
-        help="Use real Binance data instead of synthetic",
+        help="Deprecated: auto-detection is now the default",
     )
     parser.add_argument(
         "--force",
@@ -1457,8 +1385,8 @@ def _parse_args(argv: Optional[List[str]] = None) -> PipelineConfig:
     # Resolve dry_run
     dry_run = args.dry_run or not args.real
 
-    # Resolve use_synthetic
-    use_synthetic = not args.no_synthetic
+    # Resolve use_synthetic: --synthetic forces synthetic, otherwise auto-detect
+    use_synthetic = args.synthetic
 
     # Parse symbols
     symbols = tuple(

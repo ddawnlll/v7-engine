@@ -154,7 +154,7 @@ class TestAudit1NoFutureData:
     The no-revision property states: adding bar N+1 must NOT change feature
     values at bars [0, N-1]. This is the strongest causal guarantee.
 
-    All 7 active feature groups must satisfy this property.
+    All 9 active feature groups must satisfy this property.
     """
 
     N_BASE: int = 200  # Base number of bars for no-revision test
@@ -1174,7 +1174,7 @@ class TestAudit8NanSafety:
             warnings.simplefilter("always")
             result = compute_features(ohlcv, mode="SWING")
         # Should complete without error
-        assert result.total_features() == 38
+        assert result.total_features() == 60
         # NaN should have propagated to some features
         assert np.isnan(result.features["log_return_1"][50])
 
@@ -1282,19 +1282,19 @@ class TestAudit10FeatureMatrixIntegrity:
             f"Inconsistent feature lengths: {lengths}"
         )
 
-    def test_7_active_groups(self):
-        """AC-128-073: Seven active feature groups (Lead-Lag deferred)."""
+    def test_9_active_groups(self):
+        """AC-128-073: Nine active feature groups (Lead-Lag + PerpetualFunding deferred)."""
         ohlcv = _make_ohlcv(n=200)
         result = compute_features(ohlcv, mode="SWING")
         groups = result.feature_group_ids
-        assert len(groups) == 7, f"Expected 7 groups, got {len(groups)}: {groups}"
+        assert len(groups) == 9, f"Expected 9 groups, got {len(groups)}: {groups}"
         assert "lead_lag" not in groups
 
-    def test_38_total_features(self):
-        """AC-128-074: Full pipeline produces 38 features (#119 expansion)."""
+    def test_60_total_features(self):
+        """AC-128-074: Full pipeline produces 60 features (extended)."""
         ohlcv = _make_ohlcv(n=200)
         result = compute_features(ohlcv, mode="SWING")
-        assert result.total_features() == 38, (
+        assert result.total_features() == 60, (
             f"Expected 38 features, got {result.total_features()}"
         )
 
