@@ -81,6 +81,12 @@ def generate_labels(ohlcv, mode: str):
     For each bar, simulate LONG and SHORT scenarios using future price path.
     Uses stop_mult/target_mult from mode config to determine exit points.
     Picks action with highest gross R. Applies costs afterward.
+
+    Returns:
+        Tuple of (int_labels, r_values, metrics_dict) where:
+        - int_labels: np.ndarray of integer labels (0=LONG, 1=SHORT, 2=NO_TRADE)
+        - r_values: np.ndarray of best-action gross R values
+        - metrics_dict: dict with n_labels and label_distribution
     """
     cfg = MODE_CONFIG[mode]
     n = len(ohlcv["close"])
@@ -89,7 +95,7 @@ def generate_labels(ohlcv, mode: str):
     target_mult = cfg["target_mult"]
     label_map = {"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}
     fee_pct = 0.04
-    labels_list, ints_list = [], []
+    labels_list, ints_list, r_vals = [], [], []
 
     for i in range(n - max_hold - 1):
         entry_price = float(ohlcv["close"][i])
@@ -98,6 +104,7 @@ def generate_labels(ohlcv, mode: str):
         if atr <= 0 or atr > entry_price * 0.5:
             labels_list.append("NO_TRADE")
             ints_list.append(2)
+            r_vals.append(0.0)
             continue
 
         stop_dist = atr * stop_mult
@@ -144,18 +151,22 @@ def generate_labels(ohlcv, mode: str):
         # Pick action with highest gross return (before costs)
         if long_gross > short_gross and long_gross > no_trade_gross:
             best = "LONG_NOW"
+            best_r = long_gross
         elif short_gross > long_gross and short_gross > no_trade_gross:
             best = "SHORT_NOW"
+            best_r = short_gross
         else:
             best = "NO_TRADE"
+            best_r = 0.0
 
         labels_list.append(best)
         ints_list.append(label_map.get(best, 2))
+        r_vals.append(best_r)
 
     uniq, cnt = np.unique(labels_list, return_counts=True)
     d = {str(k): int(v) for k, v in zip(uniq, cnt)}
     logger.info("Labels: %d samples, dist=%s", len(labels_list), d)
-    return np.array(labels_list), {"n_labels": len(labels_list), "label_distribution": d}
+    return np.array(ints_list), np.array(r_vals, dtype=float), {"n_labels": len(labels_list), "label_distribution": d}
 
 
 def _compute_stability(values: list[float]) -> float:
@@ -178,7 +189,7 @@ def _compute_stability(values: list[float]) -> float:
 def walk_forward_validate(
     X: np.ndarray,
     y_int: np.ndarray,
-    ohlcv: dict[str, np.ndarray | list],
+    r_values: np.ndarray,
     mode: str,
     min_folds: int = 6,
 ) -> list[dict]:
@@ -197,7 +208,7 @@ def walk_forward_validate(
     Args:
         X: Feature matrix (n_samples, n_features).
         y_int: Integer labels (0=LONG_NOW, 1=SHORT_NOW, 2=NO_TRADE).
-        ohlcv: OHLCV data dict (passed for context / future regime use).
+        r_values: R-values array (n_samples,) for expectancy computation.
         mode: Trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
         min_folds: Minimum number of walk-forward folds (default 6).
 
@@ -207,6 +218,7 @@ def walk_forward_validate(
             train_accuracy, train_logloss, val_accuracy, val_logloss,
             active_trade_count, long_count, short_count, no_trade_count,
             long_actual, short_actual, no_trade_actual,
+            confusion_matrix, feature_importance, r_expectancy,
             training_duration_seconds.
     """
     from alphaforge.training.xgb_trainer import XGBoostTrainer
@@ -285,6 +297,15 @@ def walk_forward_validate(
         # Actual label distribution
         true_counts = Counter(y_val)
 
+        # Confusion matrix: 3x3 (predicted x actual) for 3 classes
+        cm = np.zeros((3, 3), dtype=int)
+        for t, p in zip(y_val, y_pred):
+            cm[t, p] += 1
+
+        # R-expectancy: mean R value of validation fold
+        val_r_values = r_values[effective_val_start:val_end]
+        r_expectancy_val = float(np.mean(val_r_values)) if len(val_r_values) > 0 else 0.0
+
         r: dict = {
             "fold": fold + 1,
             "n_train": len(X_train),
@@ -302,6 +323,9 @@ def walk_forward_validate(
             "long_actual": int(true_counts.get(0, 0)),
             "short_actual": int(true_counts.get(1, 0)),
             "no_trade_actual": int(true_counts.get(2, 0)),
+            "confusion_matrix": cm.tolist(),
+            "feature_importance": fold_result.model_artifact.get("feature_importance", {}),
+            "r_expectancy": r_expectancy_val,
             "training_duration_seconds": fold_result.training_duration_seconds,
         }
         results.append(r)
@@ -333,7 +357,7 @@ def main():
     print(f"  {len(ohlcv['close'])} bars")
 
     print("[2/5] Generating simulation labels...")
-    labels, lm = generate_labels(ohlcv, mode)
+    y_int, r_vals, lm = generate_labels(ohlcv, mode)
 
     print("[3/5] Computing features...")
     from alphaforge.features.pipeline import compute_features
@@ -343,12 +367,12 @@ def main():
     n_feat = X.shape[1]
     print(f"  {n_feat} features from {len(feat_names)} keys")
 
-    cut = min(X.shape[0], len(labels))
-    X, y_str = X[:cut], labels[:cut]
-    y_int = np.array([{"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}.get(str(l), 2) for l in y_str])
+    cut = min(X.shape[0], len(y_int))
+    X, y_int = X[:cut], y_int[:cut]
+    r_vals = r_vals[:cut]
 
     print(f"[4/5] Walk-forward validating on {len(X)} samples (anchor=anchored_expanding)...")
-    wfv = walk_forward_validate(X, y_int, ohlcv, mode, min_folds=6)
+    wfv = walk_forward_validate(X, y_int, r_vals, mode, min_folds=6)
 
     # Aggregate across folds
     val_accs = [r["val_accuracy"] for r in wfv]

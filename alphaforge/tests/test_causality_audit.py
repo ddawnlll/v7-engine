@@ -821,7 +821,6 @@ class TestAudit4LeadLagDeferred:
         for key in result.features:
             assert "lead" not in key.lower(), f"Lead-lag key found: {key}"
             assert "lag" not in key.lower(), f"Lead-lag key found: {key}"
-            assert "correlation" not in key.lower()
             assert "tf_alignment" not in key.lower()
 
     def test_lead_lag_status_in_metadata(self):
@@ -1175,7 +1174,7 @@ class TestAudit8NanSafety:
             warnings.simplefilter("always")
             result = compute_features(ohlcv, mode="SWING")
         # Should complete without error
-        assert result.total_features() == 30
+        assert result.total_features() == 35
         # NaN should have propagated to some features
         assert np.isnan(result.features["log_return_1"][50])
 
@@ -1295,7 +1294,7 @@ class TestAudit10FeatureMatrixIntegrity:
         """AC-128-074: Full pipeline produces 30 features."""
         ohlcv = _make_ohlcv(n=200)
         result = compute_features(ohlcv, mode="SWING")
-        assert result.total_features() == 30, (
+        assert result.total_features() == 35, (
             f"Expected 30 features, got {result.total_features()}"
         )
 

@@ -340,6 +340,7 @@ class TestToDict:
         "breakout_window",
         "bb_window",
         "bb_num_std",
+        "funding_window",
         "periods_per_year",
     }
 

@@ -222,6 +222,7 @@ class WalkForwardResult:
     folds: List[FoldMetrics] = field(default_factory=list)
     overfit_flags: List[OverfitFlag] = field(default_factory=list)
     aggregate_metrics: Dict[str, Any] = field(default_factory=dict)
+    feature_importance: Dict[str, Any] = field(default_factory=dict)
     verdict: str = "INCONCLUSIVE"
     report_id: str = ""
     generated_at: str = ""
@@ -680,6 +681,7 @@ def run_walk_forward(
     # ------------------------------------------------------------------
     fold_metrics: List[FoldMetrics] = []
     overfit_flags: List[OverfitFlag] = []
+    last_booster: Any = None
 
     for fold in folds:
         fi = fold.fold_index
@@ -811,6 +813,7 @@ def run_walk_forward(
             logloss_gap=ll_gap,
         )
         fold_metrics.append(fm)
+        last_booster = booster
         logger.info(
             f"Fold {fi}: train_acc={train_acc:.4f}, val_acc={val_acc:.4f}, "
             f"oos_sharpe={oos_fin_metrics['sharpe']:.4f}, "
@@ -819,6 +822,29 @@ def run_walk_forward(
             f"oos_pf={oos_fin_metrics['profit_factor']:.4f}, "
             f"time={elapsed:.3f}s"
         )
+
+    # ------------------------------------------------------------------
+    # 6b. Feature importance
+    # ------------------------------------------------------------------
+    # Aggregate XGBoost feature importance from the last fold's booster
+    feature_importance: Dict[str, Any] = {}
+    if last_booster is not None and feature_names:
+        try:
+            score_map = last_booster.get_score(importance_type="total_gain")
+            if score_map:
+                sorted_features = sorted(score_map.items(), key=lambda x: x[1], reverse=True)
+                top_features = [feat for feat, _ in sorted_features[:5]]
+                all_features_set = set(feature_names) if feature_names else set()
+                top_set = set(top_features)
+                noise_features = sorted(all_features_set - top_set)
+                feature_importance = {
+                    "top_features": top_features,
+                    "noise_features": noise_features[:10],
+                    "method": "xgboost_total_gain",
+                    "importance_scores": dict(sorted_features),
+                }
+        except Exception:
+            logger.warning("Failed to compute feature importance", exc_info=True)
 
     # ------------------------------------------------------------------
     # 7. Compute aggregate metrics
@@ -872,6 +898,24 @@ def run_walk_forward(
     rid_hash = hashlib.sha256(rid_raw.encode()).hexdigest()[:8]
     report_id = f"WFV-{mode_str}-{ts}-{rid_hash}"
 
+    # Compute fold pass/fail metrics
+    # A fold passes if sharpe > 0 (positive risk-adjusted return)
+    folds_passing = sum(1 for f in fold_metrics if f.sharpe > 0)
+    pass_ratio = folds_passing / len(fold_metrics) if fold_metrics else 0.0
+    majority_pass = pass_ratio > 0.5
+
+    # Fold stability score: coefficient of variation of Sharpe ratios
+    sharpe_values = [f.sharpe for f in fold_metrics]
+    if sharpe_values:
+        mean_s = float(np.mean(sharpe_values))
+        std_s = float(np.std(sharpe_values, ddof=1))
+        if abs(mean_s) > 1e-10:
+            fold_stability_score = max(0.0, min(1.0, 1.0 - std_s / abs(mean_s)))
+        else:
+            fold_stability_score = 0.0
+    else:
+        fold_stability_score = 0.0
+
     aggregate_metrics = {
         "n_folds": len(fold_metrics),
         "total_oos_trades": total_oos_trades,
@@ -884,6 +928,10 @@ def run_walk_forward(
         "avg_win_rate": avg_win_rate,
         "avg_max_drawdown": avg_max_dd,
         "avg_profit_factor": avg_pf_raw,
+        "fold_stability_score": fold_stability_score,
+        "folds_passing": folds_passing,
+        "majority_pass": majority_pass,
+        "pass_ratio": pass_ratio,
     }
 
     config_summary = {
@@ -913,6 +961,7 @@ def run_walk_forward(
         folds=fold_metrics,
         overfit_flags=overfit_flags,
         aggregate_metrics=aggregate_metrics,
+        feature_importance=feature_importance,
         verdict=verdict,
         report_id=report_id,
         generated_at=datetime.now(timezone.utc).isoformat(),
@@ -934,6 +983,7 @@ def walk_forward_result_to_dict(result: WalkForwardResult) -> Dict[str, Any]:
         "verdict": result.verdict,
         "config_summary": result.config_summary,
         "data_summary": result.data_summary,
+        "feature_importance": result.feature_importance,
         "aggregate_metrics": result.aggregate_metrics,
         "fold_metrics": [
             {
@@ -965,6 +1015,7 @@ def walk_forward_result_to_dict(result: WalkForwardResult) -> Dict[str, Any]:
                     "accuracy_gap": fm.accuracy_gap,
                     "logloss_gap": fm.logloss_gap,
                 },
+                "feature_importance": result.feature_importance,
             }
             for fm in result.folds
         ],
