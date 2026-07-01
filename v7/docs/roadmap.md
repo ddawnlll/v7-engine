@@ -625,3 +625,23 @@ It is:
 - prove the contract layer
 - prove the learning layer
 - only then broaden runtime and deployment sophistication
+
+## AlphaForge Profitability v0.1 — Complete (2026-07-01)
+
+### Implemented (14 issues)
+- OrderBook features: OBI, OBI_N, OFI, VAMP, spread/VWAP-to-mid, volume HHI, micro-price (#154, #162-#166, #170)
+- Triple-barrier labeling + Meta-labeling (#156, #160)
+- Funding rate features (#157)
+- Online regime classifier (#161)
+- Combinatorial CV + Purged CV for Optuna (#159, #169)
+- Symbol diversity scoring (#168)
+
+### Not Implemented (5 issues)
+- #155 (data download), #158 (caching), #167 (SHAP), #171 (docs), #172 (epic)
+- Status: DEFERRED — will be revisited in v0.2
+
+### Design Lock Status
+- SWING mode feature set: LOCKED_INITIAL_BASELINE (expanded)
+- OrderBook feature group: LOCKED_INITIAL_BASELINE (14 functions)
+- CPCV validation: LOCKABLE_WITH_HOLDS (needs empirical calibration)
+- Meta-labeling: LOCKABLE_WITH_HOLDS (threshold tuning needed)
