@@ -147,7 +147,7 @@ WFV_TRAIN_WINDOW_BARS: int = 500
 WFV_TEST_WINDOW_BARS: int = 200
 WFV_PURGE_BARS: int = MODE_PURGE_BARS[Mode.SWING]  # 20
 WFV_EMBARGO_BARS: int = 20
-WFV_MIN_FOLDS: int = 3  # Per issue spec: >= 3 folds
+WFV_MIN_FOLDS: int = 6  # Per issue #125: >= 6 folds with anchored expanding window
 WFV_VAL_FRACTION: float = 0.25  # fraction of test window used for validation
 
 # Overfitting thresholds
@@ -527,6 +527,23 @@ def _build_walk_forward_config(
     )
 
 
+def _compute_stability(values: List[float]) -> float:
+    """Coefficient-of-variation stability: 1 - (std/mean), clipped to [0, 1].
+
+    Higher is better: 1.0 = perfectly stable, 0.0 = unusable.
+    Returns 0.0 when mean is zero or list is empty.
+    """
+    if not values:
+        return 0.0
+    arr = np.array(values, dtype=float)
+    mean_v = float(np.mean(arr))
+    if abs(mean_v) < 1e-10:
+        return 0.0
+    std_v = float(np.std(arr, ddof=1))
+    cv = std_v / abs(mean_v)
+    return max(0.0, min(1.0, 1.0 - cv))
+
+
 def run_walk_forward(
     n_bars: int = 2000,
     n_symbols: int = 3,
@@ -845,8 +862,28 @@ def run_walk_forward(
     # Sharpe stability (std of Sharpe across folds)
     sharpe_std = float(np.std([f.sharpe for f in fold_metrics], ddof=1)) if len(fold_metrics) > 1 else 0.0
 
+    # Fold stability score (CV-based on val_accuracy across folds)
+    val_accuracies = [f.val_accuracy for f in fold_metrics]
+    fold_stability_score = _compute_stability(val_accuracies)
+
     # ------------------------------------------------------------------
-    # 8. Determine verdict
+    # 8. Majority fold PASS criteria
+    # ------------------------------------------------------------------
+    # A fold passes if:
+    #   - val_accuracy > 0.5 (better than random 3-class guess)
+    #   - accuracy_gap <= OVERFIT_ACCURACY_GAP_THRESHOLD (not overfit)
+    #   - sharpe > -0.5 (not terrible OOS performance)
+    folds_passing = 0
+    for fm in fold_metrics:
+        if (fm.val_accuracy > 0.5
+                and fm.accuracy_gap <= OVERFIT_ACCURACY_GAP_THRESHOLD
+                and fm.sharpe > -0.5):
+            folds_passing += 1
+    majority_pass = folds_passing > len(fold_metrics) // 2
+    pass_ratio = folds_passing / len(fold_metrics) if fold_metrics else 0.0
+
+    # ------------------------------------------------------------------
+    # 9. Determine verdict
     # ------------------------------------------------------------------
     has_critical_overfit = any(f.severity == "CRITICAL" for f in overfit_flags)
     has_high_overfit = any(f.severity == "HIGH" for f in overfit_flags)
@@ -859,13 +896,16 @@ def run_walk_forward(
         verdict = ValidationVerdict.FAIL_OVERFIT.value
     elif avg_sharpe < -1.0:
         verdict = ValidationVerdict.FAIL_OOS.value
+    elif not majority_pass:
+        # Majority of folds failed individual criteria
+        verdict = ValidationVerdict.PASS_WITH_LIMITATIONS.value
     elif has_high_overfit:
         verdict = ValidationVerdict.PASS_WITH_LIMITATIONS.value
     else:
         verdict = ValidationVerdict.PASS.value
 
     # ------------------------------------------------------------------
-    # 9. Assemble result
+    # 10. Assemble result
     # ------------------------------------------------------------------
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
     rid_raw = f"{mode_str}|{len(fold_metrics)}|{total_oos_trades}|{ts}"
@@ -881,6 +921,10 @@ def run_walk_forward(
         "avg_logloss_gap": avg_logloss_gap,
         "avg_sharpe": avg_sharpe,
         "sharpe_stability_std": sharpe_std,
+        "fold_stability_score": fold_stability_score,
+        "folds_passing": folds_passing,
+        "majority_pass": majority_pass,
+        "pass_ratio": pass_ratio,
         "avg_win_rate": avg_win_rate,
         "avg_max_drawdown": avg_max_dd,
         "avg_profit_factor": avg_pf_raw,

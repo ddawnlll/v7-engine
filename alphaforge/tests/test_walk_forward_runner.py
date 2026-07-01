@@ -233,14 +233,14 @@ class TestWalkForwardRunner:
 
     @pytest.fixture
     def result(self) -> WalkForwardResult:
-        """Run walk-forward on a small dataset (fast, 3 symbols x 500 bars)."""
+        """Run walk-forward on a small dataset (fast, 3 symbols x 1000 bars)."""
         return run_walk_forward(
-            n_bars=500,
+            n_bars=1000,
             n_symbols=3,
             random_seed=42,
             train_window_bars=200,
             test_window_bars=100,
-            min_folds=3,
+            min_folds=6,
         )
 
     def test_runs_without_error(self, result):
@@ -249,9 +249,9 @@ class TestWalkForwardRunner:
         assert isinstance(result, WalkForwardResult)
 
     def test_min_folds_met(self, result):
-        """At least min_folds (3) folds are produced."""
-        assert len(result.folds) >= 3, (
-            f"Expected >= 3 folds, got {len(result.folds)}"
+        """At least min_folds (6) folds are produced."""
+        assert len(result.folds) >= 6, (
+            f"Expected >= 6 folds, got {len(result.folds)}"
         )
 
     def test_each_fold_has_valid_metrics(self, result):
@@ -296,10 +296,35 @@ class TestWalkForwardRunner:
             "avg_train_accuracy", "avg_val_accuracy",
             "avg_accuracy_gap", "avg_logloss_gap",
             "avg_sharpe", "sharpe_stability_std",
+            "fold_stability_score", "folds_passing",
+            "majority_pass", "pass_ratio",
             "avg_win_rate", "avg_max_drawdown", "avg_profit_factor",
         ]
         for key in required:
             assert key in agg, f"Missing aggregate metric: {key}"
+
+    def test_fold_stability_score_range(self, result):
+        """fold_stability_score is in [0, 1]."""
+        score = result.aggregate_metrics["fold_stability_score"]
+        assert 0.0 <= score <= 1.0, (
+            f"fold_stability_score={score} outside [0, 1]"
+        )
+
+    def test_majority_pass_bool(self, result):
+        """majority_pass is a boolean."""
+        mp = result.aggregate_metrics["majority_pass"]
+        assert isinstance(mp, bool), f"majority_pass={mp!r} is not bool"
+
+    def test_pass_ratio_range(self, result):
+        """pass_ratio is in [0, 1]."""
+        pr = result.aggregate_metrics["pass_ratio"]
+        assert 0.0 <= pr <= 1.0, f"pass_ratio={pr} outside [0, 1]"
+
+    def test_folds_passing_non_negative(self, result):
+        """folds_passing is a non-negative int."""
+        fp = result.aggregate_metrics["folds_passing"]
+        assert isinstance(fp, int), f"folds_passing={fp!r} is not int"
+        assert fp >= 0, f"folds_passing={fp} negative"
 
     def test_config_and_data_summary_present(self, result):
         """Config and data summaries are populated."""
@@ -325,12 +350,12 @@ class TestReportSerialization:
     def test_to_dict_serializable(self, tmp_path):
         """walk_forward_result_to_dict produces JSON-serializable output."""
         result = run_walk_forward(
-            n_bars=200,
+            n_bars=600,
             n_symbols=2,
             random_seed=42,
             train_window_bars=80,
             test_window_bars=40,
-            min_folds=3,
+            min_folds=6,
         )
         d = walk_forward_result_to_dict(result)
         # Should not raise
@@ -342,12 +367,12 @@ class TestReportSerialization:
     def test_save_report_creates_file(self, tmp_path):
         """save_walk_forward_report writes a JSON file."""
         result = run_walk_forward(
-            n_bars=200,
+            n_bars=600,
             n_symbols=2,
             random_seed=42,
             train_window_bars=80,
             test_window_bars=40,
-            min_folds=3,
+            min_folds=6,
         )
         out = tmp_path / "wfv_test.json"
         saved = save_walk_forward_report(result, str(out))
@@ -360,12 +385,12 @@ class TestReportSerialization:
     def test_fold_metrics_contain_all_fields(self, tmp_path):
         """Serialized fold metrics have all expected sub-dicts."""
         result = run_walk_forward(
-            n_bars=200,
+            n_bars=600,
             n_symbols=2,
             random_seed=42,
             train_window_bars=80,
             test_window_bars=40,
-            min_folds=3,
+            min_folds=6,
         )
         d = walk_forward_result_to_dict(result)
         for fm in d["fold_metrics"]:
