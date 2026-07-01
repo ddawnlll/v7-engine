@@ -503,6 +503,7 @@ Do not collapse these into one vague “publish” step.
 - MHT correction module: LOCKED_INITIAL_BASELINE (Issue #124)
 - 6-fold walk-forward validation: LOCKED_INITIAL_BASELINE (Issue #125)
 - SOLUSDT optimized params: LOCKED_INITIAL_BASELINE
+- Per-fold field name alignment real_training.py <-> empirical.py: LOCKED (Issue #131)
 
 **Remaining holds:**
 - Cost Stress Matrix (HOLD — requires regime-aware cost multipliers)
@@ -510,9 +511,8 @@ Do not collapse these into one vague “publish” step.
 - NO_TRADE Collapse edge case under extreme market conditions (HOLD)
 - Real profitability evidence (HOLD — requires real training + WFV)
 - MHT correction real thresholds (HOLD — requires empirical baseline)
-- Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL)
 
-**Evidence:** 1578 passed, 3 skipped, 0 failures. ACCP reports at `reports/accp/issue-122.yaml`, `issue-123.yaml`, `issue-124.yaml`, `issue-125.yaml`.
+**Evidence:** 1578 passed, 3 skipped, 0 failures. ACCP reports at `reports/accp/issue-122.yaml`, `issue-123.yaml`, `issue-124.yaml`, `issue-125.yaml`, `issue-131.yaml`.
 
 ---
 
