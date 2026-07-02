@@ -28,34 +28,36 @@ All profiles share the same structure. Mode-specific differences are explicit.
 | Refinement interval | `1h` | Hourly refinement |
 | Max holding bars | `30` | Up to 5 days (30 × 4h) |
 | Stop method | `atr_wide` | Wide ATR-based stop |
-| Stop multiplier (ATR) | `2.0–2.5` | Conservative stop placement |
+| Stop multiplier (ATR) | `2.0` | Conservative stop placement |
 | Target method | `atr_wide` | Wide ATR-based target |
-| Target multiplier (ATR) | `2.0–3.0` | Ambitious R:R targets |
+| Target multiplier (ATR) | `2.0` | Ambitious R:R targets |
 | Ambiguity margin (R) | `0.20` | Actions within 0.20R utility are ambiguous |
 | Min action edge (R) | `0.35` | Directional must beat NO_TRADE by 0.35R |
 | MAE penalty weight | `1.0` | Moderate MAE penalization |
 | Cost penalty weight | `1.0` | Moderate cost penalization |
 | Time penalty weight | `0.3` | Lower time sensitivity |
+| Funding rate | `0.0` | Perpetual funding cost per bar (bps) |
 | NO_TRADE tendency | `LOW` | Default is directional when clear |
 
 ```yaml
 simulation_configs:
   swing:
+    profile_version: "1.0.0"
+    mode: "SWING"
     primary_interval: "4h"
     context_intervals: ["1d", "1h"]
     refinement_intervals: ["1h"]
     max_holding_bars: 30
     stop_method: "atr_wide"
-    stop_multiplier_min: 2.0
-    stop_multiplier_max: 2.5
+    stop_multiplier: 2.0
     target_method: "atr_wide"
-    target_multiplier_min: 2.0
-    target_multiplier_max: 3.0
+    target_multiplier: 2.0
     ambiguity_margin_r: 0.20
     min_action_edge_r: 0.35
     mae_penalty_weight: 1.0
     cost_penalty_weight: 1.0
     time_penalty_weight: 0.3
+    funding_rate: 0.0
     no_trade_default: false
 ```
 
@@ -70,34 +72,36 @@ simulation_configs:
 | Refinement interval | `15m` | 15-minute refinement |
 | Max holding bars | `12` | Up to 12 hours |
 | Stop method | `atr_medium` | Medium ATR-based stop |
-| Stop multiplier (ATR) | `1.5–2.0` | Tighter than SWING |
+| Stop multiplier (ATR) | `1.5` | Tighter than SWING |
 | Target method | `atr_medium` | Medium ATR-based target |
-| Target multiplier (ATR) | `1.5–2.0` | Proportional to stop |
+| Target multiplier (ATR) | `1.5` | Proportional to stop |
 | Ambiguity margin (R) | `0.10` | Actions within 0.10R utility are ambiguous |
 | Min action edge (R) | `0.15` | Directional must beat NO_TRADE by 0.15R |
 | MAE penalty weight | `2.0` | Higher MAE sensitivity |
 | Cost penalty weight | `2.0` | Higher cost sensitivity |
 | Time penalty weight | `1.5` | Moderate time sensitivity |
+| Funding rate | `0.0` | Perpetual funding cost per bar (bps) |
 | NO_TRADE tendency | `MEDIUM` | Directional when clear, NO_TRADE when ambiguous |
 
 ```yaml
 simulation_configs:
   scalp:
+    profile_version: "1.0.0"
+    mode: "SCALP"
     primary_interval: "1h"
     context_intervals: ["4h", "15m"]
     refinement_intervals: ["15m"]
     max_holding_bars: 12
     stop_method: "atr_medium"
-    stop_multiplier_min: 1.5
-    stop_multiplier_max: 2.0
+    stop_multiplier: 1.5
     target_method: "atr_medium"
-    target_multiplier_min: 1.5
-    target_multiplier_max: 2.0
+    target_multiplier: 1.5
     ambiguity_margin_r: 0.10
     min_action_edge_r: 0.15
     mae_penalty_weight: 2.0
     cost_penalty_weight: 2.0
     time_penalty_weight: 1.5
+    funding_rate: 0.0
     no_trade_default: true
 ```
 
@@ -114,34 +118,36 @@ simulation_configs:
 | Refinement interval | `5m` | Five-minute refinement |
 | Max holding bars | `5` | Up to 75 minutes |
 | Stop method | `atr_tight` | Tight ATR-based stop |
-| Stop multiplier (ATR) | `1.0–1.5` | Very tight stop |
+| Stop multiplier (ATR) | `1.0` | Very tight stop |
 | Target method | `atr_tight` | Tight ATR-based target |
-| Target multiplier (ATR) | `1.0–1.5` | Quick targets |
+| Target multiplier (ATR) | `1.0` | Quick targets |
 | Ambiguity margin (R) | `0.05` | Very small ambiguity window |
 | Min action edge (R) | `0.08` | Small edge needed |
 | MAE penalty weight | `3.0` | Very high MAE sensitivity |
 | Cost penalty weight | `3.0` | Very high cost sensitivity |
 | Time penalty weight | `2.5` | High time sensitivity |
+| Funding rate | `0.0` | Perpetual funding cost per bar (bps) |
 | NO_TRADE tendency | `HIGH` | Default NO_TRADE, trade only with strong signals |
 
 ```yaml
 simulation_configs:
   aggressive_scalp:
+    profile_version: "1.0.0"
+    mode: "AGGRESSIVE_SCALP"
     primary_interval: "15m"
     context_intervals: ["1h", "5m"]
     refinement_intervals: ["5m"]
     max_holding_bars: 5
     stop_method: "atr_tight"
-    stop_multiplier_min: 1.0
-    stop_multiplier_max: 1.5
+    stop_multiplier: 1.0
     target_method: "atr_tight"
-    target_multiplier_min: 1.0
-    target_multiplier_max: 1.5
+    target_multiplier: 1.0
     ambiguity_margin_r: 0.05
     min_action_edge_r: 0.08
     mae_penalty_weight: 3.0
     cost_penalty_weight: 3.0
     time_penalty_weight: 2.5
+    funding_rate: 0.0
     no_trade_default: true
 ```
 

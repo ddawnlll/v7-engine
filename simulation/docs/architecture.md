@@ -192,43 +192,27 @@ alphaforge MAY import:
 ```
 simulation/
 ├── contracts/             # SimulationInput, SimulationOutput, ActionOutcome types
-│   ├── simulation_input.py
-│   ├── simulation_output.py
-│   └── action_outcome.py
-├── engine/                # Core comparative simulation engine
-│   ├── engine.py          # Main simulation loop
-│   ├── long_path.py       # LONG_NOW simulation path
-│   ├── short_path.py      # SHORT_NOW simulation path
-│   ├── no_trade_path.py   # NO_TRADE evaluation
-│   └── path_metrics.py    # MFE, MAE, path quality
-├── resolvers/             # Profile, cost, horizon, stop/target resolvers
-│   ├── profile_resolver.py
-│   ├── cost_resolver.py
-│   ├── horizon_resolver.py
-│   ├── stop_resolver.py
-│   └── time_exit_resolver.py
-├── exits/                 # Exit reason determination
-│   └── exits.py
+│   └── models.py          # All contract types (enums, value objects, input/output)
+├── engine/                # Core simulation engine
+│   ├── engine.py          # Main simulation loop (LONG_NOW, SHORT_NOW, NO_TRADE)
+│   ├── batch.py           # Batch simulation orchestration
+│   ├── costs.py           # Fee, slippage, and funding cost calculation
+│   ├── exits.py           # Exit reason determination
+│   ├── funding.py         # Funding rate cost model
+│   └── writer.py          # Simulation output writer
 ├── adapters/              # Side-effect-free adapters for consumers
-│   ├── training_adapter.py
-│   ├── evaluation_adapter.py
-│   ├── replay_driver.py
-│   ├── paper_driver.py
-│   └── monte_carlo_driver.py
-├── profiles/              # Mode-specific simulation profiles
-│   ├── base.py
-│   ├── swing.py
-│   ├── scalp.py
-│   └── aggressive_scalp.py
-├── lineage/               # Version tracking and lineage
-│   └── lineage.py
-├── tests/                 # Unit, integration, golden tests
-│   ├── unit/
-│   ├── golden/
-│   ├── integration/
-│   └── import_boundary/
+│   └── market_data_adapter.py  # Converts KlineRecords to SimulationInput
 ├── docs/                  # Authority documentation
-└── pyproject.toml
+│   └── phases/            # Phase implementation plans
+├── tests/                 # Unit, golden, integration tests
+│   ├── golden/
+│   │   └── test_swing_golden.py
+│   ├── test_batch_simulation.py
+│   ├── test_funding_costs.py
+│   ├── test_import_boundary.py
+│   ├── test_market_data_adapter.py
+│   └── test_simulation_writer.py
+└── __init__.py
 ```
 
 ## Data Lineage

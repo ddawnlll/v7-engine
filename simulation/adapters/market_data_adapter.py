@@ -10,6 +10,7 @@ No network, no exchange API, no xgboost. Pure deterministic transformation.
 from __future__ import annotations
 
 import datetime
+from datetime import UTC
 import logging
 from typing import List
 
@@ -146,4 +147,4 @@ class MarketDataAdapter:
 
 def _timestamp_to_iso(ts_ms: int) -> str:
     """Convert unix-millisecond timestamp to ISO-8601 string."""
-    return datetime.datetime.utcfromtimestamp(ts_ms / 1000.0).isoformat()
+    return datetime.datetime.fromtimestamp(ts_ms / 1000.0, tz=UTC).isoformat()
