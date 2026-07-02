@@ -1,0 +1,67 @@
+{
+  "xsmom_baseline": {
+    "alpha_id": "xsmom_baseline",
+    "type": "deterministic",
+    "mode": "SWING",
+    "metrics": {
+      "oos_ic": null,
+      "oos_rank_ic": null,
+      "oos_sharpe": 0,
+      "profit_factor": 0,
+      "net_return": 0,
+      "max_drawdown": 0,
+      "trade_count": 0,
+      "config": {}
+    },
+    "status": "FAIL_COST"
+  },
+  "xsmom_baseline_1h": {
+    "alpha_id": "xsmom_baseline_1h",
+    "type": "deterministic",
+    "mode": "SWING",
+    "metrics": {
+      "oos_sharpe": -7.14,
+      "profit_factor": 0.62,
+      "net_return": -0.723,
+      "max_drawdown": -0.734,
+      "trade_count": 15908,
+      "beat_no_trade": false,
+      "cost_erosion_pct": 72.96,
+      "config": "1h data, 4h rebalance, top20%/bottom20%, taker4bps+slippage1bps"
+    },
+    "status": "FAIL_COST"
+  },
+  "xsmom_daily_proposed": {
+    "alpha_id": "xsmom_daily_proposed",
+    "type": "deterministic",
+    "mode": "SWING",
+    "metrics": {
+      "note": "Not yet run \u2014 proposed: daily data, weekly rebalance",
+      "config": "1d data, 1w rebalance, top20%/bottom20%"
+    },
+    "status": "PROPOSED"
+  },
+  "xsmom_baseline_daily": {
+    "alpha_id": "xsmom_baseline_daily",
+    "type": "deterministic",
+    "mode": "SWING",
+    "metrics": {
+      "net_return": 0.210281,
+      "gross_return": 0.210281,
+      "total_cost": 0.1865,
+      "sharpe": 1.4773,
+      "profit_factor": 1.6825,
+      "max_drawdown": -0.0605,
+      "n_trades": 373,
+      "n_long": 162,
+      "n_short": 211,
+      "n_rebalances": 88,
+      "n_signals_generated": 1520,
+      "n_trades_gated": 6,
+      "n_trades_executed": 602,
+      "exposure_pct": 6.8,
+      "beat_no_trade": true
+    },
+    "status": "PASS"
+  }
+}

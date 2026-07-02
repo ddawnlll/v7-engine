@@ -14,7 +14,9 @@
 | P0.8C | Complete | Re-Audit After Authority Lock | DONE |
 | P0.8D | Complete | Profitability/Efficiency Squeeze Audit | DONE |
 | P0.8E | Complete | Contract/Docs Profitability Patch | DONE |
-| P0.9A | Next | Implementation Scaffold | BLOCKED (requires P0.8E PASS) |
+| P0.9A | Next | Implementation Scaffold | REDESIGN_IN_PROGRESS |
+| P0.9A-FREEZE | Current | Freeze + Metric Ownership Redesign | IN_PROGRESS |
+| XSMOM | Complete | Cross-Sectional Momentum Baseline | DONE |
 | P0.9B | Future | Data/Label/Feature Pipeline | PENDING |
 | P0.9C | Future | All-Mode Research Reports | PENDING |
 | P1.0 | Future | V7 Handoff Candidate | PENDING |
@@ -88,7 +90,7 @@
 
 ---
 
-## P0.9A — Implementation Scaffold (Next — BLOCKED)
+## P0.9A — Implementation Scaffold (REDESIGN_IN_PROGRESS)
 
 **What:** Create minimal AlphaForge package structure without full model training.
 
@@ -100,7 +102,20 @@
 - CI integration (basic)
 - No actual training, no data pipeline yet
 
-**Prerequisites:** P0.8B + P0.8C + P0.8D + **P0.8E PASS**
+**Prerequisites:** P0.8B + P0.8C + P0.8D + P0.8E PASS
+
+---
+
+## P0.9A-FREEZE — Freeze + Metric Ownership Redesign (IN_PROGRESS)
+
+**What:** Pause the original P0.9A scaffold implementation. Redesign to account for layer metric ownership (Metric Philosophy) discovered during v0.25 diagnostics repair and v0.30 metric plumbing audit.
+
+**Scope:**
+- Freeze P0.9A scaffold source tree
+- Document layer metric ownership in discovery_authority.md
+- Redesign scaffold to respect metric layer boundaries
+
+**Prerequisites:** P0.8B + P0.8C + P0.8D + P0.8E PASS
 
 ---
 
@@ -147,6 +162,23 @@
 - Handoff to V7 acceptance pipeline
 
 **Prerequisites:** P0.9C complete. At least one mode has CANDIDATE_FOR_V7_GATES verdict.
+
+---
+
+## XSMOM — Cross-Sectional Momentum Baseline (DONE)
+
+**Issue:** #v034 — Cross-sectional momentum (XSMOM) baseline for all 16 symbols.
+
+**What:** Research and implement cross-sectional momentum alpha discovery. Rank symbols by trailing returns, go long top quantile, short bottom quantile. Baseline validated for 16 Binance USDT perpetual symbols.
+
+**Output:**
+- XSMOM baseline implementation
+- 16-symbol ranking and scoring
+- Cross-sectional momentum research report
+
+**Lock status:** LOCKED_INITIAL_BASELINE. Recalibrate after first walk-forward on real data.
+
+**Evidence:** Committed as v0.34A.
 
 ---
 

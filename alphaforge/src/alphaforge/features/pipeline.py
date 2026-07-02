@@ -1,8 +1,8 @@
 """AlphaForge Feature Pipeline — deterministic causal feature computation.
 
 Authority: AlphaForge owns feature discovery and specification.
-This module computes 7 active feature groups from OHLCV data.
-Lead-Lag group is DEFERRED (P0.9B cross-sectional data dependency).
+This module computes 10 active feature groups from OHLCV data.
+Lead-Lag and Cross-Sectional Rank groups are DEFERRED (P0.9B).
 
 Design constraints:
 - numpy only (no pandas, scipy, ta-lib)
@@ -76,6 +76,38 @@ from alphaforge.features.candle_pattern import (
     DEFAULT_CANDLE_WINDOW,
     compute_candle_pattern_group,
 )
+from alphaforge.features.cross_sectional_rank import (
+    AGGRESSIVE_CORRELATION_WINDOW,
+    AGGRESSIVE_CORRELATION_ZSCORE_WINDOW,
+    AGGRESSIVE_MOMENTUM_WINDOW_1H,
+    AGGRESSIVE_MOMENTUM_WINDOW_4H,
+    AGGRESSIVE_MOMENTUM_WINDOW_24H,
+    AGGRESSIVE_RANK_VOLATILITY_WINDOW,
+    CORRELATION_WINDOW,
+    CORRELATION_ZSCORE_WINDOW,
+    MOMENTUM_WINDOW_1H,
+    MOMENTUM_WINDOW_4H,
+    MOMENTUM_WINDOW_24H,
+    RANK_VOLATILITY_WINDOW,
+    SCALP_CORRELATION_WINDOW,
+    SCALP_CORRELATION_ZSCORE_WINDOW,
+    SCALP_MOMENTUM_WINDOW_1H,
+    SCALP_MOMENTUM_WINDOW_4H,
+    SCALP_MOMENTUM_WINDOW_24H,
+    SCALP_RANK_VOLATILITY_WINDOW,
+    compute_cross_sectional_rank_group,
+)
+from alphaforge.features.funding import (
+    AGGRESSIVE_SCALP_FUNDING_WINDOW,
+    AGGRESSIVE_SCALP_OI_PROXY_WINDOW,
+    DEFAULT_FUNDING_WINDOW,
+    DEFAULT_OI_PROXY_WINDOW,
+    SCALP_FUNDING_WINDOW,
+    SCALP_OI_PROXY_WINDOW,
+    SWING_FUNDING_WINDOW,
+    SWING_OI_PROXY_WINDOW,
+    compute_funding_group,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +122,7 @@ PIPELINE_VERSION: str = "0.2.0"
 _CACHE_DIR_RELATIVE: str = ".cache/features/"
 CACHE_DIR_DEFAULT: str = str(
     Path(__file__).resolve().parent.parent.parent.parent / _CACHE_DIR_RELATIVE
-)
+) + "/"
 
 # Process-lifetime secret for cache integrity HMAC signing.
 # Generated once at import time — cache files from other processes or
@@ -124,10 +156,11 @@ MIN_BARS: int = 2
 class FeatureGroup(Enum):
     """Feature group enumeration.
 
-    LEAD_LAG is marked DEFERRED because it requires cross-sectional data
-    across symbols (P0.9B dependency). No compute function is mapped for it.
+    LEAD_LAG and CROSS_SECTIONAL_RANK are marked DEFERRED because they require
+    cross-sectional data across symbols (P0.9B dependency). No compute function
+    is called for them in the single-symbol pipeline.
+    PERPETUAL_FUNDING is ACTIVE — computed from OHLCV-derived funding proxies.
     REGIME and CANDLE_PATTERN are active optional groups.
-    PERPETUAL_FUNDING is reserved for future funding data integration.
     Re-enablement conditions:
       (a) cross-sectional data pipeline available
       (b) correlation computation across symbols validated
@@ -144,6 +177,7 @@ class FeatureGroup(Enum):
     CANDLE_PATTERN = "candle_pattern"
     PERPETUAL_FUNDING = "perpetual_funding"
     LEAD_LAG = "lead_lag"  # DEFERRED — P0.9B cross-sectional data required
+    CROSS_SECTIONAL_RANK = "cross_sectional_rank"  # DEFERRED — P0.9B multi-symbol data required
 
 
 # ---------------------------------------------------------------------------
@@ -175,8 +209,8 @@ class FeatureMatrix:
     def __post_init__(self):
         if not self.feature_group_ids:
             # Infer from active group map
-            # Exclude DEFERRED groups: LEAD_LAG and PERPETUAL_FUNDING
-            excluded = {FeatureGroup.LEAD_LAG, FeatureGroup.PERPETUAL_FUNDING}
+            # Exclude DEFERRED groups: LEAD_LAG and CROSS_SECTIONAL_RANK
+            excluded = {FeatureGroup.LEAD_LAG, FeatureGroup.CROSS_SECTIONAL_RANK}
             active = [g.value for g in FeatureGroup if g not in excluded]
             self.feature_group_ids = active
         if not self.metadata:
@@ -510,11 +544,13 @@ FEATURE_GROUP_MAP: Dict[FeatureGroup, str] = {
     FeatureGroup.ORDERBOOK: "compute_orderbook_group",
     FeatureGroup.REGIME: "compute_regime_group",
     FeatureGroup.CANDLE_PATTERN: "compute_candle_pattern_group",
-    FeatureGroup.PERPETUAL_FUNDING: "compute_perpetual_funding_group",
+    FeatureGroup.PERPETUAL_FUNDING: "compute_funding_group",
     # LEAD_LAG is mapped but DEFERRED — compute_features does not call it.
-    # Active filtering (lines 119, 1257) keeps LEAD_LAG out of computation
-    # until cross-sectional data support lands (P0.9B).
+    # Active filtering keeps LEAD_LAG out of computation until
+    # cross-sectional data support lands (P0.9B).
     FeatureGroup.LEAD_LAG: "compute_lead_lag_group",
+    # CROSS_SECTIONAL_RANK is mapped but DEFERRED — same P0.9B dependency.
+    FeatureGroup.CROSS_SECTIONAL_RANK: "compute_cross_sectional_rank_group",
 }
 
 
@@ -562,8 +598,9 @@ def _validate_ohlcv_data(ohlcv_data: dict) -> None:
 
 
 def _rolling_mean(arr: np.ndarray, window: int) -> np.ndarray:
-    """Compute rolling mean over `window` bars (NaN-safe).
+    """Compute rolling mean over `window` bars (NaN-safe, vectorized).
 
+    Uses cumulative sums for O(n) computation instead of O(n*window).
     Result at index t uses arr[t-window+1 .. t] (causal).
     Returns NaN for t < window-1 or when the window contains insufficient
     non-NaN values (fewer than 2 valid samples).
@@ -576,54 +613,75 @@ def _rolling_mean(arr: np.ndarray, window: int) -> np.ndarray:
     result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
         return result
-    for i in range(window - 1, n):
-        seg = arr[i - window + 1 : i + 1]
-        valid = seg[~np.isnan(seg)]
-        if len(valid) >= 2:
-            result[i] = np.mean(valid.astype(np.float64))
+
+    valid = ~np.isnan(arr)
+    arr_clean = np.where(valid, arr, 0.0)
+
+    # Cumulative sums for O(n) rolling aggregation
+    cumsum = np.cumsum(arr_clean, dtype=np.float64)
+    cumcount = np.cumsum(valid)
+
+    window_sum = cumsum[window - 1:] - np.concatenate([[0], cumsum[:-window]])
+    window_count = cumcount[window - 1:] - np.concatenate([[0], cumcount[:-window]])
+
+    mask = window_count >= 2
+    result[window - 1:][mask] = window_sum[mask] / window_count[mask]
     return result
 
 
 def _rolling_std(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
-    """Compute rolling standard deviation over `window` bars (NaN-safe).
+    """Compute rolling standard deviation over `window` bars (NaN-safe, vectorized).
 
-    Causal: std at index t uses arr[t-window+1 .. t].
-    Returns NaN for t < window-1 or when fewer than 2 non-NaN values
-    are in the window.
-
-    NaN values in the input are excluded (partial window std).
+    Uses cumulative sums for O(n) computation. Causal: std at index t
+    uses arr[t-window+1 .. t]. Returns NaN for t < window-1 or when
+    fewer than 2 non-NaN values are in the window.
     """
     n = len(arr)
     result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
         return result
-    for i in range(window - 1, n):
-        seg = arr[i - window + 1 : i + 1]
-        valid = seg[~np.isnan(seg)]
-        if len(valid) >= 2:
-            result[i] = np.std(valid.astype(np.float64), ddof=ddof)
+
+    valid = ~np.isnan(arr)
+    arr_clean = np.where(valid, arr, 0.0)
+
+    # Cumulative sums for mean and variance
+    cumsum = np.cumsum(arr_clean, dtype=np.float64)
+    cumsum_sq = np.cumsum(arr_clean * arr_clean, dtype=np.float64)
+    cumcount = np.cumsum(valid)
+
+    window_sum = cumsum[window - 1:] - np.concatenate([[0], cumsum[:-window]])
+    window_sum_sq = cumsum_sq[window - 1:] - np.concatenate([[0], cumsum_sq[:-window]])
+    window_count = cumcount[window - 1:] - np.concatenate([[0], cumcount[:-window]])
+
+    mask = window_count >= 2
+    wc = window_count[mask].astype(np.float64)
+    mean = window_sum[mask] / wc
+    variance = (window_sum_sq[mask] / wc) - mean * mean
+    # Clamp to avoid tiny negatives from floating point
+    variance = np.maximum(variance, 0.0)
+    result[window - 1:][mask] = np.sqrt(variance * wc / (wc - ddof))
     return result
 
 
 def _rolling_max(arr: np.ndarray, window: int) -> np.ndarray:
-    """Compute rolling maximum over `window` bars (causal)."""
+    """Compute rolling maximum over `window` bars (causal, vectorized)."""
     n = len(arr)
     result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
         return result
-    for i in range(window - 1, n):
-        result[i] = np.max(arr[i - window + 1 : i + 1])
+    views = np.lib.stride_tricks.sliding_window_view(arr, window)
+    result[window - 1:] = np.max(views, axis=1)
     return result
 
 
 def _rolling_min(arr: np.ndarray, window: int) -> np.ndarray:
-    """Compute rolling minimum over `window` bars (causal)."""
+    """Compute rolling minimum over `window` bars (causal, vectorized)."""
     n = len(arr)
     result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
         return result
-    for i in range(window - 1, n):
-        result[i] = np.min(arr[i - window + 1 : i + 1])
+    views = np.lib.stride_tricks.sliding_window_view(arr, window)
+    result[window - 1:] = np.min(views, axis=1)
     return result
 
 
@@ -718,7 +776,7 @@ def compute_return_volatility(returns: np.ndarray, window: int) -> np.ndarray:
 
 
 def compute_return_zscore(returns: np.ndarray, window: int) -> np.ndarray:
-    """Compute rolling z-score of log returns.
+    """Compute rolling z-score of log returns (vectorized).
 
     z[t] = (r[t] - mean(r[t-window:t])) / std(r[t-window:t]).
     NaN for t < window or when std is zero.
@@ -729,18 +787,12 @@ def compute_return_zscore(returns: np.ndarray, window: int) -> np.ndarray:
     result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
         return result
-    for i in range(window - 1, n):
-        seg = returns[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) < 2:
-            result[i] = np.nan
-            continue
-        mu = np.mean(seg_clean)
-        sigma = np.std(seg_clean, ddof=1)
-        if sigma < 1e-12:
-            result[i] = 0.0
-        else:
-            result[i] = (returns[i] - mu) / sigma
+
+    roll_mean = _rolling_mean(returns, window)
+    roll_std = _rolling_std(returns, window, ddof=1)
+    valid = ~np.isnan(roll_mean) & ~np.isnan(roll_std) & (roll_std >= 1e-12)
+    result[valid] = (returns[valid] - roll_mean[valid]) / roll_std[valid]
+    result[valid & (roll_std < 1e-12)] = 0.0
     return result
 
 
@@ -777,7 +829,7 @@ def compute_realized_volatility(
     window: int = SWING_VOLATILITY_WINDOW,
     periods_per_year: int = SWING_PERIODS_PER_YEAR,
 ) -> np.ndarray:
-    """Compute annualized realized volatility from close prices.
+    """Compute annualized realized volatility from close prices (vectorized).
 
     Formula: std(log_returns[t-window:t]) * sqrt(periods_per_year).
     For SWING 4h bars: periods_per_year = 365 * 6 = 2190.
@@ -790,13 +842,9 @@ def compute_realized_volatility(
     if n < window + 1:
         return result
     log_ret = compute_log_return_1(close)
-    for i in range(window, n):  # Need window returns, so start at window
-        seg = log_ret[i - window + 1 : i + 1]  # window returns
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) < 2:
-            result[i] = np.nan
-        else:
-            result[i] = np.std(seg_clean, ddof=1) * np.sqrt(periods_per_year)
+    roll_std = _rolling_std(log_ret, window, ddof=1)
+    valid = ~np.isnan(roll_std)
+    result[valid] = roll_std[valid] * np.sqrt(periods_per_year)
     return result
 
 
@@ -806,7 +854,7 @@ def compute_high_low_range(
     close: np.ndarray,
     window: int = SWING_VOLATILITY_WINDOW,
 ) -> np.ndarray:
-    """Compute rolling mean of normalized high-low range.
+    """Compute rolling mean of normalized high-low range (vectorized).
 
     Formula: rolling mean of (high - low) / close over `window` bars.
     NaN for t < window.
@@ -819,11 +867,17 @@ def compute_high_low_range(
         return result
     with np.errstate(divide="ignore", invalid="ignore"):
         hl_ratio = (high - low) / np.where(close == 0, np.nan, close)
-    for i in range(window - 1, n):
-        seg = hl_ratio[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) > 0:
-            result[i] = np.mean(seg_clean)
+
+    valid = ~np.isnan(hl_ratio)
+    arr_clean = np.where(valid, hl_ratio, 0.0)
+    cumsum = np.cumsum(arr_clean, dtype=np.float64)
+    cumcount = np.cumsum(valid)
+
+    window_sum = cumsum[window - 1:] - np.concatenate([[0], cumsum[:-window]])
+    window_count = cumcount[window - 1:] - np.concatenate([[0], cumcount[:-window]])
+
+    mask = window_count >= 1
+    result[window - 1:][mask] = window_sum[mask] / window_count[mask]
     return result
 
 
@@ -834,7 +888,7 @@ def compute_garman_klass_vol(
     close: np.ndarray,
     window: int = SWING_VOLATILITY_WINDOW,
 ) -> np.ndarray:
-    """Compute Garman-Klass volatility estimator.
+    """Compute Garman-Klass volatility estimator (vectorized).
 
     Formula: sqrt(1/N * sum(0.5 * ln(H/L)^2 - (2*ln(2)-1) * ln(C/O)^2)).
     NaN for t < window.
@@ -847,24 +901,25 @@ def compute_garman_klass_vol(
         return result
 
     # Precompute per-bar terms
-    # Avoid division by zero: if any price is 0, the bar term is NaN
     with np.errstate(divide="ignore", invalid="ignore"):
         hl_term = 0.5 * (np.log(high / low)) ** 2
         co_term = (2.0 * np.log(2.0) - 1.0) * (np.log(close / open_arr)) ** 2
 
-    for i in range(window - 1, n):
-        seg_hl = hl_term[i - window + 1 : i + 1]
-        seg_co = co_term[i - window + 1 : i + 1]
-        # Skip bars where either term is NaN
-        valid = ~(np.isnan(seg_hl) | np.isnan(seg_co))
-        if np.sum(valid) < 2:
-            continue
-        gk_sum = np.sum(seg_hl[valid] - seg_co[valid])
-        if gk_sum < 0:
-            # Clamp to 0 — negative variance is invalid
-            result[i] = 0.0
-        else:
-            result[i] = np.sqrt(gk_sum / np.sum(valid))
+    # gk_bar = hl_term - co_term (NaN if either term invalid)
+    gk_bar = np.where(np.isnan(hl_term) | np.isnan(co_term), np.nan, hl_term - co_term)
+
+    valid = ~np.isnan(gk_bar)
+    arr_clean = np.where(valid, gk_bar, 0.0)
+    cumsum = np.cumsum(arr_clean, dtype=np.float64)
+    cumcount = np.cumsum(valid)
+
+    window_sum = cumsum[window - 1:] - np.concatenate([[0], cumsum[:-window]])
+    window_count = cumcount[window - 1:] - np.concatenate([[0], cumcount[:-window]])
+
+    mask = window_count >= 2
+    gk_mean = window_sum[mask] / window_count[mask]
+    gk_mean = np.maximum(gk_mean, 0.0)  # clamp negative variance to 0
+    result[window - 1:][mask] = np.sqrt(gk_mean)
     return result
 
 
@@ -873,7 +928,7 @@ def compute_parkinson_vol(
     low: np.ndarray,
     window: int = SWING_VOLATILITY_WINDOW,
 ) -> np.ndarray:
-    """Compute Parkinson volatility estimator (high-low only).
+    """Compute Parkinson volatility estimator (vectorized).
 
     Formula: sqrt(1/(4*N*ln(2)) * sum(ln(H/L)^2)).
     Always non-negative. Uses only high/low (not close-dependent).
@@ -889,13 +944,17 @@ def compute_parkinson_vol(
     with np.errstate(divide="ignore", invalid="ignore"):
         hl_sq = np.log(high / low) ** 2
 
-    denom = 4.0 * np.log(2.0)  # constant factor
-    for i in range(window - 1, n):
-        seg = hl_sq[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) < 2:
-            continue
-        result[i] = np.sqrt(np.sum(seg_clean) / (denom * len(seg_clean)))
+    valid = ~np.isnan(hl_sq)
+    arr_clean = np.where(valid, hl_sq, 0.0)
+    cumsum = np.cumsum(arr_clean, dtype=np.float64)
+    cumcount = np.cumsum(valid)
+
+    window_sum = cumsum[window - 1:] - np.concatenate([[0], cumsum[:-window]])
+    window_count = cumcount[window - 1:] - np.concatenate([[0], cumcount[:-window]])
+
+    denom = 4.0 * np.log(2.0)
+    mask = window_count >= 2
+    result[window - 1:][mask] = np.sqrt(window_sum[mask] / (denom * window_count[mask]))
     return result
 
 
@@ -929,7 +988,7 @@ def compute_true_range(
     low: np.ndarray,
     close: np.ndarray,
 ) -> np.ndarray:
-    """Compute True Range for each bar.
+    """Compute True Range for each bar (vectorized).
 
     TR[t] = max(high[t] - low[t], |high[t] - close[t-1]|, |low[t] - close[t-1]|).
     TR[0] = high[0] - low[0] (no prior close available).
@@ -945,11 +1004,10 @@ def compute_true_range(
     if n == 1:
         return result
 
-    for i in range(1, n):
-        a = high[i] - low[i]
-        b = abs(high[i] - close[i - 1])
-        c = abs(low[i] - close[i - 1])
-        result[i] = max(a, b, c)
+    hl = high[1:] - low[1:]
+    hc = np.abs(high[1:] - close[:-1])
+    lc = np.abs(low[1:] - close[:-1])
+    result[1:] = np.maximum(hl, np.maximum(hc, lc))
     return result
 
 
@@ -1027,7 +1085,7 @@ def compute_atr_group(
 # ===========================================================================
 
 def compute_momentum_N(close: np.ndarray, n: int = SWING_MOMENTUM_N) -> np.ndarray:
-    """Compute raw momentum: price change over N bars.
+    """Compute raw momentum: price change over N bars (vectorized).
 
     momentum[t] = close[t] - close[t-n].
     NaN for t < n.
@@ -1038,13 +1096,12 @@ def compute_momentum_N(close: np.ndarray, n: int = SWING_MOMENTUM_N) -> np.ndarr
     result = np.full(length, np.nan, dtype=np.float64)
     if length <= n:
         return result
-    for i in range(n, length):
-        result[i] = close[i] - close[i - n]
+    result[n:] = close[n:] - close[:-n]
     return result
 
 
 def compute_roc_N(close: np.ndarray, n: int = SWING_MOMENTUM_N) -> np.ndarray:
-    """Compute Rate of Change over N bars.
+    """Compute Rate of Change over N bars (vectorized).
 
     roc[t] = (close[t] / close[t-n] - 1) * 100.
     NaN for t < n.
@@ -1055,11 +1112,9 @@ def compute_roc_N(close: np.ndarray, n: int = SWING_MOMENTUM_N) -> np.ndarray:
     result = np.full(length, np.nan, dtype=np.float64)
     if length <= n:
         return result
-    for i in range(n, length):
-        if close[i - n] == 0:
-            result[i] = np.nan
-        else:
-            result[i] = (close[i] / close[i - n] - 1.0) * 100.0
+    valid = close[:-n] != 0
+    idx = np.arange(n, length)
+    result[n:][valid] = (close[n:][valid] / close[:-n][valid] - 1.0) * 100.0
     return result
 
 
@@ -1220,7 +1275,7 @@ def compute_volume_trend(
     volume: np.ndarray,
     window: int = SWING_VOLUME_WINDOW,
 ) -> np.ndarray:
-    """Compute volume trend: linear regression slope over rolling window.
+    """Compute volume trend: linear regression slope over rolling window (vectorized).
 
     Positive slope = increasing volume trend.
     Negative slope = decreasing volume trend.
@@ -1232,9 +1287,23 @@ def compute_volume_trend(
     result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
         return result
-    for i in range(window - 1, n):
-        seg = volume[i - window + 1 : i + 1]
-        result[i] = _linear_regression_slope(seg)
+
+    # Pre-compute regression terms: slope = sum((x-x_mean)*(y-y_mean)) / sum((x-x_mean)^2)
+    # For x = arange(window), we can pre-compute the denominator
+    x = np.arange(window, dtype=np.float64)
+    x_mean = np.mean(x)
+    x_dev = x - x_mean
+    denom = np.sum(x_dev ** 2)
+
+    if denom == 0:
+        return result
+
+    # Use sliding window view for O(n) computation
+    views = np.lib.stride_tricks.sliding_window_view(volume, window)
+    y_mean = np.mean(views, axis=1)
+    y = views.astype(np.float64)
+    numerator = np.sum(x_dev * (y - y_mean[:, None]), axis=1)
+    result[window - 1:] = numerator / denom
     return result
 
 
@@ -1244,7 +1313,7 @@ def compute_vwap_deviation(
     close: np.ndarray,
     volume: np.ndarray,
 ) -> np.ndarray:
-    """Compute deviation from cumulative VWAP.
+    """Compute deviation from cumulative VWAP (vectorized).
 
     VWAP[t] = cumulative(typical_price * volume) / cumulative(volume)
     typical_price = (high + low + close) / 3
@@ -1259,20 +1328,14 @@ def compute_vwap_deviation(
         return result
 
     tp = (high.astype(np.float64) + low.astype(np.float64) + close.astype(np.float64)) / 3.0
-    cum_pv = 0.0
-    cum_v = 0.0
 
-    for i in range(n):
-        cum_pv += tp[i] * volume[i]
-        cum_v += volume[i]
-        if cum_v == 0:
-            result[i] = np.nan
-        else:
-            vwap = cum_pv / cum_v
-            if vwap == 0:
-                result[i] = np.nan
-            else:
-                result[i] = (close[i] - vwap) / vwap
+    cum_pv = np.cumsum(tp * volume)
+    cum_v = np.cumsum(volume)
+
+    valid = cum_v > 0
+    vwap = np.where(valid, cum_pv / cum_v, np.nan)
+    valid_vwap = valid & (vwap != 0)
+    result[valid_vwap] = (close[valid_vwap] - vwap[valid_vwap]) / vwap[valid_vwap]
     return result
 
 
@@ -1280,7 +1343,7 @@ def compute_obv(
     close: np.ndarray,
     volume: np.ndarray,
 ) -> np.ndarray:
-    """Compute On-Balance Volume (cumulative).
+    """Compute On-Balance Volume (cumulative, vectorized).
 
     OBV[0] = 0.
     OBV[t] = OBV[t-1] + volume[t] if close[t] > close[t-1]
@@ -1296,13 +1359,11 @@ def compute_obv(
     result[0] = 0.0
     if n == 1:
         return result
-    for i in range(1, n):
-        if close[i] > close[i - 1]:
-            result[i] = result[i - 1] + volume[i]
-        elif close[i] < close[i - 1]:
-            result[i] = result[i - 1] - volume[i]
-        else:
-            result[i] = result[i - 1]
+
+    # Vectorized: signed volume change, then cumulative sum
+    direction = np.sign(close[1:] - close[:-1])
+    signed_vol = direction * volume[1:]
+    result[1:] = np.cumsum(signed_vol)
     return result
 
 
@@ -1503,6 +1564,16 @@ _MODE_DEFAULTS = {
         "vol_regime_window": SWING_VOL_REGIME_WINDOW,
         # Candle pattern window
         "candle_window": 10,
+        # Funding windows
+        "funding_window": SWING_FUNDING_WINDOW,
+        "oi_proxy_window": SWING_OI_PROXY_WINDOW,
+        # Cross-sectional rank windows (SWING: 4h primary bars)
+        "csr_momentum_window_1h": MOMENTUM_WINDOW_1H,
+        "csr_momentum_window_4h": MOMENTUM_WINDOW_4H,
+        "csr_momentum_window_24h": MOMENTUM_WINDOW_24H,
+        "csr_volatility_window": RANK_VOLATILITY_WINDOW,
+        "csr_correlation_window": CORRELATION_WINDOW,
+        "csr_zscore_window": CORRELATION_ZSCORE_WINDOW,
     },
     "SCALP": {
         "n_returns": 12,
@@ -1545,6 +1616,16 @@ _MODE_DEFAULTS = {
         "vol_regime_window": SCALP_VOL_REGIME_WINDOW,
         # Candle pattern window
         "candle_window": 12,
+        # Funding windows
+        "funding_window": SCALP_FUNDING_WINDOW,
+        "oi_proxy_window": SCALP_OI_PROXY_WINDOW,
+        # Cross-sectional rank windows (SCALP: 1h bars)
+        "csr_momentum_window_1h": SCALP_MOMENTUM_WINDOW_1H,
+        "csr_momentum_window_4h": SCALP_MOMENTUM_WINDOW_4H,
+        "csr_momentum_window_24h": SCALP_MOMENTUM_WINDOW_24H,
+        "csr_volatility_window": SCALP_RANK_VOLATILITY_WINDOW,
+        "csr_correlation_window": SCALP_CORRELATION_WINDOW,
+        "csr_zscore_window": SCALP_CORRELATION_ZSCORE_WINDOW,
     },
     "AGGRESSIVE_SCALP": {
         "n_returns": 16,
@@ -1587,6 +1668,16 @@ _MODE_DEFAULTS = {
         "vol_regime_window": AGGRESSIVE_SCALP_VOL_REGIME_WINDOW,
         # Candle pattern window
         "candle_window": 16,
+        # Funding windows
+        "funding_window": AGGRESSIVE_SCALP_FUNDING_WINDOW,
+        "oi_proxy_window": AGGRESSIVE_SCALP_OI_PROXY_WINDOW,
+        # Cross-sectional rank windows (AGGRESSIVE_SCALP: 15m bars)
+        "csr_momentum_window_1h": AGGRESSIVE_MOMENTUM_WINDOW_1H,
+        "csr_momentum_window_4h": AGGRESSIVE_MOMENTUM_WINDOW_4H,
+        "csr_momentum_window_24h": AGGRESSIVE_MOMENTUM_WINDOW_24H,
+        "csr_volatility_window": AGGRESSIVE_RANK_VOLATILITY_WINDOW,
+        "csr_correlation_window": AGGRESSIVE_CORRELATION_WINDOW,
+        "csr_zscore_window": AGGRESSIVE_CORRELATION_ZSCORE_WINDOW,
     },
 }
 
@@ -1602,10 +1693,10 @@ def compute_features(
 ) -> FeatureMatrix:
     """Main feature pipeline entry point.
 
-    Computes 9 active feature groups from OHLCV data:
+    Computes 10 active feature groups from OHLCV data:
       RETURNS, VOLATILITY, ATR, MOMENTUM, VOLUME, BREAKOUT, ORDERBOOK,
-      REGIME, CANDLE_PATTERN.
-    Lead-Lag and PERPETUAL_FUNDING are NOT computed (DEFERRED).
+      REGIME, CANDLE_PATTERN, PERPETUAL_FUNDING.
+    LEAD_LAG and CROSS_SECTIONAL_RANK are NOT computed (DEFERRED — P0.9B).
 
     Args:
         ohlcv_data: dict with keys 'open', 'high', 'low', 'close', 'volume'.
@@ -1617,9 +1708,10 @@ def compute_features(
             Informational only — does not affect computation.
 
     Returns:
-        FeatureMatrix with features dict containing ~57 feature arrays
-        (35 core + 9 OrderBook extended + 6 Regime + 7 Candle Pattern),
-        each of shape (n_bars,). No Lead-Lag columns present.
+        FeatureMatrix with features dict containing ~64 feature arrays
+        (35 core + 9 OrderBook extended + 6 Regime + 7 Candle Pattern
+         + 7 Perpetual Funding), each of shape (n_bars,).
+        No Lead-Lag or Cross-Sectional Rank columns present (P0.9B).
 
     Raises:
         ValueError: if OHLCV data is invalid or mode is unsupported.
@@ -1766,8 +1858,18 @@ def compute_features(
         )
     )
 
-    # Lead-Lag group is DEFERRED — not computed, no columns added.
-    # PERPETUAL_FUNDING group is DEFERRED — requires external funding data feed, not OHLCV-only.
+    # 10. Perpetual Funding Group (7 features — OHLCV-derived funding proxy + OI proxy)
+    # Uses only OHLCV data; no real funding_rate feed needed.
+    features.update(
+        compute_funding_group(
+            ohlcv_data=ohlcv_data,
+            window=defaults.get("funding_window", DEFAULT_FUNDING_WINDOW),
+            oi_window=defaults.get("oi_proxy_window", DEFAULT_OI_PROXY_WINDOW),
+        )
+    )
+
+    # Lead-Lag group is DEFERRED — P0.9B cross-sectional data required.
+    # Cross-Sectional Rank group is DEFERRED — P0.9B multi-symbol data required.
 
     # Filter to requested feature groups if specified
     if feature_groups is not None:
@@ -1815,6 +1917,11 @@ def compute_features(
             "cusum": "regime",
             "hmm_": "regime",
             "vol_regime": "regime",
+            "funding_rate": "perpetual_funding",
+            "funding_": "perpetual_funding",
+            "open_interest": "perpetual_funding",
+            "rank_": "cross_sectional_rank",
+            "correlation_": "cross_sectional_rank",
             "doji": "candle_pattern",
             "engulfing": "candle_pattern",
             "hammer": "candle_pattern",
@@ -1847,9 +1954,9 @@ def compute_features(
             )
 
     # Assemble FeatureMatrix
-    # Exclude DEFERRED groups: LEAD_LAG (P0.9B cross-sectional data)
-    # and PERPETUAL_FUNDING (requires external funding data feed).
-    excluded = {FeatureGroup.LEAD_LAG, FeatureGroup.PERPETUAL_FUNDING}
+    # Exclude DEFERRED groups: LEAD_LAG and CROSS_SECTIONAL_RANK
+    # (P0.9B cross-sectional/multi-symbol data dependency).
+    excluded = {FeatureGroup.LEAD_LAG, FeatureGroup.CROSS_SECTIONAL_RANK}
     expected_groups = [
         g.value for g in FeatureGroup
         if g not in excluded
@@ -1868,11 +1975,153 @@ def compute_features(
             "window_defaults": defaults,
             "lead_lag_status": "DEFERRED",
             "lead_lag_reason": "P0.9B cross-sectional data dependency",
-            "perpetual_funding_status": "DEFERRED",
-            "perpetual_funding_reason": "Requires external funding data feed",
-            "active_groups": 9,
+            "cross_sectional_rank_status": "DEFERRED",
+            "cross_sectional_rank_reason": "P0.9B multi-symbol data dependency",
+            "perpetual_funding_status": "ACTIVE",
+            "perpetual_funding_reason": "OHLCV-derived funding proxy",
+            "active_groups": 10,
         },
     )
+
+
+# ===========================================================================
+# Multi-Symbol Pipeline Entry Point
+# ===========================================================================
+
+
+def compute_multi_symbol_features(
+    multi_ohlcv: Dict[str, dict],
+    mode: str = "SWING",
+    timeframe_stack: Optional[dict] = None,
+    feature_groups: Optional[List[str]] = None,
+) -> Dict[str, FeatureMatrix]:
+    """Compute features for multiple symbols, including cross-sectional rank features.
+
+    Multi-symbol extension of the feature pipeline. Computes per-symbol features
+    via compute_features() for each symbol individually, then computes
+    cross-sectional rank features across all symbols using
+    compute_cross_sectional_rank_group() and merges them into each symbol's
+    FeatureMatrix.
+
+    Args:
+        multi_ohlcv: Dict mapping symbol -> OHLCV dict.
+            Each OHLCV dict must have keys 'open', 'high', 'low', 'close',
+            'volume'. Values must be 1D numpy.ndarray. All symbols must share
+            the same bar count.
+        mode: Trading mode string ("SWING", "SCALP", "AGGRESSIVE_SCALP").
+        timeframe_stack: Optional dict with keys primary, context, refinement.
+            Passed through to each single-symbol compute_features() call.
+        feature_groups: Optional list of feature group names to include.
+            If provided and "cross_sectional_rank" is not in the list,
+            cross-sectional rank features are skipped.
+
+    Returns:
+        Dict mapping symbol -> FeatureMatrix with per-symbol features.
+        Each FeatureMatrix includes cross-sectional rank features
+        (rank_momentum_1h, rank_momentum_4h, rank_momentum_24h,
+         rank_volatility, rank_volume, correlation_with_median,
+         correlation_zscore) merged into the per-symbol feature set
+        when cross-sectional rank is enabled.
+
+    Raises:
+        ValueError: if fewer than 2 symbols, mismatched bar counts,
+            invalid mode, or invalid OHLCV data.
+    """
+    if not isinstance(multi_ohlcv, dict) or len(multi_ohlcv) < 2:
+        raise ValueError(
+            f"Multi-symbol features require at least 2 symbols, "
+            f"got {len(multi_ohlcv) if isinstance(multi_ohlcv, dict) else 0}"
+        )
+
+    mode = mode.upper()
+    if mode not in _SUPPORTED_MODES:
+        raise ValueError(
+            f"Unsupported mode: '{mode}'. Supported: {sorted(_SUPPORTED_MODES)}"
+        )
+
+    # Validate each symbol's OHLCV and verify uniform bar count
+    bar_counts: Dict[str, int] = {}
+    for symbol, ohlcv in multi_ohlcv.items():
+        _validate_ohlcv_data(ohlcv)
+        bar_counts[symbol] = len(ohlcv["close"])
+
+    if len(set(bar_counts.values())) != 1:
+        raise ValueError(
+            f"All symbols must have the same bar count. Got: {bar_counts}"
+        )
+
+    # Step 1: Compute per-symbol features via single-symbol pipeline
+    symbol_matrices: Dict[str, FeatureMatrix] = {}
+    for symbol, ohlcv in multi_ohlcv.items():
+        ohlcv_with_symbol = dict(ohlcv)
+        ohlcv_with_symbol["symbol"] = symbol
+        matrix = compute_features(
+            ohlcv_data=ohlcv_with_symbol,
+            mode=mode,
+            timeframe_stack=timeframe_stack,
+            feature_groups=feature_groups,
+        )
+        symbol_matrices[symbol] = matrix
+
+    # Step 2: Compute cross-sectional rank features if enabled
+    csr_enabled = (
+        feature_groups is None
+        or FeatureGroup.CROSS_SECTIONAL_RANK.value in feature_groups
+    )
+
+    if csr_enabled:
+        defaults = _MODE_DEFAULTS.get(mode, _MODE_DEFAULTS["SWING"])
+
+        rank_features: Dict[str, np.ndarray] = compute_cross_sectional_rank_group(
+            multi_ohlcv=multi_ohlcv,
+            momentum_window_1h=defaults.get(
+                "csr_momentum_window_1h", MOMENTUM_WINDOW_1H
+            ),
+            momentum_window_4h=defaults.get(
+                "csr_momentum_window_4h", MOMENTUM_WINDOW_4H
+            ),
+            momentum_window_24h=defaults.get(
+                "csr_momentum_window_24h", MOMENTUM_WINDOW_24H
+            ),
+            volatility_window=defaults.get(
+                "csr_volatility_window", RANK_VOLATILITY_WINDOW
+            ),
+            correlation_window=defaults.get(
+                "csr_correlation_window", CORRELATION_WINDOW
+            ),
+            zscore_window=defaults.get(
+                "csr_zscore_window", CORRELATION_ZSCORE_WINDOW
+            ),
+        )
+
+        # Step 3: Merge per-symbol rank features into each FeatureMatrix
+        symbols = list(multi_ohlcv.keys())
+        for s_idx, symbol in enumerate(symbols):
+            matrix = symbol_matrices[symbol]
+
+            # Extract per-symbol row from each 2D rank feature array
+            for feature_name, rank_array_2d in rank_features.items():
+                matrix.features[feature_name] = rank_array_2d[s_idx, :].copy()
+
+            # Include CROSS_SECTIONAL_RANK in feature_group_ids
+            csr_value = FeatureGroup.CROSS_SECTIONAL_RANK.value
+            if csr_value not in matrix.feature_group_ids:
+                matrix.feature_group_ids.append(csr_value)
+
+            # Update metadata to reflect active CSR status
+            matrix.metadata["cross_sectional_rank_status"] = "ACTIVE"
+            matrix.metadata["cross_sectional_rank_reason"] = (
+                "Multi-symbol pipeline"
+            )
+            matrix.metadata["cross_sectional_rank_features"] = list(
+                rank_features.keys()
+            )
+            matrix.metadata["total_features"] = matrix.total_features()
+            matrix.metadata["active_groups"] = matrix.metadata.get(
+                "active_groups", 10
+            ) + 1
+
+    return symbol_matrices
 
 
 # ===========================================================================

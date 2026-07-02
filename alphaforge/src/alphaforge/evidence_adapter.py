@@ -9,13 +9,13 @@ Usage::
     from alphaforge.evidence_adapter import build_alphaforge_passport
 
     metrics = main()        # run the training pipeline
-    wfv_results = {
-        "metrics": metrics,
-        "per_fold_results": [...],          # from walk_forward_validate
-        "candidate_id": "cand_swing_01",
-        "hypothesis_refs": ["hc_alpha_001"],
-    }
-    passport = build_alphaforge_passport(wfv_results, mode="SWING")
+    passport = build_alphaforge_passport(
+        candidate_id="cand_swing_01",
+        mode="SWING",
+        metrics=metrics,
+        wfv_results=wfv_results,           # list of per-fold dicts
+        limitations=["High PBO risk"],
+    )
 """
 
 from __future__ import annotations
@@ -32,25 +32,27 @@ from lib.evidence_engine.hard_caps import HardCapResult, apply_hard_caps
 
 
 def build_alphaforge_passport(
-    wfv_results: dict,
+    candidate_id: str,
     mode: str,
+    metrics: dict,
+    wfv_results: list[dict],
+    limitations: list[str] | None = None,
     hypothesis_refs: list[str] | None = None,
 ) -> EvidencePassport:
     """Build an ``EvidencePassport`` from AlphaForge walk-forward output.
 
     Parameters
     ----------
-    wfv_results:
-        Dict with keys:
-
-        - ``metrics`` (dict): aggregated output of ``collect_metrics()``.
-        - ``per_fold_results`` (list[dict]): per-fold WFV results.
-        - ``candidate_id`` (str, optional): identifier for this candidate.
-        - ``labels`` (list[str], optional): ground-truth label sequence.
-        - ``gross_r`` (list[float], optional): per-bar gross returns in R.
-        - ``fee_pct`` (float, optional): round-trip fee fraction.
+    candidate_id:
+        Identifier for this trained candidate (e.g. ``"cand_swing_001"``).
     mode:
         Trading mode (e.g. ``"SWING"``, ``"SCALP"``).
+    metrics:
+        Aggregated metrics dict from ``collect_metrics()`` (or equivalent).
+    wfv_results:
+        List of per-fold result dicts from ``walk_forward_validate()``.
+    limitations:
+        Optional list of human-readable limitation strings.
     hypothesis_refs:
         Optional list of hypothesis card IDs that this passport supports.
 
@@ -60,16 +62,24 @@ def build_alphaforge_passport(
         Fully populated passport ready for V7 consumption.
     """
     # 1. Build base passport via the standard builder
-    wfv_results = dict(wfv_results)
+    wfv_results_dict: dict = {
+        "metrics": metrics,
+        "per_fold_results": wfv_results,
+        "candidate_id": candidate_id,
+    }
     if hypothesis_refs:
-        wfv_results["hypothesis_refs"] = hypothesis_refs
+        wfv_results_dict["hypothesis_refs"] = hypothesis_refs
 
-    passport = EvidencePassportBuilder.from_wfv_results(wfv_results, mode)
+    passport = EvidencePassportBuilder.from_wfv_results(wfv_results_dict, mode)
 
-    # 2. Compute baselines if label data is available
-    labels: list[str] | None = wfv_results.get("labels")
-    gross_r: list[float] | None = wfv_results.get("gross_r")
-    fee_pct: float = wfv_results.get("fee_pct", 0.0008)  # 8 bps default
+    # Override limitations if caller provided explicit ones
+    if limitations is not None:
+        passport.limitations = list(limitations)
+
+    # 2. Compute baselines if label data is available (legacy key path)
+    labels: list[str] | None = metrics.get("labels")
+    gross_r: list[float] | None = metrics.get("gross_r")
+    fee_pct: float = metrics.get("fee_pct", 0.0008)  # 8 bps default
 
     if labels and gross_r:
         lib = BaselineLibrary()
@@ -101,7 +111,44 @@ def build_alphaforge_passport(
     # 4. Set claim statuses
     _set_claim_statuses(passport, hard_cap_result)
 
+    # 5. Enrich with IC metrics (graceful fallback to 0.0)
+    _enrich_ic_metrics(passport, metrics)
+
     return passport
+
+
+# ---------------------------------------------------------------------------
+# IC enrichment
+# ---------------------------------------------------------------------------
+
+
+def _enrich_ic_metrics(passport: EvidencePassport, metrics: dict) -> None:
+    """Populate IC, signal_quality, and metric_philosophy on the passport.
+
+    Graceful fallback — defaults to 0.0 when IC values are absent.
+    """
+    oos_ic = metrics.get("oos_ic", 0.0)
+    oos_rank_ic = metrics.get("oos_rank_ic", 0.0)
+    oos_calibration_error = metrics.get("oos_calibration_error", 0.0)
+
+    passport.metrics["oos_ic"] = oos_ic
+    passport.metrics["oos_rank_ic"] = oos_rank_ic
+
+    passport.signal_quality = {
+        "oos_ic": oos_ic,
+        "oos_rank_ic": oos_rank_ic,
+        "oos_calibration_error": oos_calibration_error,
+    }
+
+    passport.metric_philosophy = (
+        "Performance metrics computed on out-of-sample walk-forward validation. "
+        "IC (Information Coefficient) measures rank correlation between model "
+        "predicted directional scores and forward returns. "
+        "OOS IC and rank IC are means across WFV folds. "
+        "Calibration error is estimated from confidence-reliability alignment. "
+        "All metrics are sample-dependent estimates and may not generalize "
+        "to live market conditions."
+    )
 
 
 # ---------------------------------------------------------------------------

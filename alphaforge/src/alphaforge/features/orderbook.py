@@ -649,17 +649,20 @@ def compute_vpin(
 
     up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
 
-    for i in range(window - 1, n):
-        seg_up = up_vol[i - window + 1 : i + 1]
-        seg_down = down_vol[i - window + 1 : i + 1]
-        total_vol = np.sum(seg_up) + np.sum(seg_down)
+    # Vectorized rolling sums: total_vol and abs(up - down)
+    total = up_vol + down_vol
+    abs_diff = np.abs(up_vol - down_vol)
 
-        if total_vol > 0:
-            abs_imbalance = np.sum(np.abs(seg_up - seg_down))
-            result[i] = abs_imbalance / total_vol
-        else:
-            result[i] = 0.0
+    # Use cumsum for O(n) rolling aggregation
+    cum_total = np.cumsum(total)
+    cum_abs = np.cumsum(abs_diff)
 
+    total_window = cum_total[window - 1:] - np.concatenate([[0], cum_total[:-window]])
+    abs_window = cum_abs[window - 1:] - np.concatenate([[0], cum_abs[:-window]])
+
+    mask = total_window > 0
+    result[window - 1:][mask] = abs_window[mask] / total_window[mask]
+    result[window - 1:][~mask] = 0.0
     return result
 
 
@@ -717,23 +720,22 @@ def compute_price_impact_slope(
     signed_flow = up_vol - down_vol
     log_ret = _compute_log_return_1(close)
 
-    for i in range(window, n):
-        # Returns at [i-window+1 .. i] (window values)
-        r_seg = log_ret[i - window + 1 : i + 1]
-        # Signed flow at [i-window+1 .. i]
-        f_seg = signed_flow[i - window + 1 : i + 1]
+    # Use sliding_window_view for O(n) rolling regression
+    r_views = np.lib.stride_tricks.sliding_window_view(log_ret, window)
+    f_views = np.lib.stride_tricks.sliding_window_view(signed_flow, window)
 
-        # Filter to non-NaN pairs
-        valid = ~np.isnan(r_seg) & ~np.isnan(f_seg)
-        n_valid = int(np.sum(valid))
+    # Both valid: not NaN in either
+    both_valid = ~(np.isnan(r_views) | np.isnan(f_views))
 
+    for i in range(len(r_views)):
+        valid_mask = both_valid[i]
+        n_valid = np.sum(valid_mask)
         if n_valid < 3:
             continue
 
-        r_v = r_seg[valid].astype(np.float64)
-        f_v = f_seg[valid].astype(np.float64)
+        r_v = r_views[i][valid_mask].astype(np.float64)
+        f_v = f_views[i][valid_mask].astype(np.float64)
 
-        # Covariance and variance of signed flow
         r_mean = np.mean(r_v)
         f_mean = np.mean(f_v)
 
@@ -743,7 +745,7 @@ def compute_price_impact_slope(
         if var_f < 1e-14:
             continue
 
-        result[i] = cov / var_f
+        result[window + i] = cov / var_f
 
     return result
 
@@ -797,21 +799,22 @@ def compute_microprice(
     up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
     total = up_vol + down_vol
 
-    # Per-bar raw microprice: low * (1 - up_weight) + high * up_weight
-    raw_mp = np.full(n, np.nan, dtype=np.float64)
-    for i in range(n):
-        if total[i] > 0:
-            weight_up = up_vol[i] / total[i]
-            raw_mp[i] = low[i] * (1.0 - weight_up) + high[i] * weight_up
-        else:
-            raw_mp[i] = (high[i] + low[i]) * 0.5
+    # Per-bar raw microprice (vectorized): low * (1 - up_weight) + high * up_weight
+    raw_mp = np.where(total > 0,
+                      low * (1.0 - up_vol / total) + high * (up_vol / total),
+                      (high + low) * 0.5)
 
-    # Smooth with rolling mean
-    for i in range(window - 1, n):
-        seg = raw_mp[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) >= 2:
-            result[i] = np.mean(seg_clean)
+    # Smooth with rolling mean (vectorized)
+    valid = ~np.isnan(raw_mp)
+    arr_clean = np.where(valid, raw_mp, 0.0)
+    cumsum = np.cumsum(arr_clean, dtype=np.float64)
+    cumcount = np.cumsum(valid)
+
+    window_sum = cumsum[window - 1:] - np.concatenate([[0], cumsum[:-window]])
+    window_count = cumcount[window - 1:] - np.concatenate([[0], cumcount[:-window]])
+
+    mask = window_count >= 2
+    result[window - 1:][mask] = window_sum[mask] / window_count[mask]
 
     return result
 
@@ -821,16 +824,23 @@ def compute_microprice(
 # ===========================================================================
 
 def _rolling_mean_nan_safe(arr: np.ndarray, window: int) -> np.ndarray:
-    """Compute rolling mean (causal, NaN-safe). Same pattern as pipeline."""
+    """Compute rolling mean (causal, NaN-safe, vectorized). Uses cumsum."""
     n = len(arr)
     result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
         return result
-    for i in range(window - 1, n):
-        seg = arr[i - window + 1 : i + 1]
-        valid = seg[~np.isnan(seg)]
-        if len(valid) >= 2:
-            result[i] = np.mean(valid.astype(np.float64))
+
+    valid = ~np.isnan(arr)
+    arr_clean = np.where(valid, arr, 0.0)
+
+    cumsum = np.cumsum(arr_clean, dtype=np.float64)
+    cumcount = np.cumsum(valid)
+
+    window_sum = cumsum[window - 1:] - np.concatenate([[0], cumsum[:-window]])
+    window_count = cumcount[window - 1:] - np.concatenate([[0], cumcount[:-window]])
+
+    mask = window_count >= 2
+    result[window - 1:][mask] = window_sum[mask] / window_count[mask]
     return result
 
 
@@ -898,16 +908,12 @@ def compute_liquidity_vacuum(
     spread_ratio[valid_spread] = raw_spread[valid_spread] / spread_mean[valid_spread]
 
     # 3. Combine: low volume penalty * wide spread penalty
-    # Only activates when both conditions are adverse
-    for i in range(window - 1, n):
-        vr = vol_ratio[i]
-        sr = spread_ratio[i]
-        if np.isnan(vr) or np.isnan(sr):
-            continue
-        vol_penalty = max(0.0, 1.0 - vr)      # 0 when volume >= normal
-        spread_penalty = max(1.0, sr) - 1.0   # 0 when spread <= normal
-        result[i] = vol_penalty * spread_penalty
-
+    # Only activates when both conditions are adverse (vectorized)
+    vol_penalty = np.maximum(0.0, 1.0 - vol_ratio)
+    spread_penalty = np.maximum(0.0, spread_ratio - 1.0)
+    result = np.where(np.isnan(vol_ratio) | np.isnan(spread_ratio), np.nan, vol_penalty * spread_penalty)
+    # Apply nan for initial window
+    result[:window - 1] = np.nan
     return result
 
 
@@ -957,19 +963,21 @@ def compute_depth_ratio(
 
     up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
 
-    # Per-bar depth ratio (with epsilon to avoid division by zero)
-    per_bar = np.full(n, np.nan, dtype=np.float64)
-    for i in range(n):
-        short = max(down_vol[i], 1e-10)
-        per_bar[i] = up_vol[i] / short
+    # Per-bar depth ratio (vectorized, with epsilon to avoid division by zero)
+    down_safe = np.maximum(down_vol, 1e-10)
+    per_bar = up_vol / down_safe
 
-    # Smooth with rolling mean
-    for i in range(window - 1, n):
-        seg = per_bar[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) >= 2:
-            result[i] = np.mean(seg_clean)
+    # Smooth with rolling mean (vectorized)
+    valid = ~np.isnan(per_bar)
+    arr_clean = np.where(valid, per_bar, 0.0)
+    cumsum = np.cumsum(arr_clean, dtype=np.float64)
+    cumcount = np.cumsum(valid)
 
+    window_sum = cumsum[window - 1:] - np.concatenate([[0], cumsum[:-window]])
+    window_count = cumcount[window - 1:] - np.concatenate([[0], cumcount[:-window]])
+
+    mask = window_count >= 2
+    result[window - 1:][mask] = window_sum[mask] / window_count[mask]
     return result
 
 

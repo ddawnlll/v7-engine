@@ -1,0 +1,280 @@
+{
+  "schema_version": "1.0.0",
+  "report_id": "mrr-scalp-scaffold-001",
+  "mode": "SCALP",
+  "mode_priority": "PRIMARY",
+  "report_type": "primary_research_report",
+  "created_at": "2026-07-02T17:40:25Z",
+  "run_id": "run-scaffold-scalp-001",
+  "data_scope": {
+    "symbols": [
+      "BTCUSDT"
+    ],
+    "date_range_start": "2025-01-01T00:00:00Z",
+    "date_range_end": "2026-01-01T00:00:00Z",
+    "primary_timeframes": [
+      "1h"
+    ],
+    "secondary_timeframes": [
+      "4h",
+      "15m"
+    ],
+    "data_quality_summary": "Scaffold placeholder — no real market data. Mode SCALP, timeframe 1h."
+  },
+  "feature_set_refs": [
+    "fs-scalp-scaffold-001"
+  ],
+  "label_dataset_refs": [
+    "lds-scalp-scaffold-001"
+  ],
+  "alpha_theses": [
+    {
+      "alpha_thesis_id": "ath-scalp-scaffold-001",
+      "title": "Scaffold placeholder SCALP thesis",
+      "status": "PROPOSED",
+      "evidence_quality": "INSUFFICIENT"
+    }
+  ],
+  "validation_summary": {
+    "validation_report_id": "vr-scalp-scaffold-001",
+    "fold_count": 6,
+    "verdict": "INCONCLUSIVE",
+    "overfit_risk": "HIGH"
+  },
+  "metrics": {
+    "oos_ic": {
+      "value": 0.0,
+      "ci_lower": -1.0,
+      "ci_upper": 1.0,
+      "ci_level": 0.95
+    },
+    "oos_rank_ic": {
+      "value": 0.0,
+      "ci_lower": -1.0,
+      "ci_upper": 1.0,
+      "ci_level": 0.95
+    },
+    "oos_sharpe": {
+      "value": 0.0,
+      "ci_lower": -1.0,
+      "ci_upper": 1.0,
+      "ci_level": 0.95
+    },
+    "oos_expectancy_r": {
+      "value": 0.0,
+      "ci_lower": -0.5,
+      "ci_upper": 0.5,
+      "ci_level": 0.95
+    },
+    "oos_win_rate": {
+      "value": 0.4,
+      "ci_lower": 0.2,
+      "ci_upper": 0.6,
+      "ci_level": 0.95
+    },
+    "oos_profit_factor": {
+      "value": 0.9,
+      "ci_lower": 0.5,
+      "ci_upper": 1.3,
+      "ci_level": 0.95
+    },
+    "oos_max_drawdown_r": {
+      "value": -3.0,
+      "ci_lower": -6.0,
+      "ci_upper": -1.0,
+      "ci_level": 0.95
+    },
+    "oos_trade_count": 0,
+    "active_trade_count": 0,
+    "long_trade_count": 0,
+    "short_trade_count": 0,
+    "no_trade_count": 0,
+    "total_gross_R": 0.0,
+    "total_net_R": 0.0,
+    "exposure_pct": 0.0,
+    "avg_net_R_per_active_trade": 0.0,
+    "per_fold_metrics": [
+      {
+        "fold": 1,
+        "sharpe": 0.0,
+        "expectancy_r": 0.0,
+        "win_rate": 0.0,
+        "trade_count": 0
+      },
+      {
+        "fold": 2,
+        "sharpe": 0.0,
+        "expectancy_r": 0.0,
+        "win_rate": 0.0,
+        "trade_count": 0
+      },
+      {
+        "fold": 3,
+        "sharpe": 0.0,
+        "expectancy_r": 0.0,
+        "win_rate": 0.0,
+        "trade_count": 0
+      },
+      {
+        "fold": 4,
+        "sharpe": 0.0,
+        "expectancy_r": 0.0,
+        "win_rate": 0.0,
+        "trade_count": 0
+      },
+      {
+        "fold": 5,
+        "sharpe": 0.0,
+        "expectancy_r": 0.0,
+        "win_rate": 0.0,
+        "trade_count": 0
+      },
+      {
+        "fold": 6,
+        "sharpe": 0.0,
+        "expectancy_r": 0.0,
+        "win_rate": 0.0,
+        "trade_count": 0
+      }
+    ]
+  },
+  "cost_stress": {
+    "baseline_fee_pct": 0.04,
+    "baseline_slippage_pct": 0.02,
+    "fee_stress_levels": [
+      {
+        "multiplier": 1.0,
+        "oos_expectancy_r": 0.0,
+        "edge_survives": false
+      },
+      {
+        "multiplier": 1.5,
+        "oos_expectancy_r": -0.1,
+        "edge_survives": false
+      },
+      {
+        "multiplier": 2.0,
+        "oos_expectancy_r": -0.2,
+        "edge_survives": false
+      }
+    ],
+    "slippage_stress_levels": [
+      {
+        "multiplier": 1.0,
+        "oos_expectancy_r": 0.0,
+        "edge_survives": false
+      },
+      {
+        "multiplier": 1.5,
+        "oos_expectancy_r": -0.1,
+        "edge_survives": false
+      },
+      {
+        "multiplier": 2.0,
+        "oos_expectancy_r": -0.2,
+        "edge_survives": false
+      }
+    ],
+    "combined_stress_edge_survives": false,
+    "break_even_cost_total_pct": 0.01,
+    "cost_stress_verdict": "FAIL_EDGE_DESTROYED_BY_COSTS",
+    "net_edge_after_costs": 0.0
+  },
+  "no_trade_comparison": {
+    "long_vs_no_trade": "NO_TRADE dominates in scaffold placeholder (no real data)",
+    "short_vs_no_trade": "NO_TRADE dominates in scaffold placeholder (no real data)",
+    "active_beats_no_trade": false,
+    "no_trade_baseline": "NO_TRADE dominates — scaffold placeholder",
+    "saved_loss_count": 0,
+    "missed_opportunity_count": 0,
+    "trade_vs_no_trade_verdict": "NO_TRADE_DOMINATES",
+    "summary": "Scaffold placeholder — no real edge demonstrated."
+  },
+  "regime_breakdown": {
+    "regimes_tested": [
+      "TREND_UP",
+      "TREND_DOWN",
+      "RANGE",
+      "TRANSITION"
+    ],
+    "regimes": [
+      {
+        "regime": "TREND_UP",
+        "sample_pct": 0.25,
+        "oos_expectancy_r": 0.0,
+        "edge_present": false
+      },
+      {
+        "regime": "TREND_DOWN",
+        "sample_pct": 0.25,
+        "oos_expectancy_r": 0.0,
+        "edge_present": false
+      },
+      {
+        "regime": "RANGE",
+        "sample_pct": 0.25,
+        "oos_expectancy_r": 0.0,
+        "edge_present": false
+      },
+      {
+        "regime": "TRANSITION",
+        "sample_pct": 0.25,
+        "oos_expectancy_r": 0.0,
+        "edge_present": false
+      }
+    ],
+    "best_regime": "NONE",
+    "worst_regime": "NONE",
+    "edge_only_in_rare_regime": false,
+    "regime_stability_verdict": "NOT_EVALUATED",
+    "summary": "Scaffold placeholder — no real regime analysis."
+  },
+  "v7_gate_readiness": {
+    "gates_mapped": [
+      "G0_doc_ready",
+      "G1_research_backtest",
+      "G2_walk_forward_oos",
+      "G3_cost_stress",
+      "G4_regime_breakdown",
+      "G5_symbol_stability"
+    ],
+    "gates_not_ready": [
+      "G6_calibration_reliability",
+      "G7_shadow",
+      "G8_paper",
+      "G9_tiny_live",
+      "G10_live"
+    ],
+    "overall_readiness": "NOT_READY"
+  },
+  "multiple_hypothesis_control": {
+    "tested_hypothesis_count": 490,
+    "correction_method": "NONE_APPLIED",
+    "corrected_significance": null,
+    "data_snooping_risk_flag": "HIGH",
+    "deflated_sharpe_or_equivalent": null,
+    "pbo_or_backtest_overfit_risk": "NOT_RUN",
+    "trial_count_disclosure": 490,
+    "rejected_candidate_count": 0,
+    "notes": "MHT correction not applied -- 490 hypotheses tested across 6 folds without multiple comparison correction. BLOCKING HOLD: correction_method=NONE_APPLIED, trial_count=490. Candidate promotion requires proper MHT correction (Bonferroni, FDR, Deflated Sharpe, or PBO). Trial ledger: 10 symbols, 49 param combinations, 1 theses, 1 feature sets. Total hypotheses tested: 490. Correction: NONE_APPLIED. Data-snooping risk: HIGH."
+  },
+  "verdict": "CONTINUE_RESEARCH",
+  "blocked_scopes": [
+    "Scaffold placeholder — no real empirical data",
+    "Funding model DEFERRED — perpetual/live scope blocked",
+    "SCALP thresholds: HOLD_UNTIL_EMPIRICAL_EVIDENCE"
+  ],
+  "limitations": [
+    "Scaffold placeholder — do not interpret as real research",
+    "All metric values are zeros — no real model was trained",
+    "Single symbol limitation (BTCUSDT only)",
+    "P0.8E canonical timeframe: 1h primary"
+  ],
+  "recommended_actions": [
+    "Obtain real market data at 1h primary timeframe",
+    "Run simulation for SCALP with locked profile",
+    "Generate real labels from SimulationOutput",
+    "Compute features with leakage controls",
+    "Train models with real data"
+  ]
+}

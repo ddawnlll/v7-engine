@@ -106,6 +106,8 @@ _frozen_validation_report_input_map: Dict[str, str] = {
     "model_artifact_id": "model_artifact_id",
     "calibration_gate_alignment.calibration_candidate_id": "calibration_candidate_id",
     "oos_summary.oos_expectancy_r": "G2_walk_forward_oos evidence_ref",
+    "oos_summary.oos_ic": "G2_walk_forward_oos evidence_ref",
+    "oos_summary.oos_rank_ic": "G2_walk_forward_oos evidence_ref",
     "oos_summary.oos_sharpe": "G2_walk_forward_oos evidence_ref",
     "oos_summary.oos_win_rate": "G2_walk_forward_oos evidence_ref",
     "oos_summary.oos_trade_count": "G2_walk_forward_oos evidence_ref",
@@ -962,6 +964,7 @@ def run_all_dry_runs() -> Dict[str, Dict[str, Any]]:
                 "oos_max_drawdown_r": -3.0, "oos_profit_factor": 1.3,
                 "oos_trade_count": 600, "oos_positive_expectancy": True,
                 "fold_stability_score": 0.7,
+                "oos_ic": 0.04, "oos_rank_ic": 0.03,
             },
             "symbol_stability": {
                 "symbols_tested": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],

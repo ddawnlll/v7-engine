@@ -31,6 +31,8 @@
     "overfit_risk": "HIGH"
   },
   "metrics": {
+    "oos_ic": { "value": 0.0, "ci_lower": -1.0, "ci_upper": 1.0, "ci_level": 0.95 },
+    "oos_rank_ic": { "value": 0.0, "ci_lower": -1.0, "ci_upper": 1.0, "ci_level": 0.95 },
     "oos_sharpe": { "value": 0.0, "ci_lower": -1.0, "ci_upper": 1.0, "ci_level": 0.95 },
     "oos_expectancy_r": { "value": 0.0, "ci_lower": -0.5, "ci_upper": 0.5, "ci_level": 0.95 },
     "oos_win_rate": { "value": 0.4, "ci_lower": 0.2, "ci_upper": 0.6, "ci_level": 0.95 },

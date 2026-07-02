@@ -187,6 +187,23 @@ Every data artifact must include:
 
 ---
 
+## Feature Provenance
+
+Every feature group in the pipeline maps to a source module and a data dependency. This table documents the provenance of the two groups implemented beyond the core OHLCV feature set (Issue #184).
+
+| Feature Group | Module | Status | Source Data | Output Keys | Count | Notes |
+|---------------|--------|--------|-------------|-------------|-------|-------|
+| PERPETUAL_FUNDING | `alphaforge/features/funding.py` | ACTIVE | OHLCV (close, high, low, volume); optional real `funding_rate` column | `funding_rate`, `funding_rate_ma_N`, `funding_rate_vol_N`, `funding_rate_zscore_N`, `funding_rate_change_N`, `open_interest_proxy_N`, `funding_oi_divergence_N` | 7 | OHLCV-derived funding proxy when real funding_rate is absent. OI proxy (#119) uses volume * \|price change\|. Uses per-mode windows from `_MODE_DEFAULTS`. |
+| CROSS_SECTIONAL_RANK | `alphaforge/features/cross_sectional_rank.py` | DEFERRED (P0.9B) | Multi-symbol OHLCV across >= 2 symbols (close, high, low, volume) | `rank_momentum_1h`, `rank_momentum_4h`, `rank_momentum_24h`, `rank_volatility`, `rank_volume`, `correlation_with_median`, `correlation_zscore` | 7 | Cross-sectional rank requires multi-symbol data pipeline (P0.9B). Wired in `FEATURE_GROUP_MAP` but not computed in single-symbol `compute_features()`. Re-enable when multi-symbol data is available. |
+
+Both groups are wired into `alphaforge/features/pipeline.py`:
+- `FEATURE_GROUP_MAP` includes entries for both groups with their compute functions.
+- `_MODE_DEFAULTS` contains per-mode window parameters for all three trading modes (SWING, SCALP, AGGRESSIVE_SCALP).
+- `FeatureGroup` enum entries are `PERPETUAL_FUNDING` and `CROSS_SECTIONAL_RANK`.
+- Only `compute_funding_group()` is called in `compute_features()`. `compute_cross_sectional_rank_group()` requires a `Dict[str, Dict[str, np.ndarray]]` multi-symbol input and is deferred.
+
+Total pipeline output: 67 features across 10 active groups (9 computed + 1 active Funding group). Cross-Sectional Rank is the 11th group but DEFERRED.
+
 ## Related Docs
 
 - [ai_summary.md](ai_summary.md)
@@ -213,6 +230,7 @@ Every data artifact must include:
 ## Open Holds
 
 - Actual data sources not yet configured (P0.9B implementation phase).
-- Funding model DEFERRED — impacts label cost semantics.
+- Funding model: ACTIVE (OHLCV-derived proxy). Real funding_rate integration: P0.9B.
 - Cross-sectional data layer is NOT implemented — contract requirement only.
+- Cross-sectional rank features (cross_sectional_rank group) are wired but DEFERRED — require P0.9B multi-symbol pipeline.
 - Survivorship bias controls are NOT implemented — contract requirement only.

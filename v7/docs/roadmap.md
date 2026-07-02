@@ -785,6 +785,32 @@ Phase 5 — v0.30G: 20-Symbol Expansion                    (future — after E s
 
 ---
 
+## FREEZE_AND_REDESIGN — P0.9A Freeze + Metric Ownership Redesign (2026-07-02)
+
+**What:** Freeze the original P0.9A implementation scaffold for redesign. The scaffold was built before the Metric Philosophy (layer metric ownership) was fully understood. v0.25 diagnostics repair and v0.30 metric plumbing audit revealed that metric computation and ownership were inconsistently distributed across layers.
+
+**Layer Metric Ownership:** LOCKED. See [discovery_authority.md](../alphaforge/docs/discovery_authority.md) for the full layer ownership table.
+
+| Layer | Owns | Key Principle |
+|-------|------|--------------|
+| Simulation | Raw P&L, costs, economic truth | No downstream recomputes simulation metrics |
+| AlphaForge (Label) | Label-time returns, costs, NO_TRADE quality | Label is the last per-trade boundary |
+| AlphaForge (Validation) | Walk-forward statistics, OOS summary | Validation aggregates, does not recompute per-trade |
+| AlphaForge (Report) | Report-level aggregates, verdicts | Reports summarize, do not recompute |
+| V7 | Policy metrics, confidence calibration | Policy consumes reports, does not recompute alpha metrics |
+
+**Milestone issues:**
+- P0.9A metric ownership refactor — redesign scaffold to respect layer boundaries
+- Metric Philosophy documentation — added to discovery_authority.md
+- Layer boundary tests for metric computation — verify no cross-layer recomputation
+
+**Lock status:**
+- P0.9A-FREEZE phase: IN_PROGRESS
+- Layer Metric Ownership: LOCKED
+- Metric Philosophy section in discovery_authority.md: LOCKED
+
+---
+
 ## Final Position
 
 The roadmap for V7 is not:

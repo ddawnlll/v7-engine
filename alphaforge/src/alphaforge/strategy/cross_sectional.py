@@ -57,6 +57,10 @@ DEFAULT_CONFIG = {
     "uncertainty_buffer": 0.001,
     # Rebalance
     "rebalance_hours": 4,
+    # Data frequency: "hourly" (default) or "daily"
+    # When "daily", default windows and rebalance hours change
+    # (see backtest_cross_sectional_momentum for frequency-aware defaults)
+    "data_frequency": "hourly",
 }
 
 
@@ -311,6 +315,14 @@ def backtest_cross_sectional_momentum(
         PortfolioResult with all performance metrics.
     """
     cfg = {**DEFAULT_CONFIG, **(config or {})}
+
+    # Apply frequency-aware defaults
+    if cfg.get("data_frequency") == "daily":
+        if not (config and "momentum_windows" in config):
+            cfg["momentum_windows"] = [1, 5, 21, 63]  # 1d, 1w, 1m, 3m
+        if not (config and "rebalance_hours" in config):
+            cfg["rebalance_hours"] = 5  # weekly rebalance (5 trading days)
+
     windows = cfg["momentum_windows"]
     n_bars = len(timestamps)
     n_symbols = len(symbol_data)
@@ -399,8 +411,10 @@ def backtest_cross_sectional_momentum(
     pos_r = returns[returns > 0].sum()
     neg_r = abs(returns[returns < 0].sum())
     pf = float(pos_r / max(neg_r, 1e-10)) if neg_r > 0 else 0.0
+    # Annualization factor depends on data frequency
+    bars_per_year = 365 if cfg.get("data_frequency") == "daily" else 365 * 24
     if len(returns) > 1 and np.std(returns) > 0:
-        sharpe = float(np.mean(returns) / np.std(returns) * np.sqrt(365 * 24))
+        sharpe = float(np.mean(returns) / np.std(returns) * np.sqrt(bars_per_year))
     else:
         sharpe = 0.0
     total_possible = n_bars * n_symbols

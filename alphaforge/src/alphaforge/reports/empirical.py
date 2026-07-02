@@ -58,6 +58,13 @@ except ImportError:
     deflated_sharpe = lambda s, t, n, g=0.5: s  # noqa: E731
     _MHT_AVAILABLE = False
 
+# IC / Rank IC computation
+from alphaforge.reports.ic_metrics import (
+    compute_calibration_error,
+    compute_ic,
+    compute_ic_ir,
+    compute_rank_ic,
+)
 
 # ---------------------------------------------------------------------------
 # Thresholds — conservative, evidence-gated, NOT profitability claims
@@ -148,8 +155,15 @@ def _compute_verdict(
     per_fold_metrics: list[dict],
     cost_stress: dict | None = None,
     regime_breakdown: dict | None = None,
+    oos_ic: float | None = None,
+    oos_rank_ic: float | None = None,
 ) -> tuple[str, str, list[str]]:
     """Compute verdict based on empirical evidence.
+
+    IC / Rank IC checks are evidence-gated — they only fire when the caller
+    provides per-bar prediction data (oos_ic / oos_rank_ic not None).  When
+    prediction data is unavailable the IC gates are skipped, preserving
+    existing behaviour for reports without per-bar predictions.
 
     Returns (verdict, verdict_label, rationale_list).
     - verdict: One of the schema-allowed verdict strings.
@@ -175,6 +189,19 @@ def _compute_verdict(
     if not _fold_metrics_present(per_fold_metrics):
         rationale.append("Per-fold metrics insufficient or missing")
         return ("REJECT", "INCONCLUSIVE", rationale)
+
+    # --- IC checks (evidence-gated, BEFORE profitability checks) ---
+    if oos_ic is not None and oos_ic <= 0:
+        rationale.append(
+            f"OOS IC <= 0 ({oos_ic:.4f}) — no predictive signal"
+        )
+        return ("REJECT", "INCONCLUSIVE", rationale)
+
+    if oos_rank_ic is not None and oos_rank_ic <= 0:
+        rationale.append(
+            f"OOS Rank IC <= 0 ({oos_rank_ic:.4f}) — ranking signal not better than random"
+        )
+        return ("CONTINUE_RESEARCH", "CONTINUE_RESEARCH", rationale)
 
     # --- Check edge exists above noise floor ---
     if oos_expectancy_r <= 0:
@@ -750,6 +777,28 @@ def build_empirical_mode_research_report(
     turnover = wfv_metrics.get("turnover", 0.0) or 0.0
     avg_hold_bars = wfv_metrics.get("avg_hold_bars", 0.0) or 0.0
 
+    # --- IC metrics from oos_predictions (optional per-bar prediction data) ---
+    oos_predictions = wfv_results.get("oos_predictions", {})
+    predicted_R = oos_predictions.get("predicted_R")
+    realized_R = oos_predictions.get("realized_R")
+
+    oos_ic: float | None = None
+    oos_rank_ic: float | None = None
+    oos_calibration_error: float = 0.0
+    oos_mce: float = 0.0
+
+    if predicted_R is not None and realized_R is not None:
+        oos_ic = compute_ic(predicted_R, realized_R)
+        oos_rank_ic = compute_rank_ic(predicted_R, realized_R)
+
+        # Calibration error requires probability predictions and binary outcomes
+        probabilities = oos_predictions.get("probabilities")
+        outcomes = oos_predictions.get("outcomes")
+        if probabilities is not None and outcomes is not None:
+            oos_calibration_error, oos_mce = compute_calibration_error(
+                probabilities, outcomes,
+            )
+
     cost_stress_data = wfv_results.get("cost_stress")
     regime_data = wfv_results.get("regime_breakdown")
 
@@ -763,6 +812,8 @@ def build_empirical_mode_research_report(
         per_fold_metrics=per_fold_metrics,
         cost_stress=cost_stress_data,
         regime_breakdown=regime_data,
+        oos_ic=oos_ic,
+        oos_rank_ic=oos_rank_ic,
     )
 
     # --- Build sections ---
@@ -846,6 +897,10 @@ def build_empirical_mode_research_report(
             "oos_win_rate": _make_metric_ci(oos_win_rate, max(0.0, oos_win_rate - 0.1), min(1.0, oos_win_rate + 0.1)),
             "oos_profit_factor": _make_metric_ci(oos_profit_factor),
             "oos_max_drawdown_r": _make_metric_ci(oos_max_drawdown_r),
+            "oos_ic": _make_metric_ci(oos_ic if oos_ic is not None else 0.0),
+            "oos_rank_ic": _make_metric_ci(oos_rank_ic if oos_rank_ic is not None else 0.0),
+            "oos_calibration_error": oos_calibration_error,
+            "oos_mce": oos_mce,
             "oos_trade_count": oos_trade_count,
             "active_trade_count": active_trade_count,
             "long_trade_count": long_trade_count,

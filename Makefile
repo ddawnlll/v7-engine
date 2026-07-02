@@ -328,3 +328,19 @@ candidate:
 candidate-lightgbm:
 	@echo "=== v0.32A — LightGBM Directional Candidate v0.1 ==="
 	.venv/bin/python3 -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT --folds 6 --target 2-class --model lightgbm --output data/reports/candidate-lightgbm-v01.json
+
+# ====================================================================
+# AlphaForge Report CLI — centralized report generation
+# ====================================================================
+# Usage:
+#   make af-report ARGS="list"                      List available report types
+#   make af-report ARGS="generate minimal-mode --mode SWING"
+#   make af-report ARGS="status"                    Show generated reports
+#   make af-report ARGS="menu"                      Interactive menu
+# ====================================================================
+
+.PHONY: af-report
+
+af-report:
+	@echo "=== AlphaForge Report CLI ==="
+	PYTHONPATH=alphaforge/src:. python3 -m cli.alphaforge report $(ARGS)

@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import lightgbm as lgb
 import numpy as np
+import pandas as pd
 from alphaforge.features.mtf import compute_mtf_features
 
 logging.basicConfig(
@@ -211,6 +212,39 @@ def load_cached_data(
 # Label generation (triple-barrier)
 # ---------------------------------------------------------------------------
 
+def load_labels_from_simulation(label_path: str, mode: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
+    """Load pre-computed labels from a simulation output file (Parquet or CSV).
+
+    Expects columns: best_action_label, long_R_net, short_R_net.
+    Returns (int_labels, gross_r_values, net_r_values, metrics_dict)
+    matching the format of generate_labels().
+    """
+    path = Path(label_path)
+    if path.suffix == ".parquet":
+        df = pd.read_parquet(str(path))
+    else:
+        df = pd.read_csv(str(path))
+
+    label_map = {"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}
+
+    y_int = np.array([label_map.get(str(v).strip().upper(), 2) for v in df["best_action_label"]], dtype=np.int32)
+    long_r = np.array(df["long_R_net"], dtype=float)
+    short_r = np.array(df["short_R_net"], dtype=float)
+
+    # Gross = net here since simulation labels already embed costs
+    gross_r_vals = np.where(y_int == 0, long_r, np.where(y_int == 1, short_r, 0.0))
+    r_vals = gross_r_vals.copy()
+
+    uniq, cnt = np.unique(y_int, return_counts=True)
+    d = {str(k): int(v) for k, v in zip(uniq, cnt)}
+    logger.info("Labels from simulation: %d samples, dist=%s", len(y_int), d)
+    return y_int, gross_r_vals, r_vals, {
+        "n_labels": len(y_int),
+        "label_distribution": d,
+        "label_source": "simulation",
+    }
+
+
 def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
     """Generate triple-barrier labels with stop/target simulation.
 
@@ -224,8 +258,11 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
     stop_mult = cfg["stop_mult"]
     target_mult = cfg["target_mult"]
     label_map = {"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}
-    fee_pct = 0.04
+    taker_fee_bps = 4.0
+    slippage_bps = 1.0
     labels_list, ints_list, gross_r_vals, net_r_vals = [], [], [], []
+    fee_cost_total = 0.0
+    slippage_cost_total = 0.0
 
     for i in range(n - max_hold - 1):
         entry_price = float(ohlcv["close"][i])
@@ -268,11 +305,12 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
                 break
             short_gross = (entry_price - future_close) / entry_price
 
-        # Pick best action — COST-AWARE: subtract round-trip fee from gross returns
-        # Round-trip cost = fee_pct * 2 (entry + exit)
-        round_trip_cost = fee_pct * 2 / 100  # fee_pct is 0.04, so this is 0.0008
-        net_long = long_gross - round_trip_cost
-        net_short = short_gross - round_trip_cost
+        # Pick best action — COST-AWARE: subtract round-trip fee + slippage from gross returns
+        fee_cost_r = taker_fee_bps * 2 / 10000  # 0.0008
+        slippage_cost_r = slippage_bps * 2 / 10000  # 0.0002
+        round_trip_cost_r = fee_cost_r + slippage_cost_r  # 0.001 (10 bps)
+        net_long = long_gross - round_trip_cost_r
+        net_short = short_gross - round_trip_cost_r
         no_trade_net = 0.0
 
         if net_long > net_short and net_long > no_trade_net:
@@ -293,12 +331,19 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
         gross_r_vals.append(best_gross_r)
         net_r_vals.append(best_net_r)
 
+        if best != "NO_TRADE":
+            fee_cost_total += fee_cost_r
+            slippage_cost_total += slippage_cost_r
+
     uniq, cnt = np.unique(labels_list, return_counts=True)
     d = {str(k): int(v) for k, v in zip(uniq, cnt)}
     logger.info("Labels: %d samples, dist=%s", len(labels_list), d)
     return np.array(ints_list), np.array(gross_r_vals, dtype=float), np.array(net_r_vals, dtype=float), {
         "n_labels": len(labels_list),
         "label_distribution": d,
+        "fee_cost_r_total": fee_cost_total,
+        "slippage_cost_r_total": slippage_cost_total,
+        "cost_model": {"taker_fee_bps": 4.0, "slippage_bps": 1.0, "round_trip_bps": 10.0},
     }
 
 
@@ -378,6 +423,7 @@ def walk_forward_validate(
     from alphaforge.training.xgb_trainer import XGBoostTrainer
     from collections import Counter
     import xgboost as xgb
+    from alphaforge.reports.ic_metrics import compute_ic, compute_rank_ic
 
     n = len(X)
     fold_size = n // (min_folds + 1)
@@ -495,6 +541,21 @@ def walk_forward_validate(
         val_net_r_values = net_r_values[effective_val_start:val_end]
         net_r_expectancy_val = float(np.mean(val_net_r_values)) if len(val_net_r_values) > 0 else 0.0
 
+        # Per-fold IC / Rank IC
+        val_net_r_slice = net_r_values[effective_val_start:val_end]
+        if len(val_net_r_slice) >= 3:
+            if model_backend == "lightgbm":
+                directional_score = 1.0 - 2.0 * y_pred_prob
+            elif y_pred_prob.ndim >= 2 and y_pred_prob.shape[1] >= 2:
+                directional_score = y_pred_prob[:, 0] - y_pred_prob[:, 1]
+            else:
+                directional_score = 1.0 - 2.0 * y_pred_prob.ravel()
+            fold_ic = compute_ic(directional_score, val_net_r_slice)
+            fold_rank_ic = compute_rank_ic(directional_score, val_net_r_slice)
+        else:
+            fold_ic = 0.0
+            fold_rank_ic = 0.0
+
         results.append({
             "fold": fold + 1,
             "n_train": len(X_train),
@@ -517,6 +578,10 @@ def walk_forward_validate(
             "low_conf_count": low_conf_count,
             "low_conf_pct": round(low_conf_pct, 2),
             "training_duration_seconds": fold_result.training_duration_seconds,
+            "ic": round(fold_ic, 6),
+            "rank_ic": round(fold_rank_ic, 6),
+            "val_start_idx": effective_val_start,
+            "val_end_idx": val_end,
         })
 
         logger.info(
@@ -677,6 +742,10 @@ def main():
                         help="Confidence threshold (-1 to disable, default=0.55 for 3-class, disabled for 2-class)")
     parser.add_argument("--model", default="xgboost", choices=["xgboost", "lightgbm"],
                         help="Model backend: xgboost (default) or lightgbm")
+    parser.add_argument("--label-source", default="simulation", choices=["simulation", "generate"],
+                        help="Label source: 'simulation' loads pre-computed labels from file, 'generate' runs triple-barrier labeling on OHLCV")
+    parser.add_argument("--label-path", default=None,
+                        help="Path to simulation label file (Parquet/CSV), required when --label-source=simulation")
     args = parser.parse_args()
 
     global mode
@@ -711,9 +780,18 @@ def main():
     n_bars_total = len(ohlcv["close"])
     print(f"  {n_bars_total} total bars, {len(symbols)} symbols")
 
-    # Step 2: Generate labels
-    print("\n[2/6] Generating triple-barrier labels...")
-    y_int, gross_r_vals, r_vals, label_metrics = generate_labels(ohlcv, mode)
+    # Step 2: Load labels
+    print(f"\n[2/6] Loading labels (source={args.label_source})...")
+    if args.label_source == "simulation":
+        if args.label_path is None:
+            print("  ERROR: --label-path is required when --label-source=simulation")
+            sys.exit(1)
+        y_int, gross_r_vals, r_vals, label_metrics = load_labels_from_simulation(args.label_path, mode)
+    else:
+        y_int, gross_r_vals, r_vals, label_metrics = generate_labels(ohlcv, mode)
+        cm = label_metrics.get("cost_model", {})
+        print(f"  Cost model: {cm.get('taker_fee_bps', '?')} bps taker fee + {cm.get('slippage_bps', '?')} bps slippage ({cm.get('round_trip_bps', '?')} bps round-trip)")
+        print(f"  Fee cost (R total): {label_metrics.get('fee_cost_r_total', 0):.6f}, Slippage cost (R total): {label_metrics.get('slippage_cost_r_total', 0):.6f}")
 
     # Step 2b: Filter to 2-class direction if requested
     if args.target == "2-class":
@@ -805,6 +883,132 @@ def main():
     fee_pct = cfg.get("ambiguity_margin_r", 0.04) if False else 0.04  # keep at 4bps
     metrics = collect_metrics(wfv_results, X_clean, feat_names, fee_pct=fee_pct)
 
+    # ── Validation Infrastructure ──────────────────────────────────────
+    print("  Computing validation infrastructure...")
+    from alphaforge.reports.mht import TrialLedger, build_mht_section_from_ledger
+    from alphaforge.validation.contracts import RegimeLabel
+    from alphaforge.validation.regime_eval import RegimeEvaluator
+    from alphaforge.validation.cost_stress import compute_cost_stress, cost_stress_to_stress_levels
+    from alphaforge.reports.ic_metrics import compute_ic_ir
+    from alphaforge.features.regime import classify_regime_multi_symbol
+
+    # 1. MHT correction and data-snooping risk (upgrades simplified PBO detection)
+    n_param_combos = 1
+    n_theses = 1
+    n_feature_sets = 1
+    ledger = TrialLedger(
+        symbols=symbols,
+        param_combinations=n_param_combos,
+        thesis_ids=[mode],
+        feature_set_ids=[args.features],
+    )
+    mht_section = build_mht_section_from_ledger(
+        ledger=ledger,
+        correction_method="NONE_APPLIED",
+        fold_count=len(wfv_results),
+        oos_sharpe=metrics.get("sharpe_ratio", 0.0),
+        oos_trade_count=metrics.get("total_active_trades", 0),
+        alpha=0.05,
+    )
+    # Override simplified pbo_risk with MHT-derived value (only when MHT computed one)
+    mht_pbo = mht_section.get("pbo_or_backtest_overfit_risk", "NOT_EVALUATED")
+    if mht_pbo not in ("NOT_RUN", "NOT_EVALUATED"):
+        metrics["pbo_risk"] = mht_pbo
+    metrics.update(mht_section)
+
+    # 2. Per-fold regime breakdown
+    regime_signals_by_symbol = classify_regime_multi_symbol(
+        closes=np.asarray(ohlcv["close"][:cut], dtype=np.float64),
+        highs=np.asarray(ohlcv["high"][:cut], dtype=np.float64),
+        lows=np.asarray(ohlcv["low"][:cut], dtype=np.float64),
+        symbols=np.array(ohlcv["symbol"][:cut]),
+    )
+    # Align per-symbol regime sequences to concatenated OHLCV order
+    regime_series = np.full(cut, "TRANSITION", dtype=object)
+    for sym, signals in regime_signals_by_symbol.items():
+        sym_mask = np.array(ohlcv["symbol"][:cut]) == sym
+        sym_indices = np.where(sym_mask)[0]
+        for j, idx in enumerate(sym_indices):
+            if j < len(signals):
+                regime_series[idx] = signals[j].regime.value
+
+    clean_to_orig = np.where(~nan_mask)[0]
+    fold_regime_map: dict[int, RegimeLabel] = {}
+    for r in wfv_results:
+        fold_idx = r.get("fold", 0)
+        fs = r.get("val_start_idx", 0)
+        fe = r.get("val_end_idx", 0)
+        if fe > fs and fe <= len(clean_to_orig):
+            orig_indices = clean_to_orig[fs:fe]
+            orig_indices = orig_indices[orig_indices < len(regime_series)]
+            fold_regimes = regime_series[orig_indices]
+            if len(fold_regimes) > 0:
+                unique, counts = np.unique(fold_regimes, return_counts=True)
+                dominant = unique[np.argmax(counts)]
+                fold_regime_map[fold_idx] = RegimeLabel(str(dominant))
+
+    evaluator = RegimeEvaluator(fold_regime_map)
+    fold_expectancy_r = {r.get("fold", 0): r.get("net_r_expectancy", 0.0) for r in wfv_results}
+    fold_win_rate: dict[int, float] = {}
+    for r in wfv_results:
+        cm_arr = np.array(r.get("confusion_matrix", [[0, 0, 0], [0, 0, 0], [0, 0, 0]]))
+        correct = int(cm_arr.diagonal().sum())
+        total = int(cm_arr.sum())
+        fold_win_rate[r.get("fold", 0)] = correct / total if total > 0 else 0.0
+    fold_trade_count = {r.get("fold", 0): r.get("active_trade_count", 0) for r in wfv_results}
+    regime_breakdown = evaluator.evaluate(fold_expectancy_r, fold_win_rate, fold_trade_count)
+    metrics["regime_breakdown"] = regime_breakdown
+
+    # 3. Cost stress (fee / slippage / spread sensitivity)
+    net_expectancy = metrics.get("net_expectancy_r", 0.0)
+    mode_entry_risk = {"SWING": 0.02, "SCALP": 0.01, "AGGRESSIVE_SCALP": 0.005}
+    entry_risk_pct = mode_entry_risk.get(mode, 0.02)
+    cost_result = compute_cost_stress(
+        oos_expectancy_r=net_expectancy,
+        baseline_fee_pct=fee_pct,
+        entry_risk_pct=entry_risk_pct,
+    )
+    cost_stress_report = cost_stress_to_stress_levels(
+        cost_result,
+        baseline_fee_pct=fee_pct,
+        baseline_slippage_pct=0.02,
+    )
+    metrics["cost_stress"] = cost_stress_report
+
+    # 4. Aggregate IC / Rank IC from per-fold values
+    per_fold_ics = [r.get("ic", 0.0) for r in wfv_results]
+    per_fold_rank_ics = [r.get("rank_ic", 0.0) for r in wfv_results]
+    metrics["oos_ic"] = round(float(np.mean(per_fold_ics)) if per_fold_ics else 0.0, 6)
+    metrics["oos_rank_ic"] = round(float(np.mean(per_fold_rank_ics)) if per_fold_rank_ics else 0.0, 6)
+    metrics["ic_information_ratio"] = round(compute_ic_ir(np.array(per_fold_ics)), 6)
+
+    # 5. Build evidence passport
+    print("\n[5b/6] Building evidence passport...")
+    from alphaforge.evidence_adapter import build_alphaforge_passport
+
+    candidate_id = f"cand_{mode.lower()}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+
+    limitations_list: list[str] = []
+    if metrics.get("pbo_risk") == "HIGH":
+        limitations_list.append("High PBO risk — WFV results may overstate real performance")
+    overfit_gap = metrics.get("overfit_gap", 0.0)
+    if isinstance(overfit_gap, (int, float)) and overfit_gap > 0.10:
+        limitations_list.append(f"Large overfit gap ({overfit_gap:.2f}) — train/OOS divergence")
+    net_exp = metrics.get("net_expectancy_r", 0.0)
+    if isinstance(net_exp, (int, float)) and net_exp <= 0:
+        limitations_list.append("Non-positive net expectancy — not profitable after costs")
+    if len(wfv_results) < 4:
+        limitations_list.append("Few WFV folds — results may not generalize")
+
+    passport = build_alphaforge_passport(
+        candidate_id=candidate_id,
+        mode=mode,
+        metrics=metrics,
+        wfv_results=wfv_results,
+        limitations=limitations_list,
+    )
+    print(f"  Passport built: {passport.passport_id} (candidate={candidate_id})")
+
     print(f"\n{'='*60}")
     print(f"  TRAINING RESULTS — {mode}")
     print(f"{'='*60}")
@@ -815,6 +1019,13 @@ def main():
     print(f"  Overfit Gap:                 {metrics['overfit_gap']:.4f}")
     print(f"  Train-OOS Correlation:       {metrics['train_oos_correlation']:.4f}")
     print(f"  PBO Risk:                    {metrics['pbo_risk']}")
+    print(f"  Data Snooping Risk:          {metrics.get('data_snooping_risk_flag', 'N/A')}")
+    print(f"  Tested Hypotheses:           {metrics.get('tested_hypothesis_count', 'N/A')}")
+    print(f"  Corrected Significance:      {metrics.get('corrected_significance', 'N/A')}")
+    print(f"  OOS IC:                      {metrics.get('oos_ic', 'N/A')}")
+    print(f"  OOS Rank IC:                 {metrics.get('oos_rank_ic', 'N/A')}")
+    print(f"  IC Information Ratio:        {metrics.get('ic_information_ratio', 'N/A')}")
+    print(f"  Cost Stress (combined):      {metrics.get('cost_stress', {}).get('cost_stress_verdict', 'N/A')}")
     print(f"  Feature Count:               {metrics['feature_count']}")
     print(f"  Total Samples:               {metrics['n_samples']}")
     print(f"  Walk-Forward Folds:          {metrics['n_folds']}")

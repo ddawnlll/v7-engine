@@ -98,6 +98,34 @@ Purpose: Cross-timeframe and intermarket relationships. Requires cross-sectional
 | correlation_N | Correlation between related symbols |
 | lead_lag_score | Lead-lag relationship score |
 
+### Perpetual Funding Group
+Purpose: Funding rate and open interest proxy features from OHLCV data.
+Status: ACTIVE — computed from OHLCV-derived funding proxy (no real funding rate needed).
+
+| Feature | Description |
+|---------|-------------|
+| funding_rate | Raw funding rate (OHLCV proxy or real if available) |
+| funding_rate_ma_N | Rolling mean of funding rate |
+| funding_rate_vol_N | Rolling std of funding rate |
+| funding_rate_zscore_N | Rolling z-score of funding rate — extremes detected |
+| funding_rate_change_N | Period-over-period change in funding rate |
+| open_interest_proxy_N | OI proxy from volume * \|price change\| |
+| funding_oi_divergence_N | Divergence between funding rate and OI proxy |
+
+### Cross-Sectional Rank Group
+Purpose: Cross-symbol rank and inter-symbol correlation features.
+Status: DEFERRED (P0.9B) — requires multi-symbol OHLCV data pipeline.
+
+| Feature | Description |
+|---------|-------------|
+| rank_momentum_1h | Rank of short-window momentum across the universe [0, 1] |
+| rank_momentum_4h | Rank of medium-window momentum across the universe [0, 1] |
+| rank_momentum_24h | Rank of long-window momentum across the universe [0, 1] |
+| rank_volatility | Rank of realized volatility across the universe [0, 1] |
+| rank_volume | Rank of volume across the universe [0, 1] |
+| correlation_with_median | Rolling correlation vs universe median return [-1, 1] |
+| correlation_zscore | Z-score of correlation_with_median |
+
 ### Regime Group
 Purpose: Market regime classification features.
 
@@ -217,5 +245,6 @@ Lower-frequency sub-intervals (1m, 3m, 5m) are NOT canonical locked profiles. If
 
 - Exact feature formulas may be refined during implementation.
 - SCALP/AGGRESSIVE_SCALP feature sets require empirical tuning.
-- Cross-sectional rank features (cross_sectional_rank, relative_strength) are P0.9B dependencies.
+- Cross-sectional rank features (cross_sectional_rank group) are P0.9B dependencies.
+- Real funding_rate data integration is P0.9B (OHLCV proxy is active baseline).
 - Order book / depth features for AGGRESSIVE_SCALP liquidity surfaces are P0.9B dependencies.

@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0.0",
+  "alphaforge_report_id": "afrr-scaffold-001",
+  "run_id": "run-scaffold-all-001",
+  "created_at": "2026-07-02T17:40:26Z",
+  "mode_reports": [
+    {
+      "mode": "SCALP",
+      "mode_priority": "PRIMARY",
+      "report_id": "mrr-scalp-scaffold-001",
+      "report_type": "primary_research_report",
+      "verdict": "CONTINUE_RESEARCH",
+      "summary": "Scaffold placeholder — do not interpret as real research"
+    },
+    {
+      "mode": "AGGRESSIVE_SCALP",
+      "mode_priority": "PRIMARY",
+      "report_id": "mrr-aggressive_scalp-scaffold-001",
+      "report_type": "primary_research_report",
+      "verdict": "CONTINUE_RESEARCH",
+      "summary": "Scaffold placeholder — do not interpret as real research"
+    },
+    {
+      "mode": "SWING",
+      "mode_priority": "SECONDARY_BASELINE",
+      "report_id": "mrr-swing-scaffold-001",
+      "report_type": "secondary_baseline_report",
+      "verdict": "BASELINE_WEAK",
+      "summary": "Scaffold placeholder — do not interpret as real research"
+    }
+  ],
+  "promoted_candidates": [],
+  "multiple_hypothesis_control": {
+    "aggregate_mht_status": "NOT_RUN",
+    "aggregate_tested_hypothesis_count": 1470,
+    "aggregate_tested_feature_count": 0,
+    "aggregate_trial_count": 1470,
+    "correction_method": "NONE_APPLIED",
+    "false_discovery_control": "NOT_APPLIED",
+    "deflated_sharpe_or_pbo_assessment": "NOT_APPLIED",
+    "mht_block_reason": "No mode report has applied MHT correction. Aggregate hypotheses tested: 1470. Strong edge/profitability claims are BLOCKED. MHT correction requires model training which is not performed in this non-ML research phase."
+  },
+  "rejected_candidates": [
+    {
+      "alpha_candidate_id": "ac-scalp-research",
+      "mode": "SCALP",
+      "rejection_reason": "Mode SCALP verdict: CONTINUE_RESEARCH. Evidence: Mode=SCALP Verdict=CONTINUE_RESEARCH OOS_Expectancy_R=0.0 Sharpe=0.0 Trades=0 MHT=NONE_APPLIED CostStressSurvives=False RegimeStable=True ValidationVerdict=INCONCLUSIVE V7GatesMapped=6. Further research required before promotion consideration."
+    },
+    {
+      "alpha_candidate_id": "ac-aggressive_scalp-research",
+      "mode": "AGGRESSIVE_SCALP",
+      "rejection_reason": "Mode AGGRESSIVE_SCALP verdict: CONTINUE_RESEARCH. Evidence: Mode=AGGRESSIVE_SCALP Verdict=CONTINUE_RESEARCH OOS_Expectancy_R=0.0 Sharpe=0.0 Trades=0 MHT=NONE_APPLIED CostStressSurvives=False RegimeStable=True ValidationVerdict=INCONCLUSIVE V7GatesMapped=6. Further research required before promotion consideration."
+    },
+    {
+      "alpha_candidate_id": "ac-swing-rejected",
+      "mode": "SWING",
+      "rejection_reason": "Mode SWING verdict: BASELINE_WEAK. Evidence: Mode=SWING Verdict=BASELINE_WEAK OOS_Expectancy_R=0.0 Sharpe=0.0 Trades=0 MHT=NONE_APPLIED CostStressSurvives=False RegimeStable=True ValidationVerdict=INCONCLUSIVE V7GatesMapped=6. Insufficient evidence for promotion at this time."
+    }
+  ],
+  "global_limitations": [
+    "SCALP (CONTINUE_RESEARCH): Scaffold placeholder — do not interpret as real research",
+    "SCALP blocked scopes: Scaffold placeholder — no real empirical data",
+    "SCALP additional: All metric values are zeros — no real model was trained",
+    "AGGRESSIVE_SCALP (CONTINUE_RESEARCH): Scaffold placeholder — do not interpret as real research",
+    "AGGRESSIVE_SCALP blocked scopes: Scaffold placeholder — no real empirical data",
+    "AGGRESSIVE_SCALP additional: All metric values are zeros — no real model was trained",
+    "SWING (BASELINE_WEAK): Scaffold placeholder — do not interpret as real research",
+    "SWING blocked scopes: Scaffold placeholder — no real empirical data",
+    "SWING additional: All metric values are zeros — no real model was trained",
+    "Funding model is DEFERRED for all modes"
+  ],
+  "v7_handoff_packages": [],
+  "cross_mode_insights": [
+    "No modes achieved promotion-worthy verdicts",
+    "2 PRIMARY modes (2 total)",
+    "1 SECONDARY_BASELINE modes (1 total)",
+    "SCALP primary timeframe: 1h",
+    "AGGRESSIVE_SCALP primary timeframe: 15m",
+    "SWING primary timeframe: 4h"
+  ],
+  "next_research_priorities": [
+    "Review feature engineering and data quality for rejected modes",
+    "Run simulations at locked primary timeframes for all modes",
+    "Generate real labels from SimulationOutput for empirical validation"
+  ]
+}

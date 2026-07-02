@@ -13,10 +13,13 @@ Usage:
 """
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 try:
     import yaml
@@ -162,6 +165,8 @@ class TargetValidatorReport:
                 "data_source": data_summary.get("data_source", ""),
                 "num_symbols": data_summary.get("n_symbols", 0),
                 "n_bars": data_summary.get("n_bars", 0),
+                "oos_ic": agg.get("oos_ic", 0.0) or wfv_raw.get("oos_summary", {}).get("oos_ic", 0.0) or 0.0,
+                "oos_rank_ic": agg.get("oos_rank_ic", 0.0) or wfv_raw.get("oos_summary", {}).get("oos_rank_ic", 0.0) or 0.0,
             }
 
             # Include full raw WFV dict for drill-down
@@ -323,6 +328,20 @@ class AlphaTargetValidator:
                 level_assessment = "NOT_ALPHA_CANDIDATE_YET"
                 anomaly_flags.append("GR7: cost stress not survived — V7 readiness zeroed")
 
+        # IC-based overfit anomaly flags (GR8/GR9)
+        ic_measured = metrics.get("oos_ic_available", False)
+        oos_ic = metrics.get("oos_ic", 0.0) or 0.0
+        if ic_measured and oos_ic < 0:
+            anomaly_flags.append(
+                f"GR8: negative OOS IC ({oos_ic:.4f}) — "
+                f"predictions inversely correlated with actuals"
+            )
+        elif ic_measured and oos_ic < 0.02:
+            anomaly_flags.append(
+                f"GR9: near-zero OOS IC ({oos_ic:.4f}) — "
+                f"predictions effectively random on OOS"
+            )
+
         # Store anomaly flags in metric_details for the consolidated report
         if anomaly_flags:
             if "_anomaly_flags" not in metrics:
@@ -467,6 +486,20 @@ class AlphaTargetValidator:
         deflated_sharpe = mht.get("deflated_sharpe_or_equivalent")
         dsr_positive = deflated_sharpe is not None and deflated_sharpe > 0
 
+        # -- IC metrics --
+        oos_ic = oos.get("oos_ic", 0.0) or 0.0
+        oos_rank_ic = oos.get("oos_rank_ic", 0.0) or 0.0
+        oos_ic_available = "oos_ic" in oos
+        oos_rank_ic_available = "oos_rank_ic" in oos
+        if not oos_ic_available:
+            logger.warning(
+                "oos_ic not found in oos_summary — defaulting to 0.0"
+            )
+        if not oos_rank_ic_available:
+            logger.warning(
+                "oos_rank_ic not found in oos_summary — defaulting to 0.0"
+            )
+
         # -- Composite metrics --
         regime_stable = not edge_only_in_rare_regime
         real_data_multi_symbol_pass = n_symbols > 1 and not is_synthetic
@@ -511,6 +544,11 @@ class AlphaTargetValidator:
             "has_mht": has_mht,
             "deflated_sharpe": deflated_sharpe,
             "dsr_positive": dsr_positive,
+            # IC
+            "oos_ic": oos_ic,
+            "oos_rank_ic": oos_rank_ic,
+            "oos_ic_available": oos_ic_available,
+            "oos_rank_ic_available": oos_rank_ic_available,
             # Composite
             "real_data_multi_symbol_pass": real_data_multi_symbol_pass,
         }
@@ -662,8 +700,23 @@ class AlphaTargetValidator:
         else:
             gap_score = 10.0
 
+        # IC-based overfit penalty: negative or near-zero OOS IC signals
+        # that the model's predictions are uncorrelated with actuals.
+        # Only apply when IC was actually measured (not the 0.0 default).
+        ic_penalty = 0.0
+        ic_measured = m.get("oos_ic_available", False)
+        oos_ic = m.get("oos_ic", 0.0) or 0.0
+        if ic_measured and oos_ic < 0:
+            # Negative IC: predictions inversely correlated with actuals
+            ic_penalty = 1.0
+        elif ic_measured and oos_ic < 0.02:
+            # Near-zero IC: predictions effectively random on OOS
+            ic_penalty = 0.5
+
+        effective_gap_score = gap_score * (1.0 - ic_penalty)
+
         return round(
-            0.35 * fold_score + 0.35 * pbo_score + 0.30 * gap_score,
+            0.35 * fold_score + 0.35 * pbo_score + 0.30 * effective_gap_score,
             1,
         )
 
@@ -780,6 +833,8 @@ class AlphaTargetValidator:
             "cost_stress_survives": "cost_stress_survives",
             "symbol_stability": "symbol_stability_pass",
             "regime_stability": "regime_stable",
+            "oos_ic": "oos_ic",
+            "oos_rank_ic": "oos_rank_ic",
             "dsr_positive": "dsr_positive",
             "mht_pass": "has_mht",
             "real_data_multi_symbol_pass": "real_data_multi_symbol_pass",
@@ -968,6 +1023,10 @@ class AlphaTargetValidator:
         # 9. Cost stress not survived
         if not metrics.get("cost_stress_survives", False):
             blockers.append("cost stress not survived")
+
+        # 10. IC-based overfit: negative OOS IC
+        if metrics.get("oos_ic_available", False) and (metrics.get("oos_ic", 0.0) or 0.0) < 0:
+            blockers.append("IC-based overfit: negative OOS IC")
 
         return blockers
 

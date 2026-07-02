@@ -158,11 +158,21 @@ V7HandoffPackage (canonical G0-G10 gate mapping) ──► V7 Acceptance Gates
 1. **P0.8B:** Authority lock, docs, contracts — DONE
 2. **P0.8C:** Re-audit after authority lock — DONE
 3. **P0.8D:** Profitability/efficiency squeeze audit — DONE
-4. **P0.8E:** Contract/docs patch (this task) — fix gate mapping, timeframes, strengthen schemas, add fixture tests — IN PROGRESS (BLOCKS P0.9A)
-5. **P0.9A:** AlphaForge implementation scaffold — BLOCKED (requires P0.8E PASS)
-6. **P0.9B:** Data/label/feature pipeline
-7. **P0.9C:** All-mode research reports
-8. **P1.0:** V7 handoff candidate
+4. **P0.8E:** Contract/docs patch — fix gate mapping, timeframes, strengthen schemas, add fixture tests — DONE
+5. **P0.9A-FREEZE:** Freeze + Metric Ownership Redesign — IN PROGRESS
+6. **P0.9A:** AlphaForge implementation scaffold — REDESIGN_IN_PROGRESS (blocked by P0.9A-FREEZE)
+7. **XSMOM:** Cross-Sectional Momentum Baseline — DONE
+8. **P0.9B:** Data/label/feature pipeline
+9. **P0.9C:** All-mode research reports
+10. **P1.0:** V7 handoff candidate
+
+---
+
+## Do First (For Agents)
+
+- **XSMOM baseline:** Cross-sectional momentum ranking and scoring for all 16 symbols. See [phase_plan.md](phase_plan.md).
+- **Metric Philosophy compliance:** When implementing metric computation, verify the owning layer from discovery_authority.md. Do not recompute upstream-layer metrics downstream.
+- **P0.9A metric ownership refactor:** Redesign scaffold to respect layer metric boundaries.
 
 ---
 

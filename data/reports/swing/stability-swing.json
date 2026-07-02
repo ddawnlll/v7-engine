@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "report_type": "stability",
+  "mode": "SWING",
+  "created_at": "2026-07-02T17:40:48Z",
+  "stability": {
+    "symbol_metrics": {
+      "SWING_DEFAULT": {
+        "expectancy_r": 0.0,
+        "win_rate": 0.5,
+        "trade_count": 0,
+        "oos_ic": 0.0,
+        "oos_rank_ic": 0.0
+      }
+    },
+    "symbol_concentration": {
+      "num_symbols": 1,
+      "total_trades": 0,
+      "top_symbol": "NONE",
+      "top_symbol_share": 0.0,
+      "top_symbol_trade_count": 0,
+      "symbol_concentration_hhi": 0.0,
+      "per_symbol_shares": {
+        "SWING_DEFAULT": 0.0
+      }
+    },
+    "regime_concentration": {
+      "num_regimes": 0,
+      "top_regime": "NONE",
+      "top_regime_share": 0.0,
+      "regime_concentration_hhi": 0.0,
+      "per_regime_shares": {}
+    },
+    "num_symbols": 1
+  }
+}

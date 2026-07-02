@@ -162,6 +162,8 @@ def build_minimal_mode_research_report(
             "fold_count": 6, "verdict": "BLOCKED_FOR_MHT", "overfit_risk": "MEDIUM",
         },
         "metrics": {
+            "oos_ic": {"value": 0.0, "ci_lower": -0.5, "ci_upper": 0.5, "ci_level": 0.95},
+            "oos_rank_ic": {"value": 0.0, "ci_lower": -0.5, "ci_upper": 0.5, "ci_level": 0.95},
             "oos_sharpe": {"value": 0.0, "ci_lower": -0.5, "ci_upper": 0.5, "ci_level": 0.95},
             "oos_expectancy_r": {"value": 0.0, "ci_lower": -0.1, "ci_upper": 0.1, "ci_level": 0.95},
             "oos_win_rate": {"value": 0.5, "ci_lower": 0.45, "ci_upper": 0.55, "ci_level": 0.95},
