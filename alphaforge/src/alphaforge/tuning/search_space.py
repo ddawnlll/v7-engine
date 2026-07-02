@@ -33,6 +33,7 @@ Example:
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -135,6 +136,25 @@ class SearchSpace:
 # Base XGBoost fixed parameters (shared across all modes)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# CPU parallelism detection
+# ---------------------------------------------------------------------------
+
+
+def _detect_cpu_njobs() -> int:
+    """Detect available CPU parallelism, respecting container/WSL2 limits."""
+    try:
+        return max(1, len(os.sched_getaffinity(0)))
+    except AttributeError:
+        return max(1, os.cpu_count() or 1)
+
+
+CPU_NJOBS: int = _detect_cpu_njobs()
+
+# ---------------------------------------------------------------------------
+# Base fixed XGBoost parameters (shared across all modes)
+# ---------------------------------------------------------------------------
+
 _BASE_XGB_PARAMS: Dict[str, Any] = {
     "objective": "multi:softprob",
     "num_class": 3,
@@ -142,6 +162,7 @@ _BASE_XGB_PARAMS: Dict[str, Any] = {
     "random_state": 42,
     "tree_method": "hist",
     "verbosity": 0,
+    "n_jobs": CPU_NJOBS,
 }
 
 # ---------------------------------------------------------------------------

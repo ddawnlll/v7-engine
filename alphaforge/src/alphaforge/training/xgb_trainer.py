@@ -93,6 +93,29 @@ def _detect_gpu() -> dict[str, str]:
 
 GPU_PARAMS: dict[str, str] = _detect_gpu()
 
+
+def _detect_cpu_parallelism() -> dict[str, str]:
+    """Detect available CPU parallelism for XGBoost training.
+
+    Uses ``os.sched_getaffinity()`` when available (respects cgroup/container
+    CPU limits on WSL2, Docker, etc.), falling back to ``os.cpu_count()``.
+
+    When GPU is active, leaves n_jobs at 1 since GPU handles tree-building
+    parallelism internally.
+    """
+    if GPU_PARAMS.get("tree_method") in ("gpu_hist",):
+        return {"n_jobs": 1}
+    try:
+        n = len(os.sched_getaffinity(0))
+    except AttributeError:
+        n = os.cpu_count() or 1
+    n = max(1, n)
+    logger.info("CPU parallelism: n_jobs=%d (detected from %d available cores)", n, n)
+    return {"n_jobs": n}
+
+
+CPU_PARAMS: dict[str, str] = _detect_cpu_parallelism()
+
 # Conservative SWING hyperparameters (LOCKED_INITIAL_BASELINE)
 SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "objective": "multi:softprob",
@@ -111,6 +134,7 @@ SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "random_state": 42,
     "verbosity": 0,
     **GPU_PARAMS,
+    **CPU_PARAMS,
 }
 
 # Test fraction for hold-out validation within training
@@ -469,6 +493,7 @@ class XGBoostTrainer:
             "subsample", "colsample_bytree", "min_child_weight",
             "gamma", "reg_alpha", "reg_lambda", "eval_metric",
             "random_state", "verbosity", "tree_method", "device",
+            "n_jobs",
         }
         params = {}
         for k in xgb_param_keys:

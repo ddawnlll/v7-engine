@@ -23,6 +23,7 @@ Usage:
 
 from __future__ import annotations
 
+import concurrent.futures
 import hashlib
 import json
 import logging
@@ -30,6 +31,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from functools import partial
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -48,6 +50,24 @@ from alphaforge.validation.contracts import (
     WindowType,
 )
 from alphaforge.validation.walk_forward import WalkForwardValidator
+
+# ---------------------------------------------------------------------------
+# CPU parallelism detection (must precede hyperparameter dicts)
+# ---------------------------------------------------------------------------
+
+
+def _detect_cpu_njobs() -> int:
+    """Detect available CPU parallelism, respecting container/WSL2 CPU limits."""
+    try:
+        n = len(os.sched_getaffinity(0))
+    except AttributeError:
+        n = os.cpu_count() or 1
+    return max(1, n)
+
+
+CPU_NJOBS: int = _detect_cpu_njobs()
+
+
 # ---------------------------------------------------------------------------
 # Mode-specific hyperparameters (LOCKED_INITIAL_BASELINE)
 # SWING: widest windows, deepest memory — established baseline
@@ -82,6 +102,7 @@ SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "early_stopping_rounds": 20,
     "random_state": 42,
     "verbosity": 0,
+    "n_jobs": CPU_NJOBS,
 }
 
 # SCALP hyperparameters (LOCKED_INITIAL_BASELINE)
@@ -103,6 +124,7 @@ SCALP_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "early_stopping_rounds": 15,
     "random_state": 42,
     "verbosity": 0,
+    "n_jobs": CPU_NJOBS,
 }
 
 # AGGRESSIVE_SCALP hyperparameters (LOCKED_INITIAL_BASELINE)
@@ -124,6 +146,7 @@ AGGRESSIVE_SCALP_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "early_stopping_rounds": 10,
     "random_state": 42,
     "verbosity": 0,
+    "n_jobs": CPU_NJOBS,
 }
 
 # Mode hyperparameter lookup
@@ -136,9 +159,8 @@ _MODE_HYPERPARAMS: Dict[str, Dict[str, Any]] = {
 RANDOM_SEED: int = 42
 
 logger = logging.getLogger(__name__)
+logger.info("Walk-forward runner: CPU n_jobs=%d", CPU_NJOBS)
 
-# ---------------------------------------------------------------------------
-# Constants
 # ---------------------------------------------------------------------------
 
 # Walk-forward config — smaller windows so we can construct 6+ folds from
@@ -902,164 +924,212 @@ def run_walk_forward(
     logger.info(f"[{mode_str}] Split into {len(folds)} walk-forward folds")
 
     # ------------------------------------------------------------------
-    # 6. Train and evaluate per fold
+    # 6. Train and evaluate per fold (parallel via ThreadPoolExecutor)
     # ------------------------------------------------------------------
+    # Thread strategy: with N available CPUs, run P folds in parallel,
+    # each fold gets N//P threads to avoid oversubscription.
+    n_folds_total = len(folds)
+    parallel_workers = min(max(1, n_folds_total), CPU_NJOBS)
+    n_jobs_per_worker = max(1, CPU_NJOBS // parallel_workers)
+    logger.info(
+        "[%s] Fold parallelism: %d workers × n_jobs=%d (total %d cores)",
+        mode_str, parallel_workers, n_jobs_per_worker,
+        parallel_workers * n_jobs_per_worker,
+    )
+
+    # Build a shared worker hyperparams dict with per-worker n_jobs
+    worker_hyperparams = dict(hyperparams)
+    worker_hyperparams["n_jobs"] = n_jobs_per_worker
+
     fold_metrics: List[FoldMetrics] = []
     overfit_flags: List[OverfitFlag] = []
     last_booster: Any = None
 
-    for fold in folds:
-        fi = fold.fold_index
-        train_idx = fold.train_indices
-        val_idx = fold.val_indices
-        oos_idx = fold.oos_indices
+    def _train_one_fold(fold_data: Fold) -> dict:
+        """Train and evaluate a single fold — runs in a worker thread."""
+        f_fi = fold_data.fold_index
+        f_train_idx = [i for i in fold_data.train_indices if i < len(X)]
+        f_val_idx = [i for i in fold_data.val_indices if i < len(X)]
+        f_oos_idx = [i for i in fold_data.oos_indices if i < len(X)]
 
-        # Ensure indices are within bounds
-        train_idx = [i for i in train_idx if i < len(X)]
-        val_idx = [i for i in val_idx if i < len(X)]
-        oos_idx = [i for i in oos_idx if i < len(X)]
+        if len(f_train_idx) < 10 or len(f_val_idx) < 5 or len(f_oos_idx) < 5:
+            logger.warning("[%s] Fold %d: insufficient samples. Skipping.", mode_str, f_fi)
+            return {"skip": True, "fold_index": f_fi}
 
-        if len(train_idx) < 10 or len(val_idx) < 5 or len(oos_idx) < 5:
-            logger.warning(f"[{mode_str}] Fold {fi}: insufficient samples. Skipping.")
-            continue
+        f_X_train = X[f_train_idx]
+        f_y_train = y_int[f_train_idx]
+        f_X_val = X[f_val_idx]
+        f_y_val = y_int[f_val_idx]
+        f_X_oos = X[f_oos_idx]
+        f_y_oos = y_int[f_oos_idx]
 
-        X_train = X[train_idx]
-        y_train = y_int[train_idx]
-        X_val = X[val_idx]
-        y_val = y_int[val_idx]
-        X_oos = X[oos_idx]
-        y_oos = y_int[oos_idx]
+        f_dtrain = xgb.DMatrix(f_X_train, label=f_y_train)
+        f_dtrain.feature_names = feature_names
+        f_dval = xgb.DMatrix(f_X_val, label=f_y_val)
+        f_dval.feature_names = feature_names
+        f_doos = xgb.DMatrix(f_X_oos, label=f_y_oos)
+        f_doos.feature_names = feature_names
 
-        # Train XGBoost with mode-specific hyperparameters
-        dtrain = xgb.DMatrix(X_train, label=y_train)
-        dtrain.feature_names = feature_names
-        dval = xgb.DMatrix(X_val, label=y_val)
-        dval.feature_names = feature_names
-        doos = xgb.DMatrix(X_oos, label=y_oos)
-        doos.feature_names = feature_names
-
-        xgb_params = {
-            k: v for k, v in hyperparams.items()
+        f_xgb_params = {
+            k: v for k, v in worker_hyperparams.items()
             if k in {
                 "objective", "num_class", "max_depth", "learning_rate",
                 "subsample", "colsample_bytree", "min_child_weight",
                 "gamma", "reg_alpha", "reg_lambda", "eval_metric",
-                "random_state", "verbosity",
+                "random_state", "verbosity", "n_jobs",
             }
         }
 
-        start_t = time.monotonic()
-        booster = xgb.train(
-            params=xgb_params,
-            dtrain=dtrain,
-            num_boost_round=hyperparams.get("n_estimators", 200),
-            evals=[(dtrain, "train"), (dval, "val")],
-            early_stopping_rounds=hyperparams.get("early_stopping_rounds", 20),
+        f_start_t = time.monotonic()
+        f_booster = xgb.train(
+            params=f_xgb_params,
+            dtrain=f_dtrain,
+            num_boost_round=worker_hyperparams.get("n_estimators", 200),
+            evals=[(f_dtrain, "train"), (f_dval, "val")],
+            early_stopping_rounds=worker_hyperparams.get("early_stopping_rounds", 20),
             verbose_eval=False,
         )
-        elapsed = time.monotonic() - start_t
+        f_elapsed = time.monotonic() - f_start_t
 
-        # Predictions
-        train_pred = np.argmax(booster.predict(dtrain), axis=1).astype(int)
-        val_pred = np.argmax(booster.predict(dval), axis=1).astype(int)
-        oos_pred = np.argmax(booster.predict(doos), axis=1).astype(int)
+        f_train_pred = np.argmax(f_booster.predict(f_dtrain), axis=1).astype(int)
+        f_val_pred = np.argmax(f_booster.predict(f_dval), axis=1).astype(int)
+        f_oos_pred = np.argmax(f_booster.predict(f_doos), axis=1).astype(int)
 
-        # Training metrics
-        train_acc = float(np.mean(train_pred == y_train))
-        val_acc = float(np.mean(val_pred == y_val))
+        f_train_acc = float(np.mean(f_train_pred == f_y_train))
+        f_val_acc = float(np.mean(f_val_pred == f_y_val))
 
-        # Logloss from eval
-        train_logloss = 0.0
-        val_logloss = 0.0
+        f_train_logloss = 0.0
+        f_val_logloss = 0.0
         try:
-            eval_result_train = booster.eval(dtrain)
-            if eval_result_train:
-                _, vs = eval_result_train.split(":")
-                train_logloss = float(vs.strip())
+            er_train = f_booster.eval(f_dtrain)
+            if er_train:
+                _, vs = er_train.split(":")
+                f_train_logloss = float(vs.strip())
         except (ValueError, AttributeError):
             pass
         try:
-            eval_result_val = booster.eval(dval)
-            if eval_result_val:
-                _, vs = eval_result_val.split(":")
-                val_logloss = float(vs.strip())
+            er_val = f_booster.eval(f_dval)
+            if er_val:
+                _, vs = er_val.split(":")
+                f_val_logloss = float(vs.strip())
         except (ValueError, AttributeError):
             pass
 
-        # OOS financial metrics
-        oos_net_r = net_r[oos_idx]
-        oos_gross_r = gross_r[oos_idx]
-        oos_fin_metrics = compute_economic_metrics(
-            oos_pred, y_oos,
-            net_r_values=oos_net_r,
-            gross_r_values=oos_gross_r,
+        f_oos_net_r = net_r[f_oos_idx]
+        f_oos_gross_r = gross_r[f_oos_idx]
+        f_oos_fin = compute_economic_metrics(
+            f_oos_pred, f_y_oos,
+            net_r_values=f_oos_net_r,
+            gross_r_values=f_oos_gross_r,
             annualization_factor=annualization,
         )
 
-        # Overfitting indicators
-        acc_gap = train_acc - val_acc
-        ll_gap = val_logloss - train_logloss
+        f_acc_gap = f_train_acc - f_val_acc
+        f_ll_gap = f_val_logloss - f_train_logloss
 
-        if acc_gap > OVERFIT_ACCURACY_GAP_THRESHOLD:
-            overfit_flags.append(OverfitFlag(
-                indicator="train_oos_gap",
-                severity="HIGH",
-                description=(
-                    f"Fold {fi}: accuracy gap {acc_gap:.4f} exceeds threshold "
-                    f"{OVERFIT_ACCURACY_GAP_THRESHOLD}. Train acc={train_acc:.4f}, "
-                    f"Val acc={val_acc:.4f}"
+        f_overfit_entries = []
+        if f_acc_gap > OVERFIT_ACCURACY_GAP_THRESHOLD:
+            f_overfit_entries.append({
+                "indicator": "train_oos_gap",
+                "severity": "HIGH",
+                "description": (
+                    f"Fold {f_fi}: accuracy gap {f_acc_gap:.4f} exceeds threshold "
+                    f"{OVERFIT_ACCURACY_GAP_THRESHOLD}. Train acc={f_train_acc:.4f}, "
+                    f"Val acc={f_val_acc:.4f}"
                 ),
-            ))
-
-        if ll_gap > OVERFIT_LOGLOSS_GAP_THRESHOLD:
-            overfit_flags.append(OverfitFlag(
-                indicator="train_oos_gap",
-                severity="MEDIUM",
-                description=(
-                    f"Fold {fi}: logloss gap {ll_gap:.4f} exceeds threshold "
-                    f"{OVERFIT_LOGLOSS_GAP_THRESHOLD}. Train ll={train_logloss:.4f}, "
-                    f"Val ll={val_logloss:.4f}"
+            })
+        if f_ll_gap > OVERFIT_LOGLOSS_GAP_THRESHOLD:
+            f_overfit_entries.append({
+                "indicator": "train_oos_gap",
+                "severity": "MEDIUM",
+                "description": (
+                    f"Fold {f_fi}: logloss gap {f_ll_gap:.4f} exceeds threshold "
+                    f"{OVERFIT_LOGLOSS_GAP_THRESHOLD}. Train ll={f_train_logloss:.4f}, "
+                    f"Val ll={f_val_logloss:.4f}"
                 ),
-            ))
+            })
 
-        fm = FoldMetrics(
-            fold_index=fi,
-            train_count=len(train_idx),
-            val_count=len(val_idx),
-            oos_count=len(oos_idx),
-            train_accuracy=train_acc,
-            val_accuracy=val_acc,
-            train_logloss=train_logloss,
-            val_logloss=val_logloss,
-            sharpe=oos_fin_metrics["sharpe"],
-            win_rate=oos_fin_metrics["win_rate"],
-            max_drawdown=oos_fin_metrics["max_drawdown"],
-            profit_factor=oos_fin_metrics["profit_factor"],
-            total_trades=oos_fin_metrics["total_trades"],
-            long_trades=oos_fin_metrics["long_trades"],
-            short_trades=oos_fin_metrics["short_trades"],
-            no_trade_count=oos_fin_metrics["no_trade_count"],
-            accuracy_gap=acc_gap,
-            logloss_gap=ll_gap,
-            net_sharpe=oos_fin_metrics["net_sharpe"],
-            net_profit_factor=oos_fin_metrics["net_profit_factor"],
-            net_expectancy=oos_fin_metrics["net_expectancy"],
-            gross_sharpe=oos_fin_metrics["gross_sharpe"],
-            gross_profit_factor=oos_fin_metrics["gross_profit_factor"],
-            gross_expectancy=oos_fin_metrics["gross_expectancy"],
-        )
-        fold_metrics.append(fm)
-        last_booster = booster
         logger.info(
-            f"Fold {fi}: train_acc={train_acc:.4f}, val_acc={val_acc:.4f}, "
-            f"oos_sharpe={oos_fin_metrics['sharpe']:.4f}, "
-            f"oos_win_rate={oos_fin_metrics['win_rate']:.4f}, "
-            f"oos_max_dd={oos_fin_metrics['max_drawdown']:.4f}, "
-            f"oos_pf={oos_fin_metrics['profit_factor']:.4f}, "
-            f"net_sharpe={oos_fin_metrics['net_sharpe']:.4f}, "
-            f"net_expectancy={oos_fin_metrics['net_expectancy']:.6f}, "
-            f"time={elapsed:.3f}s"
+            "[%s] Fold %d: train_acc=%.4f, val_acc=%.4f, "
+            "oos_sharpe=%.4f, oos_win_rate=%.4f, "
+            "net_sharpe=%.4f, net_expectancy=%.6f, time=%.3fs",
+            mode_str, f_fi, f_train_acc, f_val_acc,
+            f_oos_fin["sharpe"], f_oos_fin["win_rate"],
+            f_oos_fin["net_sharpe"], f_oos_fin["net_expectancy"], f_elapsed,
         )
+
+        return {
+            "skip": False,
+            "fold_index": f_fi,
+            "train_count": len(f_train_idx),
+            "val_count": len(f_val_idx),
+            "oos_count": len(f_oos_idx),
+            "train_accuracy": f_train_acc,
+            "val_accuracy": f_val_acc,
+            "train_logloss": f_train_logloss,
+            "val_logloss": f_val_logloss,
+            "sharpe": f_oos_fin["sharpe"],
+            "win_rate": f_oos_fin["win_rate"],
+            "max_drawdown": f_oos_fin["max_drawdown"],
+            "profit_factor": f_oos_fin["profit_factor"],
+            "total_trades": f_oos_fin["total_trades"],
+            "long_trades": f_oos_fin["long_trades"],
+            "short_trades": f_oos_fin["short_trades"],
+            "no_trade_count": f_oos_fin["no_trade_count"],
+            "accuracy_gap": f_acc_gap,
+            "logloss_gap": f_ll_gap,
+            "net_sharpe": f_oos_fin["net_sharpe"],
+            "net_profit_factor": f_oos_fin["net_profit_factor"],
+            "net_expectancy": f_oos_fin["net_expectancy"],
+            "gross_sharpe": f_oos_fin["gross_sharpe"],
+            "gross_profit_factor": f_oos_fin["gross_profit_factor"],
+            "gross_expectancy": f_oos_fin["gross_expectancy"],
+            "overfit_flags": f_overfit_entries,
+            "booster": f_booster,
+        }
+
+    # Dispatch folds in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_workers) as executor:
+        raw_results = list(executor.map(_train_one_fold, folds))
+
+    # Collect results (sorted by fold_index for deterministic ordering)
+    raw_results.sort(key=lambda r: r["fold_index"])
+    for r in raw_results:
+        if r.get("skip", False):
+            continue
+        fold_metrics.append(FoldMetrics(
+            fold_index=r["fold_index"],
+            train_count=r["train_count"],
+            val_count=r["val_count"],
+            oos_count=r["oos_count"],
+            train_accuracy=r["train_accuracy"],
+            val_accuracy=r["val_accuracy"],
+            train_logloss=r["train_logloss"],
+            val_logloss=r["val_logloss"],
+            sharpe=r["sharpe"],
+            win_rate=r["win_rate"],
+            max_drawdown=r["max_drawdown"],
+            profit_factor=r["profit_factor"],
+            total_trades=r["total_trades"],
+            long_trades=r["long_trades"],
+            short_trades=r["short_trades"],
+            no_trade_count=r["no_trade_count"],
+            accuracy_gap=r["accuracy_gap"],
+            logloss_gap=r["logloss_gap"],
+            net_sharpe=r["net_sharpe"],
+            net_profit_factor=r["net_profit_factor"],
+            net_expectancy=r["net_expectancy"],
+            gross_sharpe=r["gross_sharpe"],
+            gross_profit_factor=r["gross_profit_factor"],
+            gross_expectancy=r["gross_expectancy"],
+        ))
+        overfit_flags.extend([
+            OverfitFlag(**flag_data)
+            for flag_data in r.get("overfit_flags", [])
+        ])
+        # Keep the last booster for feature importance
+        if r.get("booster") is not None:
+            last_booster = r["booster"]
 
     # ------------------------------------------------------------------
     # 6b. Feature importance
@@ -1185,6 +1255,14 @@ def run_walk_forward(
         "folds_passing": folds_passing,
         "majority_pass": majority_pass,
         "pass_ratio": pass_ratio,
+
+        # Forward-compat keys for target_validator.py consumption.
+        # target_validator.py:_extract_metrics fallbacks read
+        # aggregate_metrics.total_oos_trades when metrics/oos_summary missing.
+        "active_trade_count": total_oos_trades,
+        "exposure_pct": (
+            (total_oos_trades / total_bars * 100) if total_bars else 0.0
+        ),
     }
 
     config_summary = {
