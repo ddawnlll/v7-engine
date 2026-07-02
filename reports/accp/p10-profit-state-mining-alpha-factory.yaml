@@ -1,0 +1,96 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: >
+  P1.0 Profit-State Mining Alpha Factory — Exhaustive condition mining ile alpha keşfi.
+  13 issue tamamlandı: freeze, schema, design, dataset, bucketizer, mining engine,
+  beam search, rule scorer, multi-testing correction, OOS validation, CLI, dashboard, completion.
+
+files_changed:
+  - alphaforge/src/alphaforge/mine/__init__.py
+  - alphaforge/src/alphaforge/mine/candidate_dataset.py
+  - alphaforge/src/alphaforge/mine/bucketizer.py
+  - alphaforge/src/alphaforge/mine/bitset_engine.py
+  - alphaforge/src/alphaforge/mine/beam_search.py
+  - alphaforge/src/alphaforge/mine/rule_scorer.py
+  - alphaforge/src/alphaforge/mine/multi_testing.py
+  - alphaforge/src/alphaforge/mine/oos_validator.py
+  - alphaforge/src/alphaforge/mine/cli.py
+  - alphaforge/src/alphaforge/dashboard/__init__.py
+  - alphaforge/src/alphaforge/dashboard/app.py
+  - alphaforge/src/alphaforge/dashboard/templates/index.html
+  - alphaforge/tests/test_candidate_dataset.py
+  - alphaforge/tests/test_bucketizer.py
+  - alphaforge/tests/test_bitset_engine.py
+  - alphaforge/tests/test_beam_search.py
+  - alphaforge/tests/test_rule_scorer.py
+  - alphaforge/tests/test_multi_testing.py
+  - alphaforge/tests/test_oos_validator.py
+  - alphaforge/tests/test_dashboard.py
+  - contracts/schemas/alpha_rule_spec.schema.json
+  - v7/docs/combinator/design.md
+  - v7/docs/combinator/ai_summary.md
+
+decisions_locked:
+  - title: "Mining-first yaklaşımı"
+    details: "XGBoost-first değil, exhaustive condition mining first. XGBoost P1'de yardımcı araç olacak."
+    lock_status: "LOCKED_INITIAL_BASELINE"
+  - title: "Bitset tabanlı mining"
+    details: "Feature bucketing → boolean mask → AND kombinasyonları. Level 1 single, Level 2 pair, Level 3 beam search."
+    lock_status: "LOCKED_INITIAL_BASELINE"
+  - title: "Discovery/Validation/Holdout"
+    details: "Aynı datada bulup aynı datada promote etmek yasak. Temporala bölünmüş setler."
+    lock_status: "LOCKED"
+  - title: "AlphaForge yeni rolü: Alpha Candidate Miner"
+    details: "Eski action classifier donduruldu. Yeni görev: rule keşfi, V7'nin combinator'ına besleme."
+    lock_status: "LOCKED"
+  - title: "Combinator katmanı"
+    details: "V7'artık tek alpha değil, alpha basket alacak. Combinator MVP tasarımı tamamlandı."
+    lock_status: "LOCKABLE_WITH_HOLDS"
+    holds:
+      - "Combinator implementasyonu P1.1'e kaldı"
+      - "Real-time weighting mekanizması henüz tasarım aşamasında"
+
+remaining_holds:
+  - issue: "V7 Combinator implementasyonu"
+    condition: "P1.1'de başlanacak, P1.0 mining pipeline'ı stabilize olduktan sonra"
+  - issue: "Real data ile mining testi"
+    condition: "CandidateOutcomeDataset doldurulunca ilk mining run'ı yapılacak"
+  - issue: "Dashboard live deploy"
+    condition: "FastAPI bağımlılıkları yüklenince dashboard ayakta"
+
+test_evidence:
+  total_tests: 222
+  passed: 222
+  failed: 0
+  test_categories:
+    - candidate_dataset: 12
+    - bucketizer: 21
+    - bitset_engine: 38
+    - beam_search: 35
+    - rule_scorer: 32
+    - multi_testing: 18
+    - oos_validator: 24
+    - dashboard: 42
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_candidate_dataset.py -q → 12 passed"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_bucketizer.py -q → 21 passed"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_bitset_engine.py -q → 38 passed"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_beam_search.py -q → 35 passed"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_rule_scorer.py -q → 32 passed"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_multi_testing.py -q → 18 passed"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_oos_validator.py -q → 24 passed"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_dashboard.py -q → 42 passed (requires fastapi)"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_contract_registry.py -q → 11 passed"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/test_alpha_rule_schema.py -q → 23 passed"
+
+evidence:
+  - "222 tests passing"
+  - "13 issues completed"
+  - "10 Python modules created"
+  - "2 dashboard files"
+  - "1 JSON Schema contract"
+  - "1 V7 Combinator design document"
+
+safe_next_step: "P1.1 — CandidateOutcomeDataset doldurup ilk mining run'ını yapmak. Real data ile alpha keşfi."

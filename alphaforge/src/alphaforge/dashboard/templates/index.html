@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background: #0f172a; color: #e2e8f0; padding: 24px; }
+    h1 { font-size: 1.5rem; color: #f8fafc; margin-bottom: 24px; }
+    h2 { font-size: 1rem; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .card { background: #1e293b; border-radius: 8px; padding: 16px; border: 1px solid #334155; }
+    .card h3 { font-size: 0.75rem; color: #64748b; margin-bottom: 4px; }
+    .card .value { font-size: 1.75rem; font-weight: 700; color: #f8fafc; }
+    .card .sub { font-size: 0.8rem; color: #94a3b8; margin-top: 4px; }
+    .ok { color: #22c55e; }
+    .warn { color: #eab308; }
+    .err { color: #ef4444; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #334155; font-size: 0.85rem; }
+    th { color: #64748b; font-weight: 500; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;
+             background: #334155; color: #94a3b8; }
+    .badge.ok { background: #166534; color: #22c55e; }
+    .badge.warn { background: #713f12; color: #eab308; }
+    .progress-bar { width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+    .progress-fill { height: 100%; background: #3b82f6; border-radius: 4px; transition: width 0.5s; }
+    .progress-fill.ok { background: #22c55e; }
+    .empty-state { text-align: center; padding: 40px; color: #64748b; }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+<h1>🔍 AlphaForge Mining Dashboard</h1>
+
+{% if summary.status == "no_data" %}
+<div class="card empty-state">
+  <div class="icon">📡</div>
+  <h3>No Mining Data Yet</h3>
+  <p>Run the mining pipeline to see results here.</p>
+  <pre style="margin-top:12px;font-size:.8rem;">python -m alphaforge.mine.cli --candidates data/candidates/v001.parquet</pre>
+</div>
+{% else %}
+
+<!-- Row 1: Mining Overview -->
+<h2>Mining Overview</h2>
+<div class="grid">
+  <div class="card">
+    <h3>Status</h3>
+    <div class="value {% if summary.status == 'complete' %}ok{% elif summary.status == 'running' %}warn{% else %}err{% endif %}">
+      {{ summary.status | upper }}
+    </div>
+    <div class="sub">{{ summary.steps_completed | length }} / 8 steps</div>
+  </div>
+  <div class="card">
+    <h3>Total Candidates</h3>
+    <div class="value">{{ summary.total_candidates | default(0) }}</div>
+    <div class="sub">in dataset</div>
+  </div>
+  <div class="card">
+    <h3>Rules Discovered</h3>
+    <div class="value">{{ summary.total_rules_discovered | default(0) }}</div>
+    <div class="sub">
+      L1: {{ summary.results.level1_count | default(0) }} |
+      L2: {{ summary.results.level2_count | default(0) }} |
+      L3: {{ summary.results.level3_count | default(0) }}
+    </div>
+  </div>
+  <div class="card">
+    <h3>Elapsed</h3>
+    <div class="value">{{ "%.1f" | format(summary.elapsed_seconds | default(0)) }}s</div>
+    <div class="sub">last run</div>
+  </div>
+</div>
+
+<!-- Row 2: Validation -->
+<h2>Validation</h2>
+<div class="grid">
+  <div class="card">
+    <h3>Passes MTC</h3>
+    <div class="value ok">{{ summary.results.passes_correction | default(0) }}</div>
+    <div class="sub">of {{ summary.total_rules_discovered | default(0) }} rules</div>
+  </div>
+  <div class="card">
+    <h3>Fails MTC</h3>
+    <div class="value err">{{ summary.results.fails_correction | default(0) }}</div>
+    <div class="sub">filtered out</div>
+  </div>
+  <div class="card">
+    <h3>OOS Sharpe</h3>
+    <div class="value">{{ "%.2f" | format(summary.results.oos.sharpe | default(0)) }}</div>
+    <div class="sub">holdout performance</div>
+  </div>
+  <div class="card">
+    <h3>Exported Specs</h3>
+    <div class="value">{{ summary.results.exported_specs | default(0) }}</div>
+    <div class="sub">AlphaRuleSpec artifacts</div>
+  </div>
+</div>
+
+<!-- Row 3: Mining Depth -->
+<h2>Mining Depth</h2>
+<div class="grid">
+  <div class="card">
+    <h3>Total Conditions</h3>
+    <div class="value">{{ summary.total_conditions | default(0) }}</div>
+    <div class="sub">in search space</div>
+  </div>
+  <div class="card">
+    <h3>Conditions Explored</h3>
+    {% set explored = 0 %}
+    {% if summary.results.level1_count %}
+      {% set explored = summary.results.level1_count %}
+    {% endif %}
+    <div class="value">{{ explored }}</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:{{ explored / 100 }}%"></div></div>
+  </div>
+  <div class="card">
+    <h3>Active Steps</h3>
+    <div class="value">{{ summary.steps_completed | length }}</div>
+    <div>
+      {% for step in summary.steps_completed %}
+        <span class="badge ok">{{ step }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <h3>Config</h3>
+    <div class="sub">Min support: {{ summary.min_support }}</div>
+    <div class="sub">Levels: {{ summary.levels | join(", ") }}</div>
+    <div class="sub">Top-K: 500</div>
+  </div>
+</div>
+
+<!-- Last run info -->
+<div class="card" style="margin-top: 8px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <span style="color:#64748b;font-size:0.8rem;">Last run: {{ summary.elapsed_seconds | default(0) }}s</span>
+    <span style="color:#64748b;font-size:0.8rem;">
+      {% if summary.status == "complete" %}
+        <span class="ok">●</span> Pipeline OK
+      {% elif summary.status == "no_rules_found" %}
+        <span class="warn">●</span> No rules
+      {% else %}
+        <span class="err">●</span> Failed
+      {% endif %}
+    </span>
+  </div>
+</div>
+
+{% endif %}
+
+<script>
+// Auto-refresh every 15 seconds
+setTimeout(() => location.reload(), 15000);
+</script>
+</body>
+</html>

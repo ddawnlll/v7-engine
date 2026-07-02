@@ -7,9 +7,6 @@ All tests are deterministic (same seed = same output). These tests IMPORT
 xgboost and numpy (training environment).
 """
 from __future__ import annotations
-import pytest
-pytestmark = pytest.mark.integration
-
 
 import math
 

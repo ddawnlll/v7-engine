@@ -200,6 +200,7 @@ class TestFundingGroup:
             "funding_rate_ma_N",
             "funding_rate_vol_N",
             "funding_rate_zscore_N",
+            "funding_rate_change_N",
             "open_interest_proxy_N",
             "funding_oi_divergence_N",
         }
