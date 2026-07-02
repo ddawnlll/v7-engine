@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import lightgbm as lgb
 import numpy as np
+from alphaforge.features.mtf import compute_mtf_features
 
 logging.basicConfig(
     level=logging.INFO,
@@ -736,7 +737,31 @@ def main():
     else:
         feature_groups = [g.strip() for g in feature_groups_arg.split(",")]
     X, feat_names = compute_features_selected(ohlcv, mode, feature_groups=feature_groups)
-    print(f"  {X.shape[1]} feature columns, {X.shape[0]} rows")
+    print(f"  {X.shape[1]} base feature columns, {X.shape[0]} rows")
+
+    # Add multi-timeframe + funding features if requested
+    if args.features == "all" or "mtf" in args.features.lower():
+        print("  Computing multi-timeframe features...")
+        mtf_feats = compute_mtf_features(ohlcv)
+        if mtf_feats:
+            mtf_names = sorted(mtf_feats.keys())
+            mtf_arr_list = []
+            for k in mtf_names:
+                col = mtf_feats[k][:X.shape[0]].copy()
+                # Forward-fill NaN then replace remaining with 0
+                mask = np.isnan(col)
+                if mask.any():
+                    last_valid = 0.0
+                    for j in range(len(col)):
+                        if np.isnan(col[j]):
+                            col[j] = last_valid
+                        else:
+                            last_valid = col[j]
+                mtf_arr_list.append(col)
+            mtf_arr = np.column_stack(mtf_arr_list)
+            X = np.column_stack([X, mtf_arr])
+            feat_names = feat_names + mtf_names
+            print(f"  Added {len(mtf_names)} MTF features (total: {X.shape[1]})")
 
     # Align lengths (labels are shorter due to max_hold lookahead)
     cut = min(X.shape[0], len(y_int))
