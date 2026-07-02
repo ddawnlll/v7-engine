@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "v7-engine"
+version = "0.0.0"
+description = "V7 Engine — Anomaly-driven trading engine"
+requires-python = ">=3.12"
+authors = [{name = "Erfolg", email = "mail@erfolg.tech"}]
+license = {text = "Proprietary"}
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "lib*", "cli*", "runtime*", "simulation*",
+    "v7*", "integration*", "configs*",
+]
+
+[tool.setuptools.package-dir]
+alphaforge = "alphaforge/src/alphaforge"
+
+[tool.pytest.ini_options]
+pythonpath = ["alphaforge/src"]
+testpaths = [
+    "lib/tests",
+    "integration/tests",
+    "simulation/tests",
+    "runtime/tests",
+    "v7/tests",
+]
+norecursedirs = [
+    "node_modules", "interface", "data", "data_lake",
+    "docker", ".claude", ".github", "scripts", "reports", "docs",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+ignore = ["E501", "F401", "E402"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+no_strict_optional = true

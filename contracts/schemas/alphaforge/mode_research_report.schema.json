@@ -102,77 +102,46 @@
     },
     "metrics": {
       "type": "object",
-      "description": "Aggregate performance metrics with confidence intervals. P0.8E: oos_expectancy_r, oos_sharpe, oos_trade_count required.",
+      "description": "Aggregate performance metrics with confidence intervals. P0.8E-FIX (2026-07-02): IC/Rank IC added as PRIMARY AlphaForge metrics. Trade-level metrics are V7-consumption — NOT AlphaForge success metrics. See v7/docs/pipeline/evaluation.md Layer Metric Ownership.",
       "required": [
-        "oos_expectancy_r", "oos_sharpe", "oos_trade_count",
+        "oos_ic", "oos_rank_ic", "oos_trade_count",
         "active_trade_count", "total_net_R", "exposure_pct"
       ],
       "properties": {
-        "oos_sharpe": { "$ref": "#/definitions/MetricWithCI" },
-        "oos_expectancy_r": { "$ref": "#/definitions/MetricWithCI" },
-        "oos_win_rate": { "$ref": "#/definitions/MetricWithCI" },
-        "oos_profit_factor": { "$ref": "#/definitions/MetricWithCI" },
-        "oos_max_drawdown_r": { "$ref": "#/definitions/MetricWithCI" },
+        "oos_ic": { "$ref": "#/definitions/MetricWithCI", "description": "Information Coefficient — PRIMARY AlphaForge metric. Rank correlation between predicted R and realized R." },
+        "oos_rank_ic": { "$ref": "#/definitions/MetricWithCI", "description": "Rank IC — PRIMARY AlphaForge metric. Does AlphaForge correctly rank-order symbols by expected return?" },
+        "oos_calibration_error": { "type": "number", "description": "ECE — Expected Calibration Error." },
+        "oos_mce": { "type": "number", "description": "MCE — Maximum Calibration Error." },
+        "oos_ic_stability": { "type": "number", "description": "Std dev of IC across folds — lower = more stable signal." },
+        "oos_sharpe": { "$ref": "#/definitions/MetricWithCI", "description": "V7-consumption metric — NOT AlphaForge success metric." },
+        "oos_expectancy_r": { "$ref": "#/definitions/MetricWithCI", "description": "V7-consumption metric." },
+        "oos_win_rate": { "$ref": "#/definitions/MetricWithCI", "description": "V7-consumption metric." },
+        "oos_profit_factor": { "$ref": "#/definitions/MetricWithCI", "description": "V7-consumption metric." },
+        "oos_max_drawdown_r": { "$ref": "#/definitions/MetricWithCI", "description": "V7-consumption metric." },
         "oos_trade_count": { "type": "integer" },
-        "active_trade_count": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Number of OOS trades that are active (LONG_NOW + SHORT_NOW)."
-        },
-        "long_trade_count": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Number of OOS LONG_NOW trades."
-        },
-        "short_trade_count": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Number of OOS SHORT_NOW trades."
-        },
-        "no_trade_count": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Number of OOS NO_TRADE decisions."
-        },
-        "total_gross_R": {
-          "type": "number",
-          "description": "Sum of gross R-multiples across all OOS decisions."
-        },
-        "total_net_R": {
-          "type": "number",
-          "description": "Total gross R minus total costs (fee + slippage + funding)."
-        },
-        "exposure_pct": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100,
-          "description": "Percentage of total decisions that were active trades."
-        },
-        "avg_net_R_per_active_trade": {
-          "type": "number",
-          "description": "Average net R per active trade. 0.0 when active_trade_count=0 (not NaN)."
-        },
+        "active_trade_count": { "type": "integer", "minimum": 0, "description": "Number of OOS trades that are active (LONG_NOW + SHORT_NOW)." },
+        "long_trade_count": { "type": "integer", "minimum": 0, "description": "Number of OOS LONG_NOW trades." },
+        "short_trade_count": { "type": "integer", "minimum": 0, "description": "Number of OOS SHORT_NOW trades." },
+        "no_trade_count": { "type": "integer", "minimum": 0, "description": "Number of OOS NO_TRADE decisions." },
+        "total_gross_R": { "type": "number", "description": "Sum of gross R-multiples across all OOS decisions." },
+        "total_net_R": { "type": "number", "description": "Total gross R minus total costs (fee + slippage + funding)." },
+        "exposure_pct": { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of total decisions that were active trades." },
+        "avg_net_R_per_active_trade": { "type": "number", "description": "Average net R per active trade. 0.0 when active_trade_count=0 (not NaN)." },
         "per_fold_metrics": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "fold": { "type": "integer" },
-              "sharpe": { "type": "number" },
-              "expectancy_r": { "type": "number" },
-              "win_rate": { "type": "number" },
+              "ic": { "type": "number", "description": "Per-fold Information Coefficient." },
+              "rank_ic": { "type": "number", "description": "Per-fold Rank IC." },
+              "sharpe": { "type": "number", "description": "V7-consumption per-fold metric." },
+              "expectancy_r": { "type": "number", "description": "V7-consumption per-fold metric." },
+              "win_rate": { "type": "number", "description": "V7-consumption per-fold metric." },
               "trade_count": { "type": "integer" }
             }
           }
         },
-        "active_trade_count": { "type": "integer" },
-        "long_trade_count": { "type": "integer" },
-        "short_trade_count": { "type": "integer" },
-        "no_trade_count": { "type": "integer" },
-        "total_gross_R": { "type": "number" },
-        "total_net_R": { "type": "number" },
-        "exposure_pct": { "type": "number" },
-        "avg_net_R_per_active_trade": { "type": "number" },
         "total_fee_cost_R": { "type": "number" },
         "total_slippage_cost_R": { "type": "number" },
         "total_funding_cost_R": { "type": "number" },

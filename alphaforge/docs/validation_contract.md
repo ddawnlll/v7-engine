@@ -69,17 +69,24 @@ Anchored: Train window expands forward. Rolling: Train window of fixed size roll
 
 ## OOS Summary
 
+**Layer-appropriate metrics (corrected 2026-07-02):** AlphaForge measures signal quality, not trade outcomes. Trade-level metrics (Sharpe, win rate, profit factor, drawdown) belong to V7, not AlphaForge. See `v7/docs/pipeline/evaluation.md` Layer Metric Ownership section.
+
 The aggregate OOS summary must include:
 
-| Metric | Description |
-|--------|-------------|
-| OOS Sharpe ratio | Risk-adjusted return on OOS period |
-| OOS win rate | % of trades with positive R |
-| OOS expectancy | Average R per trade |
-| OOS max drawdown | Maximum peak-to-trough in R |
-| OOS profit factor | Gross gain / gross loss |
-| OOS trades count | Number of decision points |
-| OOS stability | Variance of metrics across folds |
+| Metric | Description | Layer |
+|--------|-------------|-------|
+| **OOS IC** | Information Coefficient — rank correlation between predicted R and realized R | AlphaForge (primary) |
+| **OOS Rank IC** | Rank IC — does AlphaForge correctly rank-order symbols by expected return? | AlphaForge (primary) |
+| **OOS calibration error** | ECE/MCE — are probability estimates well-calibrated? | AlphaForge (primary) |
+| **OOS signal stability** | Variance of IC across folds — lower is better | AlphaForge (primary) |
+| **OOS regime consistency** | IC by regime: TREND_UP/DOWN/RANGE/TRANSITION | AlphaForge (primary) |
+| **OOS feature stability** | Top feature overlap across folds | AlphaForge (secondary) |
+| OOS expectancy | Average R per trade | V7 (reported for V7 consumption, NOT AlphaForge success metric) |
+| OOS trades count | Number of decision points | Informational |
+| OOS profit factor | Gross gain / gross loss | V7 (reported for V7 consumption) |
+| OOS Sharpe ratio | Risk-adjusted return | V7 (reported for V7 consumption) |
+| OOS win rate | % of trades with positive R | V7 (reported for V7 consumption) |
+| OOS max drawdown | Maximum peak-to-trough in R | V7 (reported for V7 consumption) |
 
 ---
 

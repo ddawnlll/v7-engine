@@ -151,7 +151,31 @@
 - LOCKED does not mean immutable — it means "requires evidence to change."
 - Decisions are not preferences — they are binding constraints on implementation.
 
+---
+
+### DEC-AF-011 — Layer Metric Ownership
+
+**Decision:** Each layer owns distinct metrics and must not be evaluated by another layer's metrics.
+
+| Layer | Owns | Does NOT Own |
+|-------|------|-------------|
+| Simulation | Outcome truth: realized R, MFE/MAE, cost decomposition | Model accuracy, trade profitability |
+| AlphaForge | Signal quality: **IC, Rank IC, calibration error**, signal stability, regime consistency | Win rate, Sharpe, PF, drawdown |
+| V7 | Trade outcomes: net R, Sharpe, PF, drawdown, regret | Execution quality, signal IC |
+| Runtime | Execution quality: slippage, fill rate, latency, realized vs simulated divergence | Model accuracy, backtest profitability |
+
+**Rationale:** The original combined doc (ai_summary__v7_alphaforge_xgb.md) mixed signal-quality and trade-outcome metrics without layer ownership, causing AlphaForge to be incorrectly evaluated by trade-level metrics (accuracy, win rate, Sharpe) instead of signal-quality metrics (IC, Rank IC). This was the root cause of the "AlphaForge is 10% profitable" confusion — AlphaForge produces signals, not trades.
+
+**Supersedes:** Implicit metric assumptions in ai_summary__v7_alphaforge_xgb.md (superseded), evaluation.md (corrected), validation_contract.md (corrected), report_contracts.md (corrected).
+
+**Locked:** 2026-07-02 (FREEZE_AND_REDESIGN)
+
+**See:** [../../v7/docs/pipeline/evaluation.md](../../v7/docs/pipeline/evaluation.md) (Layer Metric Ownership section)
+
+---
+
 ## Open Holds
 
 - DEC-AF-002/003 depend on P0.7E mode priority alignment (PASS).
 - DEC-AF-010 depends on future funding model implementation.
+- DEC-AF-011 enforcement depends on P0.9A implementation scaffold (update train.py metrics).

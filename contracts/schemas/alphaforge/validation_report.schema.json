@@ -72,10 +72,12 @@
               "train_end": { "type": "string", "format": "date-time" },
               "test_start": { "type": "string", "format": "date-time" },
               "test_end": { "type": "string", "format": "date-time" },
-              "train_sharpe": { "type": "number" },
-              "test_sharpe": { "type": "number" },
-              "test_expectancy_r": { "type": "number" },
-              "test_win_rate": { "type": "number" },
+              "test_ic": { "type": "number", "description": "Per-fold Information Coefficient — PRIMARY AlphaForge metric." },
+              "test_rank_ic": { "type": "number", "description": "Per-fold Rank IC." },
+              "train_sharpe": { "type": "number", "description": "V7-consumption per-fold metric." },
+              "test_sharpe": { "type": "number", "description": "V7-consumption per-fold metric." },
+              "test_expectancy_r": { "type": "number", "description": "V7-consumption per-fold metric." },
+              "test_win_rate": { "type": "number", "description": "V7-consumption per-fold metric." },
               "test_trade_count": { "type": "integer" }
             }
           }
@@ -84,15 +86,31 @@
     },
     "oos_summary": {
       "type": "object",
-      "required": ["oos_expectancy_r", "oos_sharpe", "oos_win_rate", "oos_trade_count", "oos_positive_expectancy"],
+      "description": "OOS summary. P0.8E-FIX (2026-07-02): IC/Rank IC added as primary AlphaForge metrics. Trade-level metrics (Sharpe, win rate) remain for V7 consumption but are no longer required.",
+      "required": ["oos_ic", "oos_rank_ic", "oos_positive_expectancy", "oos_trade_count"],
       "properties": {
-        "oos_sharpe": { "type": "number" },
-        "oos_expectancy_r": { "type": "number" },
-        "oos_win_rate": { "type": "number" },
-        "oos_max_drawdown_r": { "type": "number" },
-        "oos_profit_factor": { "type": "number" },
-        "oos_trade_count": { "type": "integer" },
-        "oos_positive_expectancy": { "type": "boolean" },
+        "oos_ic": { "type": "number", "description": "Information Coefficient — rank correlation between predicted R and realized R. PRIMARY AlphaForge metric." },
+        "oos_rank_ic": { "type": "number", "description": "Rank IC — does AlphaForge correctly rank-order symbols by expected return?" },
+        "oos_calibration_error": { "type": "number", "description": "ECE — Expected Calibration Error for probability estimates." },
+        "oos_mce": { "type": "number", "description": "MCE — Maximum Calibration Error." },
+        "oos_ic_stability": { "type": "number", "description": "Standard deviation of IC across folds — lower is better." },
+        "oos_ic_by_regime": {
+          "type": "object",
+          "description": "IC breakdown by regime: TREND_UP/DOWN/RANGE/TRANSITION.",
+          "properties": {
+            "TREND_UP": { "type": "number" },
+            "TREND_DOWN": { "type": "number" },
+            "RANGE": { "type": "number" },
+            "TRANSITION": { "type": "number" }
+          }
+        },
+        "oos_sharpe": { "type": "number", "description": "V7-consumption metric — NOT AlphaForge's success metric." },
+        "oos_expectancy_r": { "type": "number", "description": "V7-consumption metric." },
+        "oos_win_rate": { "type": "number", "description": "V7-consumption metric." },
+        "oos_max_drawdown_r": { "type": "number", "description": "V7-consumption metric." },
+        "oos_profit_factor": { "type": "number", "description": "V7-consumption metric." },
+        "oos_trade_count": { "type": "integer", "description": "Number of decision points." },
+        "oos_positive_expectancy": { "type": "boolean", "description": "True if OOS expectancy > 0." },
         "fold_stability_score": { "type": "number", "description": "0-1 stability across folds." }
       }
     },

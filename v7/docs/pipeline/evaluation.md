@@ -349,6 +349,34 @@ Minimum tests:
 
 ---
 
+## Layer Metric Ownership
+
+**Critical decision — added 2026-07-02 after FREEZE_AND_REDESIGN RCA.**
+
+Each layer owns distinct metrics. A metric that belongs to one layer must NOT be used to evaluate another layer. This was the root cause of the AlphaForge profitability confusion — trade-level metrics (Sharpe, win rate, PF) were applied to AlphaForge, which is a signal provider, not a trader.
+
+| Layer | Owns These Metrics | Does NOT Own |
+|-------|-------------------|-------------|
+| **Simulation** | Outcome truth: realized R (gross/net), MFE/MAE, stop/target/horizon, cost decomposition, funding outcome | Model accuracy, signal quality, trade profitability, execution quality |
+| **AlphaForge** | Signal quality: **IC** (Information Coefficient), **Rank IC**, calibration error (ECE/MCE), signal stability across folds, regime consistency of signal, MHT survival, incremental information share | Win rate, profit factor, Sharpe ratio, drawdown — these are V7's metrics |
+| **V7** | Trade outcomes: net R, Sharpe, profit factor, max drawdown, risk-adjusted return, regret, no-trade quality, mode-level P&L | Execution quality, signal quality (consumes AlphaForge signal but does NOT replace it) |
+| **Runtime** | Execution quality: slippage vs benchmark, fill rate, latency, realized vs simulated cost divergence, order book impact | Model accuracy, backtest profitability, signal IC |
+
+### Enforcement
+
+1. **AlphaForge validation reports MUST NOT list Sharpe, win rate, or profit factor as primary success metrics.** These are V7-level trade outcomes. AlphaForge reports IC, Rank IC, calibration error, and signal stability.
+2. **V7 evaluation MUST NOT use classification accuracy as a proxy for economic performance.** Accuracy is a diagnostic for AlphaForge's calibration health, not a trade outcome predictor.
+3. **Simulation MUST NOT be judged by model performance.** Simulation is the truth source — it is correct by definition. Discrepancies between simulation and live outcomes belong to the Runtime layer.
+4. **Runtime MUST NOT use backtest profitability as an execution quality metric.** Backtest assumes perfect fills. Runtime measures the gap between simulated and realized outcomes.
+
+### Why This Was Wrong Before
+
+The original `ai_summary__v7_alphaforge_xgb.md` (625KB combined doc, May 2026) defined AlphaForge as a "classifier" and listed trade-level artifacts ("v7_alphaforge_xgb_swing_classifier"). The authority lock (P0.8B, June 2026) correctly separated layer authorities in the architecture docs but never corrected the metric ownership. The code (`train.py`) continued to train a classifier, report accuracy, and compute trade-level metrics — all of which belong to V7, not AlphaForge.
+
+This is now corrected. All docs and code must align to the table above.
+
+---
+
 ## Final Position
 
 Evaluation is where V7 proves that its profitability claims are real. Hybrid modeling is useful only if classification, regression, calibration, regime awareness, and policy together improve economic evidence — independently per mode scope.
