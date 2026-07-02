@@ -642,7 +642,7 @@ def main():
 
     # Step 2: Generate labels
     print("\n[2/6] Generating triple-barrier labels...")
-    y_int, r_vals, label_metrics = generate_labels(ohlcv, mode)
+    y_int, gross_r_vals, r_vals, label_metrics = generate_labels(ohlcv, mode)
 
     # Step 3: Compute features
     print("\n[3/6] Computing features...")
