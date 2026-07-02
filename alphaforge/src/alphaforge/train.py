@@ -730,6 +730,20 @@ def main():
 
 if __name__ == "__main__":
     metrics = main()
+
+    # Render the color terminal dashboard
+    try:
+        repo_root = Path(__file__).resolve().parent.parent.parent.parent
+        viz_path = repo_root / "scripts" / "visualize_results.py"
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("viz", viz_path)
+        if spec and spec.loader:
+            viz = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(viz)
+            viz.render_dashboard(metrics)
+    except Exception:
+        pass
+
     # Print structured output for machine consumption
     print("\n---STRUCTURED_RESULTS---")
     print(json.dumps({

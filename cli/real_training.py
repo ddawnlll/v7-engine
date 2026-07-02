@@ -524,6 +524,65 @@ def main():
     run_index.write()
     print(f"  Run Index:          {run_index.index_path}")
 
+    # ── Render terminal dashboard ────────────────────────────────
+    try:
+        # Build flat metrics dict from available pipeline data
+        r_exps = [r.get("r_expectancy", 0.0) for r in wfv]
+        mean_r = float(np.mean(r_exps)) if r_exps else 0.0
+        std_r = float(np.std(r_exps, ddof=1)) if len(r_exps) > 1 else 0.0
+        pipeline_sharpe = mean_r / std_r * np.sqrt(len(r_exps)) if std_r > 0 else 0.0
+
+        train_accs = [r.get("train_accuracy", 0.0) for r in wfv]
+        avg_train_acc = float(np.mean(train_accs)) if train_accs else 0.0
+        val_accs_full = [r.get("val_accuracy", 0.0) for r in wfv]
+        corr = float(np.corrcoef(train_accs, val_accs_full)[0, 1]) if len(train_accs) >= 2 else 0.0
+        overfit_gap = avg_train_acc - avg_val_accuracy
+
+        if overfit_gap > 0.3 and corr < 0.5:
+            pbo_risk = "HIGH"
+        elif overfit_gap > 0.15:
+            pbo_risk = "MODERATE"
+        else:
+            pbo_risk = "LOW"
+
+        viz_metrics = {
+            "mode": mode,
+            "accuracy": round(float(avg_val_accuracy), 4),
+            "train_accuracy": round(float(avg_train_acc), 4),
+            "accuracy_stability": round(float(stability_score), 4),
+            "sharpe_ratio": round(float(pipeline_sharpe), 4),
+            "overfit_gap": round(float(overfit_gap), 4),
+            "train_oos_correlation": round(float(corr), 4),
+            "pbo_risk": pbo_risk,
+            "feature_count": int(n_feat),
+            "n_samples": sum(r.get("n_val", 0) for r in wfv),
+            "n_folds": len(wfv),
+            "total_active_trades": int(total_active),
+            "total_long": int(total_long),
+            "total_short": int(total_short),
+            "total_no_trade": int(total_no_trade),
+            "exposure_pct": round(float(exposure_pct), 2),
+            "confidence_threshold": 0.55,
+            "low_conf_rate_pct": 0.0,
+            "cost_decomposition": {
+                "fee_pct": fee_pct,
+                "round_trip_cost_bps": round(fee_pct * 2, 2),
+                "round_trip_cost_r": round(fee_pct * 2 / 100, 6),
+            },
+            "net_expectancy_r": round(float(mean_r), 6),
+            "gross_expectancy_r": round(float(mean_r), 6),
+            "features": feat_names if isinstance(feat_names, list) else list(feat_names)[:10],
+        }
+        _viz_script = Path(__file__).resolve().parent.parent / "scripts" / "visualize_results.py"
+        import importlib.util
+        _spec = importlib.util.spec_from_file_location("_viz", str(_viz_script))
+        if _spec and _spec.loader:
+            _mod = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_mod)
+            _mod.render_dashboard(viz_metrics)
+    except Exception:
+        pass
+
 
 if __name__ == "__main__":
     main()

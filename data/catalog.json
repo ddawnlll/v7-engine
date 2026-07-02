@@ -4445,6 +4445,1482 @@
       "row_count": 744,
       "start_ts": 0,
       "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "bde0276aca69d3f53bfb2c6c751fd020fbcd8f1eb8dcfb97cab6a73e4ce08885",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.745897+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "b282db2c453922854bed27e28c0ac4df1ba985d2b89f02e27691c594c6228967",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.746085+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "fcd2055b7b0fdf5c41515cdad13496fa9f9df5545a51e3cc58d7fc4537d1715b",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.746244+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "69dbc1d65e04cf3c18becee762ab93c1f289d482934209ecc62a3487242b7c27",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.746396+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "6df8722f218c62f5116be59a840cb85af91c527e8d58d70c4394cd6ec77e2e97",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.746546+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "1ea04d2b0b279d0da4e7a125feaf579eefbe228d01cfbc02ab50a00a0a635f74",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.746694+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "78a32fca7c436f546cb9f632524a0e14345fe8c142eda5448253f5e62e326161",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.746857+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "52b4599ffbf5dfe6e54d668035748aee411c384de53be524b81177a1057d1f7b",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.747019+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "b82015ab474142eeda0c44dd5a41cff5f59e975e5276053fdbce3d424f310917",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.747173+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "cd15092663078b64791f66764adc25ee29c874033208864f87da6652327f1f36",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.747317+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "c76b38e07595907bcb2339dc52ac25222c5251212a341b3aca0a059a56c9bba7",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.747457+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "b07c724b125842f3c92d0eb9020f41791013c103be2b3f9dd964576f4a7a0370",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.747607+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "e50f62f454eaff894030506faed6e78f05dd94d021849c262f71fb404a7b3a20",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.747806+00:00",
+      "interval": "1h",
+      "row_count": 2,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "e50f62f454eaff894030506faed6e78f05dd94d021849c262f71fb404a7b3a20",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.747980+00:00",
+      "interval": "1h",
+      "row_count": 2,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "5abc5b05d1a4fb3b0465e7b3728570efcd921e20ddd4f3205b295e523012e4cf",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.748130+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "7179deeaeabb7c3007c5bcdc288af9a9e439042c65ae6b3d97a3fa35b276715c",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.748273+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "a18dc00eff281acd833750c515486b991a5315e1596c2980c5682b78479abcdf",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.748414+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "8f01ddbfb4f77f1eafd07040242e789714a28e64a6dd857937afa12a9da493eb",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.748554+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "70bfab285619a6a18f92190705ddb11aa2b5b6915fd593826ea80e78b60526e2",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.748695+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "07ee0d36f176f5885f3d645690cd8171a63342ae7d2052379c5743a91a69b3fc",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.748859+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "e741094c0eb6859abb7c003eb9ed883772bc075a8992cc2925946adc37c03551",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.749022+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "dad9d5ed36127d666d1cd37189b538c711ee74dd9e9aa1d941f79691bb3cc3f1",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.749169+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "02a83d41fcd8fb736291f350e569781c8856c8b35151e65e7713847a218b6f67",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.749310+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "e951ea28c2049f22c8f29d8161751c27b64815a7af86d1ebf6c551240fa5f65b",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.749451+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "5b46c67348b47ad0a92f4d363d134923f6b17ba379646a1244cd38cbe98254db",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.749663+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "109645f622212ab4b2aff03556a203ae162f5042956615308b91e61c0249f704",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.749805+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "da750b56aa5659431a153cc342659ca102be247f5b1e606ebbd00c918d0ec70f",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.749976+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "c347d02abc4cd34eb70d6ae72f8ebfe89f431f4d8148cba9b503405067cc948e",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.750122+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "a85c09e36748d1722aec20e865ff2613a8f523872cc91464dd7a8607e35b05e6",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.750261+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "835254f61bf2c094c997f3e660886a4d58078e350d3b1437ffbeed7ff0acb045",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.750398+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "8cc8aecffc5f2ad69af8a6f0e503f9098eabc31e3b52b3447d8f74f7bd696206",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.750536+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "fb07cc31ab6d15310ee18a84d3a95cf747735c14bf97bc619f2bf59894711d78",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.750675+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "7f342f6e4a5cd300ba441e74d3ffdd788d657e95ec4b1100c33367265cb8844c",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.750813+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "010b6c3b51636e87c97487034ff7043d12a75f86d016e19a3a5c59cd75004b44",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.750951+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "afd8c07eaddb9cdbafbd03950b9bafc7091b429a62b916328a198cce44cd832c",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.751087+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "41159fd610e20e1b21001a96a716e6c4dfb0f62c344ce43482bec3eda9370c3e",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.751327+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "b370b600e61f3ff2f53beeb32c282fe94a59d0931373b809f3dc1391ae5dda2b",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.751635+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "93bc26cd6b1cb12296850075c6eb2b83a8cd2cdcd13272ec39849886ff103546",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.751822+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "1ab3a1b1023463f50c1b922a4204dc54348f78a4f8d69d8bdfb0734518f97383",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.752183+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "b32f486141a6fe75445f69776955f0ee14b42a85a9c7f69d587e80180dd369f1",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.752366+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "3572d38d977633f247b2ed64a8de80b884249b27766bc775bf6557e93ad5aca4",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.752519+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BTCUSDT"
+    },
+    {
+      "checksum": "ff1bebb40faf16daf7ec0bce9f1a6333856e4f7b8a677fe5feb1fff72dec75e5",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.752801+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "839d5597fa20bd4f9580c66707c30ab299b693804374428695149c3953eb1056",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.752955+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "c366e3f54b3b79bbe1a0efd67b5a5abf6c661bceeeb8fa7451ec87e26ddf99c7",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.753111+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "f21df9b7064d3f2dd38ae6986710beb400cf812d4326c43eccdfbcc532bb525e",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.753313+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "e81f5a41a75e317dd84ebb1b14c5a04259c69dd96a5c6dfafbfa831ff9adf75f",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.753474+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "33db6a73e963eec04c65fa7f5a90e3840c5da467f77938924c5aa59afbf667e4",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.753624+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "159b3d21770d1488879645788904bdcbbf3fcb6639a1f1c1b5986311d6e6aca3",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.753771+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "ac64c8fc40d92978eb12c6865f3ff64fa15eb3fc14ce6f0016e97dce3e2672b4",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.753926+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "e32dde29f4386d7799edb506f52da1b2f8af97bbe3950bfde6969a43c3efc843",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.754070+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "c4d0484b6f55bb94ebb3deee48ee40202b7b2464a1fa60a2e107ab4f23c94188",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.754241+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "34be0413a33a9c648fe6a6bffc1cee8f2f9de53e2fd72e3feaaa673d14e39ae9",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.754398+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "dfa51031074db222737e0b42b4662bd9a4637ee3ec134d5c5259cd0ed0abc52a",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.754547+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "c9f9c5b786636eb7706a4f91681f9929d56aff7f687cc0e3b9dd78b6faa90e29",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.754783+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "a5c4b26bc0cf5e773de3706e8b1db73e92d59b6656e01163c6a164c50da9bef7",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.754959+00:00",
+      "interval": "1h",
+      "row_count": 696,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "fb83ccbda3f5d66147489aed19bcb2de63e08247f1f94ad935fcd050d2afdc4a",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.755307+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "93244f6648e472120abcd09e156d014ed859145e046a3fb1433859cb85a1abb9",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.755529+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "f7ac10fd17133567163ac1d4ae97584a19bf7ad74a12087bca9e05fb963d4a99",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.755731+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "3a08cf812119d25056943058d1b83f3e309fb7c0302c28d987e577696118d3e5",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.755996+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "978fe08af6345fdcf57fadd0bc4566c8da5f2d00bfcca049cde05ebec7f86966",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.756216+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "6833b7dc0d866e271dd3c666642b124297ec4b14a11316bf03855fb27b4f90b3",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.756429+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "bc6bbdaf03970d1c159ab24574f80d85776caca240eb2aa508f131a6140e762b",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.756628+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "230dce374c0b1a1c3de0244a58ef71a10f0c15454907aa89c70b93acd4ff4be9",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.756809+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "d76b2c486f8d195fd47b1bdd5ec3108feb08d0314d5396e762b21d657febadb2",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.756956+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "a9fe9201a1da6ebea9a3677674fddb05ab9d64f7e4154284da3b5dd8ec28a7e6",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.757106+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "3f1907a185e8690bcfe284d66e74b53406a65f150f6a9e61068311cce67df9bf",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.757367+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "8405133c9f76c74a93cb06729a67bc770efca62bb864a5d5b5f5e21b189bfa56",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.757513+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "acba2e8e19c5a06e54d8052ecbbe8fba151ec568e37ff591394891152932e5a7",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.757657+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "3a6e92c4aff9dcd3bdcc0dfd530a45c51a8bd591934b8ef370d78cb9f0e72bdd",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.757799+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "35ac017654092fd8725d8a27e4d20da7d05383f3814cbe8f152494e54c6c211a",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.757944+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "6f062a33770c9553a766ba2c333054fc47c2752d6fbcd03312351672ce0d6e5f",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.758108+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "c08b0c448b252e3ff52a3fe2e10fccc7329bccabd248ccd1324fd719814668ef",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.758281+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "6cbd8a6c1bcadb17d9d7dea6d70453eeda97589022d420e00dd670e9659d6f28",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.758431+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "27d4e88deb8ac699e3670661907f05fe59dddf65f40a670ff9312c9f87bc1e5c",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.758572+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "1b2a46dd32ded4c3ef3b33910cd47f16e7992bdca7afb8c217899ccd1bf2d929",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.758714+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "278951bf87af46f55a5d7f65679081d86ea881ba39bf3e42e86be2e508be29cf",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.758853+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "4f4956be96510de067e31372b0d9d71cad7cb4bdf3858a173ffb25cb6b6e73ab",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.758993+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "4a24c077a6f0896ea5d70dde1f7c79e0c1b164443d86b2b8e4c73b4444789b3e",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.759202+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "d4e408af26f03c863861f81ca4f4e264879d0d07e3e1773552cfd37b2e406f6a",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.759360+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "0f610525a4103cf96bcfb5a155f34c7a33bf561647cc64a7a63f49c79f5e75bf",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.759504+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "c21149a38aecba1a8d94b67de0d49fe57dbd87651e2328de510f4156932e545e",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.759644+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "3cbe78f1c80e7e71f05726b3b3b42da89c93a26d4de3b41b61d44b9286f25aa6",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.759786+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "ETHUSDT"
+    },
+    {
+      "checksum": "045ab3a93df4b49046ba336af79a850fb7f1e0838c6aabc1feec6c3d5b1ba345",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.760080+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "1f0f837125b7726456b48b81c46272fc0529c926827b93a9bb1575bc9fd3b183",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.760271+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "b07fa772fc9ec62d7935c992b14126542132e8b20b97c20a304f6a4f916744cc",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.760456+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "75fc4817218ffd22aa83674e323cb21e17af3512d7fac8673b030edcb46517af",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.760614+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "273dbd1b97d7917a1e28ed36f23a6c4c48350dc32551d96a5a97350a276b1c60",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.760797+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "6ca349023a446cf820273d9ec8232b095212549c8917a6f10fb609d0d93c5175",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.760981+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "b74b23428e77532916b3f09c11ceee2229bad288c6d3441690d767de01f1fea8",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.761136+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "2ad36ae1ea3b0e246d02d2f124f34a7c97ed937003b0bbc076fddf79e96deae4",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.761291+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "33151df2af2e0535234ea03bff90ae90555b7340acdbc7b4308c5922d0df2bf9",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.761434+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "6906ef3a274893f4306cffc81bac1d9cf55f6c97866457954e3ed0023613ca1e",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.761575+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "fa5f4a5a9a7a925145a9768d98d95c095e2f0ba2eea3a1dadac6e50937e963d4",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.761730+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "5b198daaa14cca0dce51fb6cc3928d9f8a96383622854c1d191badf047709fad",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.761889+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "866ca0cac637d3c60628ff9aefb42211631e38cc2a2106c6722db13193e5a7a0",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.762107+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "b286a5abe5eed3583cb976c96cec08e94db32066301a36cc3d19c8a1ae75f4b1",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.762251+00:00",
+      "interval": "1h",
+      "row_count": 696,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "ae61ece81c8d1d05dc093a200136cb38fd5f612ce79715f10175ca4e26d0e5e9",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.762395+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "f54dd9c79c05393cb17e8d3bb2f148d6048cd7f839460c0095f86365d6f15f7d",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.762543+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "229646362e7f10f08618166c03de6b5e6e83615f9a1924c46be0e52bf73de26c",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.762701+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "0f81eba9da8ca6e6295d2c3a6ffa0dce3faccbcf5fc82e271eefff85788c28c0",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.762861+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "0a9a20ddf8882d1430025cfb40840ae359b761d68c79b3c45128db5a2e90734a",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.763006+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "dae034f491d447ebd9f0264d746fa2ca64a401db8aae2245244784f0df25841a",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.763146+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "eacecbcc59c3538f9b5f1358d0f2c5e6b0b69253a42e965cf27bafabd47c7cb8",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.763286+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "e774642af0c50e28369ef5cdf30d1b4d39fbdc2a435b9210353ddb3f1796b28c",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.763426+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "c3be993a84794b0e74bb3e8daa202da733fc917343669833d7d8cb3e50824f55",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.763563+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "64b44697fe568300bfb747e15111d819f4b154d7427e22b8b45d9a6244c85428",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.763715+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "6beef45ffea5a7584840f8c95e53099a7aa9e90a1624a3bb9a8d280254c7806b",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.763956+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "041e473b6e2705ce59f47f4eeea1addff7fc231cc7ce68af0409064989e88945",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.764099+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "ea6945cec00d9d155381c6fdd5dd1f66dfa7b9414e32135ef6591dfac1fbfdb7",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.764238+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "611c43ee32eb3019e9a19b318d6b7a18d33d06c744dd076fef316f9a57381335",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.764378+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "5d996cf2bd77f1fc23c85b2d01f152a93720f6d5642e8bfecc909405627cd1b1",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.764960+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "3086bbfc2a80d57695f5784289a43459db1303fbe70f520cc62abb00c7ad2f83",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.765117+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "56804ca2775b6ba66c38603a7aa0748deeace2c5fa77ce860e48ac43c36b3716",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.765268+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "a1b5a5b4db6a587c702b73015deaca5e1b2b4d92a4e1f527f62ea9cd29e63ae2",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.765408+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "3da16a6846fae9758fcb8f817ee4d0df86e0bf5f7b291dd92f964eb984ce849c",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.765544+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "d48c73f06bca60c07c6e90e11c1a2deffbac0b025779a7705dc51d029c9fd4a8",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.765695+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "322f6a28740064a002b0a9a1589607a4578de75205705c29d08e97d32e62c3f6",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.765853+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "2251a2c5cc6446cc86c6708504abf77faf57a8d3f4894ea96f79d3da1e45f591",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.766000+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "6941ca35e5c50c989670055a32b0948077b0094336d529896be695aef57d65e6",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.766193+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "97c9d12c1cb45d016105e920175eb3c62f1c9877a99323092c42881d9a0e1b30",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.766334+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "88c7783b78d4df9e613a96dbb8bcf099ab064b1be70354bcd19690194640de31",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.766479+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "cc40e5994815c88c2d4465f7d118ee5aaa17711bd30d9157bbce2f4486ee524f",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.766619+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "085b16d36933c09d667a2fd3fc0a976db533e5ffb5f0846cc3a7164a706f3aa9",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.766805+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "SOLUSDT"
+    },
+    {
+      "checksum": "20de9abd8a44fda2425ab6b30a8cb01245d276efeb37230d801f4c50f6253926",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.767181+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "c5b2e440836e44c177e96e8bccc4a1df7245a64ceaceca271f04ca6f0a93b63f",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.767369+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "ff9acc840c792e0599f256378638c5053ca9f0b7913863725af7eabadcc9cde1",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.767554+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "874d0da7085272cf562000a85e3c57ec92791c9e3eabcdbb67ce244ba1c98b33",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.767764+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "9b60c3011027174958c98c7926ac95b98ed7cf555927607d7afbfcd68a6b4d12",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.768004+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "80bedebbfc113fac6e5c09fc2f3c278d21a5cc8dd6c2258cdbfa167772f6437c",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.768206+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "055616a9405e6d359a4bdd248d64a8fcf03d74baea8b054e8d00aef0c9f503c3",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.768393+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "e78d7e52cd81b3291e560f7eda871ff9b12fd1d3d0c38f7a6f07c9b84d0b62de",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.768572+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "8955b6b6978c81ddb8575c1788e20036354e11c5600fba3dbd0a8b77945811d3",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.768766+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "692b5870be74697cb11cb2cb2c48885ad0875d7d8af865de4603bc18a3aa26ae",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.768960+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "d057c5f976fa623b1c750cae53b59e8a573b3fca62de2178a714194dd16b7e04",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.769138+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "b0ce61d83feefdda24eb1984f645ebac23fa2d5fe699e3d9570407044cc28f5a",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.769290+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "a300b9909213755b4161a4a7094c37ec23a991e9e2d9cbd47d8819b66dd8e369",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.769513+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "9ff73b9e6d099d8146d9d3c050e74c0a2d3a99c9d44009fec48766221228b1d5",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.769656+00:00",
+      "interval": "1h",
+      "row_count": 696,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "87034eedd162ee9fd381b7b28e5d96d3e03695ac68800fa40adcc51652eca7b4",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.769858+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "c9acab376c6d605dda7241e25b2cf6eb2ea6e9eba1f727f3e3256ab175bcdb90",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.770005+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "f5ec96ede75b688a303674d66deca2f3af8885feefb4237d5c1ed2e78f495e09",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.770147+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "5bbdca87cfb7e5ad29ba28a6a0eca0fde2e4078f83ec3d403597535bb959ad1b",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.770292+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "9b8ad1b88c36840e4a1b663770573dd0727feba8e7dd86e234d2b8184bef0001",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.770433+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "65af237737bfbf1c1d63773f5ac5ca1ecaf2fd1b6f0c7127fb6b2e14831f5047",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.770573+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "5dcffa68c78a1ac4f3f2274d64481fa09ab34550d7bd2622f787e72d34d9b466",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.770734+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "006aedd2df2d2f2d9182133475cf914735458b29e1d2fde77a170a4da405b104",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.770908+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "ff978def9abe22a61a72f13b95a7d4b6bde6369fd0a7f864cd8d32ee066f13c0",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.771058+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "116e34ac5c5a461cf8b55f4c5d07c2785ae298b8a1d5c824007dfeeeac1b9105",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.771222+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "a44351f653341a0d2b3a371ef86faf734d3b70f67c63fecf33c19697ce0da634",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.771454+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "95c85954ff1fe90c6066452393e7bc3cdded22bca5958ded2664c90e6cb20893",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.771597+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "13907eb6e91632c2a3bda09337c79fe43ac1a728d8f2f57c0a73733c926d6743",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.771759+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "9a6f0830fc822d69eece0dbbe399cb80520c23cae80e03c88dc228237f1deeed",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.771928+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "139bb2497a409eed0565448299e9980dee6e23c4ee6a2ae63846da11be4bb664",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.772098+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "8595f7770514d6948a6b45265dbe6da5e1f9ce28c4542f25545fc0812bceabde",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.772246+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "262f2655ed86ee18e8957ca794aab3f4065bdf543707bec78294955c4cd7ce03",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.772387+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "9901835eada5f57cfa956b0ffdc963bb9aaa0135323ea27387d4a4187fd49279",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.772527+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "3d12e06f9ba87f3ee83687690a91cbb1f452dc716783abc838f8d60a38f99e22",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.772668+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "11f66ba37857178f05725cbb165817eb4625ef494f4c2b4888f9529362e6b133",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.772855+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "930be6d3600fd7afbd7b08488fe6c12ade3cfcfb6fcb74df5378d4ebfeaa2959",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.773002+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "9a5bff0bf0cb1b035cdcfc230b5dae2376eea04513ebfaae6c9423dd6b08049a",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.773143+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "87d5507b8745af723fabfebf9ced2664fe6203540a9bdd377ffaf499774d184f",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.773338+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "0bdadd629b39398fc43f73d70cce5801e80be8922fa1f76f26b6990bec914830",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.773478+00:00",
+      "interval": "1h",
+      "row_count": 672,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "98305cf73dc689539485a8b2f640e174b53a17be2a1e4636268956178b07fa7e",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.773619+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "594476b378fffd35ea056d4071d708e8662db8eed29dcb4a6d84f63787b80c99",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.773782+00:00",
+      "interval": "1h",
+      "row_count": 720,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
+    },
+    {
+      "checksum": "53c7416477158d2d5a4d34de2764491b9e2d21e2843c94b9fef2f0f656f72a5d",
+      "end_ts": 0,
+      "ingested_at": "2026-07-02T01:00:13.773932+00:00",
+      "interval": "1h",
+      "row_count": 744,
+      "start_ts": 0,
+      "symbol": "BNBUSDT"
     }
   ]
 }
