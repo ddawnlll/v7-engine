@@ -19,6 +19,99 @@ _FULL_SCORE = 100
 # Modes that trigger an orderbook penalty under V6.
 _ORDERBOOK_PENALTY_MODES = frozenset({"SWING"})
 
+# Claims that require real (non-synthetic) data to be asserted.
+# These are checked by RealDataGate during alpha promotion.
+REAL_DATA_REQUIRED_CLAIMS: frozenset[str] = frozenset({
+    "ALPHA_HAS_EDGE",
+    "MODEL_BEATS_BASELINES",
+    "FEATURE_FAMILY_HAS_SIGNAL",
+    "V7_RESEARCH_BACKTEST_READY",
+    "V7_WALK_FORWARD_READY",
+    "V7_PROMOTION_CANDIDATE",
+})
+
+
+@dataclass
+class RealDataGateResult:
+    """Result of a RealDataGate evaluation.
+
+    Attributes:
+        passed: Whether the gate passed.
+        max_alpha_score: Maximum alpha score (15 = synthetic, 100 = real).
+        alpha_candidate: Whether the alpha can proceed to promotion.
+        reason: Human-readable explanation.
+        blocked_actions: Actions blocked by this result.
+    """
+    passed: bool
+    max_alpha_score: int = 0
+    alpha_candidate: bool = False
+    reason: str = ""
+    blocked_actions: list[str] = field(default_factory=list)
+
+
+class RealDataGate:
+    """Gate that checks whether a claim is backed by real (non-synthetic) data.
+
+    Required claims (REAL_DATA_REQUIRED_CLAIMS) MUST have a real-data passport.
+    Non-required claims always pass.
+    """
+
+    def evaluate(
+        self,
+        claim: str,
+        passport: object | None,
+    ) -> RealDataGateResult:
+        """Evaluate a claim against the real-data requirement.
+
+        Args:
+            claim: The claim string (e.g. "ALPHA_HAS_EDGE").
+            passport: A DataPassport-like object or None.
+
+        Returns:
+            RealDataGateResult with pass/fail decision.
+        """
+        # Non-required claims always pass
+        if claim not in REAL_DATA_REQUIRED_CLAIMS:
+            return RealDataGateResult(
+                passed=True,
+                max_alpha_score=100,
+                alpha_candidate=True,
+                reason="Claim does not require real data",
+            )
+
+        # Required claims need a valid real-data passport
+        if passport is None:
+            return RealDataGateResult(
+                passed=False,
+                max_alpha_score=15,
+                alpha_candidate=False,
+                reason="Required claim requires real data, but no DataPassport was provided",
+            )
+
+        if not getattr(passport, "is_real_data", False):
+            return RealDataGateResult(
+                passed=False,
+                max_alpha_score=15,
+                alpha_candidate=False,
+                reason=f"Claim '{claim}' requires real data, but passport does not provide real data",
+            )
+
+        is_trustworthy = getattr(passport, "is_trustworthy_for_context", lambda: True)()
+        if not is_trustworthy:
+            return RealDataGateResult(
+                passed=False,
+                max_alpha_score=50,
+                alpha_candidate=True,
+                reason=f"Claim '{claim}' uses real data but passport fails context check",
+            )
+
+        return RealDataGateResult(
+            passed=True,
+            max_alpha_score=100,
+            alpha_candidate=True,
+            reason=f"Claim '{claim}' satisfied by real data passport",
+        )
+
 
 @dataclass
 class HardCapResult:

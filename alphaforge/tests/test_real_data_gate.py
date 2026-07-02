@@ -10,10 +10,12 @@ import tempfile
 
 import pytest
 
+pytestmark = pytest.mark.integration
+
 from lib.evidence_engine.hard_caps import (
     REAL_DATA_REQUIRED_CLAIMS,
-    GateResult,
     RealDataGate,
+    RealDataGateResult as GateResult,
 )
 
 

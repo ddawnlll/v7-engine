@@ -402,10 +402,6 @@ def test_param_bounds_scalp():
 # suggest_params tests (requires Optuna)
 # ============================================================================
 
-    not _HAS_OPTUNA, reason="Optuna is not installed"
-)
-
-
 @pytest.mark.skipif(not _HAS_OPTUNA, reason="Optuna is not installed")
 class TestSuggestParams:
     """Tests for suggest_params with Optuna."""
