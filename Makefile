@@ -29,6 +29,7 @@ help:
 	@echo "--- v0.30E — Real Data Baseline ---"
 	@echo "  make data-health      	Verify + auto-repair downloaded Binance data"
 	@echo "  make download         	Download Binance Vision data (BTC/ETH/SOL/BNB, 1h/4h, 2023-2026)"
+	@echo "  make diagnostic      	Run v0.31A failure diagnostic report (read-only)"
 	@echo "  make test-training    	Health check > train > verify (SCALP, BTC/ETH/SOL/BNB)"
 	@echo "  make test-training-full   Same + Optuna hyperparameter search"
 	@echo "  make MODE=SWING ...   	Override trading mode"
@@ -206,6 +207,7 @@ pipeline-v0.2:
 # ====================================================================
 
 .PHONY: data-health download test-training test-training-full
+	diagnostic \
 
 MODE ?= SCALP
 SYMBOLS ?= BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT
@@ -225,6 +227,14 @@ data-health:
 		PYTHONPATH=$(SCRIPTS_PYTHONPATH) python3 scripts/health_check.py --symbols $(SYMBOLS) --data-dir $(DATA_DIR) && \
 		echo "  OK: Data healthy"; \
 	fi
+
+diagnostic:
+
+	@echo "=== v0.31A | Real-Data Failure Diagnostic Report ==="
+
+	@PYTHONPATH=alphaforge/src:. python3 scripts/diagnostic_v031.py
+
+
 
 test-training: data-health
 	@echo "=== v0.30E | Test Training ==="
