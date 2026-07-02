@@ -30,6 +30,7 @@ help:
 	@echo "  make data-health      	Verify + auto-repair downloaded Binance data"
 	@echo "  make download         	Download Binance Vision data (BTC/ETH/SOL/BNB, 1h/4h, 2023-2026)"
 	@echo "  make diagnostic      	Run v0.31A failure diagnostic report (read-only)"
+	@echo "  make candidate       	Run candidate v0.2 (2-class + no confidence threshold)"
 	@echo "  make test-training    	Health check > train > verify (SCALP, BTC/ETH/SOL/BNB)"
 	@echo "  make test-training-full   Same + Optuna hyperparameter search"
 	@echo "  make MODE=SWING ...   	Override trading mode"
@@ -207,6 +208,7 @@ pipeline-v0.2:
 # ====================================================================
 
 .PHONY: data-health download test-training test-training-full
+	candidate \
 	diagnostic \
 
 MODE ?= SCALP
@@ -227,6 +229,23 @@ data-health:
 		PYTHONPATH=$(SCRIPTS_PYTHONPATH) python3 scripts/health_check.py --symbols $(SYMBOLS) --data-dir $(DATA_DIR) && \
 		echo "  OK: Data healthy"; \
 	fi
+
+candidate:
+	@echo "=== v0.31E — Directional Candidate v0.2 ==="
+
+	@PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train \
+
+		--mode SCALP \
+
+		--symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT \
+
+		--folds 6 \
+
+		--target 2-class \
+
+		--output data/reports/train-results-CANDIDATE-V02.json
+
+
 
 diagnostic:
 
@@ -301,3 +320,7 @@ test-training-full: data-health
 		echo ""; \
 		echo "=== Test-training-full complete ==="; \
 	fi
+
+candidate:
+	@echo "=== v0.31E — Directional Candidate v0.2 ==="
+	PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT --folds 6 --target 2-class --output data/reports/candidate-v02.json

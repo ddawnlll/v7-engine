@@ -361,8 +361,13 @@ def walk_forward_validate(
     net_r_values: np.ndarray,
     mode: str,
     min_folds: int = 6,
+    confidence_threshold: float | None = None,
 ) -> List[dict]:
     """6-fold anchored expanding walk-forward validation.
+
+    Args:
+        confidence_threshold: If None, uses module default (0.55).
+            If -1, confidence filtering is disabled (all predictions count).
 
     Returns per-fold result dicts.
     """
@@ -413,9 +418,13 @@ def walk_forward_validate(
         y_pred = np.argmax(y_pred_prob, axis=1)
 
         # Apply confidence threshold: force NO_TRADE when model is uncertain
-        low_conf_count = int(np.sum(y_pred_prob_max < CONFIDENCE_THRESHOLD))
-        low_conf_pct = float(low_conf_count / len(y_pred_prob_max) * 100)
-        y_pred[y_pred_prob_max < CONFIDENCE_THRESHOLD] = 2  # NO_TRADE
+        thr = confidence_threshold if confidence_threshold is not None else CONFIDENCE_THRESHOLD
+        low_conf_count = 0
+        low_conf_pct = 0.0
+        if thr >= 0:
+            low_conf_count = int(np.sum(y_pred_prob_max < thr))
+            low_conf_pct = float(low_conf_count / len(y_pred_prob_max) * 100)
+            y_pred[y_pred_prob_max < thr] = 2  # NO_TRADE
 
         val_accuracy = float(np.mean(y_pred == y_val))
         train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
@@ -611,6 +620,10 @@ def main():
     parser.add_argument("--synthetic", action="store_true", help="Force synthetic data")
     parser.add_argument("--folds", type=int, default=6, help="WFV folds")
     parser.add_argument("--output", default=None, help="Output report path")
+    parser.add_argument("--target", default="3-class", choices=["3-class", "2-class"],
+                        help="Target: 3-class (LONG/SHORT/NO_TRADE) or 2-class (LONG vs SHORT only)")
+    parser.add_argument("--confidence", type=float, default=None,
+                        help="Confidence threshold (-1 to disable, default=0.55 for 3-class, disabled for 2-class)")
     args = parser.parse_args()
 
     global mode
@@ -619,9 +632,14 @@ def main():
     cfg = MODE_CONFIG[mode]
     interval = cfg["primary"]
 
+    # Set confidence default based on target
+    if args.confidence is None:
+        args.confidence = -1.0 if args.target == "2-class" else 0.55
+
     print(f"\n{'='*60}")
     print(f"  AlphaForge Training Pipeline")
     print(f"  Mode: {mode} | Interval: {interval} | Symbols: {len(symbols)}")
+    print(f"  Target: {args.target} | Confidence: {'disabled' if args.confidence < 0 else args.confidence}")
     print(f"  Features: {args.features} | WFV Folds: {args.folds}")
     print(f"{'='*60}\n")
 
@@ -643,6 +661,20 @@ def main():
     # Step 2: Generate labels
     print("\n[2/6] Generating triple-barrier labels...")
     y_int, gross_r_vals, r_vals, label_metrics = generate_labels(ohlcv, mode)
+
+    # Step 2b: Filter to 2-class direction if requested
+    if args.target == "2-class":
+        dir_mask = y_int < 2
+        removed = (~dir_mask).sum()
+        # Apply to all arrays that need alignment
+        gross_r_vals = gross_r_vals[dir_mask]
+        r_vals = r_vals[dir_mask]
+        y_int = y_int[dir_mask]
+        # ohlcv is used for features — keep full ohlcv, feature pipeline handles alignment later
+        print(f"  2-class target: {removed} NO_TRADE rows removed, {len(y_int)} direction rows remaining")
+        print(f"  LONG={int((y_int==0).sum())} SHORT={int((y_int==1).sum())}")
+    else:
+        print(f"  3-class target: {dict(zip(['LONG','SHORT','NO_TRADE'],[int((y_int==0).sum()),int((y_int==1).sum()),int((y_int==2).sum())]))}")
 
     # Step 3: Compute features
     print("\n[3/6] Computing features...")
@@ -676,6 +708,7 @@ def main():
     t0 = time.time()
     wfv_results = walk_forward_validate(
         X_clean, y_clean, r_clean, mode, min_folds=args.folds,
+        confidence_threshold=args.confidence,
     )
     wfv_duration = time.time() - t0
     print(f"  {len(wfv_results)} folds completed in {wfv_duration:.1f}s")
