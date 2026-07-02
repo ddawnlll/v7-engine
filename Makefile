@@ -344,3 +344,15 @@ candidate-lightgbm:
 af-report:
 	@echo "=== AlphaForge Report CLI ==="
 	PYTHONPATH=alphaforge/src:. python3 -m cli.alphaforge report $(ARGS)
+
+# ====================================================================
+# Main Menu — centralized TUI
+# ====================================================================
+#   make menu        → Full TUI (Foundation, Pipeline, Data, AlphaForge, Reports)
+# ====================================================================
+
+.PHONY: menu
+
+menu:
+	@echo "Opening main menu..."
+	@PYTHONPATH=alphaforge/src:. python3 -m cli.menu

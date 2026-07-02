@@ -218,6 +218,112 @@ def action_pipeline_v02() -> None:
     if _yes_no(f"Run v0.2 pipeline for {mode}? (profitability evidence)", default=False):
         _run_make("pipeline-v0.2", f"MODE={mode}")
 
+def action_pipeline_wizard() -> None:
+    """Guided pipeline wizard — asks all questions, then runs end-to-end."""
+    print(f"\n  {Style.BOLD}{Style.BG_BLUE}{Style.WHITE}  ⚡ Pipeline Wizard — guided end-to-end pipeline  {Style.RESET}")
+    print()
+
+    # Step 1: Mode
+    mode = _select_mode()
+    print(f"  Mode: {Style.BOLD}{mode}{Style.RESET}")
+
+    # Step 2: Pipeline type
+    print(f"\n  {Style.BOLD}Pipeline type:{Style.RESET}")
+    print(f"    [1] Full pipeline (validate → backfill → simulate → build-dataset → train → wfv → report)")
+    print(f"    [2] v0.2 profitability evidence pipeline")
+    print(f"    [3] Custom steps (choose which steps to run)")
+    try:
+        c = input(f"  Choice [1-3, default=1]: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print("  Cancelled.")
+        return
+
+    # Step 3: Data source
+    if c in ("", "1", "2"):
+        print(f"\n  {Style.BOLD}Data source:{Style.RESET}")
+        print(f"    [1] Auto-detect (cached Binance data, fall back synthetic)")
+        print(f"    [2] Force synthetic data")
+        print(f"    [3] Real data (requires downloaded Binance data)")
+        try:
+            ds = input(f"  Choice [1-3, default=1]: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            ds = ""
+
+    # Step 4: Force flag
+    print()
+    force = _yes_no("Bypass safety gates (--force)?", default=False)
+
+    # Step 5: Summary and confirm
+    pipeline_name = {"1": "full", "2": "v0.2", "3": "custom"}.get(c or "1", "full")
+    data_source = {"1": "auto", "2": "synthetic", "3": "real"}.get(ds or "1", "auto")
+
+    mode_upper = mode.upper()
+    print(f"\n  {Style.BOLD}╔══ Pipeline Summary ═══════════════════════{Style.RESET}")
+    print(f"  {Style.BOLD}║{Style.RESET}  Type:       {pipeline_name}")
+    print(f"  {Style.BOLD}║{Style.RESET}  Mode:       {mode_upper}")
+    print(f"  {Style.BOLD}║{Style.RESET}  Data:       {data_source}")
+    print(f"  {Style.BOLD}║{Style.RESET}  Force:      {'yes' if force else 'no'}")
+    print(f"  {Style.BOLD}╚═══════════════════════════════════════════{Style.RESET}")
+
+    if not _yes_no("\nRun this pipeline?", default=False):
+        print("  Cancelled.")
+        return
+
+    # Execute
+    if c == "2":
+        # v0.2 pipeline
+        opts = f"MODE={mode_upper}"
+        if force:
+            opts += " ARGS=--force"
+        _run_make("pipeline-v0.2", opts)
+    elif c == "3":
+        # Custom steps
+        print(f"\n  Available steps: validate, backfill, simulate, build-dataset, train, wfv, report")
+        try:
+            steps = input(f"  Enter steps (comma-separated, default=all): ").strip()
+        except (EOFError, KeyboardInterrupt):
+            steps = ""
+        if steps:
+            extra = f"MODE={mode_upper} ARGS='--steps {steps}'"
+            if force:
+                extra += " --force"
+            _run_make("pipeline", extra)
+        else:
+            _run_make("pipeline", f"MODE={mode_upper}")
+    else:
+        # Full pipeline
+        opts = f"MODE={mode_upper}"
+        if force:
+            opts += " ARGS=--force"
+        _run_make("pipeline", opts)
+
+
+def action_pipeline_v02_wizard() -> None:
+    """Quick wizard for v0.2 profitability pipeline."""
+    print(f"\n  {Style.BOLD}{Style.BG_GREEN}{Style.WHITE}  ⚡ v0.2 Pipeline — Profitability Evidence  {Style.RESET}")
+    print()
+
+    mode = _select_mode()
+    print(f"\n  {Style.BOLD}Options for v0.2 pipeline:{Style.RESET}")
+    print(f"    [1] Synthetic data (quick, always works)")
+    print(f"    [2] Real data (requires cached Binance data)")
+    print(f"    [3] Both (synthetic + real comparison)")
+    try:
+        c = input(f"  Choice [1-3, default=1]: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print("  Cancelled.")
+        return
+
+    if not _yes_no(f"\nRun v0.2 pipeline for {mode}?", default=False):
+        return
+
+    if c == "2":
+        _run_make("pipeline-v0.2", f"MODE={mode.upper()} ARGS=--real --no-synthetic")
+    elif c == "3":
+        _run_make("pipeline-v0.2", f"MODE={mode.upper()} ARGS=--real")
+    else:
+        _run_make("pipeline-v0.2", f"MODE={mode.upper()} ARGS=--synthetic")
+
 
 # ── Data actions ──────────────────────────────────────────────────
 
@@ -309,7 +415,11 @@ MAIN_MENU: list[Item] = [
         _cmd("typecheck        Run mypy type checking"),
         _cmd("clean            Remove caches and build artifacts"),
     ]),
-    _submenu("▤  Pipeline", [
+    _submenu("▶  AUTO PIPELINE", [
+        _cmd("pipeline-wizard    Guided pipeline (asks mode, data, steps)"),
+        _cmd("pipeline-v02-wizard  Guided v0.2 profitability pipeline"),
+    ]),
+    _submenu("▤  Pipeline (step-by-step)", [
         _cmd("validate         Run contract + boundary + test suite"),
         _cmd("backfill         Download backfill market data"),
         _cmd("simulate         Run simulation with cost model"),
@@ -330,15 +440,15 @@ MAIN_MENU: list[Item] = [
         _cmd("candidate-lightgbm  LightGBM candidate v0.1"),
     ]),
     _submenu("α  AlphaForge", [
-        _cmd("status           Show alpha dashboard"),
-        _cmd("discover         Run discovery pipelines"),
-        _cmd("simulate         Run simulation on all alphas"),
+        _cmd("af-status         Show alpha dashboard"),
+        _cmd("af-discover       Run discovery pipelines (--real)"),
+        _cmd("af-simulate       Run simulation on all alphas"),
     ]),
     _submenu("📊  Reports", [
-        _cmd("list             List available report types"),
-        _cmd("status           Show generated reports"),
-        _cmd("generate         Generate a report (interactive)"),
-        _cmd("menu             Interactive report builder (full)"),
+        _cmd("report-list        List available report types"),
+        _cmd("report-status      Show generated reports in data/reports/"),
+        _cmd("report-generate    Generate a report (interactive)"),
+        _cmd("report-menu        Interactive report builder (full)"),
     ]),
     _sep(),
     _cmd("exit"),
@@ -367,6 +477,8 @@ ACTION_MAP: dict[str, tuple[str, Any]] = {
     "report": ("make report", action_pipeline_report),
     "pipeline": ("make pipeline", action_pipeline_e2e),
     "pipeline-v0.2": ("make pipeline-v0.2", action_pipeline_v02),
+    "pipeline-wizard": ("pipeline wizard", action_pipeline_wizard),
+    "pipeline-v02-wizard": ("pipeline v0.2 wizard", action_pipeline_v02_wizard),
     # Data
     "data-health": ("make data-health", action_data_health),
     "download": ("make download", action_download),
@@ -394,7 +506,8 @@ def _color_item(key: str) -> str:
         return Style.CYAN
     if "pipeline" in key:
         return Style.GREEN
-    if key in ("download", "data-health", "test-training", "test-training-full", "candidate", "candidate-lightgbm"):
+    if key in ("download", "data-health", "test-training", "test-training-full",
+               "candidate", "candidate-lightgbm"):
         return Style.YELLOW
     if key.startswith("af-") or key.startswith("report-"):
         return Style.MAGENTA

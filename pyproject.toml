@@ -29,12 +29,14 @@ testpaths = [
     "simulation/tests",
     "runtime/tests",
     "v7/tests",
+    "alphaforge/tests",
 ]
 norecursedirs = [
     "node_modules", "interface", "data", "data_lake",
     "docker", ".claude", ".github", "scripts", "reports", "docs",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
+addopts = "-n auto --dist loadscope -q"
 
 [tool.ruff]
 target-version = "py312"

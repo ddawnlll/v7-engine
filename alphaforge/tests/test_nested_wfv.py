@@ -43,7 +43,7 @@ class TestNestedWalkForwardConfig:
         assert config.outer_folds == 7
         assert config.inner_folds == 3
         assert config.embargo_days == 30
-        assert config.optuna_n_trials == 15
+        assert config.optuna_n_trials == 30
 
     def test_custom_config(self):
         """Custom config values are respected."""

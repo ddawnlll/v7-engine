@@ -828,7 +828,7 @@ class TestLiquidityVacuum:
 # ===========================================================================
 
 class TestOrderbookGroup:
-    """#43-06: compute_orderbook_group integration (21 features)."""
+    """#43-06: compute_orderbook_group integration (12 features)."""
 
     def test_all_keys_present(self, ohlcv_100):
         result = compute_orderbook_group(
@@ -842,11 +842,6 @@ class TestOrderbookGroup:
             "serial_correlation_N", "vpin_N",
             "price_impact_slope_N",
             "microprice_N", "liquidity_vacuum_N", "depth_ratio_N",
-            # Extended features
-            "obi", "multi_level_obi_N", "stoikov_micro_price_N",
-            "ofi_N", "vamp_N", "quoted_spread_N",
-            "vwap_mid_deviation_N", "trade_count_N",
-            "volume_concentration_hhi_N",
         }
         assert set(result.keys()) == expected
         for arr in result.values():
@@ -932,9 +927,6 @@ class TestOrderbookEdgeCases:
         volume = np.array([10.0, 10.0, 10.0])
         result = compute_orderbook_group(open_arr, high, low, close, volume, window=10)
         for key in result:
-            # obi is a per-bar L1 OBI with zero lookback — it never returns NaN
-            if key == "obi":
-                continue
             assert np.all(np.isnan(result[key])), f"{key} should be all NaN"
 
     def test_zero_volume_bars(self):
@@ -1011,9 +1003,6 @@ class TestOrderbookFeatureNames:
             np.ones(100)
         )
         for key in result:
-            # obi is a per-bar L1 OBI with zero lookback — no _N suffix
-            if key == "obi":
-                continue
             assert key.endswith("_N"), f"Feature '{key}' should end with _N"
 
 

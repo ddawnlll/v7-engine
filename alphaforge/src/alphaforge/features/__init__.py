@@ -5,14 +5,13 @@ Exports:
     compute_features — main pipeline entry point
     FeatureCache   — Parquet+Zstd disk cache for feature matrices
     cached_compute_features — caching wrapper around compute_features
-    FeatureGroup    — enumeration of feature groups (LEAD_LAG + CROSS_SECTIONAL_RANK DEFERRED)
+    FeatureGroup    — enumeration of feature groups (LEAD_LAG DEFERRED)
     FEATURE_GROUP_MAP — mapping from FeatureGroup to compute function names
     PIPELINE_VERSION — semantic version of the pipeline implementation
     CACHE_DIR_DEFAULT — default cache directory path
     OrderBook group — microstructure-aware features (AGGRESSIVE_SCALP primary)
     LeadLag group — cross-sectional multi-symbol features
     Funding group — funding rate and OI proxy features
-    CrossSectionalRank group — cross-symbol rank and correlation features
     ModeWindowConfig — per-mode window parameter configuration
 """
 
@@ -25,7 +24,6 @@ from alphaforge.features.pipeline import (
     PIPELINE_VERSION,
     cached_compute_features,
     compute_features,
-    compute_multi_symbol_features,
 )
 
 # OrderBook microstructure features (AGGRESSIVE_SCALP primary, all modes supported)
@@ -106,29 +104,6 @@ from alphaforge.features.funding import (
     compute_open_interest_proxy,
 )
 
-# Cross-Sectional Rank features (DEFERRED — P0.9B multi-symbol data required)
-from alphaforge.features.cross_sectional_rank import (
-    AGGRESSIVE_CORRELATION_WINDOW,
-    AGGRESSIVE_CORRELATION_ZSCORE_WINDOW,
-    AGGRESSIVE_MOMENTUM_WINDOW_1H,
-    AGGRESSIVE_MOMENTUM_WINDOW_4H,
-    AGGRESSIVE_MOMENTUM_WINDOW_24H,
-    AGGRESSIVE_RANK_VOLATILITY_WINDOW,
-    CORRELATION_WINDOW,
-    CORRELATION_ZSCORE_WINDOW,
-    MOMENTUM_WINDOW_1H,
-    MOMENTUM_WINDOW_4H,
-    MOMENTUM_WINDOW_24H,
-    RANK_VOLATILITY_WINDOW,
-    SCALP_CORRELATION_WINDOW,
-    SCALP_CORRELATION_ZSCORE_WINDOW,
-    SCALP_MOMENTUM_WINDOW_1H,
-    SCALP_MOMENTUM_WINDOW_4H,
-    SCALP_MOMENTUM_WINDOW_24H,
-    SCALP_RANK_VOLATILITY_WINDOW,
-    compute_cross_sectional_rank_group,
-)
-
 # Per-mode feature window configuration
 from alphaforge.features.mode_windows import (
     AGGRESSIVE_SCALP_WINDOWS,
@@ -148,7 +123,6 @@ __all__ = [
     "FeatureCache",
     "cached_compute_features",
     "compute_features",
-    "compute_multi_symbol_features",
     "FeatureGroup",
     "FEATURE_GROUP_MAP",
     "PIPELINE_VERSION",
@@ -222,26 +196,6 @@ __all__ = [
     "SWING_OI_PROXY_WINDOW",
     "SCALP_OI_PROXY_WINDOW",
     "AGGRESSIVE_SCALP_OI_PROXY_WINDOW",
-    # Cross-Sectional Rank group (DEFERRED — P0.9B multi-symbol data required)
-    "compute_cross_sectional_rank_group",
-    "MOMENTUM_WINDOW_1H",
-    "MOMENTUM_WINDOW_4H",
-    "MOMENTUM_WINDOW_24H",
-    "RANK_VOLATILITY_WINDOW",
-    "CORRELATION_WINDOW",
-    "CORRELATION_ZSCORE_WINDOW",
-    "SCALP_MOMENTUM_WINDOW_1H",
-    "SCALP_MOMENTUM_WINDOW_4H",
-    "SCALP_MOMENTUM_WINDOW_24H",
-    "SCALP_RANK_VOLATILITY_WINDOW",
-    "SCALP_CORRELATION_WINDOW",
-    "SCALP_CORRELATION_ZSCORE_WINDOW",
-    "AGGRESSIVE_MOMENTUM_WINDOW_1H",
-    "AGGRESSIVE_MOMENTUM_WINDOW_4H",
-    "AGGRESSIVE_MOMENTUM_WINDOW_24H",
-    "AGGRESSIVE_RANK_VOLATILITY_WINDOW",
-    "AGGRESSIVE_CORRELATION_WINDOW",
-    "AGGRESSIVE_CORRELATION_ZSCORE_WINDOW",
     # Mode window config (per-mode feature window parameters)
     "ModeWindowConfig",
     "SWING_WINDOWS",

@@ -16,6 +16,10 @@ from __future__ import annotations
 import numpy as np
 from typing import Dict, Optional
 
+try:
+    from numba import njit
+except ImportError:
+    njit = lambda x: x
 
 # ---------------------------------------------------------------------------
 # Resample helpers (1h -> 4h / 1d if raw data not available)
@@ -287,6 +291,7 @@ def compute_mtf_features(
 # Internal helpers (vectorized numpy, no pandas)
 # ---------------------------------------------------------------------------
 
+@njit
 def _ema(arr: np.ndarray, span: int) -> np.ndarray:
     """Exponential moving average."""
     if span < 1 or len(arr) == 0:
@@ -302,13 +307,17 @@ def _ema(arr: np.ndarray, span: int) -> np.ndarray:
     return out
 
 
+@njit
 def _rolling_std(arr: np.ndarray, window: int) -> np.ndarray:
     """Rolling standard deviation (pandas-free)."""
     out = np.full_like(arr, np.nan)
     if window < 2:
         return out
     for i in range(window - 1, len(arr)):
-        out[i] = np.std(arr[i - window + 1:i + 1])
+        seg = arr[i - window + 1:i + 1]
+        m = np.mean(seg)
+        var = np.mean((seg - m) ** 2)
+        out[i] = np.sqrt(var * window / (window - 1))
     return out
 
 
@@ -320,6 +329,7 @@ def _log_returns(arr: np.ndarray) -> np.ndarray:
     return out
 
 
+@njit
 def _rsi(close: np.ndarray, period: int = 14) -> np.ndarray:
     """Relative Strength Index."""
     out = np.full_like(close, np.nan, dtype=np.float64)
@@ -330,8 +340,8 @@ def _rsi(close: np.ndarray, period: int = 14) -> np.ndarray:
     losses = np.where(deltas < 0, -deltas, 0.0)
     avg_gain = np.full_like(close, np.nan)
     avg_loss = np.full_like(close, np.nan)
-    avg_gain[period] = np.nanmean(gains[:period])
-    avg_loss[period] = np.nanmean(losses[:period])
+    avg_gain[period] = np.mean(gains[:period])
+    avg_loss[period] = np.mean(losses[:period])
     for i in range(period + 1, len(close)):
         avg_gain[i] = (avg_gain[i - 1] * (period - 1) + gains[i - 1]) / period
         avg_loss[i] = (avg_loss[i - 1] * (period - 1) + losses[i - 1]) / period
@@ -340,6 +350,7 @@ def _rsi(close: np.ndarray, period: int = 14) -> np.ndarray:
     return out
 
 
+@njit
 def _atr(high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14) -> np.ndarray:
     """Average True Range."""
     n = len(close)
@@ -350,18 +361,20 @@ def _atr(high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14)
     return _ema(tr, period)
 
 
+@njit
 def _zscore(arr: np.ndarray, window: int) -> np.ndarray:
     """Rolling z-score."""
     out = np.full_like(arr, np.nan)
     for i in range(window, len(arr)):
         seg = arr[i - window:i]
-        mu = np.nanmean(seg)
-        sd = np.nanstd(seg)
+        mu = np.mean(seg)
+        sd = np.std(seg)
         if sd > 1e-10:
             out[i] = (arr[i] - mu) / sd
     return out
 
 
+@njit
 def _ffill(arr: np.ndarray) -> None:
     """Forward-fill NaN in-place."""
     last = np.nan
@@ -372,6 +385,7 @@ def _ffill(arr: np.ndarray) -> None:
             last = arr[i]
 
 
+@njit
 def _stretch_to_1h(sub_bar: np.ndarray, n_sub: int, n_1h: int) -> np.ndarray:
     """Stretch a sub-bar array to 1h grid with forward-fill."""
     sub_per = max(1, n_1h // max(n_sub, 1))

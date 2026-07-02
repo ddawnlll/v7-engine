@@ -43,14 +43,6 @@ from alphaforge.reports.collapse_detector import (
     counterfactual_analysis,
     detect_no_trade_collapse,
 )
-# P0.10A: IC / Rank IC metrics (Issue #121)
-from alphaforge.reports.ic_metrics import (
-    compute_calibration_error,
-    compute_expected_r_from_probabilities,
-    compute_ic,
-    compute_ic_ir,
-    compute_rank_ic,
-)
 from alphaforge.constants import CANONICAL_V7_GATES, FORBIDDEN_GATE_NAMES
 
 __all__ = [
@@ -75,11 +67,6 @@ __all__ = [
     "compute_no_trade_trend",
     "counterfactual_analysis",
     "detect_no_trade_collapse",
-    "compute_ic",
-    "compute_rank_ic",
-    "compute_ic_ir",
-    "compute_calibration_error",
-    "compute_expected_r_from_probabilities",
     "CANONICAL_V7_GATES",
     "FORBIDDEN_GATE_NAMES",
 ]

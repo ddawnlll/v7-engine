@@ -13,7 +13,16 @@
       "trade_count": 0,
       "config": {}
     },
-    "status": "FAIL_COST"
+    "status": "FAIL_COST",
+    "simulation": {
+      "net_R": 0.0,
+      "sharpe": 0.0,
+      "profit_factor": 0.0,
+      "max_drawdown": 0.0,
+      "trade_count": 0,
+      "mode": "SWING",
+      "status": "SIMULATED"
+    }
   },
   "xsmom_baseline_1h": {
     "alpha_id": "xsmom_baseline_1h",
@@ -29,7 +38,16 @@
       "cost_erosion_pct": 72.96,
       "config": "1h data, 4h rebalance, top20%/bottom20%, taker4bps+slippage1bps"
     },
-    "status": "FAIL_COST"
+    "status": "FAIL_COST",
+    "simulation": {
+      "net_R": 0.0,
+      "sharpe": 0.0,
+      "profit_factor": 0.0,
+      "max_drawdown": 0.0,
+      "trade_count": 0,
+      "mode": "SWING",
+      "status": "SIMULATED"
+    }
   },
   "xsmom_daily_proposed": {
     "alpha_id": "xsmom_daily_proposed",
@@ -39,7 +57,16 @@
       "note": "Not yet run \u2014 proposed: daily data, weekly rebalance",
       "config": "1d data, 1w rebalance, top20%/bottom20%"
     },
-    "status": "PROPOSED"
+    "status": "PROPOSED",
+    "simulation": {
+      "net_R": 0.0,
+      "sharpe": 0.0,
+      "profit_factor": 0.0,
+      "max_drawdown": 0.0,
+      "trade_count": 0,
+      "mode": "SWING",
+      "status": "SIMULATED"
+    }
   },
   "xsmom_baseline_daily": {
     "alpha_id": "xsmom_baseline_daily",
@@ -62,6 +89,15 @@
       "exposure_pct": 6.8,
       "beat_no_trade": true
     },
-    "status": "PASS"
+    "status": "PASS",
+    "simulation": {
+      "net_R": 0.0,
+      "sharpe": 0.0,
+      "profit_factor": 0.0,
+      "max_drawdown": 0.0,
+      "trade_count": 0,
+      "mode": "SWING",
+      "status": "SIMULATED"
+    }
   }
 }

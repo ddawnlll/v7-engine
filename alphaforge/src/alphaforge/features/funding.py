@@ -59,6 +59,11 @@ from typing import Dict, Optional
 
 import numpy as np
 
+try:
+    from numba import njit
+except ImportError:
+    njit = lambda x: x
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -86,6 +91,36 @@ AGGRESSIVE_SCALP_OI_PROXY_WINDOW: int = 16
 # ===========================================================================
 # Helper: OHLCV funding proxy computation
 # ===========================================================================
+
+
+@njit
+def _njit_proxy_with_tp(close: np.ndarray, tp: np.ndarray) -> np.ndarray:
+    """Numba JIT helper: compute funding proxy from cumulative VWAP."""
+    n = len(close)
+    result = np.full(n, np.nan, dtype=np.float64)
+    cum_pv = 0.0
+    cum_v = 0.0
+    for i in range(n):
+        cum_pv += tp[i]
+        cum_v += 1.0
+        vwap_i = cum_pv / cum_v
+        if vwap_i != 0:
+            result[i] = -(close[i] / vwap_i - 1.0) * 100.0
+    return result
+
+
+@njit
+def _njit_proxy_expanding_mean(close: np.ndarray) -> np.ndarray:
+    """Numba JIT helper: compute funding proxy from expanding mean of close."""
+    n = len(close)
+    result = np.full(n, np.nan, dtype=np.float64)
+    cum_sum = 0.0
+    for i in range(n):
+        cum_sum += close[i]
+        ref = cum_sum / (i + 1)
+        if ref != 0:
+            result[i] = -(close[i] / ref - 1.0) * 100.0
+    return result
 
 
 def _compute_funding_proxy(
@@ -133,23 +168,10 @@ def _compute_funding_proxy(
     elif high is not None and low is not None:
         # Compute VWAP from high/low/close
         tp = (high.astype(np.float64) + low.astype(np.float64) + close.astype(np.float64)) / 3.0
-        cum_pv = 0.0
-        cum_v = 0.0
-        # Use uniform volume weighting when no volume is available
-        for i in range(n):
-            cum_pv += tp[i]
-            cum_v += 1.0
-            vwap_i = cum_pv / cum_v
-            if vwap_i != 0:
-                result[i] = -(close[i] / vwap_i - 1.0) * 100.0
+        result = _njit_proxy_with_tp(close, tp)
     else:
         # Fallback: use expanding mean of close as reference
-        cum_sum = 0.0
-        for i in range(n):
-            cum_sum += close[i]
-            ref = cum_sum / (i + 1)
-            if ref != 0:
-                result[i] = -(close[i] / ref - 1.0) * 100.0
+        result = _njit_proxy_expanding_mean(close)
 
     return result
 
@@ -159,6 +181,7 @@ def _compute_funding_proxy(
 # ===========================================================================
 
 
+@njit
 def _rolling_mean(arr: np.ndarray, window: int) -> np.ndarray:
     """Compute rolling mean over `window` bars (causal, NaN-safe).
 
@@ -177,10 +200,12 @@ def _rolling_mean(arr: np.ndarray, window: int) -> np.ndarray:
     return result
 
 
-def _rolling_std(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
+@njit
+def _rolling_std(arr: np.ndarray, window: int) -> np.ndarray:
     """Compute rolling standard deviation over `window` bars (causal, NaN-safe).
 
     Returns NaN for t < window-1 or when fewer than 2 non-NaN values.
+    Uses sample std (ddof=1) computed manually for numba compatibility.
     """
     n = len(arr)
     result = np.full(n, np.nan, dtype=np.float64)
@@ -190,7 +215,10 @@ def _rolling_std(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
         seg = arr[i - window + 1 : i + 1]
         valid = seg[~np.isnan(seg)]
         if len(valid) >= 2:
-            result[i] = np.std(valid.astype(np.float64), ddof=ddof)
+            v = valid.astype(np.float64)
+            mu = np.mean(v)
+            var = np.sum((v - mu) ** 2) / (len(v) - 1)
+            result[i] = np.sqrt(var) if var > 0 else 0.0
     return result
 
 
@@ -306,6 +334,7 @@ def compute_funding_rate_volatility(
 # ===========================================================================
 
 
+@njit
 def compute_funding_rate_zscore(
     funding_rate: np.ndarray,
     window: int = DEFAULT_FUNDING_WINDOW,
@@ -340,7 +369,8 @@ def compute_funding_rate_zscore(
             result[i] = np.nan
             continue
         mu = np.mean(valid)
-        sigma = np.std(valid, ddof=1)
+        var = np.sum((valid - mu) ** 2) / (len(valid) - 1)
+        sigma = np.sqrt(var) if var > 0 else 0.0
         if sigma < 1e-14:
             result[i] = 0.0
         else:
@@ -390,6 +420,7 @@ def compute_funding_rate_change(
 # ===========================================================================
 
 
+@njit
 def compute_open_interest_proxy(
     close: np.ndarray,
     volume: np.ndarray,
@@ -450,6 +481,7 @@ def compute_open_interest_proxy(
 # ===========================================================================
 
 
+@njit
 def _rolling_zscore(arr: np.ndarray, window: int) -> np.ndarray:
     """Compute rolling z-score of an array (causal, NaN-safe)."""
     n = len(arr)
@@ -462,7 +494,8 @@ def _rolling_zscore(arr: np.ndarray, window: int) -> np.ndarray:
         if len(valid) < 2:
             continue
         mu = np.mean(valid)
-        sigma = np.std(valid, ddof=1)
+        var = np.sum((valid - mu) ** 2) / (len(valid) - 1)
+        sigma = np.sqrt(var) if var > 0 else 0.0
         if sigma < 1e-14:
             result[i] = 0.0
         else:
@@ -470,6 +503,7 @@ def _rolling_zscore(arr: np.ndarray, window: int) -> np.ndarray:
     return result
 
 
+@njit
 def compute_funding_oi_divergence(
     funding_rate: np.ndarray,
     oi_proxy: np.ndarray,

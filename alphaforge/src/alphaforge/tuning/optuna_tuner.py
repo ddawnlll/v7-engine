@@ -17,7 +17,6 @@ Key design decisions:
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -53,25 +52,6 @@ TARGET_DURATION_SECONDS: int = 120
 
 # Observation key for pruning (matches xgboost eval metric name)
 PRUNING_OBSERVATION_KEY: str = "val-mlogloss"
-
-# ---------------------------------------------------------------------------
-# CPU parallelism detection
-# ---------------------------------------------------------------------------
-
-
-def _detect_cpu_njobs() -> int:
-    """Detect available CPU parallelism, respecting container/WSL2 limits."""
-    try:
-        return max(1, len(os.sched_getaffinity(0)))
-    except AttributeError:
-        return max(1, os.cpu_count() or 1)
-
-
-CPU_NJOBS: int = _detect_cpu_njobs()
-
-# Default parallelism: cap parallel trials to CPU count.
-# When running parallel trials, each trial's XGBoost gets floor(CPU / parallel) threads.
-DEFAULT_TUNING_NJOBS: int = min(4, CPU_NJOBS)
 
 LABEL_TO_INT: Dict[str, int] = {
     "LONG_NOW": 0,
@@ -311,7 +291,6 @@ def run_tuning(
     random_state: int = RANDOM_SEED,
     early_stopping_rounds: int = EARLY_STOPPING_ROUNDS,
     direction: str = "minimize",
-    n_jobs: int = 1,
 ) -> optuna.Study:
     """Run hyperparameter tuning with aggressive MedianPruning.
 
@@ -376,16 +355,6 @@ def run_tuning(
     X_val = X[val_idx]
     y_val = y_int[val_idx]
 
-    # --- Per-trial thread budget ---
-    # When running parallel Optuna trials, each trial's XGBoost gets
-    # floor(total_cores / parallel_trials) threads to avoid oversubscription.
-    parallel_trials = max(1, n_jobs)
-    per_trial_n_jobs = max(1, CPU_NJOBS // parallel_trials)
-    logger.info(
-        "Optuna parallelism: %d parallel trials × n_jobs=%d (total %d cores)",
-        parallel_trials, per_trial_n_jobs, CPU_NJOBS,
-    )
-
     # --- Create study if needed ---
     if study is None:
         study = create_study(
@@ -406,7 +375,6 @@ def run_tuning(
             "num_class": NUM_CLASSES,
             "verbosity": 0,
             "random_state": random_state,
-            "n_jobs": per_trial_n_jobs,
             **params,
         }
 
@@ -451,20 +419,12 @@ def run_tuning(
 
     # --- Run optimization ---
     logger.info(
-        "Starting tuning: %d trials, early_stopping_rounds=%d, val_fraction=%.2f, "
-        "n_jobs=%d (per-trial XGBoost threads=%d)",
+        "Starting tuning: %d trials, early_stopping_rounds=%d, val_fraction=%.2f",
         n_trials,
         early_stopping_rounds,
         val_fraction,
-        n_jobs,
-        per_trial_n_jobs,
     )
-    study.optimize(
-        objective,
-        n_trials=n_trials,
-        n_jobs=n_jobs,
-        show_progress_bar=False,
-    )
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
 
     n_completed = len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE])
     n_pruned = len([t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED])

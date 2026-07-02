@@ -42,6 +42,11 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
+try:
+    from numba import njit
+except ImportError:
+    njit = lambda x: x
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -226,6 +231,7 @@ def _cross_sectional_rank(values: np.ndarray) -> np.ndarray:
     return result
 
 
+@njit
 def _rolling_correlation_vs_series(
     symbol_returns: np.ndarray,
     reference_returns: np.ndarray,
@@ -274,6 +280,7 @@ def _rolling_correlation_vs_series(
     return result
 
 
+@njit
 def _rolling_zscore(arr: np.ndarray, window: int) -> np.ndarray:
     """Compute rolling z-score (causal, NaN-safe)."""
     n = len(arr)

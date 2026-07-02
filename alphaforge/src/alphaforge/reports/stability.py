@@ -18,12 +18,9 @@ Authority: AlphaForge / reporting.
 
 from __future__ import annotations
 
-import logging
 from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
-
-logger = logging.getLogger(__name__)
 
 from alphaforge.features.regime import classify_regime, regime_counts
 from alphaforge.features.regime import Regime, RegimeSignal
@@ -49,38 +46,20 @@ def compute_symbol_metrics(
             - "oos_expectancy_r": float (mean expectancy_r for that symbol)
             - "oos_win_rate": float (win rate for that symbol)
             - "oos_trade_count": int (trade count for that symbol)
-            - "oos_ic": float (mean information coefficient, optional)
-            - "oos_rank_ic": float (mean rank IC, optional)
 
     Returns:
         Dict mapping symbol -> {
             "expectancy_r": float,
             "win_rate": float,
             "trade_count": int,
-            "oos_ic": float,
-            "oos_rank_ic": float,
         }
     """
     result: Dict[str, Dict[str, float]] = {}
     for symbol, data in per_symbol_oos.items():
-        ic = float(data.get("oos_ic", 0.0))
-        rank_ic = float(data.get("oos_rank_ic", 0.0))
-
-        if "oos_ic" not in data:
-            logger.warning(
-                "oos_ic missing for symbol %s — defaulting to 0.0", symbol
-            )
-        if "oos_rank_ic" not in data:
-            logger.warning(
-                "oos_rank_ic missing for symbol %s — defaulting to 0.0", symbol
-            )
-
         result[symbol] = {
             "expectancy_r": float(data.get("oos_expectancy_r", 0.0)),
             "win_rate": float(data.get("oos_win_rate", 0.0)),
             "trade_count": int(data.get("oos_trade_count", 0)),
-            "oos_ic": ic,
-            "oos_rank_ic": rank_ic,
         }
     return result
 
@@ -258,23 +237,11 @@ def build_stability_section(
         data_scope = wfv_results.get("data_scope", {})
         symbols = data_scope.get("symbols", ["BTCUSDT"])
         symbol_metrics = {}
-
-        if "oos_ic" not in oos_summary:
-            logger.warning(
-                "oos_ic not found in oos_summary — defaulting to 0.0"
-            )
-        if "oos_rank_ic" not in oos_summary:
-            logger.warning(
-                "oos_rank_ic not found in oos_summary — defaulting to 0.0"
-            )
-
         for sym in symbols:
             symbol_metrics[sym] = {
                 "expectancy_r": oos_summary.get("oos_expectancy_r", 0.0),
                 "win_rate": oos_summary.get("oos_win_rate", 0.5),
                 "trade_count": oos_summary.get("oos_trade_count", 0),
-                "oos_ic": oos_summary.get("oos_ic", 0.0),
-                "oos_rank_ic": oos_summary.get("oos_rank_ic", 0.0),
             }
 
     # --- Symbol concentration -----------------------------------------

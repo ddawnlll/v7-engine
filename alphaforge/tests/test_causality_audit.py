@@ -1174,7 +1174,7 @@ class TestAudit8NanSafety:
             warnings.simplefilter("always")
             result = compute_features(ohlcv, mode="SWING")
         # Should complete without error
-        assert result.total_features() == 67
+        assert result.total_features() == 60
         # NaN should have propagated to some features
         assert np.isnan(result.features["log_return_1"][50])
 
@@ -1287,14 +1287,14 @@ class TestAudit10FeatureMatrixIntegrity:
         ohlcv = _make_ohlcv(n=200)
         result = compute_features(ohlcv, mode="SWING")
         groups = result.feature_group_ids
-        assert len(groups) == 10  # Increased from 9: +funding features, f"Expected 9 groups, got {len(groups)}: {groups}"
+        assert len(groups) == 9, f"Expected 9 groups, got {len(groups)}: {groups}"
         assert "lead_lag" not in groups
 
     def test_60_total_features(self):
         """AC-128-074: Full pipeline produces 60 features (extended)."""
         ohlcv = _make_ohlcv(n=200)
         result = compute_features(ohlcv, mode="SWING")
-        assert result.total_features() == 67, (
+        assert result.total_features() == 60, (
             f"Expected 38 features, got {result.total_features()}"
         )
 

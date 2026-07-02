@@ -27,6 +27,11 @@ from typing import Dict
 
 import numpy as np
 
+try:
+    from numba import njit
+except ImportError:
+    njit = lambda x: x
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -91,6 +96,7 @@ def _is_marubozu(
     return result
 
 
+@njit
 def _is_engulfing(
     open_arr: np.ndarray,
     close: np.ndarray,
@@ -108,7 +114,7 @@ def _is_engulfing(
     Position 0 is always False (cannot detect 2-bar pattern with 1 bar).
     """
     n = len(close)
-    result = np.zeros(n, dtype=bool)
+    result = np.zeros(n, dtype=np.bool_)
     if n < 2:
         return result
     for i in range(1, n):
@@ -128,6 +134,7 @@ def _is_engulfing(
     return result
 
 
+@njit
 def _is_hammer(
     open_arr: np.ndarray,
     high: np.ndarray,
@@ -142,7 +149,7 @@ def _is_hammer(
     Returns boolean array.
     """
     n = len(close)
-    result = np.zeros(n, dtype=bool)
+    result = np.zeros(n, dtype=np.bool_)
     for i in range(n):
         body = abs(close[i] - open_arr[i])
         total_range = high[i] - low[i]
@@ -179,6 +186,7 @@ def _is_gap(
     return result
 
 
+@njit
 def _consecutive_up(close: np.ndarray, open_arr: np.ndarray) -> np.ndarray:
     """Compute consecutive up bars count (close > open)."""
     n = len(close)
@@ -193,6 +201,7 @@ def _consecutive_up(close: np.ndarray, open_arr: np.ndarray) -> np.ndarray:
     return result
 
 
+@njit
 def _consecutive_down(close: np.ndarray, open_arr: np.ndarray) -> np.ndarray:
     """Compute consecutive down bars count (close < open)."""
     n = len(close)
@@ -211,6 +220,7 @@ def _consecutive_down(close: np.ndarray, open_arr: np.ndarray) -> np.ndarray:
 # Rolling helpers
 # ---------------------------------------------------------------------------
 
+@njit
 def _rolling_fraction(mask: np.ndarray, window: int) -> np.ndarray:
     """Rolling fraction of True values in mask over window bars.
 

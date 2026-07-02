@@ -215,8 +215,6 @@ def build_mode_research_report(
             "overfit_risk": "HIGH",
         },
         "metrics": {
-            "oos_ic": _make_metric_ci(0.0, -1.0, 1.0),
-            "oos_rank_ic": _make_metric_ci(0.0, -1.0, 1.0),
             "oos_sharpe": _make_metric_ci(0.0, -1.0, 1.0),
             "oos_expectancy_r": _make_metric_ci(0.0, -0.5, 0.5),
             "oos_win_rate": _make_metric_ci(0.4, 0.2, 0.6),

@@ -54,12 +54,6 @@ class EvidencePassport:
     # -- Hypothesis cards this passport supports
     hypothesis_refs: list[str] = field(default_factory=list)
 
-    # -- Signal quality (IC / rank IC / calibration error)
-    signal_quality: dict = field(default_factory=dict)
-
-    # -- Metric philosophy disclaimer
-    metric_philosophy: str = ""
-
     # -- Evidence trail
     trial_count: int = 0
     data_summary: dict = field(default_factory=dict)

@@ -133,10 +133,9 @@ class PipelineConfig:
     random_seed: int = DEFAULT_RANDOM_SEED
     dry_run: bool = True
     force: bool = False
-    use_synthetic: bool = False       # Default: load cached Binance data, fall back to synthetic
+    use_synthetic: bool = True       # Use synthetic data instead of real Binance
     n_bars: int = DEFAULT_N_BARS    # Bars per symbol for synthetic data
     steps: Tuple[str, ...] = PIPELINE_STEPS
-    validator_enabled: bool = True
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -152,7 +151,6 @@ class PipelineConfig:
             "use_synthetic": self.use_synthetic,
             "n_bars": self.n_bars,
             "steps": list(self.steps),
-            "validator_enabled": self.validator_enabled,
         }
 
 
@@ -310,99 +308,6 @@ def _generate_synthetic_ohlcv(
         "close": np.concatenate(all_close),
         "volume": np.concatenate(all_volume),
         "symbol": all_symbol,
-    }
-
-
-def _load_cached_data(
-    symbols: Tuple[str, ...],
-    mode: str,
-    data_dir: str = "data/raw",
-) -> Optional[Dict[str, np.ndarray]]:
-    """Load cached OHLCV Parquet data from disk.
-
-    Reads from ``data/raw/<symbol>/`` directory. Scans all Parquet files
-    for the primary interval of the given trading mode and concatenates
-    them in chronological order across all symbols.
-
-    Returns None if no data is found — caller should fall back to synthetic.
-
-    Args:
-        symbols: Trading pair symbols (e.g. BTCUSDT, ETHUSDT).
-        mode: Trading mode (SWING → 4h, SCALP → 1h, AGGRESSIVE_SCALP → 15m).
-        data_dir: Root directory for raw market data.
-
-    Returns:
-        OHLCV dict with keys open/high/low/close/volume/timestamp/symbol,
-        or None if no Parquet files were found.
-    """
-    import pyarrow.parquet as pq
-    from pathlib import Path
-
-    interval = _get_primary_interval(mode)  # 4h, 1h, or 15m
-    raw_dir = Path(data_dir)
-    if not raw_dir.is_dir():
-        logger.warning("Data directory %s not found", data_dir)
-        return None
-
-    combined_close: List[float] = []
-    combined_open: List[float] = []
-    combined_high: List[float] = []
-    combined_low: List[float] = []
-    combined_volume: List[float] = []
-    combined_timestamp: List[int] = []
-    combined_symbol: List[str] = []
-
-    for sym in symbols:
-        sym_dir = raw_dir / sym
-        if not sym_dir.is_dir():
-            logger.info("No cache directory for %s at %s", sym, sym_dir)
-            continue
-
-        # Collect all Parquet files matching this interval
-        pq_files = sorted(sym_dir.glob(f"*_{interval}_*.parquet"))
-        # Fall back to any parquet file if interval-specific not found
-        if not pq_files:
-            pq_files = sorted(sym_dir.glob("*.parquet"))
-
-        if not pq_files:
-            logger.info("No Parquet files for %s in %s", sym, sym_dir)
-            continue
-
-        for pf in pq_files:
-            try:
-                table = pq.read_table(str(pf))
-                df = table.to_pandas()
-                n = len(df)
-                if n == 0:
-                    continue
-                combined_close.extend(df["close"].tolist())
-                combined_open.extend(df["open"].tolist())
-                combined_high.extend(df["high"].tolist())
-                combined_low.extend(df["low"].tolist())
-                combined_volume.extend(df["volume"].tolist())
-                combined_timestamp.extend(df["timestamp"].tolist())
-                combined_symbol.extend([sym] * n)
-                logger.info("Loaded %d bars from %s", n, pf.name)
-            except Exception as exc:
-                logger.warning("Failed to read %s: %s", pf.name, exc)
-                continue
-
-    if not combined_close:
-        logger.warning("No cached data found for any symbol")
-        return None
-
-    logger.info(
-        "Loaded %d total bars from cache (%s)",
-        len(combined_close), ", ".join(symbols),
-    )
-    return {
-        "close": np.array(combined_close, dtype=np.float64),
-        "open": np.array(combined_open, dtype=np.float64),
-        "high": np.array(combined_high, dtype=np.float64),
-        "low": np.array(combined_low, dtype=np.float64),
-        "volume": np.array(combined_volume, dtype=np.float64),
-        "timestamp": np.array(combined_timestamp, dtype=np.int64),
-        "symbol": combined_symbol,
     }
 
 
@@ -667,20 +572,23 @@ class PipelineRunner:
         if not self._config.symbols:
             errors.append("No symbols specified")
 
-        # Validate date range — optional for cached data, required for Binance API
-        # When use_synthetic=False, cached data is tried first; dates are only
-        # needed if you intend to fetch fresh data from the Binance API.
-        if self._config.start_date and self._config.end_date:
-            try:
-                start_dt = datetime.strptime(self._config.start_date, "%Y-%m-%d")
-                end_dt = datetime.strptime(self._config.end_date, "%Y-%m-%d")
-                if start_dt >= end_dt:
-                    errors.append(
-                        f"start_date ({self._config.start_date}) must be before "
-                        f"end_date ({self._config.end_date})"
-                    )
-            except ValueError as e:
-                errors.append(f"Invalid date format: {e}")
+        # Validate date range if not synthetic
+        if not self._config.use_synthetic:
+            if not self._config.start_date:
+                errors.append("start_date required for non-synthetic mode")
+            if not self._config.end_date:
+                errors.append("end_date required for non-synthetic mode")
+            if self._config.start_date and self._config.end_date:
+                try:
+                    start_dt = datetime.strptime(self._config.start_date, "%Y-%m-%d")
+                    end_dt = datetime.strptime(self._config.end_date, "%Y-%m-%d")
+                    if start_dt >= end_dt:
+                        errors.append(
+                            f"start_date ({self._config.start_date}) must be before "
+                            f"end_date ({self._config.end_date})"
+                        )
+                except ValueError as e:
+                    errors.append(f"Invalid date format: {e}")
 
         # Validate output dir writable
         try:
@@ -718,72 +626,196 @@ class PipelineRunner:
     # ------------------------------------------------------------------
 
     def _step_backfill(self) -> PipelineEvidence:
-        """Load market data: cached Binance data first, fall back to synthetic.
+        """Backfill market data.
 
-        Priority:
-          1. Cached Parquet files in data/raw/<symbol>/ (fastest, no API key)
-          2. Synthetic generation (always works, used when no cache found)
+        In synthetic mode: generate synthetic OHLCV data.
+        In real mode: use AlphaForgeBackfillPipeline with Binance.
         """
         metrics: Dict[str, Any] = {
             "mode": self._config.mode,
             "symbols": list(self._config.symbols),
-            "data_source": "unknown",
+            "use_synthetic": self._config.use_synthetic,
         }
         errors: List[str] = []
         warnings: List[str] = []
 
-        # ------------------------------------------------------------------
-        # 1. Try loading cached Binance data from disk
-        # ------------------------------------------------------------------
-        ohlcv = _load_cached_data(
-            symbols=self._config.symbols,
-            mode=self._config.mode,
-        )
-
-        if ohlcv is not None:
+        if self._config.use_synthetic:
+            # Generate synthetic OHLCV data deterministically
+            ohlcv = _generate_synthetic_ohlcv(
+                n_bars=self._config.n_bars,
+                symbols=self._config.symbols,
+                random_seed=self._config.random_seed,
+            )
             self._ctx.ohlcv_data = ohlcv
+
             total_bars = len(ohlcv["close"])
             n_symbols = len(self._config.symbols)
             bars_per_symbol = total_bars // n_symbols if n_symbols > 0 else 0
+
             metrics.update({
                 "total_bars": total_bars,
                 "n_symbols": n_symbols,
                 "bars_per_symbol": bars_per_symbol,
-                "data_source": "cached_binance",
+                "data_source": "synthetic",
+                "random_seed": self._config.random_seed,
             })
-            print(f"  Loaded {total_bars} cached bars across {n_symbols} symbols")
+
+            print(f"  Generated {total_bars} synthetic bars across {n_symbols} symbols")
+            print(f"  Bars per symbol: {bars_per_symbol}")
+        else:
+            # Real Binance backfill — use lib-level backfill orchestrator directly
+            # AlphaForge BackfillPipeline requires service objects; skip it for
+            # v0.2 direct CLI usage and call the proven lib-level pipeline.
+            try:
+                from lib.market_data.binance.klines_service import KlinesService
+                from lib.market_data.binance.market_data_service import (
+                    BinanceMarketDataService,
+                )
+                from lib.market_data.storage import StorageWriter
+                from lib.market_data.catalog import DataCatalog
+                from lib.market_data.binance.backfill import BackfillOrchestrator
+                from lib.market_data.binance.rate_limiter import BinanceRateLimiter
+                from lib.market_data.binance.checkpoint import BackfillCheckpoint
+
+                # Parse dates to ms timestamps
+                if self._config.start_date and self._config.end_date:
+                    start_dt = datetime.strptime(
+                        self._config.start_date, "%Y-%m-%d"
+                    ).replace(tzinfo=timezone.utc)
+                    end_dt = datetime.strptime(
+                        self._config.end_date, "%Y-%m-%d"
+                    ).replace(tzinfo=timezone.utc)
+                    start_ms = int(start_dt.timestamp() * 1000)
+                    end_ms = int(end_dt.timestamp() * 1000)
+                else:
+                    errors.append("start_date and end_date required for real backfill")
+                    return _make_evidence(
+                        "backfill", StepStatus.FAILED.value,
+                        metrics=metrics, errors=errors, warnings=warnings,
+                    )
+
+                # Wire up services
+                bmd = BinanceMarketDataService()
+                klines = KlinesService(client=bmd._client)
+                storage = StorageWriter()  # defaults to data/
+                catalog = DataCatalog()
+                rate_limiter = BinanceRateLimiter()
+                checkpoint = BackfillCheckpoint(
+                    file_path="/tmp/backfill_checkpoint.json"
+                )
+
+                orchestrator = BackfillOrchestrator(
+                    klines_service=klines,
+                    funding_service=None,
+                    storage_writer=storage,
+                    catalog=catalog,
+                    rate_limiter=rate_limiter,
+                    checkpoint=checkpoint,
+                )
+
+                # Backfill all intervals relevant to the mode
+                intervals = _get_mode_intervals(self._config.mode)
+                stats = orchestrator.backfill(
+                    symbols=list(self._config.symbols),
+                    intervals=intervals,
+                    start_time=start_ms,
+                    end_time=end_ms,
+                    batch_size=50000,
+                )
+
+                metrics.update({
+                    "total_records": stats.get("total_records", 0),
+                    "total_symbols": stats.get("total_symbols", 0),
+                    "total_intervals": stats.get("total_intervals", 0),
+                    "errors_count": len(stats.get("errors", [])),
+                    "data_source": "binance",
+                    "intervals": intervals,
+                })
+                warnings = stats.get("errors", [])
+
+                # Load cached data back into pipeline context for downstream steps
+                import numpy as np
+                import pyarrow.parquet as pq
+                from pathlib import Path
+
+                data_dir = Path(self._config.output_dir) / "cache"
+                if not data_dir.exists():
+                    data_dir = Path("data") / "cache"
+                    data_dir.mkdir(parents=True, exist_ok=True)
+
+                primary = _get_primary_interval(self._config.mode)
+                combined_close: list[float] = []
+                combined_open: list[float] = []
+                combined_high: list[float] = []
+                combined_low: list[float] = []
+                combined_volume: list[float] = []
+                combined_timestamp: list[int] = []
+                combined_symbol: list[str] = []
+
+                for sym in self._config.symbols:
+                    pq_path = data_dir / f"{sym}_{primary}.parquet"
+                    if pq_path.exists():
+                        table = pq.read_table(str(pq_path))
+                        df = table.to_pandas()
+                        n = len(df)
+                        combined_close.extend(df["close"].tolist())
+                        combined_open.extend(df["open"].tolist())
+                        combined_high.extend(df["high"].tolist())
+                        combined_low.extend(df["low"].tolist())
+                        combined_volume.extend(df["volume"].tolist())
+                        combined_timestamp.extend(df["timestamp"].tolist())
+                        combined_symbol.extend([sym] * n)
+                    else:
+                        # Try raw dir
+                        raw_dir = Path("data") / "raw" / sym
+                        if raw_dir.exists():
+                            pq_files = sorted(raw_dir.glob(f"*_{primary}_*.parquet"))
+                            for pf in pq_files:
+                                table = pq.read_table(str(pf))
+                                df = table.to_pandas()
+                                n = len(df)
+                                combined_close.extend(df["close"].tolist())
+                                combined_open.extend(df["open"].tolist())
+                                combined_high.extend(df["high"].tolist())
+                                combined_low.extend(df["low"].tolist())
+                                combined_volume.extend(df["volume"].tolist())
+                                combined_timestamp.extend(df["timestamp"].tolist())
+                                combined_symbol.extend([sym] * n)
+
+                if combined_close:
+                    self._ctx.ohlcv_data = {
+                        "close": np.array(combined_close, dtype=np.float64),
+                        "open": np.array(combined_open, dtype=np.float64),
+                        "high": np.array(combined_high, dtype=np.float64),
+                        "low": np.array(combined_low, dtype=np.float64),
+                        "volume": np.array(combined_volume, dtype=np.float64),
+                        "timestamp": np.array(combined_timestamp, dtype=np.int64),
+                        "symbol": combined_symbol,
+                    }
+                    metrics["ohlcv_loaded"] = len(combined_close)
+
+            except ImportError as e:
+                errors.append(f"Cannot import backfill module: {e}")
+                return _make_evidence(
+                    "backfill", StepStatus.FAILED.value,
+                    metrics=metrics, errors=errors, warnings=warnings,
+                )
+            except Exception as e:
+                errors.append(f"Backfill failed: {e}")
+                return _make_evidence(
+                    "backfill", StepStatus.FAILED.value,
+                    metrics=metrics, errors=errors, warnings=warnings,
+                )
+
+        if errors:
             return _make_evidence(
-                "backfill", StepStatus.COMPLETED.value, metrics=metrics,
+                "backfill", StepStatus.FAILED.value,
+                metrics=metrics, errors=errors, warnings=warnings,
             )
 
-        # ------------------------------------------------------------------
-        # 2. No cache found — generate synthetic data
-        # ------------------------------------------------------------------
-        logger.warning("No cached data found, using synthetic fallback")
-        ohlcv = _generate_synthetic_ohlcv(
-            n_bars=self._config.n_bars,
-            symbols=self._config.symbols,
-            random_seed=self._config.random_seed,
-        )
-        self._ctx.ohlcv_data = ohlcv
-
-        total_bars = len(ohlcv["close"])
-        n_symbols = len(self._config.symbols)
-        bars_per_symbol = total_bars // n_symbols if n_symbols > 0 else 0
-
-        metrics.update({
-            "total_bars": total_bars,
-            "n_symbols": n_symbols,
-            "bars_per_symbol": bars_per_symbol,
-            "data_source": "synthetic",
-            "random_seed": self._config.random_seed,
-        })
-
-        print(f"  Generated {total_bars} synthetic bars across {n_symbols} symbols")
-        print(f"  Bars per symbol: {bars_per_symbol}")
-
         return _make_evidence(
-            "backfill", StepStatus.COMPLETED.value, metrics=metrics,
+            "backfill", StepStatus.COMPLETED.value,
+            metrics=metrics, warnings=warnings,
         )
 
     # ------------------------------------------------------------------
@@ -791,19 +823,14 @@ class PipelineRunner:
     # ------------------------------------------------------------------
 
     def _step_labels(self) -> PipelineEvidence:
-        """Generate alpha labels from OHLCV data.
+        """Generate alpha labels.
 
-        Uses forward-return labeling: looks N bars ahead and labels based
-        on price change. This is faster and more transparent than the
-        simulation engine, and sufficient for profitability testing.
-
-        Label logic:
-          - LONG_NOW  if future_return >  entry_threshold
-          - SHORT_NOW if future_return < -entry_threshold
-          - NO_TRADE  otherwise
+        In synthetic mode: generate synthetic 3-class labels.
+        In real mode: use LabelAdapter with SimulationOutput (not yet wired).
         """
         metrics: Dict[str, Any] = {
             "mode": self._config.mode,
+            "label_method": "synthetic" if self._config.use_synthetic else "simulation",
         }
         errors: List[str] = []
 
@@ -814,51 +841,94 @@ class PipelineRunner:
                 metrics=metrics, errors=errors,
             )
 
-        close = self._ctx.ohlcv_data["close"]
+        n_bars = len(self._ctx.ohlcv_data["close"])
 
-        # Mode-specific forward horizon (bars ahead) and entry threshold
-        horizon = {"SWING": 6, "SCALP": 12, "AGGRESSIVE_SCALP": 24}
-        thresholds = {"SWING": 0.005, "SCALP": 0.003, "AGGRESSIVE_SCALP": 0.002}
-        fwd = horizon.get(self._config.mode, 6)
-        thr = thresholds.get(self._config.mode, 0.005)
+        if self._config.use_synthetic:
+            # Generate synthetic labels for each bar
+            labels = _generate_synthetic_labels(
+                n_samples=n_bars,
+                random_seed=self._config.random_seed + 1,  # Offset seed from OHLCV
+            )
+            self._ctx.labels = labels
+            self._ctx.label_ints = np.array(
+                [_LABEL_TO_INT[str(lbl)] for lbl in labels], dtype=int
+            )
 
-        n = len(close)
-        labels_list: List[str] = []
-        label_ints_list: List[int] = []
+            unique, counts = np.unique(labels, return_counts=True)
+            distribution = {str(k): int(v) for k, v in zip(unique, counts)}
 
-        for i in range(n):
-            if i + fwd < n:
-                # Forward return: (close[t+N] - close[t]) / close[t]
-                fwd_ret = (close[i + fwd] - close[i]) / close[i]
-                if fwd_ret > thr:
-                    labels_list.append("LONG_NOW")
-                    label_ints_list.append(0)
-                elif fwd_ret < -thr:
-                    labels_list.append("SHORT_NOW")
-                    label_ints_list.append(1)
-                else:
-                    labels_list.append("NO_TRADE")
-                    label_ints_list.append(2)
-            else:
-                # Not enough future data — mark as NO_TRADE
-                labels_list.append("NO_TRADE")
-                label_ints_list.append(2)
+            metrics.update({
+                "n_labels": n_bars,
+                "label_distribution": distribution,
+                "label_classes": sorted(_LABEL_TO_INT.keys()),
+            })
 
-        self._ctx.labels = np.array(labels_list)
-        self._ctx.label_ints = np.array(label_ints_list, dtype=int)
+            print(f"  Generated {n_bars} synthetic labels")
+            print(f"  Distribution: {distribution}")
+        else:
+            # Real labels from SimulationOutput via LabelAdapter
+            # NOT YET WIRED — requires simulation pipeline
+            try:
+                from simulation.engine.engine import simulate as sim_engine
+                from simulation.contracts.models import SimulationInput
+                from alphaforge.labels.adapter import LabelAdapter
 
-        unique, counts = np.unique(labels_list, return_counts=True)
-        dist = {str(k): int(v) for k, v in zip(unique, counts)}
-        metrics.update({
-            "n_labels": n,
-            "label_distribution": dist,
-            "label_classes": sorted(_LABEL_TO_INT.keys()),
-            "forward_horizon_bars": fwd,
-            "entry_threshold": thr,
-        })
+                adapter = LabelAdapter()
+                ohlcv = self._ctx.ohlcv_data
+                n = len(ohlcv["close"])
 
-        print(f"  Generated {n} labels ({self._config.mode}, {fwd}-bar forward, threshold={thr})")
-        print(f"  Distribution: {dist}")
+                stop_mult = 2.0 if self._config.mode == "SWING" else 1.5
+                target_mult = 3.0 if self._config.mode == "SWING" else 2.0
+                max_hold = 30 if self._config.mode == "SWING" else 12
+
+                labels_list = []
+                label_ints_list = []
+
+                for i in range(n):
+                    atr_val = float(
+                        np.mean(np.abs(np.diff(ohlcv["close"][max(0, i-14):i+1])))
+                    ) if i >= 14 else float(ohlcv["high"][i] - ohlcv["low"][i])
+
+                    inp = SimulationInput(
+                        symbol=str(ohlcv["symbol"][i]) if isinstance(ohlcv["symbol"], list) else "S",
+                        entry_price=float(ohlcv["close"][i]),
+                        high_price=float(ohlcv["high"][i]),
+                        low_price=float(ohlcv["low"][i]),
+                        atr_14=atr_val,
+                        stop_loss_mult=stop_mult,
+                        take_profit_mult=target_mult,
+                        max_hold_bars=max_hold,
+                        fee_pct=0.04,
+                        slippage_pct=0.02,
+                    )
+                    try:
+                        sim_out = sim_engine(inp)
+                        ld = sim_out.model_dump() if hasattr(sim_out, "model_dump") else vars(sim_out)
+                        label = adapter.adapt_simulation_output(ld)
+                        best = label.get("best_action_after_cost", "NO_TRADE")
+                        labels_list.append(best)
+                        label_ints_list.append(_LABEL_TO_INT.get(best, _LABEL_TO_INT["NO_TRADE"]))
+                    except Exception:
+                        labels_list.append("NO_TRADE")
+                        label_ints_list.append(_LABEL_TO_INT["NO_TRADE"])
+
+                self._ctx.labels = np.array(labels_list)
+                self._ctx.label_ints = np.array(label_ints_list, dtype=int)
+
+                unique, counts = np.unique(labels_list, return_counts=True)
+                dist = {str(k): int(v) for k, v in zip(unique, counts)}
+                metrics.update({"n_labels": n, "label_distribution": dist, "label_source": "simulation"})
+                print(f"  Generated {n} simulation labels. Dist: {dist}")
+
+            except ImportError as e:
+                errors.append(f"Sim engine unavailable: {e}")
+                return _make_evidence("labels", StepStatus.FAILED.value, metrics=metrics, errors=errors)
+
+        if errors:
+            return _make_evidence(
+                "labels", StepStatus.FAILED.value,
+                metrics=metrics, errors=errors,
+            )
 
         return _make_evidence(
             "labels", StepStatus.COMPLETED.value, metrics=metrics,
@@ -1102,7 +1172,6 @@ class PipelineRunner:
                 n_symbols=len(self._config.symbols),
                 random_seed=self._config.random_seed,
                 min_folds=3,  # Per issue spec
-                mode=self._config.mode,
             )
             self._ctx.wfv_result = result
 
@@ -1115,17 +1184,11 @@ class PipelineRunner:
                 "avg_val_accuracy": agg.get("avg_val_accuracy", 0.0),
                 "avg_accuracy_gap": agg.get("avg_accuracy_gap", 0.0),
                 "avg_logloss_gap": agg.get("avg_logloss_gap", 0.0),
-                # Classification-based metrics
                 "avg_sharpe": agg.get("avg_sharpe", 0.0),
                 "sharpe_stability_std": agg.get("sharpe_stability_std", 0.0),
                 "avg_win_rate": agg.get("avg_win_rate", 0.0),
                 "avg_max_drawdown": agg.get("avg_max_drawdown", 0.0),
                 "avg_profit_factor": agg.get("avg_profit_factor", 0.0),
-                # Net_R economic metrics
-                "avg_net_sharpe": agg.get("avg_net_sharpe", 0.0),
-                "net_sharpe_stability_std": agg.get("net_sharpe_stability_std", 0.0),
-                "avg_net_profit_factor": agg.get("avg_net_profit_factor", 0.0),
-                "avg_net_expectancy": agg.get("avg_net_expectancy", 0.0),
                 "total_oos_trades": agg.get("total_oos_trades", 0),
                 "overfit_flags": len(result.overfit_flags),
             })
@@ -1154,11 +1217,9 @@ class PipelineRunner:
 
             print(f"  Folds: {len(result.folds)}")
             print(f"  Verdict: {result.verdict}")
-            print(f"  Avg Sharpe (class):  {agg.get('avg_sharpe', 0):.4f}")
-            print(f"  Avg Win Rate:        {agg.get('avg_win_rate', 0):.4f}")
-            print(f"  Avg Net Sharpe:      {agg.get('avg_net_sharpe', 0):.4f}")
-            print(f"  Avg Net Expectancy:  {agg.get('avg_net_expectancy', 0):.6f}")
-            print(f"  Overfit flags:       {len(result.overfit_flags)}")
+            print(f"  Avg Sharpe: {agg.get('avg_sharpe', 0):.4f}")
+            print(f"  Avg Win Rate: {agg.get('avg_win_rate', 0):.4f}")
+            print(f"  Overfit flags: {len(result.overfit_flags)}")
             print(f"  Report saved to: {report_path}")
 
             metrics["wfv_report_path"] = report_path
@@ -1211,350 +1272,38 @@ class PipelineRunner:
                 metrics["wfv_verdict"] = ev.metrics.get("verdict", "UNKNOWN")
                 metrics["wfv_n_folds"] = ev.metrics.get("n_folds", 0)
                 metrics["wfv_avg_sharpe"] = ev.metrics.get("avg_sharpe", 0.0)
-                metrics["wfv_avg_net_sharpe"] = ev.metrics.get("avg_net_sharpe", 0.0)
-                metrics["wfv_avg_net_expectancy"] = ev.metrics.get("avg_net_expectancy", 0.0)
 
-        # ------------------------------------------------------------------
-        # Alpha Target Validator — produces a single consolidated report
-        # with validator scores + WFV data + pipeline context
-        # ------------------------------------------------------------------
-        consolidated_path = None
-        if (
-            self._config.validator_enabled
-            and self._ctx.wfv_result is not None
-            and not errors
-        ):
-            try:
-                from alphaforge.validation.target_validator import AlphaTargetValidator
+        # Save report
+        try:
+            ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+            report_filename = f"pipeline_v02_{self._config.mode.lower()}_{ts}.json"
+            report_path = os.path.join(
+                self._config.output_dir, "reports", report_filename,
+            )
+            os.makedirs(os.path.dirname(report_path), exist_ok=True)
 
-                # Load WFV dict from the saved JSON report
-                wfv_ev = next(
-                    (
-                        e for e in self._evidence
-                        if e.step == "wfv" and e.status == StepStatus.COMPLETED.value
-                    ),
-                    None,
-                )
-                wfv_report_path = wfv_ev.metrics.get("wfv_report_path") if wfv_ev else None
+            report_data = {
+                "pipeline_version": PIPELINE_VERSION,
+                "schema_version": PIPELINE_SCHEMA_VERSION,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "config": self._config.to_dict(),
+                "step_results": step_results,
+                "metrics": metrics,
+                "evidence_checksums": [
+                    {"step": e.step, "checksum": e.checksum}
+                    for e in self._evidence
+                ],
+            }
+            with open(report_path, "w") as f:
+                json.dump(report_data, f, indent=2, default=str)
 
-                if wfv_report_path and os.path.isfile(wfv_report_path):
-                    with open(wfv_report_path) as f_wfv:
-                        wfv_dict = json.load(f_wfv)
+            self._ctx.report_path = report_path
+            metrics["report_path"] = report_path
 
-                    # Build pipeline context for the consolidated report
-                    pipeline_ctx = {
-                        "pipeline_version": PIPELINE_VERSION,
-                        "schema_version": PIPELINE_SCHEMA_VERSION,
-                        "config": self._config.to_dict(),
-                        "step_results": step_results,
-                        "metrics": metrics,
-                        "evidence_checksums": [
-                            {"step": e.step, "checksum": e.checksum}
-                            for e in self._evidence
-                        ],
-                    }
+            print(f"  Report saved to: {report_path}")
 
-                    validator = AlphaTargetValidator()
-                    v_report = validator.score(wfv_dict)
-
-                    # ------------------------------------------------------------------
-                    # Evidence Engine — Trial Ledger + Baseline Library + V7 Gates
-                    # ------------------------------------------------------------------
-                    evidence_decision = None
-                    v7_gate_statuses = []
-                    baseline_data = {}
-                    model_vs_baselines = {}
-                    ee_ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-                    try:
-                        from lib.evidence_engine.hypothesis import (
-                            HypothesisCard, HypothesisRegistry, ClaimType,
-                        )
-                        from lib.evidence_engine.baselines import BaselineLibrary
-                        from lib.evidence_engine.evidence_passport import (
-                            EvidencePassportBuilder,
-                        )
-                        from lib.evidence_engine.decisions import DecisionEngine
-                        from v7.evidence_consumer import consume_evidence_passport
-
-                        # ----------------------------------------------------------
-                        # 1. Trial Ledger — persistent hypothesis registry
-                        # ----------------------------------------------------------
-                        hyp_reg = HypothesisRegistry(
-                            ledger_path=os.path.join(
-                                self._config.output_dir, "trial_ledger.json",
-                            ),
-                        )
-                        hyp_card = HypothesisCard(
-                            card_id=f"CTRL-BASELINE-{ee_ts}",
-                            claim_type=ClaimType.ALPHA_HAS_EDGE,
-                            problem=(
-                                f"Measure current {self._config.mode} model "
-                                f"vs baselines on real data"
-                            ),
-                            proposed_mechanism=(
-                                "Control run — no intervention, "
-                                "just evidence collection"
-                            ),
-                            intervention="NONE — control run",
-                            control="N/A",
-                            data=(
-                                "synthetic" if self._config.use_synthetic
-                                else "real"
-                            ) + f" {self._config.mode} BTC/ETH/SOL 1h",
-                            baselines=[
-                                "NO_TRADE", "RANDOM_ACTION",
-                                "ALWAYS_LONG", "ALWAYS_SHORT",
-                                "BUY_AND_HOLD", "COST_ONLY_NULL",
-                            ],
-                            success_criteria=[
-                                "fold_pass_ratio > 0",
-                                "beats_no_trade",
-                                "beats_random",
-                            ],
-                            fail_criteria=[
-                                "fold_pass_ratio == 0",
-                                "active_trades == 0",
-                            ],
-                            max_trials=1,
-                            allowed_files=[],
-                            status="APPROVED",
-                        )
-                        hyp_reg.register(hyp_card)
-
-                        # ----------------------------------------------------------
-                        # 2. Baseline Library — compute from pipeline labels
-                        # ----------------------------------------------------------
-                        pipeline_labels = getattr(self._ctx, "labels", None)
-
-                        if pipeline_labels is not None:
-                            labels_list = (
-                                pipeline_labels.tolist()
-                                if hasattr(pipeline_labels, "tolist")
-                                else list(pipeline_labels)
-                            )
-                            gross_r_list = [0.0] * len(labels_list)
-
-                            bl = BaselineLibrary()
-                            baseline_results = bl.compute_baselines(
-                                labels_list, gross_r_list, fee_pct=0.04,
-                            )
-
-                            # Compare model vs baselines using WFV aggregate metrics
-                            wfv_agg = wfv_dict.get("aggregate_metrics", {})
-                            model_metrics_for_baseline = {
-                                "net_expectancy_R": wfv_agg.get(
-                                    "avg_net_expectancy", 0.0,
-                                ),
-                                "net_sharpe": wfv_agg.get(
-                                    "avg_net_sharpe", 0.0,
-                                ),
-                                "net_profit_factor": wfv_agg.get(
-                                    "avg_net_profit_factor", 0.0,
-                                ),
-                            }
-
-                            for baseline_name in baseline_results:
-                                beats, reason = bl.model_beats_baseline(
-                                    model_metrics_for_baseline,
-                                    baseline_name,
-                                )
-                                model_vs_baselines[baseline_name] = {
-                                    "beats": beats,
-                                    "reason": reason,
-                                    "model_net_expectancy": (
-                                        model_metrics_for_baseline[
-                                            "net_expectancy_R"
-                                        ]
-                                    ),
-                                    "baseline_net_expectancy": (
-                                        baseline_results[baseline_name]
-                                        .net_expectancy_R
-                                    ),
-                                }
-
-                            # Serialise for consolidated report
-                            for name, br in baseline_results.items():
-                                baseline_data[name] = {
-                                    "net_expectancy_R": br.net_expectancy_R,
-                                    "net_sharpe": br.net_sharpe,
-                                    "net_profit_factor": (
-                                        br.net_profit_factor
-                                    ),
-                                    "active_trade_count": (
-                                        br.active_trade_count
-                                    ),
-                                    "exposure_pct": br.exposure_pct,
-                                }
-
-                        # ----------------------------------------------------------
-                        # 3. Evidence Engine — passport, gates, decision
-                        # ----------------------------------------------------------
-                        adapter_input = {
-                            "metrics": {
-                                k: v
-                                for k, v in wfv_dict.get(
-                                    "aggregate_metrics", {}
-                                ).items()
-                                if isinstance(v, (int, float, str, bool))
-                            },
-                            "per_fold_results": wfv_dict.get("folds", []),
-                            "candidate_id": (
-                                f"pipeline_{self._config.mode.lower()}"
-                                f"_{ee_ts}"
-                            ),
-                            "hypothesis_refs": [hyp_card.card_id],
-                        }
-
-                        passport = EvidencePassportBuilder().from_wfv_results(
-                            adapter_input, self._config.mode,
-                        )
-
-                        # Attach baseline results to passport
-                        if baseline_results:
-                            passport.baselines = baseline_results
-
-                        # Map to V7 gates
-                        gate_results = consume_evidence_passport(passport)
-                        v7_gate_statuses = [
-                            {
-                                "gate": g,
-                                "status": gr.status,
-                                "label": gr.gate_label,
-                            }
-                            for g, gr in gate_results.items()
-                        ]
-
-                        # Evaluate with DecisionEngine
-                        de = DecisionEngine(hyp_reg)
-                        evidence_decision = de.is_implementation_allowed(
-                            hyp_card.card_id, passport,
-                        )
-
-                    except Exception as ee:
-                        logger.warning(
-                            "Evidence Engine skipped (non-fatal): %s", ee,
-                        )
-
-                    # ------------------------------------------------------------------
-
-                    # Single consolidated report file
-                    consolidated = v_report.consolidated(
-                        wfv_raw=wfv_dict,
-                        pipeline_context=pipeline_ctx,
-                    )
-                    if baseline_data:
-                        consolidated["baselines"] = {
-                            "model_vs_baselines": model_vs_baselines,
-                        }
-                        consolidated["baselines"].update(baseline_data)
-                    if evidence_decision is not None:
-                        consolidated["evidence_engine"] = {
-                            "trial_id": (
-                                hyp_card.card_id
-                                if evidence_decision is not None
-                                and 'hyp_card' in dir()
-                                else None
-                            ),
-                            "verdict": evidence_decision.verdict,
-                            "implementation_allowed":
-                                evidence_decision.implementation_allowed,
-                            "blocked_reason":
-                                evidence_decision.blocked_reason,
-                            "blocked_actions":
-                                evidence_decision.blocked_actions,
-                            "allowed_actions":
-                                evidence_decision.allowed_actions,
-                            "required_steps":
-                                evidence_decision.required_steps,
-                        }
-                    if v7_gate_statuses:
-                        consolidated["v7_gates"] = v7_gate_statuses
-
-                    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-                    consolidated_path = os.path.join(
-                        self._config.output_dir, "reports",
-                        f"consolidated_{self._config.mode.lower()}_{ts}.json",
-                    )
-                    os.makedirs(os.path.dirname(consolidated_path), exist_ok=True)
-                    with open(consolidated_path, "w") as f:
-                        json.dump(consolidated, f, indent=2, default=str)
-
-                    # Print summary
-                    val = consolidated["validator"]
-                    print(f"\n{'='*60}")
-                    print("=== Alpha Target Validator — Consolidated Report ===")
-                    print(f"{'='*60}")
-                    print(f"  Target Proximity: {val['target_proximity_score']}/100")
-                    print(f"  Economic Score:   {val['economic_score']}/100")
-                    print(f"  Behavior Score:   {val['behavior_score']}/100")
-                    print(f"  Validation Score: {val['validation_score']}/100")
-                    print(f"  Data Quality:     {val['data_quality_score']}/100")
-                    print(f"  Level:            {val['level_assessment']}")
-                    if val["main_blockers"]:
-                        print(f"  Main Blockers:")
-                        for b in val["main_blockers"]:
-                            print(f"    - {b}")
-                    wfv_sum = consolidated.get("wfv_summary", {})
-                    if wfv_sum:
-                        print(f"  WFV Verdict:      {wfv_sum.get('verdict', '?')}")
-                        print(f"  Folds:            {wfv_sum.get('folds', '?')}")
-                        print(f"  Net Sharpe:       {wfv_sum.get('avg_net_sharpe', 0.0):.2f}")
-
-                    ee_data = consolidated.get("evidence_engine")
-                    if ee_data:
-                        print(f"  Evidence Verdict: {ee_data['verdict']}")
-                        print(f"  Implementation:   {'ALLOWED' if ee_data.get('implementation_allowed') else 'BLOCKED'}")
-                        if ee_data.get("blocked_actions"):
-                            print(f"  Blocked Actions:  {', '.join(ee_data['blocked_actions'][:3])}")
-                    v7 = consolidated.get("v7_gates", [])
-                    if v7:
-                        passed = sum(1 for g in v7 if g["status"] == "PASSED")
-                        failed = sum(1 for g in v7 if g["status"] == "FAILED")
-                        print(f"  V7 Gates:         {passed}/11 passed, {failed} failed")
-
-                    print(f"  Consolidated: {consolidated_path}")
-
-                    metrics["consolidated_report_path"] = consolidated_path
-                    metrics["target_proximity_score"] = val["target_proximity_score"]
-                    metrics["validator_level"] = val["level_assessment"]
-
-            except ImportError as e:
-                logger.warning(f"Alpha Target Validator not available: {e}")
-            except Exception as e:
-                logger.warning(f"Alpha Target Validator failed: {e}")
-
-        # Fallback: save a minimal pipeline report when the validator did not
-        # produce a consolidated file (e.g., validator disabled or errored).
-        if consolidated_path is None:
-            try:
-                ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-                report_filename = f"pipeline_v02_{self._config.mode.lower()}_{ts}.json"
-                report_path = os.path.join(
-                    self._config.output_dir, "reports", report_filename,
-                )
-                os.makedirs(os.path.dirname(report_path), exist_ok=True)
-
-                report_data = {
-                    "pipeline_version": PIPELINE_VERSION,
-                    "schema_version": PIPELINE_SCHEMA_VERSION,
-                    "generated_at": datetime.now(timezone.utc).isoformat(),
-                    "config": self._config.to_dict(),
-                    "step_results": step_results,
-                    "metrics": metrics,
-                    "evidence_checksums": [
-                        {"step": e.step, "checksum": e.checksum}
-                        for e in self._evidence
-                    ],
-                }
-                with open(report_path, "w") as f:
-                    json.dump(report_data, f, indent=2, default=str)
-
-                self._ctx.report_path = report_path
-                metrics["report_path"] = report_path
-                print(f"  Pipeline report saved to: {report_path}")
-
-            except OSError as e:
-                errors.append(f"Cannot save report: {e}")
+        except OSError as e:
+            errors.append(f"Cannot save report: {e}")
 
         if errors:
             return _make_evidence(
@@ -1668,13 +1417,13 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--synthetic",
         action="store_true",
-        default=False,
-        help="Force synthetic data (default: auto-detect cached data, fall back synthetic)",
+        default=True,
+        help="Use synthetic data (default: True). Pass --no-synthetic for real data.",
     )
     parser.add_argument(
         "--no-synthetic",
         action="store_true",
-        help="Deprecated: auto-detection is now the default",
+        help="Use real Binance data instead of synthetic",
     )
     parser.add_argument(
         "--force",
@@ -1708,8 +1457,8 @@ def _parse_args(argv: Optional[List[str]] = None) -> PipelineConfig:
     # Resolve dry_run
     dry_run = args.dry_run or not args.real
 
-    # Resolve use_synthetic: --synthetic forces synthetic, otherwise auto-detect
-    use_synthetic = args.synthetic
+    # Resolve use_synthetic
+    use_synthetic = not args.no_synthetic
 
     # Parse symbols
     symbols = tuple(

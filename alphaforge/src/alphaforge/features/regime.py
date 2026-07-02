@@ -28,6 +28,11 @@ import math
 
 import numpy as np
 
+try:
+    from numba import njit
+except ImportError:
+    njit = lambda x: x
+
 
 # ===========================================================================
 # Constants
@@ -164,6 +169,7 @@ def _atr(
     return result
 
 
+@njit
 def _linreg_slope(y: np.ndarray) -> float:
     """Linear regression slope of y against bar index.
 
@@ -180,9 +186,10 @@ def _linreg_slope(y: np.ndarray) -> float:
     denominator = np.sum((x - x_mean) ** 2)
     if denominator == 0:
         return 0.0
-    return float(numerator / denominator)
+    return numerator / denominator
 
 
+@njit
 def _rolling_slope(data: np.ndarray, period: int) -> np.ndarray:
     """Rolling linear regression slope over `period` bars.
 
@@ -409,6 +416,7 @@ def _compute_log_return(close: np.ndarray) -> np.ndarray:
     return result
 
 
+@njit
 def _gaussian_pdf(x: float, mu: float, sigma: float) -> float:
     """Unnormalized Gaussian PDF (no sqrt(2pi) factor).
 
@@ -426,6 +434,35 @@ def _gaussian_pdf(x: float, mu: float, sigma: float) -> float:
 # ===========================================================================
 # Feature: CUSUM change point detection
 # ===========================================================================
+
+
+@njit
+def _njit_cusum_loop(log_ret: np.ndarray, threshold: float, drift: float) -> tuple:
+    """Numba JIT helper: CUSUM loop body."""
+    n = len(log_ret)
+    cusum_pos = np.full(n, np.nan, dtype=np.float64)
+    cusum_neg = np.full(n, np.nan, dtype=np.float64)
+    cusum_sig = np.full(n, np.nan, dtype=np.float64)
+
+    s_pos = 0.0
+    s_neg = 0.0
+
+    for i in range(1, n):
+        ret = log_ret[i] if not np.isnan(log_ret[i]) else 0.0
+        s_pos = max(0.0, s_pos + ret - drift)
+        s_neg = min(0.0, s_neg + ret - drift)
+        sig = 0.0
+        if s_pos > threshold:
+            sig = 1.0
+            s_pos = 0.0
+        elif s_neg < -threshold:
+            sig = 1.0
+            s_neg = 0.0
+        cusum_pos[i] = s_pos
+        cusum_neg[i] = abs(s_neg)
+        cusum_sig[i] = sig
+
+    return cusum_pos, cusum_neg, cusum_sig
 
 
 def compute_cusum_detector(
@@ -466,30 +503,7 @@ def compute_cusum_detector(
 
     log_ret = _compute_log_return(close)
 
-    cusum_pos = nan_arr.copy()
-    cusum_neg = nan_arr.copy()
-    cusum_sig = nan_arr.copy()
-
-    s_pos = 0.0
-    s_neg = 0.0
-
-    for i in range(1, n):
-        ret = log_ret[i] if not np.isnan(log_ret[i]) else 0.0
-
-        s_pos = max(0.0, s_pos + ret - drift)
-        s_neg = min(0.0, s_neg + ret - drift)
-
-        sig = 0.0
-        if s_pos > threshold:
-            sig = 1.0
-            s_pos = 0.0
-        elif s_neg < -threshold:
-            sig = 1.0
-            s_neg = 0.0
-
-        cusum_pos[i] = s_pos
-        cusum_neg[i] = abs(s_neg)
-        cusum_sig[i] = sig
+    cusum_pos, cusum_neg, cusum_sig = _njit_cusum_loop(log_ret, threshold, drift)
 
     return {
         "cusum_positive": cusum_pos,
@@ -501,6 +515,56 @@ def compute_cusum_detector(
 # ===========================================================================
 # Feature: HMM streaming volatility state classification
 # ===========================================================================
+
+
+@njit
+def _njit_hmm_loop(
+    log_ret: np.ndarray,
+    init_idx: int,
+    low_vol: float,
+    high_vol: float,
+    trans_prob: float,
+    vol_factor: float,
+    prob_high: float,
+) -> tuple:
+    """Numba JIT helper: HMM streaming loop body."""
+    n = len(log_ret)
+    vol_state = np.full(n, np.nan, dtype=np.float64)
+    vol_prob = np.full(n, np.nan, dtype=np.float64)
+    alpha = 1.0 - trans_prob
+
+    for i in range(init_idx, n):
+        like_high = _gaussian_pdf(log_ret[i], 0.0, high_vol)
+        like_low = _gaussian_pdf(log_ret[i], 0.0, low_vol)
+
+        prior_high = (
+            prob_high * trans_prob + (1.0 - prob_high) * (1.0 - trans_prob)
+        )
+        prior_low = (
+            (1.0 - prob_high) * trans_prob + prob_high * (1.0 - trans_prob)
+        )
+
+        post_numer = like_high * prior_high
+        post_low_numer = like_low * prior_low
+        total = post_numer + post_low_numer
+        prob_high = post_numer / total if total > 0 else 0.5
+
+        vol_prob[i] = prob_high
+        vol_state[i] = 1.0 if prob_high > 0.5 else 0.0
+
+        if prob_high > 0.5:
+            high_vol = math.sqrt(
+                (1.0 - alpha) * high_vol ** 2 + alpha * log_ret[i] ** 2
+            )
+        else:
+            low_vol = math.sqrt(
+                (1.0 - alpha) * low_vol ** 2 + alpha * log_ret[i] ** 2
+            )
+
+        if high_vol <= low_vol:
+            high_vol = low_vol * vol_factor
+
+    return vol_state, vol_prob
 
 
 def compute_hmm_vol_state(
@@ -570,42 +634,9 @@ def compute_hmm_vol_state(
     total = like_high + like_low
     prob_high = like_high / total if total > 0 else 0.5
 
-    # --- Streaming classification ---
-    alpha = 1.0 - trans_prob  # adaptation rate
-
-    for i in range(init_idx, n):
-        like_high = _gaussian_pdf(log_ret[i], 0.0, high_vol)
-        like_low = _gaussian_pdf(log_ret[i], 0.0, low_vol)
-
-        # Prior from transition matrix
-        prior_high = (
-            prob_high * trans_prob + (1.0 - prob_high) * (1.0 - trans_prob)
-        )
-        prior_low = (
-            (1.0 - prob_high) * trans_prob + prob_high * (1.0 - trans_prob)
-        )
-
-        # Posterior
-        post_numer = like_high * prior_high
-        post_low_numer = like_low * prior_low
-        total = post_numer + post_low_numer
-        prob_high = post_numer / total if total > 0 else 0.5
-
-        vol_prob[i] = prob_high
-        vol_state[i] = 1.0 if prob_high > 0.5 else 0.0
-
-        # Adapt volatility estimates weighted by state posterior
-        if prob_high > 0.5:
-            high_vol = math.sqrt(
-                (1.0 - alpha) * high_vol ** 2 + alpha * log_ret[i] ** 2
-            )
-        else:
-            low_vol = math.sqrt(
-                (1.0 - alpha) * low_vol ** 2 + alpha * log_ret[i] ** 2
-            )
-
-        if high_vol <= low_vol:
-            high_vol = low_vol * vol_factor
+    vol_state, vol_prob = _njit_hmm_loop(
+        log_ret, init_idx, low_vol, high_vol, trans_prob, vol_factor, prob_high,
+    )
 
     return {
         "hmm_vol_state": vol_state,
@@ -616,6 +647,34 @@ def compute_hmm_vol_state(
 # ===========================================================================
 # Feature: Volatility regime classification (LOW/MEDIUM/HIGH)
 # ===========================================================================
+
+
+@njit
+def _njit_vol_regime_loop(
+    log_ret: np.ndarray,
+    window: int,
+    low_percentile: float,
+    high_percentile: float,
+) -> np.ndarray:
+    """Numba JIT helper: volatility regime loop body."""
+    n = len(log_ret)
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(window, n):
+        seg = log_ret[i - window + 1 : i + 1]
+        valid = seg[~np.isnan(seg)]
+        if len(valid) < 5:
+            continue
+        abs_ret = np.abs(valid)
+        low_thresh = np.percentile(abs_ret, low_percentile)
+        high_thresh = np.percentile(abs_ret, high_percentile)
+        current_abs = abs_ret[-1]
+        if current_abs <= low_thresh:
+            result[i] = 0.0
+        elif current_abs >= high_thresh:
+            result[i] = 2.0
+        else:
+            result[i] = 1.0
+    return result
 
 
 def compute_volatility_regime(
@@ -646,32 +705,11 @@ def compute_volatility_regime(
     Causality: at t uses returns [t-window+1 .. t] only.
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
     if n < window + 1:
-        return result
+        return np.full(n, np.nan, dtype=np.float64)
 
     log_ret = _compute_log_return(close)
-
-    for i in range(window, n):
-        seg = log_ret[i - window + 1 : i + 1]
-        valid = seg[~np.isnan(seg)]
-        if len(valid) < 5:
-            continue
-
-        abs_ret = np.abs(valid)
-        low_thresh = float(np.percentile(abs_ret, low_percentile))
-        high_thresh = float(np.percentile(abs_ret, high_percentile))
-
-        current_abs = abs_ret[-1]
-
-        if current_abs <= low_thresh:
-            result[i] = 0.0
-        elif current_abs >= high_thresh:
-            result[i] = 2.0
-        else:
-            result[i] = 1.0
-
-    return result
+    return _njit_vol_regime_loop(log_ret, window, low_percentile, high_percentile)
 
 
 # ===========================================================================

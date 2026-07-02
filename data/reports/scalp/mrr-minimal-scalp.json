@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0.0",
+  "report_id": "mrr-minimal-001",
+  "mode": "SCALP",
+  "mode_priority": "PRIMARY",
+  "report_type": "primary_research_report",
+  "created_at": "2026-07-02T17:50:00Z",
+  "run_id": "run-placeholder-001",
+  "data_scope": {
+    "symbols": [
+      "BTCUSDT"
+    ],
+    "date_range_start": "2024-01-01T00:00:00Z",
+    "date_range_end": "2025-01-01T00:00:00Z",
+    "primary_timeframes": [
+      "1h"
+    ],
+    "secondary_timeframes": [
+      "4h"
+    ],
+    "data_quality_summary": "Placeholder — no real data"
+  },
+  "feature_set_refs": [
+    "fs-placeholder-001"
+  ],
+  "label_dataset_refs": [
+    "lds-placeholder-001"
+  ],
+  "alpha_theses": [
+    {
+      "alpha_thesis_id": "at-placeholder-001",
+      "title": "Placeholder thesis",
+      "status": "HYPOTHESIS_ONLY",
+      "evidence_quality": "INSUFFICIENT"
+    }
+  ],
+  "validation_summary": {
+    "validation_report_id": "vr-scalp-001",
+    "fold_count": 6,
+    "verdict": "BLOCKED_FOR_MHT",
+    "overfit_risk": "MEDIUM"
+  },
+  "metrics": {
+    "oos_ic": {
+      "value": 0.0,
+      "ci_lower": -0.5,
+      "ci_upper": 0.5,
+      "ci_level": 0.95
+    },
+    "oos_rank_ic": {
+      "value": 0.0,
+      "ci_lower": -0.5,
+      "ci_upper": 0.5,
+      "ci_level": 0.95
+    },
+    "oos_sharpe": {
+      "value": 0.0,
+      "ci_lower": -0.5,
+      "ci_upper": 0.5,
+      "ci_level": 0.95
+    },
+    "oos_expectancy_r": {
+      "value": 0.0,
+      "ci_lower": -0.1,
+      "ci_upper": 0.1,
+      "ci_level": 0.95
+    },
+    "oos_win_rate": {
+      "value": 0.5,
+      "ci_lower": 0.45,
+      "ci_upper": 0.55,
+      "ci_level": 0.95
+    },
+    "oos_profit_factor": {
+      "value": 1.0,
+      "ci_lower": 0.8,
+      "ci_upper": 1.2,
+      "ci_level": 0.95
+    },
+    "oos_max_drawdown_r": {
+      "value": -1.0,
+      "ci_lower": -3.0,
+      "ci_upper": -0.5,
+      "ci_level": 0.95
+    },
+    "oos_trade_count": 0,
+    "active_trade_count": 0,
+    "total_net_R": 0.0,
+    "exposure_pct": 0.0,
+    "per_fold_metrics": []
+  },
+  "cost_stress": {
+    "baseline_fee_pct": 0.04,
+    "baseline_slippage_pct": 0.02,
+    "fee_stress_levels": [],
+    "slippage_stress_levels": [],
+    "combined_stress_edge_survives": false,
+    "break_even_cost_total_pct": 0.0
+  },
+  "no_trade_comparison": {
+    "long_vs_no_trade": "NOT_EVALUATED",
+    "short_vs_no_trade": "NOT_EVALUATED",
+    "active_beats_no_trade": false,
+    "summary": "Placeholder"
+  },
+  "regime_breakdown": {
+    "regimes": [],
+    "edge_only_in_rare_regime": false,
+    "summary": "No regime breakdown — placeholder"
+  },
+  "multiple_hypothesis_control": {
+    "mht_status": "NOT_RUN",
+    "tested_hypothesis_count": 1,
+    "correction_method": "NONE_APPLIED",
+    "corrected_significance": null,
+    "data_snooping_risk_flag": "LOW",
+    "deflated_sharpe_or_equivalent": null,
+    "pbo_or_backtest_overfit_risk": "NOT_RUN",
+    "trial_count_disclosure": 1,
+    "rejected_candidate_count": 0,
+    "notes": "Trial ledger: 1 symbols, 1 param combinations, 1 theses, 1 feature sets. Total hypotheses tested: 1. Correction: NONE_APPLIED. Data-snooping risk: LOW."
+  },
+  "verdict": "BLOCKED_FOR_MHT",
+  "blocked_scopes": [
+    "No real profitability evidence exists yet."
+  ],
+  "limitations": [
+    "P0.9A scaffold report — no real research."
+  ],
+  "recommended_actions": [
+    "Do not interpret as profitability evidence."
+  ]
+}

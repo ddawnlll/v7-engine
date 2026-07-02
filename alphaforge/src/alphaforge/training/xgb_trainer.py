@@ -63,58 +63,56 @@ NUM_CLASSES: int = 3
 def _detect_gpu() -> dict[str, str]:
     """Detect available GPU backend for XGBoost.
 
-    Checks build-time CUDA/HIP support AND runtime availability via
-    nvidia-smi. Falls back to CPU (hist) when the GPU is compiled in
-    but not actually available at runtime.
+    Checks CUDA/HIP build-time support AND runtime availability.
+    Tries nvidia-smi for CUDA GPUs, rocm-smi for AMD GPUs.
+    Falls back to CPU (hist) when no GPU is available at runtime.
 
-    Returns {"tree_method": ..., "device": ...} to merge into params.
+    Returns {"tree_method": ..., "device": ...} or {"tree_method": "hist"}.
     """
     try:
         info = xgb.build_info()
         has_cuda = info.get("USE_CUDA") or info.get("USE_HIP")
+
         if has_cuda:
-            # Runtime validation: nvidia-smi confirms a usable GPU
             import subprocess
-            r = subprocess.run(
-                ["nvidia-smi"], capture_output=True, text=True, timeout=5
-            )
-            if r.returncode == 0:
-                backend = "ROCm/HIP" if info.get("USE_HIP") else "CUDA"
-                logger.info("XGBoost GPU: %s detected — using gpu_hist", backend)
-                return {"tree_method": "gpu_hist", "device": "cuda"}
+            # Try NVIDIA CUDA first
+            try:
+                r = subprocess.run(
+                    ["nvidia-smi"], capture_output=True, text=True, timeout=3
+                )
+                if r.returncode == 0:
+                    backend = "ROCm/HIP" if info.get("USE_HIP") else "CUDA"
+                    logger.info("XGBoost GPU: %s detected — using gpu_hist", backend)
+                    return {"tree_method": "gpu_hist", "device": "cuda"}
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+            # Try AMD ROCm as fallback — rocm-smi
+            try:
+                r = subprocess.run(
+                    ["rocm-smi"], capture_output=True, text=True, timeout=3
+                )
+                if r.returncode == 0:
+                    logger.info("XGBoost: AMD ROCm detected but xgboost compiled with CUDA — using CPU hist")
+                    # Can't use AMD GPU with CUDA-compiled XGBoost
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+            # Check /dev/kfd (ROCm device presence)
+            if os.path.exists("/dev/kfd"):
+                logger.info("XGBoost: /dev/kfd found (ROCm) but xgboost is CUDA-compiled — CPU fallback")
+
             logger.info(
-                "XGBoost compiled with CUDA but no GPU available — using CPU hist"
+                "XGBoost compiled with CUDA/HIP but no compatible GPU available — using CPU hist"
             )
     except Exception:
         pass
+
     logger.info("XGBoost GPU: none detected — using CPU hist")
     return {"tree_method": "hist"}
 
 
 GPU_PARAMS: dict[str, str] = _detect_gpu()
-
-
-def _detect_cpu_parallelism() -> dict[str, str]:
-    """Detect available CPU parallelism for XGBoost training.
-
-    Uses ``os.sched_getaffinity()`` when available (respects cgroup/container
-    CPU limits on WSL2, Docker, etc.), falling back to ``os.cpu_count()``.
-
-    When GPU is active, leaves n_jobs at 1 since GPU handles tree-building
-    parallelism internally.
-    """
-    if GPU_PARAMS.get("tree_method") in ("gpu_hist",):
-        return {"n_jobs": 1}
-    try:
-        n = len(os.sched_getaffinity(0))
-    except AttributeError:
-        n = os.cpu_count() or 1
-    n = max(1, n)
-    logger.info("CPU parallelism: n_jobs=%d (detected from %d available cores)", n, n)
-    return {"n_jobs": n}
-
-
-CPU_PARAMS: dict[str, str] = _detect_cpu_parallelism()
 
 # Conservative SWING hyperparameters (LOCKED_INITIAL_BASELINE)
 SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
@@ -134,7 +132,6 @@ SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "random_state": 42,
     "verbosity": 0,
     **GPU_PARAMS,
-    **CPU_PARAMS,
 }
 
 # Test fraction for hold-out validation within training
@@ -493,7 +490,6 @@ class XGBoostTrainer:
             "subsample", "colsample_bytree", "min_child_weight",
             "gamma", "reg_alpha", "reg_lambda", "eval_metric",
             "random_state", "verbosity", "tree_method", "device",
-            "n_jobs",
         }
         params = {}
         for k in xgb_param_keys:

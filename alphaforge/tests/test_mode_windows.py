@@ -514,7 +514,7 @@ class TestPipelineModeSpecific:
         ohlcv = _make_ohlcv(200)
         for mode in ["SWING", "SCALP", "AGGRESSIVE_SCALP"]:
             fm = compute_features(ohlcv, mode=mode)
-            assert fm.total_features() == 67, f"{mode}: {fm.total_features()}"
+            assert fm.total_features() == 60, f"{mode}: {fm.total_features()}"
             assert fm.bar_count() == 200
             assert fm.mode == mode
 
@@ -653,7 +653,7 @@ class TestCrossModeConsistency:
         ohlcv = _make_ohlcv(200)
         for mode in ["SWING", "SCALP", "AGGRESSIVE_SCALP"]:
             fm = compute_features(ohlcv, mode=mode)
-            assert fm.total_features() == 67
+            assert fm.total_features() == 60
 
     def test_no_lead_lag_in_any_mode(self):
         ohlcv = _make_ohlcv(100)

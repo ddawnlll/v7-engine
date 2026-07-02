@@ -33,7 +33,6 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -189,12 +188,6 @@ class BinanceVisionConfig:
     def __post_init__(self) -> None:
         if not self.symbols:
             raise BackfillError("vision_config", "symbols must be non-empty")
-        for sym in self.symbols:
-            if not re.fullmatch(r"[A-Z0-9]+", sym.upper()):
-                raise BackfillError(
-                    "vision_config",
-                    f"invalid symbol {sym!r} — only uppercase alphanumeric allowed",
-                )
         if not self.intervals:
             raise BackfillError("vision_config", "intervals must be non-empty")
         for interval in self.intervals:

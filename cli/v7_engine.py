@@ -486,40 +486,6 @@ def cmd_v02(args: argparse.Namespace) -> int:
     return v02_main(argv)
 
 
-def cmd_runs(args: argparse.Namespace) -> int:
-    """List recent training runs with stats."""
-    _exec_script("list_runs.py", args)
-
-
-def cmd_viz(args: argparse.Namespace) -> int:
-    """Visualize training results with terminal dashboard."""
-    _exec_script("visualize_results.py", args)
-
-
-def _exec_script(name: str, args: argparse.Namespace) -> None:
-    """Run a scripts/*.py as __main__, forwarding CLI args."""
-    try:
-        repo_root = Path(__file__).resolve().parent.parent
-        script_path = repo_root / "scripts" / name
-
-        # Forward relevant flags from our parsed namespace to the child argv
-        child_argv = [str(script_path)]
-        for flag in ("limit", "mode"):
-            val = getattr(args, flag, None)
-            if val is not None:
-                child_argv.extend([f"--{flag}", str(val)])
-        report_path = getattr(args, "report_path", None)
-        if report_path is not None:
-            child_argv.append(report_path)
-
-        sys.argv = child_argv
-        import runpy
-        runpy.run_path(str(script_path), run_name="__main__")
-    except Exception as exc:
-        print(f"Error running {name}: {exc}", file=sys.stderr)
-        sys.exit(1)
-
-
 def cmd_pipeline(args: argparse.Namespace) -> int:
     """Run end-to-end pipeline: validate → backfill → simulate → build-dataset → train → wfv → report."""
     steps: list[tuple[str, Any]] = [
@@ -668,18 +634,6 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("pipeline", parents=[_dry_run_parent], add_help=False,
                     help="Run end-to-end pipeline")
 
-    p_runs = sub.add_parser("runs", parents=[_dry_run_parent], add_help=False,
-                             help="List recent training runs with stats")
-    p_runs.add_argument("--limit", type=int, default=20,
-                        help="Max runs to show")
-    p_runs.add_argument("--mode", type=lambda s: s.upper(), default=None,
-                        help="Filter by mode (SCALP, SWING, AGGRESSIVE_SCALP)")
-
-    p_viz = sub.add_parser("viz", parents=[_dry_run_parent], add_help=False,
-                            help="Visualize training results with terminal dashboard")
-    p_viz.add_argument("report_path", nargs="?", default=None,
-                       help="Path to train-results JSON (reads latest if omitted)")
-
     return parser
 
 
@@ -717,8 +671,6 @@ def main(argv: list[str] | None = None) -> int:
         "tune": cmd_tune,
         "v02": cmd_v02,
         "pipeline": cmd_pipeline,
-        "runs": cmd_runs,
-        "viz": cmd_viz,
     }
 
     handler = handlers.get(args.command)
