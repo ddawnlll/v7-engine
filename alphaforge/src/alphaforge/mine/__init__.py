@@ -1,21 +1,11 @@
-"""AlphaForge Mining Engine — boolean mask bitsets and condition discovery.
+"""AlphaForge Alpha Mining — rule discovery, multiple testing correction.
 
 Exports:
-    FeatureBucketizer — bins continuous feature columns into decile-based
-        boolean masks for use as bitsets in the mining engine.
-    ConditionRecord — dataclass describing a single condition in the registry.
+    MultiTestingCorrector — statistical corrections for multiple hypothesis testing
 """
 
-from alphaforge.mine.bucketizer import (
-    ConditionRecord,
-    FeatureBucketizer,
-)
-
-__version__ = "0.1.0"
-__authority__ = "alphaforge"
-__domain__ = "mining_engine"
+from alphaforge.mine.multi_testing import MultiTestingCorrector
 
 __all__ = [
-    "ConditionRecord",
-    "FeatureBucketizer",
+    "MultiTestingCorrector",
 ]

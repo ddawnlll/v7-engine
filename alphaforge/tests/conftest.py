@@ -18,9 +18,18 @@ import pytest
 
 # Ensure alphaforge/src is on the Python path so "from alphaforge.dataset..."
 # resolves correctly under the src/ layout pattern.
+# Remove any stale import first to prevent namespace-package shadowing.
 _src = Path(__file__).resolve().parent.parent / "src"
-if str(_src) not in sys.path:
-    sys.path.insert(0, str(_src))
+_src_str = str(_src)
+
+if "alphaforge" in sys.modules:
+    del sys.modules["alphaforge"]
+
+# Remove any existing entries for this path so we can place it at front
+while _src_str in sys.path:
+    sys.path.remove(_src_str)
+
+sys.path.insert(0, _src_str)
 
 from alphaforge.dataset.assembler import DefaultAssembler
 from alphaforge.dataset.contracts import (
@@ -237,11 +246,6 @@ def empty_label_df() -> pd.DataFrame:
 @pytest.fixture
 def assembler() -> DefaultAssembler:
     return DefaultAssembler()
-
-
-# ---------------------------------------------------------------------------
-# Writer instance
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
