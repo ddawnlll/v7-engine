@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import lightgbm as lgb
 import numpy as np
 
 logging.basicConfig(
@@ -362,12 +363,14 @@ def walk_forward_validate(
     mode: str,
     min_folds: int = 6,
     confidence_threshold: float | None = None,
+    model_backend: str = "xgboost",
 ) -> List[dict]:
     """6-fold anchored expanding walk-forward validation.
 
     Args:
         confidence_threshold: If None, uses module default (0.55).
             If -1, confidence filtering is disabled (all predictions count).
+        model_backend: ``"xgboost"`` (default) or ``"lightgbm"``.
 
     Returns per-fold result dicts.
     """
@@ -410,26 +413,73 @@ def walk_forward_validate(
             logger.warning("Fold %d: insufficient samples — stopping", fold + 1)
             break
 
-        trainer = XGBoostTrainer(mode=mode)
-        fold_result = trainer.train(X_train, y_train)
-        dval = xgb.DMatrix(X_val)
-        y_pred_prob = fold_result.model.predict(dval)
-        y_pred_prob_max = np.max(y_pred_prob, axis=1)
-        y_pred = np.argmax(y_pred_prob, axis=1)
-
-        # Apply confidence threshold: force NO_TRADE when model is uncertain
         thr = confidence_threshold if confidence_threshold is not None else CONFIDENCE_THRESHOLD
-        low_conf_count = 0
-        low_conf_pct = 0.0
-        if thr >= 0:
-            low_conf_count = int(np.sum(y_pred_prob_max < thr))
-            low_conf_pct = float(low_conf_count / len(y_pred_prob_max) * 100)
-            y_pred[y_pred_prob_max < thr] = 2  # NO_TRADE
+
+        if model_backend == "lightgbm":
+            # ── LightGBM training path ──
+            lgb_train = lgb.Dataset(X_train, label=y_train)
+            lgb_val = lgb.Dataset(X_val, label=y_val, reference=lgb_train)
+            lgb_params = {
+                "objective": "binary",
+                "metric": "binary_logloss",
+                "boosting_type": "gbdt",
+                "num_leaves": 31,
+                "max_depth": 4,
+                "learning_rate": 0.05,
+                "n_estimators": 200,
+                "subsample": 0.8,
+                "colsample_bytree": 0.8,
+                "verbosity": -1,
+                "num_threads": 4,
+                "seed": 42,
+            }
+            lgb_model = lgb.train(
+                lgb_params, lgb_train,
+                valid_sets=[lgb_train, lgb_val],
+                callbacks=[lgb.early_stopping(20), lgb.log_evaluation(0)],
+            )
+            y_pred_prob = lgb_model.predict(X_val)
+            y_pred = (y_pred_prob >= 0.5).astype(np.int32)
+            y_pred_prob_max = np.where(y_pred_prob >= 0.5, y_pred_prob, 1 - y_pred_prob)
+
+            # Train accuracy on training set
+            train_preds = (lgb_model.predict(X_train) >= 0.5).astype(np.int32)
+            train_accuracy = float(np.mean(train_preds == y_train))
+            train_logloss = 0.0
+
+            # Validation logloss (manual computation, no sklearn dependency)
+            lgb_val_preds = lgb_model.predict(X_val)
+            eps = 1e-15
+            lgb_val_preds_clip = np.clip(lgb_val_preds, eps, 1 - eps)
+            val_logloss = float(-np.mean(y_val * np.log(lgb_val_preds_clip) +
+                                         (1 - y_val) * np.log(1 - lgb_val_preds_clip)))
+            low_conf_count = 0
+            low_conf_pct = 0.0
+            fold_result = type("obj", (object,), {"training_duration_seconds": 0})()
+
+        else:
+            # ── XGBoost training path (default) ──
+            trainer = XGBoostTrainer(mode=mode)
+            fold_result = trainer.train(X_train, y_train)
+            dval = xgb.DMatrix(X_val)
+            y_pred_prob = fold_result.model.predict(dval)
+            y_pred_prob_max = np.max(y_pred_prob, axis=1)
+            y_pred = np.argmax(y_pred_prob, axis=1)
+
+            # Apply confidence threshold
+            if thr >= 0:
+                low_conf_count = int(np.sum(y_pred_prob_max < thr))
+                low_conf_pct = float(low_conf_count / len(y_pred_prob_max) * 100)
+                y_pred[y_pred_prob_max < thr] = 2  # NO_TRADE
+            else:
+                low_conf_count = 0
+                low_conf_pct = 0.0
+
+            train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
+            val_logloss = float(fold_result.val_metrics.get("logloss", 0.0))
+            train_logloss = float(fold_result.train_metrics.get("logloss", 0.0))
 
         val_accuracy = float(np.mean(y_pred == y_val))
-        train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
-        val_logloss = float(fold_result.val_metrics.get("logloss", 0.0))
-        train_logloss = float(fold_result.train_metrics.get("logloss", 0.0))
 
         long_count = int(np.sum(y_pred == 0))
         short_count = int(np.sum(y_pred == 1))
@@ -624,6 +674,8 @@ def main():
                         help="Target: 3-class (LONG/SHORT/NO_TRADE) or 2-class (LONG vs SHORT only)")
     parser.add_argument("--confidence", type=float, default=None,
                         help="Confidence threshold (-1 to disable, default=0.55 for 3-class, disabled for 2-class)")
+    parser.add_argument("--model", default="xgboost", choices=["xgboost", "lightgbm"],
+                        help="Model backend: xgboost (default) or lightgbm")
     args = parser.parse_args()
 
     global mode
@@ -640,7 +692,7 @@ def main():
     print(f"  AlphaForge Training Pipeline")
     print(f"  Mode: {mode} | Interval: {interval} | Symbols: {len(symbols)}")
     print(f"  Target: {args.target} | Confidence: {'disabled' if args.confidence < 0 else args.confidence}")
-    print(f"  Features: {args.features} | WFV Folds: {args.folds}")
+    print(f"  Model: {args.model} | Features: {args.features} | WFV Folds: {args.folds}")
     print(f"{'='*60}\n")
 
     # Step 1: Load data
@@ -709,6 +761,7 @@ def main():
     wfv_results = walk_forward_validate(
         X_clean, y_clean, r_clean, mode, min_folds=args.folds,
         confidence_threshold=args.confidence,
+        model_backend=args.model,
     )
     wfv_duration = time.time() - t0
     print(f"  {len(wfv_results)} folds completed in {wfv_duration:.1f}s")
