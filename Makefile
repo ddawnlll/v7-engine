@@ -23,9 +23,16 @@ help:
 	@echo "  make train            Train model (gated)"
 	@echo "  make wfv              Walk-forward validation (gated)"
 	@echo "  make report           Generate pipeline report"
-	@echo "  make pipeline         End-to-end: validate → backfill → simulate → build-dataset → train → wfv → report"
+	@echo "  make pipeline         End-to-end: validate > backfill > simulate > build-dataset > train > wfv > report"
 	@echo "  make pipeline-v0.2    v0.2 profitability evidence pipeline (ISSUE #35)"
-	@echo "  make DRY_RUN=1 <tgt>  Dry-run mode (echo what would run)"
+	@echo ""
+	@echo "--- v0.30E — Real Data Baseline ---"
+	@echo "  make data-health      	Verify + auto-repair downloaded Binance data"
+	@echo "  make test-training    	Health check > train > verify (SCALP, BTC/ETH/SOL/BNB)"
+	@echo "  make test-training-full   Same + Optuna hyperparameter search"
+	@echo "  make MODE=SWING ...   	Override trading mode"
+	@echo "  make SYMBOLS=BTCUSDT  	Override symbol list"
+	@echo "  make DRY_RUN=1 <tgt>  	Dry-run mode (echo what would run)"
 	@echo ""
 
 setup:
@@ -43,9 +50,9 @@ endif
 
 check-lib-boundaries:
 	@echo "Checking that lib/ does NOT import v7 or alphaforge..."
-	@python -c "import lib; print('  lib/ importable ✓')"
+	@python -c "import lib; print('  lib/ importable ok')"
 	@python -m pytest lib/tests/test_import_boundary.py -v -q 2>&1 | tail -3
-	@echo "  Lib boundary check complete ✓"
+	@echo "  Lib boundary check complete ok"
 
 check-boundaries:
 	@echo "=== Checking lib/ boundaries ==="
@@ -54,7 +61,7 @@ check-boundaries:
 	@echo "=== Checking cross-domain boundaries ==="
 	@python -m pytest integration/tests/test_cross_domain_boundaries.py -v -q 2>&1 | tail -10
 	@echo ""
-	@echo "  Boundary check complete ✓"
+	@echo "  Boundary check complete ok"
 
 check-contracts:
 	@echo "=== Validating contract registry ==="
@@ -63,13 +70,13 @@ check-contracts:
 	@echo "=== Validating schema parity ==="
 	@python -m pytest integration/tests/test_schema_parity.py -v -q 2>&1 | tail -10
 	@echo ""
-	@echo "  Contract check complete ✓"
+	@echo "  Contract check complete ok"
 
 test-system:
 	@echo "=== System tests (contracts + boundaries + smoke) ==="
 	@python -m pytest integration/tests/ -v -q 2>&1
 	@echo ""
-	@echo "  System tests complete ✓"
+	@echo "  System tests complete ok"
 
 test-all:
 	@echo "=== Running all lib/ tests ==="
@@ -78,7 +85,7 @@ test-all:
 	@echo "=== Running all system tests ==="
 	@python -m pytest integration/tests/ -v -q 2>&1
 	@echo ""
-	@echo "  All tests complete ✓"
+	@echo "  All tests complete ok"
 
 clean:
 	-rm -rf .pytest_cache
@@ -90,7 +97,7 @@ clean:
 	-rm -rf build/
 	-rm -rf dist/
 	-rm -rf *.egg-info
-	@echo "  Cleanup complete ✓"
+	@echo "  Cleanup complete ok"
 
 lint:
 	@echo "Running ruff..."
@@ -183,4 +190,91 @@ pipeline-v0.2:
 		PYTHONPATH=$(PIPELINE_PYTHONPATH) python3 -m cli v02 --dry-run $(ARGS); \
 	else \
 		PYTHONPATH=$(PIPELINE_PYTHONPATH) python3 -m cli v02 $(ARGS); \
+	fi
+
+# ====================================================================
+# v0.30E — Real Data Baseline Pipeline (test-training profile)
+# ====================================================================
+# Targets:
+#   make data-health          Verify + auto-repair downloaded data
+#   make test-training        Full pipeline: health > train > verify
+#   make test-training-full   Same + Optuna hyperparameter search
+#
+# Profile: configs/profiles/test-training.yaml
+# Overrides: MODE=SCALP, SYMBOLS=BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT
+# ====================================================================
+
+.PHONY: data-health test-training test-training-full
+
+MODE ?= SCALP
+SYMBOLS ?= BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT
+TRAIN_PYTHONPATH := alphaforge/src:.
+SCRIPTS_PYTHONPATH := .
+DATA_DIR ?= data_lake
+
+data-health:
+	@echo "=== v0.30E | Data Health Check ==="
+	@echo "  Mode:    $(MODE)"
+	@echo "  Symbols: $(SYMBOLS)"
+	@echo "  Data:    $(DATA_DIR)"
+	@echo ""
+	@if [ "$(DRY_RUN)" = "1" ]; then \
+		echo "[DRY RUN] python3 scripts/health_check.py --symbols $(SYMBOLS) --data-dir $(DATA_DIR)"; \
+	else \
+		PYTHONPATH=$(SCRIPTS_PYTHONPATH) python3 scripts/health_check.py --symbols $(SYMBOLS) --data-dir $(DATA_DIR) && \
+		echo "  OK: Data healthy"; \
+	fi
+
+test-training: data-health
+	@echo "=== v0.30E | Test Training ==="
+	@echo "  Mode:    $(MODE)"
+	@echo "  Symbols: $(SYMBOLS)"
+	@echo ""
+	@if [ "$(DRY_RUN)" = "1" ]; then \
+		echo "[DRY RUN] PYTHONPATH=$(TRAIN_PYTHONPATH) python3 -m alphaforge.train --mode $(MODE) --symbols $(SYMBOLS) --folds 6"; \
+	else \
+		echo "[1/3] Running train..."; \
+		PYTHONPATH=$(TRAIN_PYTHONPATH) python3 -m alphaforge.train \
+			--mode $(MODE) \
+			--symbols $(SYMBOLS) \
+			--folds 6 \
+			--output data/reports/train-results-$(MODE).json; \
+		echo ""; \
+		echo "[2/3] Verifying results..."; \
+		PYTHONPATH=$(SCRIPTS_PYTHONPATH) python3 scripts/verify_training.py \
+			data/reports/train-results-$(MODE).json; \
+		echo ""; \
+		echo "[3/3] DataPassport check..."; \
+		PYTHONPATH=$(SCRIPTS_PYTHONPATH) python3 scripts/check_passport.py \
+			--symbols $(SYMBOLS); \
+		echo ""; \
+		echo "=== Test-training complete ==="; \
+	fi
+
+test-training-full: data-health
+	@echo "=== v0.30E | Test Training + Optuna ==="
+	@echo "  Mode:    $(MODE)"
+	@echo "  Symbols: $(SYMBOLS)"
+	@echo ""
+	@if [ "$(DRY_RUN)" = "1" ]; then \
+		echo "[DRY RUN] Would run: Optuna + verify + baseline"; \
+	else \
+		echo "[1/3] Running Optuna study..."; \
+		PYTHONPATH=$(TRAIN_PYTHONPATH) python3 -m alphaforge.train \
+			--mode $(MODE) \
+			--symbols $(SYMBOLS) \
+			--folds 6 \
+			--optuna \
+			--output data/reports/train-results-optuna-$(MODE).json; \
+		echo ""; \
+		echo "[2/3] Verifying results..."; \
+		PYTHONPATH=$(SCRIPTS_PYTHONPATH) python3 scripts/verify_training.py \
+			data/reports/train-results-optuna-$(MODE).json; \
+		echo ""; \
+		echo "[3/3] Saving baseline snapshot..."; \
+		cp data/reports/train-results-optuna-$(MODE).json \
+		   data/reports/baseline-$(MODE)-$$(date +%Y%m%d).json; \
+		echo "  Baseline saved: data/reports/baseline-$(MODE)-$$(date +%Y%m%d).json"; \
+		echo ""; \
+		echo "=== Test-training-full complete ==="; \
 	fi
