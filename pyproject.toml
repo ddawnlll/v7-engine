@@ -40,7 +40,7 @@ timeout = 10
 
 # Fast local test: `pytest` — skips 13 slow integration files with 10s timeout
 # Full suite:     `pytest --ignore=''` — runs everything
-addopts = "--ignore=alphaforge/tests/test_real_data_gate.py --ignore=alphaforge/tests/test_ablation.py --ignore=alphaforge/tests/test_ablation_tuned.py --ignore=alphaforge/tests/test_autotune.py --ignore=alphaforge/tests/test_collapse_detector.py --ignore=alphaforge/tests/test_mode_specific_walk_forward.py --ignore=alphaforge/tests/test_nested_wfv.py --ignore=alphaforge/tests/test_optuna_tuner.py --ignore=alphaforge/tests/test_search_space.py --ignore=alphaforge/tests/test_walk_forward_runner.py --ignore=alphaforge/tests/test_walk_forward_validator.py --ignore=alphaforge/tests/test_wfv.py --ignore=alphaforge/tests/test_xgb_trainer.py"
+addopts = "-v --ignore=alphaforge/tests/test_real_data_gate.py --ignore=alphaforge/tests/test_ablation.py --ignore=alphaforge/tests/test_ablation_tuned.py --ignore=alphaforge/tests/test_autotune.py --ignore=alphaforge/tests/test_collapse_detector.py --ignore=alphaforge/tests/test_mode_specific_walk_forward.py --ignore=alphaforge/tests/test_nested_wfv.py --ignore=alphaforge/tests/test_optuna_tuner.py --ignore=alphaforge/tests/test_search_space.py --ignore=alphaforge/tests/test_walk_forward_runner.py --ignore=alphaforge/tests/test_walk_forward_validator.py --ignore=alphaforge/tests/test_wfv.py --ignore=alphaforge/tests/test_xgb_trainer.py"
 
 [tool.ruff]
 target-version = "py312"
