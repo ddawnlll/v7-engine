@@ -233,7 +233,7 @@ data-health:
 candidate:
 	@echo "=== v0.31E — Directional Candidate v0.2 ==="
 
-	@PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train \
+	@.venv/bin/python3 -m alphaforge.train \
 
 		--mode SCALP \
 
@@ -323,4 +323,8 @@ test-training-full: data-health
 
 candidate:
 	@echo "=== v0.31E — Directional Candidate v0.2 ==="
-	PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT --folds 6 --target 2-class --output data/reports/candidate-v02.json
+	.venv/bin/python3 -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT --folds 6 --target 2-class --output data/reports/candidate-v02.json
+
+candidate-lightgbm:
+	@echo "=== v0.32A — LightGBM Directional Candidate v0.1 ==="
+	.venv/bin/python3 -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT --folds 6 --target 2-class --model lightgbm --output data/reports/candidate-lightgbm-v01.json
