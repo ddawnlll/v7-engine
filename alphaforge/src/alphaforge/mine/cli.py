@@ -89,7 +89,10 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     bucketizer = FeatureBucketizer()
     bucketizer.fit(table, feature_cols)
     masks = bucketizer.transform(table)
-    condition_registry = bucketizer.get_condition_registry(min_support=min_support)
+    condition_registry = [
+        c for c in bucketizer.get_condition_registry()
+        if c.get("support_count", 0) >= min_support
+    ]
     summary["total_conditions"] = len(condition_registry)
     summary["steps_completed"].append("bucketize")
 
