@@ -1,0 +1,192 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+result: "PASS"
+
+scope_confirmation:
+  task_type: "IMPLEMENTATION"
+  phases_implemented:
+    - "v0.30A — DatasetSpec + DataCatalog"
+    - "v0.30B — Binance UM Data Lake Bootstrap"
+    - "v0.30C — DataPassport + RealDataRequired Gate design"
+  domains:
+    - "lib/data_lake/ — centralized data lake module"
+    - "lib/tests/ — test coverage for all data lake modules"
+  what_was_excluded:
+    - "Metric plumbing fix (v0.30D — deferred, independent)"
+    - "Real Data Baseline Evidence Control (v0.30E — not started)"
+    - "On-chain vendor gate (v0.30F — future)"
+    - "20-symbol expansion (v0.30G — future)"
+    - "Actual data backfill execution"
+
+files_changed:
+  - path: lib/data_lake/__init__.py
+    status: CREATED
+    size_bytes: 716
+    description: "Data Lake package init — exports DatasetSpec, DataCatalog, DataLakePaths, DataPassport"
+
+  - path: lib/data_lake/spec.py
+    status: CREATED
+    size_bytes: 4547
+    description: "DatasetSpec — immutable frozen dataclass describing a required dataset (symbol, interval, date range, data types)"
+
+  - path: lib/data_lake/catalog.py
+    status: CREATED
+    size_bytes: 4820
+    description: "DataCatalog — extended catalog with gap analysis, spec-vs-ingested comparison, completeness scoring, timeline gap detection"
+
+  - path: lib/data_lake/storage.py
+    status: CREATED
+    size_bytes: 3767
+    description: "DataLakePaths — medallion-architecture path resolution (raw/bronze/silver layers), pure path math, no I/O"
+
+  - path: lib/data_lake/backfill_planner.py
+    status: CREATED
+    size_bytes: 7731
+    description: "BackfillPlanner — compares DatasetSpec against DataCatalog to produce DownloadManifest of missing data"
+
+  - path: lib/data_lake/downloader.py
+    status: CREATED
+    size_bytes: 20055
+    description: "BinanceUmDownloader — multi-worker parallel downloader for Binance klines (ZIP) and funding rate (REST) with rate limiting, retry/backoff, atomic writes"
+
+  - path: lib/data_lake/checksum.py
+    status: CREATED
+    size_bytes: 5546
+    description: "SHA-256 batch checksum verification — memory-efficient streaming hashes, batch verification, ChecksumReport"
+
+  - path: lib/data_lake/coverage.py
+    status: CREATED
+    size_bytes: 7001
+    description: "CoverageReport — frozen dataclass and pure functions for reporting dataset coverage against spec"
+
+  - path: lib/data_lake/gateway.py
+    status: CREATED
+    size_bytes: 12127
+    description: "DataGateway — unified parquet read-only interface for the data lake; pipeline never guesses local paths"
+
+  - path: lib/data_lake/passport.py
+    status: CREATED
+    size_bytes: 10835
+    description: "DataPassport — immutable provenance/coverage/trustworthiness artifact for dataset claims, blocking semantics"
+
+  - path: lib/tests/test_data_lake_spec.py
+    status: CREATED
+    size_bytes: 4843
+    description: "31 tests for DatasetSpec — construction, validation, serialization, edge cases"
+
+  - path: lib/tests/test_data_lake_catalog.py
+    status: CREATED
+    size_bytes: 7030
+    description: "Tests for DataCatalog gap analysis, spec-vs-ingested comparison, completeness scoring"
+
+  - path: lib/tests/test_data_lake_storage.py
+    status: CREATED
+    size_bytes: 3115
+    description: "Tests for DataLakePaths — raw/bronze/silver path resolution, edge cases, no-I/O guarantee"
+
+  - path: lib/tests/test_data_lake_backfill_planner.py
+    status: CREATED
+    size_bytes: 11427
+    description: "Tests for BackfillPlanner — manifest generation, spec vs catalog, boundary conditions"
+
+  - path: lib/tests/test_data_lake_downloader.py
+    status: CREATED
+    size_bytes: 19723
+    description: "Tests for BinanceUmDownloader — parallel download, rate limiting, retry, atomic writes"
+
+  - path: lib/tests/test_data_lake_checksum.py
+    status: CREATED
+    size_bytes: 3575
+    description: "Tests for SHA-256 checksum verification — streaming, batch, corrupt-file detection"
+
+  - path: lib/tests/test_data_lake_coverage.py
+    status: CREATED
+    size_bytes: 8009
+    description: "Tests for CoverageReport — report generation, spec alignment, edge cases"
+
+  - path: lib/tests/test_data_lake_gateway.py
+    status: CREATED
+    size_bytes: 18394
+    description: "Tests for DataGateway — parquet read, path resolution, error handling, pipeline integration"
+
+  - path: lib/tests/test_data_lake_passport.py
+    status: CREATED
+    size_bytes: 13014
+    description: "Tests for DataPassport — provenance, coverage, trustworthiness, blocking semantics"
+
+decisions_locked:
+  - decision: "Data Lake architecture (medallion: raw/bronze/silver)"
+    status: "LOCKED"
+    rationale: "10-module implementation with 158 passing tests validates the design from v0.30 research"
+
+  - decision: "DatasetSpec frozen dataclass as dataset requirement descriptor"
+    status: "LOCKED"
+    rationale: "Implements the research-phase design; all modules consume/write against this spec"
+
+  - decision: "DataCatalog gap analysis with completeness scoring"
+    status: "LOCKED"
+    rationale: "Extends existing catalog with spec-vs-ingested comparison, timeline gaps, and coverage metrics"
+
+  - decision: "DataLakePaths medallion-architecture path resolution"
+    status: "LOCKED"
+    rationale: "Pure path math, no I/O, raw/bronze/silver layer separation per v0.30 research"
+
+  - decision: "BackfillPlanner with DownloadManifest"
+    status: "LOCKED"
+    rationale: "Compares spec against catalog; produces actionable manifest of missing data"
+
+  - decision: "BinanceUmDownloader with rate limiting, retry/backoff, atomic writes"
+    status: "LOCKED"
+    rationale: "Multi-worker parallel download; klines from Binance Vision ZIPs, funding from REST API"
+
+  - decision: "SHA-256 batch checksum verification"
+    status: "LOCKED"
+    rationale: "Memory-efficient streaming hashes; ChecksumReport for data integrity auditing"
+
+  - decision: "CoverageReport frozen dataclass"
+    status: "LOCKED"
+    rationale: "Pure data structures for coverage reporting; consumed by DataGateway and downstream"
+
+  - decision: "DataGateway unified parquet read interface"
+    status: "LOCKED"
+    rationale: "Pipeline never guesses local paths; pure read, never writes"
+
+  - decision: "DataPassport standard"
+    status: "LOCKED"
+    rationale: "Immutable provenance/coverage/trustworthiness artifact from v0.30C research; blocking semantics for RealDataRequiredGate"
+
+remaining_holds:
+  - hold: "Metric plumbing fix (v0.30D)"
+    status: "HOLD"
+    condition: "Consolidated active_trade_count=0 vs WFV detail not yet reconciled; small independent fix"
+
+  - hold: "Real Data Baseline Evidence Control (v0.30E)"
+    status: "HOLD"
+    condition: "Not started — requires data lake implementation first (now complete)"
+
+  - hold: "Real data backfill execution"
+    status: "HOLD"
+    condition: "Pending v0.30E setup; downloader and planner are ready"
+
+  - hold: "Data lake end-to-end integration test"
+    status: "HOLD"
+    condition: "Full pipeline: spec -> planner -> downloader -> checksum -> coverage -> passport not yet wired"
+
+safe_next_step:
+  phase: "v0.30E — Real Data Baseline Evidence Control"
+  description: >
+    CONTROL_REALDATA_SCALP_1H_BASELINE_V030 snapshot.
+    NO Optuna, NO threshold change, NO feature-set change.
+    Measure: NO_TRADE defeat, random defeat, ALWAYS_LONG defeat, net_R, fold_pass_ratio, exposure.
+    Requires metric plumbing fix (v0.30D) first.
+
+evidence:
+  commands_run:
+    - "PYTHONPATH=. python3 -m pytest lib/tests/test_data_lake_*.py -q --tb=short"
+    - "PYTHONPATH=. python3 -m pytest lib/tests/ -q --tb=short"
+  test_results:
+    - "158/158 data lake tests passed"
+    - "469/469 lib tests passed (all lib tests)"
+  src_files_created: 10
+  test_files_created: 9

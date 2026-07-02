@@ -643,6 +643,111 @@ Do not collapse these into one vague “publish” step.
 
 ---
 
+## v0.30 — Real Data Lake + Evidence-Gated Workflow Research (2026-07-02)
+
+**Scope:** RESEARCH_ONLY — No code, no config, no backfill.
+
+### What was researched
+- **14 external data sources** evaluated: Binance public archive (P0 ✅), Binance REST API (P0-P2 ✅), Glassnode (P3 conditional ✅), Coinalyze (P3 conditional), Tardis.dev (P4), Crypto Lake (P4), CryptoQuant (P4 deferred ❌), Santiment (P4 blocked ❌)
+- **Data Lake architecture** designed: `lib/data_lake/` with DatasetSpec, DataCatalog, DataPassport, BackfillPlanner, ParallelDownloader, CoverageReport, ChecksumReport, DataGateway
+- **DataPassport standard** designed: provenance schema for every claim
+- **RealDataRequired gate** designed: hard block on synthetic data for serious claims
+- **Metric plumbing gap** identified and rooted: consolidated `active_trade_count=0` vs WFV detail `1344`
+- **On-chain vendor workflow** designed with PIT test protocol
+
+### Key decisions locked
+- Centralized Data Lake required — LOCKED
+- Synthetic fallback blocked for ALPHA_HAS_EDGE etc. — LOCKED
+- Binance public data sufficient for P0 — LOCKED
+- Metric plumbing fix before data backfill — LOCKED
+- On-chain data cannot generate labels — LOCKED (immutable rule)
+- `lib/data_lake/` is correct module location — LOCKED_INITIAL_BASELINE
+- No vendor purchases before v0.30E — LOCKED
+
+### Reports produced (6 files)
+- `reports/research/v030_real_data_lake_research.md` (794 lines)
+- `reports/research/v030_data_source_matrix.yaml` (367 lines, 14 sources)
+- `reports/research/v030_data_workflow_plan.md` (473 lines, 7 phases)
+- `reports/research/v030_onchain_vendor_workflow.md` (270 lines)
+- `reports/research/v030_repo_impact_map.md` (172 lines, 17 new + 6 modified files)
+- `reports/accp/v030_real_data_lake_acccp.yaml` (146 lines)
+
+### Recommended implementation order
+```
+Phase 0 — v0.30D: Metric Plumbing Integrity Fix          (1 day, PARALEL)
+Phase 0 — v0.30A: DatasetSpec + DataCatalog              (3-5 days, PARALEL)
+Phase 1 — v0.30B: Binance UM Data Lake Bootstrap         (5-7 days)
+  → 5 symbols: BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, XRPUSDT
+  → Intervals: 1h, 15m, 4h, 1d
+  → Data: klines + funding_rate + mark/index/premium price
+  → Range: 2022-present
+Phase 2 — v0.30C: DataPassport + RealDataRequired Gate   (2-3 days)
+Phase 3 — v0.30E: Real Data Baseline Evidence Control    (2-3 days)
+  → CONTROL_REALDATA_SCALP_1H_BASELINE_V030
+  → NO Optuna, NO threshold change, NO feature-set change
+  → Measure: NO_TRADE defeat, random defeat, ALWAYS_LONG defeat, net_R, fold_pass_ratio, exposure
+Phase 4 — v0.30F: On-Chain Vendor Evidence Gate          (future — after E stable)
+Phase 5 — v0.30G: 20-Symbol Expansion                    (future — after E stable)
+```
+
+**20-symbol expansion gate:** Before expanding beyond 5 symbols, these conditions must ALL be met:
+- 5-symbol P0 coverage > 90%, checksum pass, DataPassport present
+- Metric plumbing fixed (consolidated report matches WFV detail)
+- First real-data baseline evidence snapshot produced
+- Evidence Engine deciding on real data, not synthetic
+
+**On-chain / L2 gate:** Not before v0.30E complete. On-chain hard rules are immutable:
+- On-chain data CANNOT generate labels
+- On-chain data CANNOT be ground truth
+- If NOT PIT safe: backtest feature usage FORBIDDEN
+
+### Design Lock Status
+- Data Lake architecture: LOCKED_INITIAL_BASELINE
+- DataPassport standard: LOCKED_INITIAL_BASELINE
+- RealDataRequired Gate: LOCKED_INITIAL_BASELINE
+- Metric plumbing root cause: LOCKED
+- On-chain vendor protocol: LOCKED_INITIAL_BASELINE
+- Binance P0 sources: LOCKED
+
+### Remaining holds
+- Metric plumbing fix not yet applied (HOLD — pending implementation)
+- Data Lake not yet implemented (HOLD — pending implementation)
+- Real data backfill not yet started (HOLD — pending implementation)
+- Glassnode PIT test not yet executed (HOLD — P3 scope)
+- OI/Taker volume 30-day limitation (DEFERRED — P1 scope)
+- 20-symbol expansion (DEFERRED — after P0 baseline)
+
+
+---
+
+## v0.30B+v0.30C — Binance UM Data Lake Bootstrap + DataPassport/RealDataRequired Gate — LOCKED (2026-07-02)
+
+**What was implemented:**
+- **v0.30A foundation:** `DatasetSpec` (immutable dataset requirement descriptor) and `DataCatalog` (extended gap-analysis catalog with spec-vs-ingested comparison, completeness scoring, and timeline gap detection) — 2 source files, 2 test files
+- **v0.30B — Binance UM Data Lake Bootstrap:** Centralized medallion-architecture storage path resolution (`DataLakePaths`), backfill planner (`BackfillPlanner` with `DownloadManifest`), multi-worker parallel Binance downloader (`BinanceUmDownloader` with rate limiting, retry/backoff, atomic writes), SHA-256 batch checksum verification (`ChecksumReport`), coverage reporting (`CoverageReport`), and unified data gateway (`DataGateway` with parquet read-only access) — 6 source files, 6 test files
+- **v0.30C — DataPassport:** `DataPassport` (immutable provenance/coverage/trustworthiness artifact with blocking semantics), designed for integration with `RealDataRequiredGate` — 1 source file, 1 test file
+- **Total:** 10 source modules, 9 test files, **158 tests all passing**
+
+**Lock status (all implemented modules):**
+- Data Lake architecture (v0.30A): LOCKED
+- Data lake storage paths: LOCKED
+- Backfill planner: LOCKED
+- Parallel downloader: LOCKED
+- Checksum verification: LOCKED
+- Coverage report: LOCKED
+- Data gateway: LOCKED
+- DataPassport standard: LOCKED
+
+**Remaining holds:**
+- Metric plumbing fix not yet committed (HOLD)
+- v0.30E — Real Data Baseline Evidence Control not started (HOLD)
+- Real data backfill not yet started (HOLD — pending v0.30E)
+- Binance API key availability (NEEDS_VERIFICATION)
+
+**Evidence:** 158/158 data lake tests pass, 469/469 lib tests pass. ACCP report at `reports/accp/v030_data_lake_implementation.accp.yaml`.
+
+---
+
 ## Final Position
 
 The roadmap for V7 is not:
