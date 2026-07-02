@@ -1,0 +1,149 @@
+{
+  "candidate_id": "ALPHAFORGE_SCALP_1H_DIRECTION_V01",
+  "timestamp": "2026-07-02T01:40:26.471354+00:00",
+  "v7_status": "RESEARCH_ONLY / NOT_READY",
+  "config": {
+    "mode": "SCALP",
+    "interval": "1h",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT"
+    ],
+    "n_folds": 6,
+    "target": "2-class direction (LONG vs SHORT)",
+    "confidence_threshold": "DISABLED",
+    "no_trade_treatment": "REMOVED_FROM_SUPERVISION",
+    "features": 60
+  },
+  "metrics": {
+    "oos_accuracy": 0.5149,
+    "oos_balanced_accuracy": 0.5138,
+    "oos_long_accuracy": 0.4494,
+    "oos_short_accuracy": 0.5782,
+    "train_accuracy_mean": 0.6975,
+    "train_oos_gap": 0.1827,
+    "oos_net_r_mean": 0.007648,
+    "oos_net_r_sum": 125.0365,
+    "oos_profit_factor": 242647.8601,
+    "active_trade_count": 31752,
+    "fold_stability": 0.9878,
+    "baselines": {
+      "random_direction": 0.5,
+      "majority_direction": 0.508
+    },
+    "baseline_defeat_random": true,
+    "baseline_defeat_majority": true
+  },
+  "confusion_matrix": [
+    [
+      7021,
+      8601
+    ],
+    [
+      6803,
+      9327
+    ]
+  ],
+  "fold_results": [
+    {
+      "fold": 1,
+      "n_train": 10584,
+      "n_val": 5292,
+      "train_accuracy": 0.8101,
+      "val_accuracy": 0.5191,
+      "long_accuracy": 0.1117,
+      "short_accuracy": 0.8855,
+      "net_r_mean": 0.004723,
+      "active_trades": 5292
+    },
+    {
+      "fold": 2,
+      "n_train": 24696,
+      "n_val": 5292,
+      "train_accuracy": 0.7294,
+      "val_accuracy": 0.5248,
+      "long_accuracy": 0.766,
+      "short_accuracy": 0.2718,
+      "net_r_mean": 0.007722,
+      "active_trades": 5292
+    },
+    {
+      "fold": 3,
+      "n_train": 38808,
+      "n_val": 5292,
+      "train_accuracy": 0.6911,
+      "val_accuracy": 0.5068,
+      "long_accuracy": 0.7406,
+      "short_accuracy": 0.2821,
+      "net_r_mean": 0.009097,
+      "active_trades": 5292
+    },
+    {
+      "fold": 4,
+      "n_train": 52920,
+      "n_val": 5292,
+      "train_accuracy": 0.6674,
+      "val_accuracy": 0.5127,
+      "long_accuracy": 0.3868,
+      "short_accuracy": 0.6406,
+      "net_r_mean": 0.011368,
+      "active_trades": 5292
+    },
+    {
+      "fold": 5,
+      "n_train": 67032,
+      "n_val": 5292,
+      "train_accuracy": 0.6498,
+      "val_accuracy": 0.5176,
+      "long_accuracy": 0.4873,
+      "short_accuracy": 0.5459,
+      "net_r_mean": 0.005819,
+      "active_trades": 5292
+    },
+    {
+      "fold": 6,
+      "n_train": 81144,
+      "n_val": 5292,
+      "train_accuracy": 0.6373,
+      "val_accuracy": 0.5083,
+      "long_accuracy": 0.1802,
+      "short_accuracy": 0.8219,
+      "net_r_mean": 0.007226,
+      "active_trades": 5292
+    }
+  ],
+  "data_passport": {
+    "passport_id": "0dd0b953-0463-4026-80e8-e6e50d813fe3",
+    "dataset_id": "ALPHAFORGE_SCALP_1H_DIRECTION_V01",
+    "source": "binance",
+    "source_type": "public_archive",
+    "market": "um_futures",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT"
+    ],
+    "intervals": [
+      "1h"
+    ],
+    "data_types": [
+      "klines"
+    ],
+    "start": "2023-01-01T00:00:00+00:00",
+    "end": "2026-07-02T01:40:26.467809+00:00",
+    "is_real_data": true,
+    "allow_synthetic": false,
+    "coverage_pct": 100.0,
+    "gap_count": 4,
+    "duplicate_count": 0,
+    "checksum_pass": false,
+    "point_in_time_safe": true,
+    "revision_risk": "none",
+    "generated_at": "2026-07-02T01:40:26.469244+00:00",
+    "manifest_hash": "1fa7537be30d9928f0802d94fc6707cb1b937dcafb093e4327f43940abb85041",
+    "passport_version": "1.0.0"
+  }
+}
