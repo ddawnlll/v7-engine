@@ -28,6 +28,7 @@ help:
 	@echo ""
 	@echo "--- v0.30E — Real Data Baseline ---"
 	@echo "  make data-health      	Verify + auto-repair downloaded Binance data"
+	@echo "  make download         	Download Binance Vision data (BTC/ETH/SOL/BNB, 1h/4h, 2023-2026)"
 	@echo "  make test-training    	Health check > train > verify (SCALP, BTC/ETH/SOL/BNB)"
 	@echo "  make test-training-full   Same + Optuna hyperparameter search"
 	@echo "  make MODE=SWING ...   	Override trading mode"
@@ -204,7 +205,7 @@ pipeline-v0.2:
 # Overrides: MODE=SCALP, SYMBOLS=BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT
 # ====================================================================
 
-.PHONY: data-health test-training test-training-full
+.PHONY: data-health download test-training test-training-full
 
 MODE ?= SCALP
 SYMBOLS ?= BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT
@@ -249,6 +250,18 @@ test-training: data-health
 			--symbols $(SYMBOLS); \
 		echo ""; \
 		echo "=== Test-training complete ==="; \
+	fi
+
+download:
+	@echo "=== v0.30E | Download Binance Vision Data ==="
+	@echo "  Symbols:   $(SYMBOLS)"
+	@echo "  Intervals: 1h, 4h"
+	@echo "  Period:    2023-01 to 2026-12"
+	@echo ""
+	@if [ "$(DRY_RUN)" = "1" ]; then \
+		echo "[DRY RUN] python3 scripts/download_binance.py --symbols $(SYMBOLS)"; \
+	else \
+		PYTHONPATH=alphaforge/src:. python3 scripts/download_binance.py --symbols $(SYMBOLS); \
 	fi
 
 test-training-full: data-health
