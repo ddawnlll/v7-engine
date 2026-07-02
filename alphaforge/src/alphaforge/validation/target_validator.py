@@ -398,12 +398,20 @@ class AlphaTargetValidator:
         oos_trade_count = oos.get("oos_trade_count", 0) or 0
 
         # -- Active trade / behavior --
+        # NOTE: Supports both pipeline-style (metrics/oos_summary) and
+        # walk_forward_runner.py dict shape (aggregate_metrics.total_oos_trades).
+        total_bars = data_summary.get("total_bars", 0) or 0
         active_trade_count = (
             met.get("active_trade_count")
             or oos.get("active_trade_count")
             or oos_trade_count
+            or agg.get("total_oos_trades", 0)
         )
-        exposure_pct = met.get("exposure_pct", 0.0) or oos.get("exposure_pct", 0.0) or 0.0
+        exposure_pct = (
+            met.get("exposure_pct", 0.0)
+            or oos.get("exposure_pct", 0.0)
+            or ((active_trade_count / total_bars * 100) if total_bars > 0 else 0.0)
+        )
         turnover = met.get("turnover", 0.0) or 0.0
         avg_hold_bars = met.get("avg_hold_bars", 0.0) or 0.0
 

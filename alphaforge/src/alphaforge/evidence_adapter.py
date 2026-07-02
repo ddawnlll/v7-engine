@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from lib.data_lake.passport import DataPassport
 from lib.evidence_engine.baselines import BaselineLibrary, BaselineResult
 from lib.evidence_engine.evidence_passport import (
     EvidencePassport,
@@ -196,3 +197,36 @@ def _has_orderbook_features(metrics: dict) -> bool:
             if kw in feat.lower():
                 return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# Data passport integration
+# ---------------------------------------------------------------------------
+
+
+def attach_data_passport(
+    evidence_passport: EvidencePassport,
+    data_passport: DataPassport,
+) -> EvidencePassport:
+    """Attach a :class:`DataPassport` to an :class:`EvidencePassport`.
+
+    The data passport is stored under
+    ``evidence_passport.data_summary["data_passport"]`` as a dict.
+
+    Returns the modified ``EvidencePassport`` for chaining.
+    """
+    evidence_passport.data_summary["data_passport"] = data_passport.to_dict()
+    return evidence_passport
+
+
+def has_real_data(evidence_passport: EvidencePassport) -> bool:
+    """Check whether the evidence passport is backed by real data.
+
+    Returns ``True`` when the passport has a ``DataPassport`` attached
+    under ``data_summary`` whose ``is_real_data`` field is ``True``.
+    Returns ``False`` if no data passport is attached.
+    """
+    dp = evidence_passport.data_summary.get("data_passport")
+    if dp is None:
+        return False
+    return bool(dp.get("is_real_data", False))

@@ -1,0 +1,89 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+result: "PASS"
+
+scope_confirmation:
+  task_type: "CONFIG_AND_PIPELINE"
+  implementation_details:
+    - "DataHealthChecker with auto-repair (lib/data_lake/health.py)"
+    - "test-training config profile (configs/profiles/test-training.yaml)"
+    - "Script helpers: health_check.py, verify_training.py, check_passport.py"
+    - "Makefile targets: data-health, test-training, test-training-full"
+
+files_changed:
+  - path: lib/data_lake/health.py
+    status: CREATED
+    size_bytes: 14000
+    description: "DataHealthChecker — verify coverage, auto-repair via backfill"
+  - path: lib/data_lake/__init__.py
+    status: MODIFIED
+    description: "Export DataHealthChecker, HealthReport; bumped to v0.4.0"
+  - path: lib/tests/test_data_lake_health.py
+    status: CREATED
+    size_bytes: 4500
+    description: "14 tests for DataHealthChecker and HealthReport"
+  - path: configs/profiles/test-training.yaml
+    status: CREATED
+    size_bytes: 3000
+    description: "Test-training profile: 4 symbols x 4 years, SCALP, auto-repair"
+  - path: scripts/health_check.py
+    status: CREATED
+    size_bytes: 2500
+    description: "CLI entry point for data health check"
+  - path: scripts/verify_training.py
+    status: CREATED
+    size_bytes: 1500
+    description: "CLI entry point for training result verification"
+  - path: scripts/check_passport.py
+    status: CREATED
+    size_bytes: 2000
+    description: "CLI entry point for DataPassport verification"
+  - path: Makefile
+    status: MODIFIED
+    description: "Added data-health, test-training, test-training-full targets"
+
+decisions_locked:
+  - decision: "4 symbols (BTC/ETH/SOL/BNB) x 4 years for baseline"
+    status: "LOCKED_INITIAL_BASELINE"
+    rationale: "Minimum statistically significant dataset for alpha evidence"
+  - decision: "DataHealthChecker with auto-repair"
+    status: "LOCKED_INITIAL_BASELINE"
+    rationale: "Pipeline must self-heal missing/corrupted data"
+  - decision: "SCALP 1h as primary baseline mode"
+    status: "LOCKED_INITIAL_BASELINE"
+    rationale: "Primary business priority mode, 1h interval optimal for iteration"
+  - decision: "Coverage threshold >= 90% for healthy data"
+    status: "LOCKED_INITIAL_BASELINE"
+    rationale: "Allows small gaps without blocking pipeline while ensuring data quality"
+
+remaining_holds:
+  - hold: "Real data not yet downloaded"
+    status: "HOLD"
+    condition: "Must run backfill before test-training target works"
+  - hold: "Metric plumbing fix not committed"
+    status: "HOLD"
+    condition: "target_validator.py + walk_forward_runner.py unstaged changes pending"
+  - hold: "v0.30E baseline not yet produced"
+    status: "HOLD"
+    condition: "Requires backfill + training run"
+  - hold: "20-symbol expansion"
+    status: "DEFERRED"
+    condition: "P0 baseline stable"
+
+safe_next_step:
+  phase: "v0.30E execution"
+  description: >
+    Run Binance Vision backfill for BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT
+    (1h + 4h klines, 2023-2026), then 'make test-training' to get first
+    real-data baseline.
+
+evidence:
+  commands_run:
+    - "PYTHONPATH=. python3 -m pytest lib/tests/test_data_lake_*.py -q → 170 passed"
+    - "make DRY_RUN=1 data-health → syntax OK"
+    - "make DRY_RUN=1 test-training → syntax OK"
+  verification:
+    - "DataHealthChecker correctly detects missing data (healthy=False)"
+    - "Auto-repair fails gracefully when download not possible"
+    - "All 170 data lake tests pass"

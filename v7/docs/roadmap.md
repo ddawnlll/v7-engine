@@ -672,6 +672,43 @@ Do not collapse these into one vague “publish” step.
 - `reports/research/v030_repo_impact_map.md` (172 lines, 17 new + 6 modified files)
 - `reports/accp/v030_real_data_lake_acccp.yaml` (146 lines)
 
+### Implementation Status (2026-07-02)
+
+**v0.30A + v0.30D — DatasetSpec, DataCatalog, Metric Plumbing Fix**
+- ✅ `lib/data_lake/spec.py` — DatasetSpec frozen dataclass (LOCKED)
+- ✅ `lib/data_lake/catalog.py` — DataCatalog with gap analysis (LOCKED)
+- ✅ `target_validator.py` — `active_trade_count` fallback to `total_oos_trades` (LOCKED)
+- ✅ `walk_forward_runner.py` — forward-compat `active_trade_count` key (LOCKED)
+- ✅ 17 + 11 + 6 tests pass
+
+**v0.30B + v0.30C — Data Lake Bootstrap, DataPassport, RealDataGate**
+- ✅ `lib/data_lake/storage.py` — DataLakePaths medallion path resolution (LOCKED)
+- ✅ `lib/data_lake/coverage.py` — CoverageReport + builders (LOCKED)
+- ✅ `lib/data_lake/checksum.py` — ChecksumReport + SHA-256 batch verify (LOCKED)
+- ✅ `lib/data_lake/backfill_planner.py` — BackfillPlanner + DownloadManifest (LOCKED)
+- ✅ `lib/data_lake/downloader.py` — BinanceUmDownloader multi-worker (LOCKED)
+- ✅ `lib/data_lake/gateway.py` — DataGateway unified read (LOCKED)
+- ✅ `lib/data_lake/passport.py` — DataPassport + trustworthiness (LOCKED)
+- ✅ `lib/evidence_engine/hard_caps.py` — V11 RealDataRequired gate (LOCKED)
+- ✅ `alphaforge/evidence_adapter.py` — `attach_data_passport()`, `has_real_data()` (LOCKED)
+- ✅ 158 data lake tests + 39 passport+gate tests pass
+- Commit: `2bc74a0`
+
+**v0.30E Config — Test-Training Profile + Data Health Checker**
+- ✅ `lib/data_lake/health.py` — DataHealthChecker with auto-repair (LOCKED_INITIAL_BASELINE)
+- ✅ `configs/profiles/test-training.yaml` — 4 sym × 4y, SCALP primary (LOCKED_INITIAL_BASELINE)
+- ✅ `scripts/health_check.py`, `verify_training.py`, `check_passport.py` — CLI helpers (LOCKED)
+- ✅ `Makefile` — `data-health`, `test-training`, `test-training-full` targets (LOCKED)
+- ✅ 14 health checker tests pass
+- Commit: `4809b99`
+
+### Remaining holds
+- Real data not yet downloaded (HOLD — Binance Vision backfill not executed)
+- Metric plumbing fix not yet committed to training output (HOLD — pending real data run)
+- v0.30E real-data baseline not yet produced (HOLD — requires backfill + training run)
+- Glassnode PIT test not executed (HOLD — P3 scope, deferred)
+- 20-symbol expansion (HOLD — after P0 baseline stable)
+
 ### Recommended implementation order
 ```
 Phase 0 — v0.30D: Metric Plumbing Integrity Fix          (1 day, PARALEL)

@@ -1,0 +1,146 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+result: "PASS_WITH_WARNINGS"
+
+scope_confirmation:
+  task_type: "RESEARCH_AND_PLANNING"
+  implementation_explicitly_excluded: true
+  research_domains:
+    - "Binance public data availability and format"
+    - "On-chain vendor evaluation (Glassnode, CryptoQuant, Santiment)"
+    - "Alternative data providers (Tardis.dev, Crypto Lake, Coinalyze)"
+    - "Current repo state analysis"
+    - "Metric plumbing gap analysis"
+    - "Data Lake architecture design"
+    - "DataPassport standard design"
+    - "RealDataRequired gate design"
+  what_was_excluded:
+    - "Config changes"
+    - "Threshold changes"
+    - "Feature set changes"
+    - "Model tuning"
+    - "Backfill execution"
+    - "Code implementation"
+    - "New model training"
+
+files_changed:
+  - reports/research/v030_real_data_lake_research.md
+    status: CREATED
+    size_bytes: 31500
+    description: "Main research document — executive summary, current state, external sources, architecture, data tier plan, metric analysis, roadmap"
+
+  - reports/research/v030_data_source_matrix.yaml
+    status: CREATED
+    size_bytes: 12500
+    description: "Data source comparison matrix — all 14 sources evaluated with PIT safety, cost, historical depth"
+
+  - reports/research/v030_data_workflow_plan.md
+    status: CREATED
+    size_bytes: 18500
+    description: "Implementation workflow plan — 7 phases (v0.30A-G), dependency graph, risks, acceptance criteria"
+
+  - reports/research/v030_onchain_vendor_workflow.md
+    status: CREATED
+    size_bytes: 11000
+    description: "On-chain vendor evaluation and PIT test protocol"
+
+  - reports/accp/v030_real_data_lake_acccp.yaml
+    status: CREATED
+    size_bytes: 5000
+    description: "This ACCP report"
+
+  - reports/research/v030_repo_impact_map.md
+    status: CREATED
+    size_bytes: 8500
+    description: "Repo impact map — all affected files and modules"
+
+decisions_locked:
+  - decision: "Centralized Data Lake required"
+    status: "LOCKED"
+    rationale: "Current backfill split across alphaforge/ and lib/ with no gap analysis, coverage reporting, or data passport"
+
+  - decision: "Synthetic fallback default must be prohibited for serious claims"
+    status: "LOCKED"
+    rationale: "ALPHA_HAS_EDGE, MODEL_BEATS_BASELINES, FEATURE_FAMILY_HAS_SIGNAL, V7_*_READY claims require real data"
+
+  - decision: "Binance public data sufficient for P0"
+    status: "LOCKED"
+    rationale: "Klines + funding rate free, CHECKSUM-verified, PIT-safe. 5 symbols × 4 intervals adequate for baseline"
+
+  - decision: "Metric plumbing fix before data backfill"
+    status: "LOCKED"
+    rationale: "Fix is small (<10 lines), independent, and fixes consolidated report correctness regardless of data source"
+
+  - decision: "On-chain data cannot generate labels"
+    status: "LOCKED"
+    rationale: "Immutable rule: labels must come from market outcomes, not blockchain state"
+
+  - decision: "On-chain data PIT test mandatory before backtest feature use"
+    status: "LOCKED"
+    rationale: "Vendor data revision risk invalidates backtest results. Only Glassnode has explicit PIT guarantee"
+
+  - decision: "lib/data_lake/ is correct module location"
+    status: "LOCKED_INITIAL_BASELINE"
+    rationale: "Respects domain boundaries. Data layer is shared infrastructure, not alphaforge- or v7-specific"
+
+remaining_holds:
+  - hold: "Binance API key availability for fresh data"
+    status: "NEEDS_VERIFICATION"
+    condition: "Public archive covers historical needs; REST API needed for recent/current data"
+
+  - hold: "OI/Taker 30-day limitation workaround"
+    status: "DEFERRED"
+    condition: "P1 scope — Coinalyze or vendor with deeper historical OI may resolve"
+
+  - hold: "Glassnode PIT test not yet executed"
+    status: "HOLD"
+    condition: "P3 scope — requires v0.30E completion and budget approval"
+
+  - hold: "20-symbol expansion"
+    status: "DEFERRED"
+    condition: "P0 baseline must be stable (v0.30E complete)"
+
+safe_next_step:
+  phase: "v0.30A — DatasetSpec + DataCatalog"
+  description: >
+    Implement DatasetSpec frozen dataclass in lib/data_lake/spec.py.
+    Extend existing DataCatalog with gap analysis methods.
+    Write tests for both.
+    Estimated: 3-5 days.
+
+warnings:
+  - "Metric plumbing fix (v0.30D) should run in parallel with v0.30A-C — it's independent and small"
+  - "GR1 guardrail currently zeroes economic score due to active_trade_count=0 — this is a bug, not intentional"
+  - "Synthetic data is still the default in AlphaTargetValidator — changing to passport-based detection is high priority"
+  - "Data lake implementation must NOT break existing backfill — keep backward compatibility during transition"
+
+evidence:
+  research_sources:
+    - "data.binance.vision — Binance public data archive confirmed with CHECKSUM support"
+    - "github.com/binance/binance-public-data — Download scripts and data format documentation"
+    - "developers.binance.com — REST API documentation for all data endpoints"
+    - "glassnode.com — PIT data explicitly marketed"
+    - "docs.glassnode.com — API documentation reviewed"
+    - "api.santiment.net — `canMutate: true` confirmed for metrics"
+    - "tardis.dev — Tick-level data, multiple pricing tiers"
+    - "crypto-lake.com — Order book data with Python API"
+    - "api.coinalyze.net/v1/doc — Free derivatives data API"
+  repo_analysis:
+    - "alphaforge/src/alphaforge/data/backfill.py — Current backfill pipeline analyzed (550 lines)"
+    - "alphaforge/src/alphaforge/data/manifest.py — DataManifest analyzed"
+    - "alphaforge/src/alphaforge/validation/target_validator.py — Metric plumbing bug localized"
+    - "alphaforge/src/alphaforge/validation/walk_forward_runner.py — Runner output dict shape analyzed"
+    - "alphaforge/src/alphaforge/reports/empirical.py — Empirical report builder analyzed"
+    - "alphaforge/src/alphaforge/evidence_adapter.py — Evidence passport bridge analyzed"
+    - "lib/evidence_engine/ — Hard caps, gate mapping, passport analyzed"
+    - "lib/market_data/ — Existing catalog and backfill infrastructure analyzed"
+  commands_run:
+    - "repo structure exploration via Explore agent"
+    - "web research via parallel-search MCP (6 searches, ~60 results examined)"
+
+decisions_not_made:
+  - "Glassnode subscription purchase — P3, deferred until v0.30E"
+  - "Tardis.dev vs Crypto Lake for L2 — P4, no current need"
+  - "Exact symbol list for 20-symbol expansion — P1, can be refined during implementation"
+  - "Bronze layer enrichment rules — can evolve as data understanding grows"

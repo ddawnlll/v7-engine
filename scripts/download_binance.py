@@ -2,42 +2,37 @@
 """MAX-PERFORMANCE Binance Vision downloader.
 
 Squeezes max throughput from Binance Vision public S3 mirror:
-  - Downloads 1h klines from data.binance.vision (no API key needed)
-  - 4h auto-resampled from 1h via pandas
-
-Performance features:
-  - Max workers = min(32, CPU cores × 4)
-  - Skip SHA-256 checksum by default (--verify to enable)
-  - urllib connection pooling (HTTP keep-alive)
-  - Batched CSV→Parquet after download phase
+  - Async I/O with aiohttp for high-concurrency downloads (60+ parallel)
+  - ProcessPoolExecutor offloads CSV parsing (pandas C engine) from network path
+  - ZIP stays in memory — no temp-file round trip
+  - Retry with exponential backoff for transient failures
+  - 1h klines only (direct from data.binance.vision, no API key needed)
+  - 4h is auto-resampled from 1h via pandas after download phase
   - Resume support (skips existing files)
 
-Typical: 172 files in ~15-30s
+Performance:
+  Network: 60-concurrent async downloads saturates local bandwidth
+  CPU:     All cores parse CSV→parquet in parallel while network continues
+  Target:  70+ files/sec (vs ~7/sec with old thread+urllib+pure-Python parser)
 
 Usage:
     make download                                # max perf default
-    python3 scripts/download_binance.py --workers 32
+    python3 scripts/download_binance.py --concurrency 80
     python3 scripts/download_binance.py --verify  # with checksums
 """
+
 import argparse
+import asyncio
 import concurrent.futures
+import hashlib
+import io
 import multiprocessing
 import os
-import shutil
 import sys
-import tempfile
 import time
-import urllib.request
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Lock
-from urllib.error import HTTPError
-
-try:
-    from tqdm import tqdm
-except ImportError:
-    tqdm = None
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "alphaforge" / "src"))
@@ -45,156 +40,189 @@ sys.path.insert(0, str(REPO_ROOT))
 
 BINANCE_VISION_BASE = "https://data.binance.vision/data/futures/um/monthly/klines"
 SUPPORTED_INTERVALS = frozenset({"1m", "5m", "15m", "1h"})
-MAX_WORKERS = min(32, multiprocessing.cpu_count() * 4)  # aggressive default
-_LOCK = Lock()
+DEFAULT_CONCURRENCY = 60          # async semaphore — not threads, so this is safe
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = None
+
+try:
+    import aiohttp
+except ImportError:
+    print("ERROR: requires aiohttp. Install:\n    pip install aiohttp --break-system-packages")
+    sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
-# Download ONE file (IO-bound — designed for thread-level parallelism)
+# CPU-bound parse step — runs in ProcessPoolExecutor workers
 # ---------------------------------------------------------------------------
 
-def download_file(symbol: str, interval: str, year: int, month: int,
-                  output_root: str, verify: bool = False,
-                  timeout: int = 120) -> dict:
-    """Download ONE monthly ZIP, optionally verify SHA, save as Parquet.
+def _parse_zip_to_parquet(zip_bytes: bytes, symbol: str, interval: str,
+                          year: int, month: int, out_path_str: str,
+                          expected_sha: str | None = None) -> dict:
+    """Extract CSV from in-memory ZIP, parse with pandas C engine, write Parquet.
 
-    Returns {symbol, interval, year, month, status, path, error, records}.
+    Designed for ProcessPoolExecutor — all imports are local so each worker
+    has its own import state regardless of multiprocessing context.
+
+    Returns {status, records, error}.
     """
-    out_path = Path(output_root) / symbol / interval / str(year) / f"{month:02d}.parquet"
+    csv_name = f"{symbol}-{interval}-{year}-{month:02d}.csv"
+    out_path = Path(out_path_str)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zf:
+            csv_bytes = zf.read(csv_name)
+
+        # Optional SHA-256 check
+        if expected_sha:
+            actual = hashlib.sha256(csv_bytes).hexdigest()
+            if actual != expected_sha:
+                return {"status": "error", "records": 0, "error": "SHA-256 mismatch"}
+
+        # Binance Vision CSVs have a header row; detect and skip it
+        skiprows = 1 if csv_bytes[:9] == b"open_time" else 0
+
+        COLS = [
+            "open_time", "open", "high", "low", "close", "volume",
+            "close_time", "quote_volume", "trade_count",
+            "taker_buy_base_volume", "taker_buy_quote_volume", "ignore",
+        ]
+        USE_COLS = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10]  # drop close_time + ignore
+
+        import pandas as pd
+        df = pd.read_csv(
+            io.BytesIO(csv_bytes),
+            header=None, names=COLS, skiprows=skiprows,
+            engine="c", usecols=USE_COLS,
+            dtype={
+                "open_time": "int64",
+                "open": "float64",
+                "high": "float64",
+                "low": "float64",
+                "close": "float64",
+                "volume": "float64",
+                "quote_volume": "float64",
+                "trade_count": "int64",
+                "taker_buy_base_volume": "float64",
+                "taker_buy_quote_volume": "float64",
+            },
+        )
+        df["interval"] = interval
+
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+        table = pa.Table.from_pandas(df, preserve_index=False)
+        pq.write_table(table, out_path_str, compression="zstd")
+
+        return {"status": "ok", "records": len(df), "error": None}
+
+    except Exception as exc:
+        return {"status": "error", "records": 0, "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# Async download helpers (I/O bound — asyncio + aiohttp)
+# ---------------------------------------------------------------------------
+
+async def download_zip(session: aiohttp.ClientSession, sem: asyncio.Semaphore,
+                       url: str) -> bytes | None:
+    """Download one ZIP file with retry + exponential backoff.
+
+    Returns raw bytes on success, None on 404, raises on terminal failure.
+    The ``sem`` semaphore limits global concurrent downloads.
+    """
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            async with sem:
+                async with session.get(
+                    url, timeout=aiohttp.ClientTimeout(total=120)
+                ) as resp:
+                    if resp.status == 404:
+                        return None
+                    resp.raise_for_status()
+                    return await resp.read()
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
+            if attempt == max_retries - 1:
+                raise
+            await asyncio.sleep(1.5 ** attempt)
+    return None  # unreachable
+
+
+async def fetch_checksum(session: aiohttp.ClientSession, url: str) -> str | None:
+    """Fetch the SHA-256 checksum file (``url.CHECKSUM``)."""
+    try:
+        async with session.get(url + ".CHECKSUM",
+                               timeout=aiohttp.ClientTimeout(total=30)) as resp:
+            if resp.status == 200:
+                text = await resp.text()
+                return text.strip().split()[0] if text else None
+    except Exception:
+        pass
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Per-file pipeline: download → submit to process pool → collect result
+# ---------------------------------------------------------------------------
+
+async def process_one(session: aiohttp.ClientSession, sem: asyncio.Semaphore,
+                      pool: concurrent.futures.ProcessPoolExecutor,
+                      symbol: str, interval: str, year: int, month: int,
+                      output_root: str, verify: bool) -> dict:
+    """Pipeline for ONE monthly file: exists-check → download → parse → save.
+
+    Returns status dict: {symbol, interval, year, month, status, path, error, records}.
+    Skips if parquet already on disk.
+    """
+    out_path = Path(output_root) / symbol / interval / str(year) / f"{month:02d}.parquet"
+    base = {"symbol": symbol, "interval": interval, "year": year, "month": month}
+
+    # --- Resume: skip if already on disk ---
     if out_path.exists():
         try:
             import pyarrow.parquet as pq
             n = pq.ParquetFile(str(out_path)).metadata.num_rows
         except Exception:
             n = 0
-        return {"symbol": symbol, "interval": interval, "year": year, "month": month,
-                "status": "skipped", "path": str(out_path), "error": None, "records": n}
+        return {**base, "status": "skipped", "path": str(out_path),
+                "error": None, "records": n}
 
+    # --- Download ZIP (I/O bound, async) ---
     filename = f"{symbol}-{interval}-{year}-{month:02d}.zip"
     zip_url = f"{BINANCE_VISION_BASE}/{symbol}/{interval}/{filename}"
-    zip_tmp = None
 
     try:
-        # --- Download ZIP (IO-bound, streaming) ---
-        req = urllib.request.Request(zip_url, headers={
-            "User-Agent": "Mozilla/5.0",
-            "Accept-Encoding": "gzip",
-        })
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
-            shutil.copyfileobj(resp, tmp)
-            zip_tmp = tmp.name
-            tmp.close()
+        zip_bytes = await download_zip(session, sem, zip_url)
+    except Exception as exc:
+        return {**base, "status": "error", "path": None,
+                "error": f"download failed: {exc}", "records": 0}
 
-        # --- Optional SHA-256 checksum (CPU-bound) ---
-        if verify:
-            actual_hash = _file_sha256(zip_tmp)
-            checksum_url = zip_url + ".CHECKSUM"
-            expected_hash = _fetch_checksum(checksum_url)
-            if expected_hash and actual_hash != expected_hash:
-                os.unlink(zip_tmp)
-                return {"symbol": symbol, "interval": interval, "year": year, "month": month,
-                        "status": "error", "path": None, "error": "SHA-256 mismatch"}
+    if zip_bytes is None:
+        return {**base, "status": "error", "path": None,
+                "error": "HTTP 404", "records": 0}
 
-        # --- Extract CSV & convert to Parquet (CPU-bound) ---
-        csv_name = f"{symbol}-{interval}-{year}-{month:02d}.csv"
-        with zipfile.ZipFile(zip_tmp, "r") as zf:
-            csv_text = zf.read(csv_name).decode("utf-8")
+    # --- Optional checksum (another async fetch) ---
+    expected_sha: str | None = None
+    if verify:
+        expected_sha = await fetch_checksum(session, zip_url)
 
-        table = _parse_klines_csv(csv_text, interval)
-        import pyarrow.parquet as pq
-        pq.write_table(table, str(out_path), compression="zstd")
-        records = table.num_rows
+    # --- CPU-bound: parse CSV → write parquet (process pool) ---
+    loop = asyncio.get_running_loop()
+    result: dict = await loop.run_in_executor(
+        pool, _parse_zip_to_parquet,
+        zip_bytes, symbol, interval, year, month, str(out_path), expected_sha,
+    )
 
-        if zip_tmp and os.path.exists(zip_tmp):
-            os.unlink(zip_tmp)
-
-        return {"symbol": symbol, "interval": interval, "year": year, "month": month,
-                "status": "ok", "path": str(out_path), "error": None, "records": records}
-
-    except HTTPError as e:
-        if zip_tmp and os.path.exists(zip_tmp):
-            os.unlink(zip_tmp)
-        return {"symbol": symbol, "interval": interval, "year": year, "month": month,
-                "status": "error", "path": None, "error": f"HTTP {e.code}"}
-    except Exception as e:
-        if zip_tmp and os.path.exists(zip_tmp):
-            os.unlink(zip_tmp)
-        return {"symbol": symbol, "interval": interval, "year": year, "month": month,
-                "status": "error", "path": None, "error": str(e)}
+    return {**base, **result,
+            "path": str(out_path) if result.get("status") == "ok" else None}
 
 
 # ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _fetch_checksum(url: str) -> str | None:
-    try:
-        with urllib.request.urlopen(url, timeout=30) as r:
-            line = r.read().decode("utf-8").strip()
-            return line.split()[0] if line else None
-    except HTTPError:
-        return None
-
-
-def _file_sha256(path: str) -> str:
-    import hashlib
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        while True:
-            chunk = f.read(128 * 1024)  # 128KB chunks
-            if not chunk:
-                break
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def _parse_klines_csv(csv_text: str, interval: str):
-    import pyarrow as pa
-    opens, highs, lows, closes = [], [], [], []
-    volumes, quote_volumes = [], []
-    trades = []
-    taker_buy_volumes, taker_buy_quote_volumes = [], []
-    timestamps = []
-
-    for line in csv_text.strip().splitlines():
-        parts = line.split(",")
-        if len(parts) < 11:
-            continue
-        try:
-            timestamps.append(int(parts[0]))
-            opens.append(float(parts[1]))
-            highs.append(float(parts[2]))
-            lows.append(float(parts[3]))
-            closes.append(float(parts[4]))
-            volumes.append(float(parts[5]))
-            quote_volumes.append(float(parts[7]))
-            trades.append(int(parts[8]))
-            taker_buy_volumes.append(float(parts[9]))
-            taker_buy_quote_volumes.append(float(parts[10]))
-        except (ValueError, IndexError):
-            continue
-
-    n = len(timestamps)
-    return pa.table({
-        "timestamp": pa.array(timestamps, type=pa.int64()),
-        "open": pa.array(opens, type=pa.float64()),
-        "high": pa.array(highs, type=pa.float64()),
-        "low": pa.array(lows, type=pa.float64()),
-        "close": pa.array(closes, type=pa.float64()),
-        "volume": pa.array(volumes, type=pa.float64()),
-        "quote_volume": pa.array(quote_volumes, type=pa.float64()),
-        "trade_count": pa.array(trades, type=pa.int64()),
-        "taker_buy_base_volume": pa.array(taker_buy_volumes, type=pa.float64()),
-        "taker_buy_quote_volume": pa.array(taker_buy_quote_volumes, type=pa.float64()),
-        "interval": pa.array([interval] * n, type=pa.string()),
-    }) if n else pa.table({})
-
-
-# ---------------------------------------------------------------------------
-# 4h resample (CPU-bound — ProcessPoolExecutor candidate)
+# Resample 1h → 4h (process-pool, kept from original)
 # ---------------------------------------------------------------------------
 
 def _resample_one_month(args: tuple) -> tuple:
@@ -265,7 +293,7 @@ def resample_to_4h(data_dir: str, symbols: list[str]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Catalog registration
+# Catalog registration (kept from original)
 # ---------------------------------------------------------------------------
 
 def update_catalog(data_dir: str, symbols: list[str], intervals: list[str]) -> None:
@@ -300,7 +328,84 @@ def update_catalog(data_dir: str, symbols: list[str], intervals: list[str]) -> N
 
 
 # ---------------------------------------------------------------------------
-# Main
+# Async orchestrator
+# ---------------------------------------------------------------------------
+
+async def main_async(args: argparse.Namespace) -> list[dict]:
+    """Orchestrate async downloads + parallel CPU parsing + tqdm."""
+    symbols = [s.strip() for s in args.symbols.split(",")]
+    intervals = [s.strip() for s in args.intervals.split(",")]
+
+    now = datetime.now(timezone.utc)
+    end_year = args.end_year or now.year
+    end_month = args.end_month or now.month
+
+    # Build flat task list
+    tasks = []
+    for sym in symbols:
+        for interval in intervals:
+            if interval not in SUPPORTED_INTERVALS:
+                continue
+            for year in range(args.start_year, end_year + 1):
+                sm = args.start_month if year == args.start_year else 1
+                em = end_month if year == end_year else 12
+                for month in range(sm, em + 1):
+                    tasks.append((sym, interval, year, month))
+
+    total = len(tasks)
+    if total == 0:
+        return []
+
+    verify_str = "ON" if args.verify else "OFF"
+    print(f"  Symbols:   {symbols}")
+    print(f"  Intervals: {intervals}")
+    print(f"  Period:    {args.start_year}-{args.start_month:02d} to {end_year}-{end_month:02d}")
+    print(f"  Concurrency: {args.concurrency} (async) | CPU cores: {multiprocessing.cpu_count()}")
+    print(f"  Checksums: {verify_str}")
+    print(f"  Tasks:     {total} files ({total // len(symbols)} per symbol)")
+    print()
+
+    # Shared resources
+    conn = aiohttp.TCPConnector(limit=100, limit_per_host=100)
+    sem = asyncio.Semaphore(args.concurrency)
+
+    results: list[dict] = []
+
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=multiprocessing.cpu_count()
+    ) as pool:
+        async with aiohttp.ClientSession(connector=conn) as session:
+            coros = [
+                process_one(session, sem, pool, sym, intv, y, m,
+                            args.output_dir, args.verify)
+                for sym, intv, y, m in tasks
+            ]
+
+            pbar = tqdm(
+                total=total, unit="file",
+                bar_format="{l_bar}{bar:30}| {n_fmt}/{total_fmt} "
+                           "[{elapsed}<{remaining}, {rate_fmt}]",
+            ) if tqdm else None
+
+            # Await in completion order (fast downloads surface first)
+            for coro in asyncio.as_completed(coros):
+                try:
+                    r = await coro
+                    results.append(r)
+                except Exception as exc:
+                    results.append({"status": "error", "error": str(exc),
+                                    "records": 0})
+                if pbar:
+                    pbar.update(1)
+
+            if pbar:
+                pbar.close()
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point
 # ---------------------------------------------------------------------------
 
 def main() -> int:
@@ -312,83 +417,35 @@ def main() -> int:
     parser.add_argument("--end-year", type=int, default=None)
     parser.add_argument("--end-month", type=int, default=None)
     parser.add_argument("--output-dir", default="data_lake/raw/binance/um/klines")
-    parser.add_argument("--workers", type=int, default=MAX_WORKERS,
-                        help=f"Parallel workers (default {MAX_WORKERS})")
+    parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY,
+                        help=f"Async download concurrency (default {DEFAULT_CONCURRENCY})")
+    parser.add_argument("--workers", type=int, default=None,  # alias kept for compat
+                        help="Deprecated alias for --concurrency")
     parser.add_argument("--verify", action="store_true",
                         help="Enable SHA-256 checksum verification (slower)")
     args = parser.parse_args()
 
+    # Accept --workers as alias for --concurrency (back-compat)
+    if args.workers is not None:
+        args.concurrency = args.workers
+
     symbols = [s.strip() for s in args.symbols.split(",")]
     intervals = [s.strip() for s in args.intervals.split(",")]
-
     unsupported = [i for i in intervals if i not in SUPPORTED_INTERVALS]
     intervals = [i for i in intervals if i in SUPPORTED_INTERVALS]
 
-    now = datetime.now(timezone.utc)
-    end_year = args.end_year or now.year
-    end_month = args.end_month or now.month
-
-    # Build task list: (symbol, interval, year, month)
-    tasks = []
-    for sym in symbols:
-        for interval in intervals:
-            for year in range(args.start_year, end_year + 1):
-                sm = args.start_month if year == args.start_year else 1
-                em = end_month if year == end_year else 12
-                for month in range(sm, em + 1):
-                    tasks.append((sym, interval, year, month))
-
-    total = len(tasks)
-    if total == 0:
-        print("Nothing to download.")
-        return 0
-
-    verify_str = "ON" if args.verify else "OFF"
-    print(f"  Symbols:   {symbols}")
-    print(f"  Intervals: {intervals}")
-    print(f"  Period:    {args.start_year}-{args.start_month:02d} to {end_year}-{end_month:02d}")
-    print(f"  Workers:   {args.workers}  (CPUs: {multiprocessing.cpu_count()})")
-    print(f"  Checksums: {verify_str}")
-    print(f"  Tasks:     {total} files ({total // len(symbols)} per symbol)")
-    print()
-
-    counters = {"ok": 0, "skipped": 0, "error": 0}
-    lock = Lock()
-
-    pbar = tqdm(total=total, unit="file",
-                bar_format="{l_bar}{bar:30}| {n_fmt}/{total_fmt} "
-                           "[{elapsed}<{remaining}, {rate_fmt}]") if tqdm else None
-
     t0 = time.time()
-    results = []
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-        fut_map = {executor.submit(download_file, sym, intv, y, m, args.output_dir, args.verify):
-                   (sym, intv, y, m) for sym, intv, y, m in tasks}
-
-        for fut in concurrent.futures.as_completed(fut_map):
-            try:
-                r = fut.result()
-                results.append(r)
-                with lock:
-                    counters[r.get("status", "error")] += 1
-                if pbar:
-                    pbar.update(1)
-            except Exception as e:
-                with lock:
-                    counters["error"] += 1
-                if pbar:
-                    pbar.update(1)
-
-    if pbar:
-        pbar.close()
-
+    results = asyncio.run(main_async(args))
     elapsed = time.time() - t0
-    ok = counters["ok"]
-    skipped = counters["skipped"]
-    errors = counters["error"]
-    total_records = sum(r.get("records", 0) for r in results if r.get("status") == "ok")
 
+    # Tally
+    ok = sum(1 for r in results if r.get("status") == "ok")
+    skipped = sum(1 for r in results if r.get("status") == "skipped")
+    errors = sum(1 for r in results if r.get("status") == "error")
+    total_records = sum(r.get("records", 0) for r in results
+                        if r.get("status") == "ok")
+
+    total = len(results)
     rate = total / max(1, elapsed)
     print(f"\n  Done in {elapsed:.0f}s ({rate:.0f} files/min, {elapsed/max(1,total):.2f}s/file)")
     print(f"  Downloaded: {ok} files, {total_records:,} records")
@@ -396,10 +453,11 @@ def main() -> int:
         print(f"  Skipped:    {skipped} (already on disk)")
     if errors:
         print(f"  Errors:     {errors}")
-        for e in [r.get("error", "?") for r in results if r.get("status") == "error"][:3]:
+        for e in [r.get("error", "?") for r in results
+                  if r.get("status") == "error"][:5]:
             print(f"    - {e}")
 
-    # 4h resample (parallel processes)
+    # 4h resample (processes, self-contained)
     if unsupported:
         print(f"\n  Resampling 1h → {unsupported}...")
         resample_to_4h(args.output_dir, symbols)
