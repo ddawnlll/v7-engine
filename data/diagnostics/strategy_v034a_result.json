@@ -1,0 +1,63 @@
+{
+  "strategy": "cross_sectional_momentum",
+  "config": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT",
+      "XRPUSDT",
+      "ADAUSDT",
+      "AVAXUSDT",
+      "DOGEUSDT",
+      "DOTUSDT",
+      "LINKUSDT",
+      "MATICUSDT",
+      "NEARUSDT",
+      "ATOMUSDT",
+      "FILUSDT",
+      "APTUSDT",
+      "SUIUSDT",
+      "OPUSDT",
+      "ARBUSDT",
+      "INJUSDT",
+      "RUNEUSDT"
+    ],
+    "intervals": [
+      "1h"
+    ],
+    "start": "2023-01-01T00:00:00+00:00",
+    "end": null,
+    "momentum_windows": [
+      1,
+      4,
+      12,
+      24
+    ],
+    "long_pct": 0.2,
+    "short_pct": 0.2,
+    "skip_pct": 0.6,
+    "max_exposure_pct": 0.4,
+    "max_symbols_per_side": 4,
+    "volatility_target": 0.15,
+    "turnover_cap": 0.3,
+    "cooldown_hours": 4,
+    "taker_fee": 0.00045,
+    "maker_fee": 0.00018,
+    "slippage": 0.0005,
+    "uncertainty_buffer": 0.001,
+    "rebalance_hours": 4
+  },
+  "return_pct": -99.9659,
+  "net_return_pct": -99.9659,
+  "max_drawdown": -0.9997,
+  "profit_factor": 0.4706,
+  "sharpe": -5.6162,
+  "n_trades": 44046,
+  "n_long": 21257,
+  "n_short": 22789,
+  "exposure_pct": 8.5,
+  "trades_gated": 8641,
+  "trades_executed": 51167,
+  "beat_no_trade": false
+}
