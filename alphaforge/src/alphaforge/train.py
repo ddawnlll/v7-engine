@@ -104,28 +104,33 @@ def load_cached_data(
 ) -> Optional[dict]:
     """Load real OHLCV data from parquet cache.
 
+    Checks these paths in order:
+      1. ``{data_dir}/raw/{symbol}/``  (legacy flat format)
+      2. ``data_lake/raw/binance/um/klines/{symbol}/{interval}/`` (DataLake medallion)
+
     Returns None if no data found (caller falls back to synthetic).
     """
     if data_dir is None:
         data_dir = str(REPO_ROOT / "data")
     raw_dir = Path(data_dir) / "raw"
-    closes, highs, lows, opens, volumes, timestamps, sym_list = [], [], [], [], [], [], []
+    data_lake_dir = REPO_ROOT / "data_lake" / "raw" / "binance" / "um" / "klines"
 
     import pyarrow.parquet as pq
 
-    found_any = False
-    for sym in symbols:
-        sym_dir = raw_dir / sym
+    def _load_sym_dir(sym_dir: Path, sym: str) -> Optional[int]:
+        """Load all parquet files from a flat symbol directory. Returns row count."""
+        nonlocal closes, highs, lows, opens, volumes, timestamps, sym_list, found_any
         if not sym_dir.exists():
-            logger.info("  No data dir for %s at %s", sym, sym_dir)
-            continue
+            return None
         parquet_files = sorted(sym_dir.glob(f"*_{interval}_*.parquet"))
-        # Fallback to any parquet file
-        if not parquet_files:
-            parquet_files = sorted(sym_dir.glob("*.parquet"))
+        # NOTE: No wildcard fallback here — we must only load bars matching
+        # the requested interval.  The DataLake path below is the correct
+        # fallback for medallion-structured data.
+        count = 0
         for pf in parquet_files:
             try:
                 df = pq.read_table(str(pf)).to_pandas()
+                n = len(df)
                 for _, r in df.iterrows():
                     closes.append(float(r["close"]))
                     highs.append(float(r["high"]))
@@ -135,9 +140,56 @@ def load_cached_data(
                     timestamps.append(int(r.get("timestamp", 0)))
                     sym_list.append(sym)
                 found_any = True
-                logger.info("  Loaded %d bars from %s/%s", len(df), sym, pf.name)
+                count += n
+                logger.info("  Loaded %d bars from %s/%s", n, sym, pf.name)
             except Exception as e:
                 logger.warning("  Error reading %s: %s", pf, e)
+        return count or None
+
+    def _load_data_lake_sym(sym: str) -> Optional[int]:
+        """Load DataLake medallion path: {symbol}/{interval}/{year}/{month}.parquet"""
+        nonlocal closes, highs, lows, opens, volumes, timestamps, sym_list, found_any
+        sym_dir = data_lake_dir / sym / interval
+        if not sym_dir.exists():
+            logger.info("  No data_lake dir for %s/%s", sym, interval)
+            return None
+        count = 0
+        for year_dir in sorted(sym_dir.iterdir()):
+            if not year_dir.is_dir():
+                continue
+            for pf in sorted(year_dir.iterdir()):
+                if pf.suffix != ".parquet":
+                    continue
+                try:
+                    df = pq.read_table(str(pf)).to_pandas()
+                    n = len(df)
+                    # Handle both 'timestamp' and 'open_time' column names
+                    ts_col = "timestamp" if "timestamp" in df.columns else "open_time"
+                    for _, r in df.iterrows():
+                        closes.append(float(r["close"]))
+                        highs.append(float(r["high"]))
+                        lows.append(float(r["low"]))
+                        opens.append(float(r["open"]))
+                        volumes.append(float(r.get("volume", 0)))
+                        timestamps.append(int(r.get(ts_col, 0)))
+                        sym_list.append(sym)
+                    found_any = True
+                    count += n
+                except Exception as e:
+                    logger.warning("  Error reading %s from data_lake: %s", pf, e)
+        if count:
+            logger.info("  Loaded %d bars for %s from data_lake/%s", count, sym, interval)
+        return count or None
+
+    closes, highs, lows, opens, volumes, timestamps, sym_list = [], [], [], [], [], [], []
+    found_any = False
+
+    for sym in symbols:
+        # Try legacy flat path first
+        if _load_sym_dir(raw_dir / sym, sym) is not None:
+            continue
+        # Fallback to DataLake medallion path
+        _load_data_lake_sym(sym)
 
     if not found_any:
         return None

@@ -172,6 +172,16 @@ class DataHealthChecker:
         coverage = self._catalog.coverage_pct(spec)
         gaps = self._catalog.find_gaps(spec)
 
+        # If catalog appears empty but files exist on disk, scan directories
+        if coverage == 0.0 and not self._catalog.query():
+            coverage = self._scan_disk_coverage(spec)
+            if coverage > 0.0:
+                gaps = []  # disk has files, trust the scan
+                logger.info(
+                    "  Disk scan found data: coverage=%.1f%%",
+                    coverage,
+                )
+
         logger.info(
             "Data health check: %s coverage=%.1f%%, gaps=%d",
             spec.dataset_id, coverage, len(gaps),
@@ -239,8 +249,45 @@ class DataHealthChecker:
         return report
 
     # ------------------------------------------------------------------
-    # Internal helpers
+    # Disk scan fallback (when catalog is cold)
     # ------------------------------------------------------------------
+
+    def _scan_disk_coverage(self, spec: DatasetSpec) -> float:
+        """Scan actual data_lake directories for parquet files when catalog is cold.
+
+        Counts parquet files on disk and compares against expected files
+        from the DatasetSpec. Does NOT check row counts (too slow).
+        """
+        if spec.source != "binance" or spec.market != "um_futures":
+            return 0.0
+
+        from lib.data_lake.storage import DataLakePaths
+
+        expected = 0
+        found = 0
+        for symbol in spec.symbols:
+            for interval in spec.intervals:
+                for year in range(spec.start.year, spec.end.year + 1):
+                    sm = spec.start.month if year == spec.start.year else 1
+                    em = spec.end.month if year == spec.end.year else 12
+                    for month in range(sm, em + 1):
+                        expected += 1
+                        p = DataLakePaths.bronze_klines_path(
+                            symbol, interval, year, month
+                        )
+                        if p.exists():
+                            found += 1
+                        else:
+                            # Try raw path
+                            p = DataLakePaths.klines_path(
+                                symbol, interval, year, month
+                            )
+                            if p.exists():
+                                found += 1
+
+        if expected == 0:
+            return 0.0
+        return min(100.0, round(found / expected * 100, 2))
 
     def _repair_and_verify(self, spec: DatasetSpec) -> HealthReport:
         """Attempt to backfill missing data and re-check."""
