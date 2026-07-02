@@ -10,6 +10,9 @@ Tests cover:
 """
 
 from __future__ import annotations
+import pytest
+pytestmark = pytest.mark.integration
+
 
 import math
 from typing import Any, Dict, List, Tuple

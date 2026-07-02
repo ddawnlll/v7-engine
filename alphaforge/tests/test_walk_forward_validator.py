@@ -8,6 +8,9 @@ WS-06-NO-FAKE-TESTS: Negative tests only — verify the skeleton, not results.
 """
 
 from __future__ import annotations
+import pytest
+pytestmark = pytest.mark.integration
+
 
 import dataclasses
 import re

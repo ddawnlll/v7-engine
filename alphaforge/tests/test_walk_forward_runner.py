@@ -6,6 +6,9 @@ helpers. These tests import xgboost and numpy (training environment).
 """
 
 from __future__ import annotations
+import pytest
+pytestmark = pytest.mark.integration
+
 
 import json
 import math

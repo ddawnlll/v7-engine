@@ -36,7 +36,12 @@ norecursedirs = [
     "docker", ".claude", ".github", "scripts", "reports", "docs",
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
-addopts = "-n auto --dist loadscope -q"
+markers = [
+    "integration: slow tests (XGBoost training, WFV, nested WFV, Optuna). Use `pytest -m integration` to run.",
+]
+# Default: skip integration tests for fast local feedback (~30s)
+# Full suite: pytest -m integration  (or remove -m to run all)
+addopts = "-m 'not integration'"
 
 [tool.ruff]
 target-version = "py312"
