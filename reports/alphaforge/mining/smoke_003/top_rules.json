@@ -1,0 +1,4452 @@
+[
+  {
+    "mean_net_R": 0.027218387992583717,
+    "median_net_R": 0.030235738465018754,
+    "positive_rate": 0.9651162790697675,
+    "lift_over_base": 2.0795066645196325,
+    "profit_factor": 85.98621228264491,
+    "sharpe": 67.26035906216023,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.02086106170529508,
+          "std_net_R": 0.01725225766716222,
+          "cv": 0.8270076523853601,
+          "count": 92
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.02572033089544787,
+          "std_net_R": 0.017702151230304306,
+          "cv": 0.6882551901164433,
+          "count": 377
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.02793916639010771,
+          "std_net_R": 0.018514015740191857,
+          "cv": 0.6626545503070924,
+          "count": 1595
+        }
+      },
+      "cross_symbol_mean": 0.024840186330283554,
+      "cross_symbol_std": 0.0029558847884610167,
+      "cross_symbol_cv": 0.11899607954459634
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.02674311621035137,
+          "std_net_R": 0.019462660811544037,
+          "cv": 0.7277633862283667,
+          "count": 742
+        },
+        "range": {
+          "mean_net_R": 0.027335539896823354,
+          "std_net_R": 0.01786412784179608,
+          "cv": 0.6535128960036403,
+          "count": 709
+        },
+        "up": {
+          "mean_net_R": 0.02765817749064326,
+          "std_net_R": 0.01760580160878486,
+          "cv": 0.636549592421297,
+          "count": 613
+        }
+      },
+      "cross_regime_mean": 0.02724561119927266,
+      "cross_regime_std": 0.00037894561144904173,
+      "cross_regime_cv": 0.013908501030769974
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.027218387992583717,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.027218387992583717,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.027218387992583717,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.027218387992583717,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "atr_pct__d10"
+    ],
+    "support": 2064,
+    "lift": 2.0795066645196325,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.027218387992583717,
+    "median_net_R": 0.030235738465018754,
+    "positive_rate": 0.9651162790697675,
+    "lift_over_base": 2.0795066645196325,
+    "profit_factor": 85.98621228264491,
+    "sharpe": 67.26035906216023,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.02086106170529508,
+          "std_net_R": 0.01725225766716222,
+          "cv": 0.8270076523853601,
+          "count": 92
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.02572033089544787,
+          "std_net_R": 0.017702151230304306,
+          "cv": 0.6882551901164433,
+          "count": 377
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.02793916639010771,
+          "std_net_R": 0.018514015740191857,
+          "cv": 0.6626545503070924,
+          "count": 1595
+        }
+      },
+      "cross_symbol_mean": 0.024840186330283554,
+      "cross_symbol_std": 0.0029558847884610167,
+      "cross_symbol_cv": 0.11899607954459634
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.02674311621035137,
+          "std_net_R": 0.019462660811544037,
+          "cv": 0.7277633862283667,
+          "count": 742
+        },
+        "range": {
+          "mean_net_R": 0.027335539896823354,
+          "std_net_R": 0.01786412784179608,
+          "cv": 0.6535128960036403,
+          "count": 709
+        },
+        "up": {
+          "mean_net_R": 0.02765817749064326,
+          "std_net_R": 0.01760580160878486,
+          "cv": 0.636549592421297,
+          "count": 613
+        }
+      },
+      "cross_regime_mean": 0.02724561119927266,
+      "cross_regime_std": 0.00037894561144904173,
+      "cross_regime_cv": 0.013908501030769974
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.027218387992583717,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.027218387992583717,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.027218387992583717,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.027218387992583717,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "atr_pct__very_high"
+    ],
+    "support": 2064,
+    "lift": 2.0795066645196325,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.01901316605550022,
+    "median_net_R": 0.02329610352195906,
+    "positive_rate": 0.9689922480620154,
+    "lift_over_base": 1.452621130127332,
+    "profit_factor": 95.54399850963853,
+    "sharpe": 81.61379552821714,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.01864565072118648,
+          "std_net_R": 0.010641934889443164,
+          "cv": 0.5707462318465003,
+          "count": 182
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.01842738483477499,
+          "std_net_R": 0.010709475462741865,
+          "cv": 0.581171748393273,
+          "count": 550
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01930525874487258,
+          "std_net_R": 0.010511948145751671,
+          "cv": 0.5445121603741061,
+          "count": 1332
+        }
+      },
+      "cross_symbol_mean": 0.01879276476694468,
+      "cross_symbol_std": 0.0003731823123282753,
+      "cross_symbol_cv": 0.01985776531320607
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.018488227314469308,
+          "std_net_R": 0.010996484370642098,
+          "cv": 0.5947830575425692,
+          "count": 668
+        },
+        "range": {
+          "mean_net_R": 0.01942058281236176,
+          "std_net_R": 0.010267114039909268,
+          "cv": 0.528671777727183,
+          "count": 724
+        },
+        "up": {
+          "mean_net_R": 0.01909603710764442,
+          "std_net_R": 0.010479742176162815,
+          "cv": 0.5487914647991348,
+          "count": 672
+        }
+      },
+      "cross_regime_mean": 0.019001615744825163,
+      "cross_regime_std": 0.0003864438199187174,
+      "cross_regime_cv": 0.020337418938911035
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.01901316605550022,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.01901316605550022,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.01901316605550022,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.01901316605550022,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "atr_pct__d09"
+    ],
+    "support": 2064,
+    "lift": 1.452621130127332,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.01748429435600514,
+    "median_net_R": 0.020913918048672167,
+    "positive_rate": 0.9665697674418605,
+    "lift_over_base": 1.3358141065386555,
+    "profit_factor": 92.5444764861767,
+    "sharpe": 113.03983543576338,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.01616123262306389,
+          "std_net_R": 0.010356919450828833,
+          "cv": 0.6408495993089258,
+          "count": 421
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.016738815910278364,
+          "std_net_R": 0.009889299279718508,
+          "cv": 0.5908004086266369,
+          "count": 1233
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01808097338314717,
+          "std_net_R": 0.00984164147738566,
+          "cv": 0.5443092730040083,
+          "count": 2474
+        }
+      },
+      "cross_symbol_mean": 0.016993673972163142,
+      "cross_symbol_std": 0.0008041830721347106,
+      "cross_symbol_cv": 0.04732249620959071
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01718391730322959,
+          "std_net_R": 0.010089729350874332,
+          "cv": 0.5871611910619496,
+          "count": 1370
+        },
+        "range": {
+          "mean_net_R": 0.017581575611443953,
+          "std_net_R": 0.009774016561278699,
+          "cv": 0.5559238135014892,
+          "count": 1456
+        },
+        "up": {
+          "mean_net_R": 0.01769157166351941,
+          "std_net_R": 0.009950604395696326,
+          "cv": 0.5624488646316705,
+          "count": 1302
+        }
+      },
+      "cross_regime_mean": 0.017485688192730983,
+      "cross_regime_std": 0.00021805815001339033,
+      "cross_regime_cv": 0.012470664443395474
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.01748429435600514,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.01748429435600514,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.01748429435600514,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.01748429435600514,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 4128,
+    "rule_id": "",
+    "conditions": [
+      "atr_pct__high"
+    ],
+    "support": 4128,
+    "lift": 1.3358141065386555,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.015955422656510055,
+    "median_net_R": 0.01980872476070171,
+    "positive_rate": 0.9641472868217055,
+    "lift_over_base": 1.2190070829499786,
+    "profit_factor": 89.20959765821691,
+    "sharpe": 80.63009721583234,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.01426933264876133,
+          "std_net_R": 0.009717438508474506,
+          "cv": 0.681001610073057,
+          "count": 239
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.015379060553802311,
+          "std_net_R": 0.008946983634439498,
+          "cv": 0.5817639902736094,
+          "count": 683
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.016652997812378126,
+          "std_net_R": 0.008783935378319722,
+          "cv": 0.5274687162806596,
+          "count": 1142
+        }
+      },
+      "cross_symbol_mean": 0.01543379700498059,
+      "cross_symbol_std": 0.0009738966277710604,
+      "cross_symbol_cv": 0.06310155741045301
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01594277900193596,
+          "std_net_R": 0.008969358738793528,
+          "cv": 0.5625969435883394,
+          "count": 702
+        },
+        "range": {
+          "mean_net_R": 0.015762666849880445,
+          "std_net_R": 0.008894029227679803,
+          "cv": 0.5642464763345082,
+          "count": 732
+        },
+        "up": {
+          "mean_net_R": 0.016193475189786075,
+          "std_net_R": 0.009117842066185785,
+          "cv": 0.5630565372364792,
+          "count": 630
+        }
+      },
+      "cross_regime_mean": 0.015966307013867493,
+      "cross_regime_std": 0.00017666188410284177,
+      "cross_regime_cv": 0.011064667862731348
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.015955422656510055,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.015955422656510055,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.015955422656510055,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.015955422656510055,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "atr_pct__d08"
+    ],
+    "support": 2064,
+    "lift": 1.2190070829499786,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.015075878449433706,
+    "median_net_R": 0.013500478535711426,
+    "positive_rate": 0.9583333333333334,
+    "lift_over_base": 1.1518092003695237,
+    "profit_factor": 69.73201336672405,
+    "sharpe": 52.11214338623788,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.01057090223517253,
+          "std_net_R": 0.008468433241628217,
+          "cv": 0.8011078953555378,
+          "count": 646
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.014911948065375418,
+          "std_net_R": 0.012892131683969545,
+          "cv": 0.8645504683525719,
+          "count": 709
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.019344483917289913,
+          "std_net_R": 0.015316238965927195,
+          "cv": 0.7917626043379574,
+          "count": 709
+        }
+      },
+      "cross_symbol_mean": 0.014942444739279288,
+      "cross_symbol_std": 0.0035818646371720804,
+      "cross_symbol_cv": 0.23971075012621013
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.015243019819726979,
+          "std_net_R": 0.013217357183992508,
+          "cv": 0.8671088367205998,
+          "count": 1739
+        },
+        "range": {
+          "mean_net_R": 0.014183329463122478,
+          "std_net_R": 0.012720786727163298,
+          "cv": 0.8968829752025517,
+          "count": 324
+        },
+        "up": {
+          "mean_net_R": 0.01360290707427549,
+          "std_net_R": 0.0,
+          "cv": 0.0,
+          "count": 1
+        }
+      },
+      "cross_regime_mean": 0.014343085452374981,
+      "cross_regime_std": 0.0006790355594638817,
+      "cross_regime_cv": 0.04734236310022433
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.015075878449433706,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.015075878449433706,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.015075878449433706,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.015075878449433706,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "pullback_atr__d10"
+    ],
+    "support": 2064,
+    "lift": 1.1518092003695237,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.015075878449433706,
+    "median_net_R": 0.013500478535711426,
+    "positive_rate": 0.9583333333333334,
+    "lift_over_base": 1.1518092003695237,
+    "profit_factor": 69.73201336672405,
+    "sharpe": 52.11214338623788,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.01057090223517253,
+          "std_net_R": 0.008468433241628217,
+          "cv": 0.8011078953555378,
+          "count": 646
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.014911948065375418,
+          "std_net_R": 0.012892131683969545,
+          "cv": 0.8645504683525719,
+          "count": 709
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.019344483917289913,
+          "std_net_R": 0.015316238965927195,
+          "cv": 0.7917626043379574,
+          "count": 709
+        }
+      },
+      "cross_symbol_mean": 0.014942444739279288,
+      "cross_symbol_std": 0.0035818646371720804,
+      "cross_symbol_cv": 0.23971075012621013
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.015243019819726979,
+          "std_net_R": 0.013217357183992508,
+          "cv": 0.8671088367205998,
+          "count": 1739
+        },
+        "range": {
+          "mean_net_R": 0.014183329463122478,
+          "std_net_R": 0.012720786727163298,
+          "cv": 0.8968829752025517,
+          "count": 324
+        },
+        "up": {
+          "mean_net_R": 0.01360290707427549,
+          "std_net_R": 0.0,
+          "cv": 0.0,
+          "count": 1
+        }
+      },
+      "cross_regime_mean": 0.014343085452374981,
+      "cross_regime_std": 0.0006790355594638817,
+      "cross_regime_cv": 0.04734236310022433
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.015075878449433706,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.015075878449433706,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.015075878449433706,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.015075878449433706,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "pullback_atr__very_high"
+    ],
+    "support": 2064,
+    "lift": 1.1518092003695237,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.014946165319261406,
+    "median_net_R": 0.013458336190933446,
+    "positive_rate": 0.9607956183338138,
+    "lift_over_base": 1.1418990132290325,
+    "profit_factor": 80.97494135014564,
+    "sharpe": 71.09100705229586,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.010572983009764664,
+          "std_net_R": 0.00784842348894678,
+          "cv": 0.742309287899014,
+          "count": 1153
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.01355122187390678,
+          "std_net_R": 0.010590653602512642,
+          "cv": 0.7815275774434195,
+          "count": 1161
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.020713964923509433,
+          "std_net_R": 0.015230826233832723,
+          "cv": 0.7352926535347373,
+          "count": 1155
+        }
+      },
+      "cross_symbol_mean": 0.014946056602393626,
+      "cross_symbol_std": 0.004255901900778052,
+      "cross_symbol_cv": 0.28475082183861566
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.016180404480202686,
+          "std_net_R": 0.013972587447449128,
+          "cv": 0.8635499479969798,
+          "count": 1393
+        },
+        "range": {
+          "mean_net_R": 0.013669797749714887,
+          "std_net_R": 0.011121076522771634,
+          "cv": 0.8135509190692736,
+          "count": 869
+        },
+        "up": {
+          "mean_net_R": 0.014440670925512211,
+          "std_net_R": 0.011096785901684983,
+          "cv": 0.7684397739498644,
+          "count": 1207
+        }
+      },
+      "cross_regime_mean": 0.01476362438514326,
+      "cross_regime_std": 0.0010500827718513137,
+      "cross_regime_cv": 0.07112635383138163
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.014946165319261406,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.014946165319261406,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.014946165319261406,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.014946165319261406,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 3469,
+    "rule_id": "",
+    "conditions": [
+      "volatility_percentile__d09"
+    ],
+    "support": 3469,
+    "lift": 1.1418990132290325,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.01469969365329724,
+    "median_net_R": 0.013136171072291876,
+    "positive_rate": 0.9638135003479471,
+    "lift_over_base": 1.1230683803448445,
+    "profit_factor": 90.35457225763332,
+    "sharpe": 92.13744940873404,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.010331331512060586,
+          "std_net_R": 0.007763117439107034,
+          "cv": 0.7514149971902971,
+          "count": 1888
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.013424748455526707,
+          "std_net_R": 0.010392400421256779,
+          "cv": 0.7741225435757368,
+          "count": 1929
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.02024440468859199,
+          "std_net_R": 0.014753573443025213,
+          "cv": 0.7287728965099706,
+          "count": 1931
+        }
+      },
+      "cross_symbol_mean": 0.014666828218726427,
+      "cross_symbol_std": 0.004141201641587404,
+      "cross_symbol_cv": 0.2823515473031836
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.015574084385437954,
+          "std_net_R": 0.01321404316961193,
+          "cv": 0.8484635656634361,
+          "count": 2261
+        },
+        "range": {
+          "mean_net_R": 0.013510266879514262,
+          "std_net_R": 0.011273391675168228,
+          "cv": 0.8344314568842583,
+          "count": 1537
+        },
+        "up": {
+          "mean_net_R": 0.014623361092237894,
+          "std_net_R": 0.011252770538188895,
+          "cv": 0.7695064402233687,
+          "count": 1950
+        }
+      },
+      "cross_regime_mean": 0.014569237452396702,
+      "cross_regime_std": 0.0008434187179693199,
+      "cross_regime_cv": 0.05789038175299792
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.01469969365329724,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.01469969365329724,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.01469969365329724,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.01469969365329724,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 5748,
+    "rule_id": "",
+    "conditions": [
+      "volatility_percentile__high"
+    ],
+    "support": 5748,
+    "lift": 1.1230683803448445,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.014495934651447447,
+    "median_net_R": 0.013503089542378392,
+    "positive_rate": 0.9626937984496124,
+    "lift_over_base": 1.1075010292431566,
+    "profit_factor": 94.06935589352022,
+    "sharpe": 62.88537429717214,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.00974289141007552,
+          "std_net_R": 0.006410104826019857,
+          "cv": 0.6579263337976761,
+          "count": 621
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.013740474567099979,
+          "std_net_R": 0.008995757538328203,
+          "cv": 0.6546904544234253,
+          "count": 635
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01874266361982939,
+          "std_net_R": 0.012212024804562448,
+          "cv": 0.6515629289554316,
+          "count": 808
+        }
+      },
+      "cross_symbol_mean": 0.01407534319900163,
+      "cross_symbol_std": 0.0036817638623661774,
+      "cross_symbol_cv": 0.2615754237969364
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.019531675438482454,
+          "std_net_R": 0.0033098176219910663,
+          "cv": 0.1694589710143283,
+          "count": 3
+        },
+        "range": {
+          "mean_net_R": 0.012863841519159258,
+          "std_net_R": 0.009687793483939031,
+          "cv": 0.753102676949972,
+          "count": 345
+        },
+        "up": {
+          "mean_net_R": 0.014815261521073509,
+          "std_net_R": 0.0105993024689897,
+          "cv": 0.7154313444898054,
+          "count": 1716
+        }
+      },
+      "cross_regime_mean": 0.01573692615957174,
+      "cross_regime_std": 0.002799059553172909,
+      "cross_regime_cv": 0.177865710545412
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.014495934651447447,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.014495934651447447,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.014495934651447447,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.014495934651447447,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "distance_to_range_high__d10"
+    ],
+    "support": 2064,
+    "lift": 1.1075010292431566,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.014324524627746693,
+    "median_net_R": 0.012625800548947814,
+    "positive_rate": 0.9684071961386573,
+    "lift_over_base": 1.0944051660073064,
+    "profit_factor": 110.80853463173372,
+    "sharpe": 58.77346398587334,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009952250999335685,
+          "std_net_R": 0.007611934368521731,
+          "cv": 0.7648454976698066,
+          "count": 735
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.013233556217584952,
+          "std_net_R": 0.010082289719621662,
+          "cv": 0.7618730410669327,
+          "count": 768
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.019545510266775437,
+          "std_net_R": 0.013983993112040868,
+          "cv": 0.7154580730394975,
+          "count": 776
+        }
+      },
+      "cross_symbol_mean": 0.014243772494565357,
+      "cross_symbol_std": 0.00398104329188441,
+      "cross_symbol_cv": 0.2794936027940181
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014601038426904233,
+          "std_net_R": 0.011831260923840393,
+          "cv": 0.8103027043638088,
+          "count": 868
+        },
+        "range": {
+          "mean_net_R": 0.013302733457052672,
+          "std_net_R": 0.011465189376008714,
+          "cv": 0.8618671803824084,
+          "count": 668
+        },
+        "up": {
+          "mean_net_R": 0.014920140407497515,
+          "std_net_R": 0.011495470552801304,
+          "cv": 0.7704666470179274,
+          "count": 743
+        }
+      },
+      "cross_regime_mean": 0.014274637430484807,
+      "cross_regime_std": 0.0006994781477094272,
+      "cross_regime_cv": 0.0490014650890976
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.014324524627746693,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.014324524627746693,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.014324524627746693,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.014324524627746693,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2279,
+    "rule_id": "",
+    "conditions": [
+      "volatility_percentile__d08"
+    ],
+    "support": 2279,
+    "lift": 1.0944051660073064,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.014257008002775556,
+    "median_net_R": 0.01744156774255697,
+    "positive_rate": 0.9636627906976745,
+    "lift_over_base": 1.0892468417291894,
+    "profit_factor": 92.08698606149008,
+    "sharpe": 85.57509950554876,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.013469653194806619,
+          "std_net_R": 0.007740194284468783,
+          "cv": 0.5746394634312564,
+          "count": 295
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.013054760818825086,
+          "std_net_R": 0.008228280234026712,
+          "cv": 0.630289619872733,
+          "count": 783
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.015447301322637679,
+          "std_net_R": 0.006744142693487644,
+          "cv": 0.43659035016066217,
+          "count": 986
+        }
+      },
+      "cross_symbol_mean": 0.01399057177875646,
+      "cross_symbol_std": 0.0010438964328974996,
+      "cross_symbol_cv": 0.07461427948803144
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.013977171386789868,
+          "std_net_R": 0.007800389621867376,
+          "cv": 0.5580807021683726,
+          "count": 613
+        },
+        "range": {
+          "mean_net_R": 0.014276692060796941,
+          "std_net_R": 0.007461630544309621,
+          "cv": 0.5226442170591374,
+          "count": 784
+        },
+        "up": {
+          "mean_net_R": 0.014491052296794238,
+          "std_net_R": 0.0074691961078305205,
+          "cv": 0.5154350391436295,
+          "count": 667
+        }
+      },
+      "cross_regime_mean": 0.014248305248127015,
+      "cross_regime_std": 0.0002107490700128124,
+      "cross_regime_cv": 0.014791167534855841
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.014257008002775556,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.014257008002775556,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.014257008002775556,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.014257008002775556,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "atr_pct__d07"
+    ],
+    "support": 2064,
+    "lift": 1.0892468417291894,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.014212374562300767,
+    "median_net_R": 0.012768476959803203,
+    "positive_rate": 0.9718992248062015,
+    "lift_over_base": 1.085836811092803,
+    "profit_factor": 111.57326242531241,
+    "sharpe": 59.66178620022299,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009796974165392176,
+          "std_net_R": 0.007043466598668215,
+          "cv": 0.7189430613739158,
+          "count": 643
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.013017236558759566,
+          "std_net_R": 0.009088879056733033,
+          "cv": 0.6982187821282958,
+          "count": 691
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.019232844172792817,
+          "std_net_R": 0.012866146965327412,
+          "cv": 0.6689674626245936,
+          "count": 730
+        }
+      },
+      "cross_symbol_mean": 0.014015684965648187,
+      "cross_symbol_std": 0.003916340563592035,
+      "cross_symbol_cv": 0.279425555953263
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.015744177521302218,
+          "std_net_R": 0.011029369110037454,
+          "cv": 0.7005363789321147,
+          "count": 108
+        },
+        "range": {
+          "mean_net_R": 0.01376439259490614,
+          "std_net_R": 0.011737465070609455,
+          "cv": 0.8527412299292596,
+          "count": 857
+        },
+        "up": {
+          "mean_net_R": 0.01441117877202328,
+          "std_net_R": 0.010007846076818977,
+          "cv": 0.694450206685897,
+          "count": 1099
+        }
+      },
+      "cross_regime_mean": 0.014639916296077214,
+      "cross_regime_std": 0.0008242684554112305,
+      "cross_regime_cv": 0.05630281203397962
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.014212374562300767,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.014212374562300767,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.014212374562300767,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.014212374562300767,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__d10"
+    ],
+    "support": 2064,
+    "lift": 1.085836811092803,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.014197310241839164,
+    "median_net_R": 0.012450374217186214,
+    "positive_rate": 0.9694767441860465,
+    "lift_over_base": 1.08468588493197,
+    "profit_factor": 109.69690007477385,
+    "sharpe": 56.45792180876491,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.010054819427619727,
+          "std_net_R": 0.007914386617965145,
+          "cv": 0.7871236947552736,
+          "count": 663
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.013417838413736892,
+          "std_net_R": 0.01015924179976325,
+          "cv": 0.7571444435761306,
+          "count": 652
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018542686799583045,
+          "std_net_R": 0.013408058301339256,
+          "cv": 0.7230914508916125,
+          "count": 749
+        }
+      },
+      "cross_symbol_mean": 0.014005114880313219,
+      "cross_symbol_std": 0.0034899516106631674,
+      "cross_symbol_cv": 0.24919121624406954
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014614736149025647,
+          "std_net_R": 0.011281359720811306,
+          "cv": 0.7719167561956584,
+          "count": 1376
+        },
+        "range": {
+          "mean_net_R": 0.013376127301239332,
+          "std_net_R": 0.01169506426395575,
+          "cv": 0.8743236364737776,
+          "count": 676
+        },
+        "up": {
+          "mean_net_R": 0.012592445204913054,
+          "std_net_R": 0.00949483874839252,
+          "cv": 0.7540107257872383,
+          "count": 12
+        }
+      },
+      "cross_regime_mean": 0.013527769551726012,
+      "cross_regime_std": 0.0008325309582870175,
+      "cross_regime_cv": 0.061542366988414185
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.014197310241839164,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.014197310241839164,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.014197310241839164,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.014197310241839164,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "pullback_atr__d09"
+    ],
+    "support": 2064,
+    "lift": 1.08468588493197,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.014175088413852045,
+    "median_net_R": 0.013014811271360768,
+    "positive_rate": 0.9626937984496124,
+    "lift_over_base": 1.0829881194577762,
+    "profit_factor": 82.44307282965588,
+    "sharpe": 60.00084740308547,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009739156707060999,
+          "std_net_R": 0.006709968743425838,
+          "cv": 0.6889681463448509,
+          "count": 615
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.013792050501317052,
+          "std_net_R": 0.009898736812876755,
+          "cv": 0.717713208194205,
+          "count": 614
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01772393066292148,
+          "std_net_R": 0.012342866270679768,
+          "cv": 0.6963955403245333,
+          "count": 835
+        }
+      },
+      "cross_symbol_mean": 0.01375171262376651,
+      "cross_symbol_std": 0.0032598951046335753,
+      "cross_symbol_cv": 0.2370537542356459
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01484099355529488,
+          "std_net_R": 0.01102675587404291,
+          "cv": 0.7429931044009416,
+          "count": 1665
+        },
+        "range": {
+          "mean_net_R": 0.01142046878552728,
+          "std_net_R": 0.008893473750074347,
+          "cv": 0.7787310588637748,
+          "count": 392
+        },
+        "up": {
+          "mean_net_R": 0.010043493242564457,
+          "std_net_R": 0.008333977969461498,
+          "cv": 0.8297887764928232,
+          "count": 7
+        }
+      },
+      "cross_regime_mean": 0.012101651861128873,
+      "cross_regime_std": 0.0020169300268025594,
+      "cross_regime_cv": 0.16666567919384975
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.014175088413852045,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.014175088413852045,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.014175088413852045,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.014175088413852045,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "distance_to_range_high__d01"
+    ],
+    "support": 2064,
+    "lift": 1.0829881194577762,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.014081233251467384,
+    "median_net_R": 0.012916102872293622,
+    "positive_rate": 0.9728682170542635,
+    "lift_over_base": 1.075817509804785,
+    "profit_factor": 129.4199891048905,
+    "sharpe": 63.66578682467972,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009916365878256677,
+          "std_net_R": 0.006399152511378805,
+          "cv": 0.6453122635793459,
+          "count": 697
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.01307652061228843,
+          "std_net_R": 0.008245826281258728,
+          "cv": 0.6305825934698454,
+          "count": 713
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01961528932312252,
+          "std_net_R": 0.012274593332686351,
+          "cv": 0.6257666216636963,
+          "count": 654
+        }
+      },
+      "cross_symbol_mean": 0.014202725271222544,
+      "cross_symbol_std": 0.004038855588546154,
+      "cross_symbol_cv": 0.2843718731030905
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01534376397730129,
+          "std_net_R": 0.011276831178420701,
+          "cv": 0.7349455580197283,
+          "count": 723
+        },
+        "range": {
+          "mean_net_R": 0.012175410875948688,
+          "std_net_R": 0.0086344308086785,
+          "cv": 0.7091695628715872,
+          "count": 618
+        },
+        "up": {
+          "mean_net_R": 0.014447745717985563,
+          "std_net_R": 0.00961827972213558,
+          "cv": 0.6657287517292108,
+          "count": 723
+        }
+      },
+      "cross_regime_mean": 0.013988973523745181,
+      "cross_regime_std": 0.0013335339736626547,
+      "cross_regime_cv": 0.09532750715405142
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.014081233251467384,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.014081233251467384,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.014081233251467384,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.014081233251467384,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "volume_zscore__d10"
+    ],
+    "support": 2064,
+    "lift": 1.075817509804785,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.014009204073434674,
+    "median_net_R": 0.012560322374523859,
+    "positive_rate": 0.9730691056910569,
+    "lift_over_base": 1.0703144228549002,
+    "profit_factor": 121.51070422996163,
+    "sharpe": 54.35513327916371,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009386668353846161,
+          "std_net_R": 0.00680166247927407,
+          "cv": 0.7246087986572048,
+          "count": 651
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.01298433311322769,
+          "std_net_R": 0.009675229018877882,
+          "cv": 0.7451463956220683,
+          "count": 687
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.019903421697425656,
+          "std_net_R": 0.014160507649910548,
+          "cv": 0.7114609671231602,
+          "count": 630
+        }
+      },
+      "cross_symbol_mean": 0.014091474388166504,
+      "cross_symbol_std": 0.004364236976030478,
+      "cross_symbol_cv": 0.30970761865028135
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014960950496752105,
+          "std_net_R": 0.011376537713381282,
+          "cv": 0.7604154372311459,
+          "count": 681
+        },
+        "range": {
+          "mean_net_R": 0.012538764246884458,
+          "std_net_R": 0.011577114957132189,
+          "cv": 0.9233058959545225,
+          "count": 686
+        },
+        "up": {
+          "mean_net_R": 0.014609174800114004,
+          "std_net_R": 0.01116167986021018,
+          "cv": 0.764018502956312,
+          "count": 601
+        }
+      },
+      "cross_regime_mean": 0.014036296514583524,
+      "cross_regime_std": 0.0010686092846269029,
+      "cross_regime_cv": 0.07613185454700477
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.014009204073434674,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.014009204073434674,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.014009204073434674,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.014009204073434674,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 1968,
+    "rule_id": "",
+    "conditions": [
+      "volatility_percentile__d07"
+    ],
+    "support": 1968,
+    "lift": 1.0703144228549002,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013853125191993393,
+    "median_net_R": 0.012548366021981738,
+    "positive_rate": 0.9680232558139535,
+    "lift_over_base": 1.05838987117916,
+    "profit_factor": 100.67347193646887,
+    "sharpe": 60.57422734177947,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009516812072412756,
+          "std_net_R": 0.006094480061420383,
+          "cv": 0.6403909224063595,
+          "count": 639
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012697866765532336,
+          "std_net_R": 0.008966481298867235,
+          "cv": 0.706140760840731,
+          "count": 680
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018626923599249154,
+          "std_net_R": 0.012397588367910784,
+          "cv": 0.6655735877077699,
+          "count": 745
+        }
+      },
+      "cross_symbol_mean": 0.013613867479064748,
+      "cross_symbol_std": 0.0037751667502458988,
+      "cross_symbol_cv": 0.27730303354658825
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01467189450407375,
+          "std_net_R": 0.011461024137583037,
+          "cv": 0.781155026326069,
+          "count": 663
+        },
+        "range": {
+          "mean_net_R": 0.012616905198647005,
+          "std_net_R": 0.009621680980587449,
+          "cv": 0.7626023045349699,
+          "count": 683
+        },
+        "up": {
+          "mean_net_R": 0.014273033550692982,
+          "std_net_R": 0.009935663849476327,
+          "cv": 0.6961143763999582,
+          "count": 718
+        }
+      },
+      "cross_regime_mean": 0.013853944417804577,
+      "cross_regime_std": 0.0008897460451662369,
+      "cross_regime_cv": 0.06422330120097552
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013853125191993393,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013853125191993393,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013853125191993393,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013853125191993393,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "volume_zscore__d09"
+    ],
+    "support": 2064,
+    "lift": 1.05838987117916,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013619310593131791,
+    "median_net_R": 0.012108563939941704,
+    "positive_rate": 0.9680232558139535,
+    "lift_over_base": 1.040526248369199,
+    "profit_factor": 96.77466020702308,
+    "sharpe": 80.2288503783187,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.00935647152157189,
+          "std_net_R": 0.0071595385253274075,
+          "cv": 0.7651964214095746,
+          "count": 1257
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012502701236134653,
+          "std_net_R": 0.009410288204136636,
+          "cv": 0.7526604072517955,
+          "count": 1345
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018114873042746435,
+          "std_net_R": 0.012854580093124462,
+          "cv": 0.7096146941130067,
+          "count": 1526
+        }
+      },
+      "cross_symbol_mean": 0.013324681933484328,
+      "cross_symbol_std": 0.0036225348861112653,
+      "cross_symbol_cv": 0.2718665184050658
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014327086837183124,
+          "std_net_R": 0.010829809467368973,
+          "cv": 0.7558975240704441,
+          "count": 2330
+        },
+        "range": {
+          "mean_net_R": 0.012664252284065095,
+          "std_net_R": 0.01093045808360838,
+          "cv": 0.8630954152233467,
+          "count": 1741
+        },
+        "up": {
+          "mean_net_R": 0.013858571425509182,
+          "std_net_R": 0.011093927902462924,
+          "cv": 0.8005102085805585,
+          "count": 57
+        }
+      },
+      "cross_regime_mean": 0.013616636848919133,
+      "cross_regime_std": 0.0007000733020063747,
+      "cross_regime_cv": 0.05141308457983481
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013619310593131791,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013619310593131791,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013619310593131791,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013619310593131791,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 4128,
+    "rule_id": "",
+    "conditions": [
+      "pullback_atr__high"
+    ],
+    "support": 4128,
+    "lift": 1.040526248369199,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013574424133415999,
+    "median_net_R": 0.012191851056137463,
+    "positive_rate": 0.9723837209302325,
+    "lift_over_base": 1.037096886859946,
+    "profit_factor": 115.29282479519,
+    "sharpe": 83.42818412212318,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009416311388260674,
+          "std_net_R": 0.006755930571366315,
+          "cv": 0.7174710237162443,
+          "count": 1301
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.01239235718943865,
+          "std_net_R": 0.0087760190297834,
+          "cv": 0.7081799608925682,
+          "count": 1404
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018542327626593285,
+          "std_net_R": 0.012547423244620114,
+          "cv": 0.6766908393218488,
+          "count": 1423
+        }
+      },
+      "cross_symbol_mean": 0.013450332068097537,
+      "cross_symbol_std": 0.003800046160112847,
+      "cross_symbol_cv": 0.28252433775416363
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014809058582188377,
+          "std_net_R": 0.010566304329405958,
+          "cv": 0.7135027706700141,
+          "count": 320
+        },
+        "range": {
+          "mean_net_R": 0.012867406042999855,
+          "std_net_R": 0.01080077411364924,
+          "cv": 0.8393901674941775,
+          "count": 1790
+        },
+        "up": {
+          "mean_net_R": 0.014005781595377215,
+          "std_net_R": 0.010074651225167711,
+          "cv": 0.7193208859184965,
+          "count": 2018
+        }
+      },
+      "cross_regime_mean": 0.013894082073521816,
+      "cross_regime_std": 0.0007966016290557251,
+      "cross_regime_cv": 0.05733387962158523
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013574424133415999,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013574424133415999,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013574424133415999,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013574424133415999,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 4128,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__strong_bull"
+    ],
+    "support": 4128,
+    "lift": 1.037096886859946,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.0135614523875778,
+    "median_net_R": 0.01258059650799398,
+    "positive_rate": 0.9677692960135709,
+    "lift_over_base": 1.036105835078028,
+    "profit_factor": 101.03208178891799,
+    "sharpe": 67.39676422002357,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009338314122198118,
+          "std_net_R": 0.006238144815695901,
+          "cv": 0.6680161680219344,
+          "count": 759
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012849635490949389,
+          "std_net_R": 0.007938224811112385,
+          "cv": 0.6177782098724633,
+          "count": 769
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01808283688990361,
+          "std_net_R": 0.011833951221252706,
+          "cv": 0.6544300152295288,
+          "count": 830
+        }
+      },
+      "cross_symbol_mean": 0.013423595501017039,
+      "cross_symbol_std": 0.0035929321524902726,
+      "cross_symbol_cv": 0.26765795737945575
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.0140844813906054,
+          "std_net_R": 0.006918635157290946,
+          "cv": 0.4912239908177094,
+          "count": 7
+        },
+        "range": {
+          "mean_net_R": 0.011239609992395991,
+          "std_net_R": 0.00864398784433764,
+          "cv": 0.7690647495941243,
+          "count": 420
+        },
+        "up": {
+          "mean_net_R": 0.014064566112567527,
+          "std_net_R": 0.00993641911713335,
+          "cv": 0.7064860044459224,
+          "count": 1931
+        }
+      },
+      "cross_regime_mean": 0.013129552498522974,
+      "cross_regime_std": 0.0013364158938304557,
+      "cross_regime_cv": 0.10178685785222288
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.0135614523875778,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.0135614523875778,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.0135614523875778,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.0135614523875778,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2358,
+    "rule_id": "",
+    "conditions": [
+      "pullback_atr__d01"
+    ],
+    "support": 2358,
+    "lift": 1.036105835078028,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.0135614523875778,
+    "median_net_R": 0.01258059650799398,
+    "positive_rate": 0.9677692960135709,
+    "lift_over_base": 1.036105835078028,
+    "profit_factor": 101.03208178891799,
+    "sharpe": 67.39676422002357,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009338314122198118,
+          "std_net_R": 0.006238144815695901,
+          "cv": 0.6680161680219344,
+          "count": 759
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012849635490949389,
+          "std_net_R": 0.007938224811112385,
+          "cv": 0.6177782098724633,
+          "count": 769
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01808283688990361,
+          "std_net_R": 0.011833951221252706,
+          "cv": 0.6544300152295288,
+          "count": 830
+        }
+      },
+      "cross_symbol_mean": 0.013423595501017039,
+      "cross_symbol_std": 0.0035929321524902726,
+      "cross_symbol_cv": 0.26765795737945575
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.0140844813906054,
+          "std_net_R": 0.006918635157290946,
+          "cv": 0.4912239908177094,
+          "count": 7
+        },
+        "range": {
+          "mean_net_R": 0.011239609992395991,
+          "std_net_R": 0.00864398784433764,
+          "cv": 0.7690647495941243,
+          "count": 420
+        },
+        "up": {
+          "mean_net_R": 0.014064566112567527,
+          "std_net_R": 0.00993641911713335,
+          "cv": 0.7064860044459224,
+          "count": 1931
+        }
+      },
+      "cross_regime_mean": 0.013129552498522974,
+      "cross_regime_std": 0.0013364158938304557,
+      "cross_regime_cv": 0.10178685785222288
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.0135614523875778,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.0135614523875778,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.0135614523875778,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.0135614523875778,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2358,
+    "rule_id": "",
+    "conditions": [
+      "pullback_atr__very_low"
+    ],
+    "support": 2358,
+    "lift": 1.036105835078028,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.01354788306416004,
+    "median_net_R": 0.012134265294775837,
+    "positive_rate": 0.9680232558139535,
+    "lift_over_base": 1.0350691278899335,
+    "profit_factor": 97.00035576810355,
+    "sharpe": 57.684886036479014,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009223063064159211,
+          "std_net_R": 0.006855407126860838,
+          "cv": 0.7432896293966508,
+          "count": 622
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.01259203018469239,
+          "std_net_R": 0.009283699897807534,
+          "cv": 0.7372679195999183,
+          "count": 673
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.017882508588064127,
+          "std_net_R": 0.012546434002651081,
+          "cv": 0.7016036894860117,
+          "count": 769
+        }
+      },
+      "cross_symbol_mean": 0.013232533945638577,
+      "cross_symbol_std": 0.0035640971737789717,
+      "cross_symbol_cv": 0.2693435126197951
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014856926469377484,
+          "std_net_R": 0.01127240671740974,
+          "cv": 0.7587307334827283,
+          "count": 659
+        },
+        "range": {
+          "mean_net_R": 0.01203994541895842,
+          "std_net_R": 0.010201984907274647,
+          "cv": 0.8473447804182176,
+          "count": 732
+        },
+        "up": {
+          "mean_net_R": 0.013906205132881128,
+          "std_net_R": 0.010356184148276699,
+          "cv": 0.7447167684726275,
+          "count": 673
+        }
+      },
+      "cross_regime_mean": 0.013601025673739012,
+      "cross_regime_std": 0.0011700986956425885,
+      "cross_regime_cv": 0.08603018064305445
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.01354788306416004,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.01354788306416004,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.01354788306416004,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.01354788306416004,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "volume_zscore__d08"
+    ],
+    "support": 2064,
+    "lift": 1.0350691278899335,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013525880774916864,
+    "median_net_R": 0.012237029191271238,
+    "positive_rate": 0.9694767441860465,
+    "lift_over_base": 1.0333881353517882,
+    "profit_factor": 131.15330702585118,
+    "sharpe": 61.45044645147804,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.00931388977728492,
+          "std_net_R": 0.006686440941039842,
+          "cv": 0.7178999430879026,
+          "count": 667
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012430247264418744,
+          "std_net_R": 0.0077372394381530225,
+          "cv": 0.6224525766515254,
+          "count": 722
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018859873945287455,
+          "std_net_R": 0.012259416753242372,
+          "cv": 0.6500264417888991,
+          "count": 675
+        }
+      },
+      "cross_symbol_mean": 0.013534670328997042,
+      "cross_symbol_std": 0.0039746082543330105,
+      "cross_symbol_cv": 0.2936612534859976
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.013311817701075599,
+          "std_net_R": 0.00944865769137763,
+          "cv": 0.709794702988922,
+          "count": 21
+        },
+        "range": {
+          "mean_net_R": 0.011796073453474313,
+          "std_net_R": 0.009104458839260329,
+          "cv": 0.7718211382092387,
+          "count": 561
+        },
+        "up": {
+          "mean_net_R": 0.014183719662825053,
+          "std_net_R": 0.010249843765592532,
+          "cv": 0.7226485018917113,
+          "count": 1482
+        }
+      },
+      "cross_regime_mean": 0.013097203605791655,
+      "cross_regime_std": 0.000986494809135743,
+      "cross_regime_cv": 0.07532102568058953
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013525880774916864,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013525880774916864,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013525880774916864,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013525880774916864,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "distance_to_range_high__d09"
+    ],
+    "support": 2064,
+    "lift": 1.0333881353517882,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013513804453587384,
+    "median_net_R": 0.012082890959852162,
+    "positive_rate": 0.9704057279236277,
+    "lift_over_base": 1.0324654947202279,
+    "profit_factor": 108.99841394567817,
+    "sharpe": 59.49540618645559,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.00934639767281678,
+          "std_net_R": 0.006534660791313023,
+          "cv": 0.6991635729687107,
+          "count": 629
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012499291395750858,
+          "std_net_R": 0.009238280983210152,
+          "cv": 0.7391043772569948,
+          "count": 750
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01823752464699814,
+          "std_net_R": 0.012275952001185962,
+          "cv": 0.6731150328126663,
+          "count": 716
+        }
+      },
+      "cross_symbol_mean": 0.013361071238521927,
+      "cross_symbol_std": 0.003680582661373852,
+      "cross_symbol_cv": 0.2754706262445628
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014484320011027521,
+          "std_net_R": 0.009523760907513716,
+          "cv": 0.6575221273945119,
+          "count": 512
+        },
+        "range": {
+          "mean_net_R": 0.012962160278557063,
+          "std_net_R": 0.011046257082709956,
+          "cv": 0.8521926010268109,
+          "count": 981
+        },
+        "up": {
+          "mean_net_R": 0.013587324337799004,
+          "std_net_R": 0.009943096436418308,
+          "cv": 0.7317920871850608,
+          "count": 602
+        }
+      },
+      "cross_regime_mean": 0.01367793487579453,
+      "cross_regime_std": 0.0006247134089513969,
+      "cross_regime_cv": 0.04567307964427695
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013513804453587384,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013513804453587384,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013513804453587384,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013513804453587384,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2095,
+    "rule_id": "",
+    "conditions": [
+      "volatility_percentile__d05"
+    ],
+    "support": 2095,
+    "lift": 1.0324654947202279,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013432817295972645,
+    "median_net_R": 0.011817491431360155,
+    "positive_rate": 0.9631782945736435,
+    "lift_over_base": 1.026278010948366,
+    "profit_factor": 76.0683087849742,
+    "sharpe": 52.204543796313445,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009264434512490585,
+          "std_net_R": 0.00732674413476265,
+          "cv": 0.7908463409055908,
+          "count": 664
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012752419907851574,
+          "std_net_R": 0.0105247487359978,
+          "cv": 0.8253138472579457,
+          "count": 686
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.017963011660794965,
+          "std_net_R": 0.014197303394197988,
+          "cv": 0.7903632009093556,
+          "count": 714
+        }
+      },
+      "cross_symbol_mean": 0.01332662202704571,
+      "cross_symbol_std": 0.0035743150538731254,
+      "cross_symbol_cv": 0.26820863131101286
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01446119842318117,
+          "std_net_R": 0.01235468508267571,
+          "cv": 0.8543334183750125,
+          "count": 1313
+        },
+        "range": {
+          "mean_net_R": 0.01164744402186273,
+          "std_net_R": 0.010147468451368949,
+          "cv": 0.8712184778327103,
+          "count": 734
+        },
+        "up": {
+          "mean_net_R": 0.01109161512961261,
+          "std_net_R": 0.011480990658574441,
+          "cv": 1.0351053948781788,
+          "count": 17
+        }
+      },
+      "cross_regime_mean": 0.012400085858218836,
+      "cross_regime_std": 0.0014749859193563411,
+      "cross_regime_cv": 0.11894965375410795
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013432817295972645,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013432817295972645,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013432817295972645,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013432817295972645,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "distance_to_range_high__d02"
+    ],
+    "support": 2064,
+    "lift": 1.026278010948366,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013351434558084815,
+    "median_net_R": 0.012005976587072215,
+    "positive_rate": 0.9631782945736435,
+    "lift_over_base": 1.0200603045264902,
+    "profit_factor": 80.27309272536651,
+    "sharpe": 57.95751020354525,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008882734825285682,
+          "std_net_R": 0.0065670713931451396,
+          "cv": 0.7393073779993127,
+          "count": 604
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011749729671048493,
+          "std_net_R": 0.00871008450700502,
+          "cv": 0.741300842730603,
+          "count": 735
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018698121083026018,
+          "std_net_R": 0.012294909097074272,
+          "cv": 0.657547838228274,
+          "count": 725
+        }
+      },
+      "cross_symbol_mean": 0.013110195193120065,
+      "cross_symbol_std": 0.004120970894883759,
+      "cross_symbol_cv": 0.3143332981835657
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014818617971093297,
+          "std_net_R": 0.011341954854935646,
+          "cv": 0.7653854682710909,
+          "count": 625
+        },
+        "range": {
+          "mean_net_R": 0.011899346027746071,
+          "std_net_R": 0.009506134820693972,
+          "cv": 0.7988787617847423,
+          "count": 783
+        },
+        "up": {
+          "mean_net_R": 0.013686793835714289,
+          "std_net_R": 0.010465500734524036,
+          "cv": 0.7646422427446362,
+          "count": 656
+        }
+      },
+      "cross_regime_mean": 0.013468252611517887,
+      "cross_regime_std": 0.001201764638579041,
+      "cross_regime_cv": 0.08922944002040074
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013351434558084815,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013351434558084815,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013351434558084815,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013351434558084815,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "volume_zscore__d07"
+    ],
+    "support": 2064,
+    "lift": 1.0200603045264902,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013317838979101881,
+    "median_net_R": 0.011988729748767463,
+    "positive_rate": 0.9702935282329365,
+    "lift_over_base": 1.0174935753575018,
+    "profit_factor": 104.01562149386191,
+    "sharpe": 117.30246779475969,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009024544951093111,
+          "std_net_R": 0.006382930217905431,
+          "cv": 0.7072855476366472,
+          "count": 2661
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012398361235051399,
+          "std_net_R": 0.009042631697454593,
+          "cv": 0.729340880300388,
+          "count": 2949
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018238129712041737,
+          "std_net_R": 0.012611292951805256,
+          "cv": 0.6914795075439474,
+          "count": 2873
+        }
+      },
+      "cross_symbol_mean": 0.013220345299395414,
+      "cross_symbol_std": 0.003806072287658483,
+      "cross_symbol_cv": 0.28789507395336644
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014056307504462571,
+          "std_net_R": 0.0103518865264837,
+          "cv": 0.7364584563333721,
+          "count": 2298
+        },
+        "range": {
+          "mean_net_R": 0.012545299073533092,
+          "std_net_R": 0.010583815593750984,
+          "cv": 0.84364792993096,
+          "count": 3741
+        },
+        "up": {
+          "mean_net_R": 0.013806002283297453,
+          "std_net_R": 0.010278446498664747,
+          "cv": 0.7444911486868031,
+          "count": 2444
+        }
+      },
+      "cross_regime_mean": 0.013469202953764373,
+      "cross_regime_std": 0.0006612422455073688,
+      "cross_regime_cv": 0.04909290087744686
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013317838979101881,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013317838979101881,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013317838979101881,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013317838979101881,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 8483,
+    "rule_id": "",
+    "conditions": [
+      "volatility_percentile__mid"
+    ],
+    "support": 8483,
+    "lift": 1.0174935753575018,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013286771529586319,
+    "median_net_R": 0.011973748173019232,
+    "positive_rate": 0.9593023255813954,
+    "lift_over_base": 1.015119997306706,
+    "profit_factor": 89.88252128906838,
+    "sharpe": 54.31864118795822,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.009400637712219622,
+          "std_net_R": 0.006930854788029048,
+          "cv": 0.7372749594444882,
+          "count": 656
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012172812740953986,
+          "std_net_R": 0.008861083654715326,
+          "cv": 0.7279405214953534,
+          "count": 726
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01821058071542155,
+          "std_net_R": 0.014278113599363639,
+          "cv": 0.7840559190554688,
+          "count": 682
+        }
+      },
+      "cross_symbol_mean": 0.013261343722865053,
+      "cross_symbol_std": 0.0036780836227444905,
+      "cross_symbol_cv": 0.2773537659236433
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014356816641650562,
+          "std_net_R": 0.011628684702371422,
+          "cv": 0.8099765423370696,
+          "count": 998
+        },
+        "range": {
+          "mean_net_R": 0.01191304586128981,
+          "std_net_R": 0.010182429926128379,
+          "cv": 0.8547293483705216,
+          "count": 933
+        },
+        "up": {
+          "mean_net_R": 0.01489414767004141,
+          "std_net_R": 0.012249434318915928,
+          "cv": 0.8224327158750314,
+          "count": 133
+        }
+      },
+      "cross_regime_mean": 0.01372133672432726,
+      "cross_regime_std": 0.001297335228465498,
+      "cross_regime_cv": 0.09454874947900564
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013286771529586319,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013286771529586319,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013286771529586319,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013286771529586319,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__d01"
+    ],
+    "support": 2064,
+    "lift": 1.015119997306706,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.01326679227159809,
+    "median_net_R": 0.011818102193602234,
+    "positive_rate": 0.9672520170859041,
+    "lift_over_base": 1.0135935659783704,
+    "profit_factor": 103.596353998236,
+    "sharpe": 55.97857987114081,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008826346897286683,
+          "std_net_R": 0.00632725003410158,
+          "cv": 0.7168594332097514,
+          "count": 660
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012578443287596485,
+          "std_net_R": 0.009556356118607685,
+          "cv": 0.7597407644260034,
+          "count": 720
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.017979729294330813,
+          "std_net_R": 0.013252185209688645,
+          "cv": 0.737062554877686,
+          "count": 727
+        }
+      },
+      "cross_symbol_mean": 0.013128173159737994,
+      "cross_symbol_std": 0.003757016061173448,
+      "cross_symbol_cv": 0.28617965466022455
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01303236617630983,
+          "std_net_R": 0.010630569551561218,
+          "cv": 0.8157052531938072,
+          "count": 576
+        },
+        "range": {
+          "mean_net_R": 0.013020369038016415,
+          "std_net_R": 0.011284876328416776,
+          "cv": 0.8667094070427337,
+          "count": 902
+        },
+        "up": {
+          "mean_net_R": 0.013834841854390954,
+          "std_net_R": 0.010481538797213441,
+          "cv": 0.7576189816645263,
+          "count": 629
+        }
+      },
+      "cross_regime_mean": 0.013295859022905733,
+      "cross_regime_std": 0.00038114988504845673,
+      "cross_regime_cv": 0.028666811553268005
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.01326679227159809,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.01326679227159809,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.01326679227159809,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.01326679227159809,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2107,
+    "rule_id": "",
+    "conditions": [
+      "volatility_percentile__d06"
+    ],
+    "support": 2107,
+    "lift": 1.0135935659783704,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013182359126128416,
+    "median_net_R": 0.011721001372981214,
+    "positive_rate": 0.9718992248062015,
+    "lift_over_base": 1.0071428059716283,
+    "profit_factor": 133.22401545024658,
+    "sharpe": 55.97290288679734,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008613627155340106,
+          "std_net_R": 0.006719534544968096,
+          "cv": 0.7801051083111081,
+          "count": 670
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.01242574756774991,
+          "std_net_R": 0.009057532731128767,
+          "cv": 0.7289326200893466,
+          "count": 665
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01807151839464676,
+          "std_net_R": 0.012813583621252208,
+          "cv": 0.7090485337993466,
+          "count": 729
+        }
+      },
+      "cross_symbol_mean": 0.013036964372578926,
+      "cross_symbol_std": 0.0038852812991697645,
+      "cross_symbol_cv": 0.2980203970904303
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01516731264835038,
+          "std_net_R": 0.012103605017338155,
+          "cv": 0.7980059024269247,
+          "count": 694
+        },
+        "range": {
+          "mean_net_R": 0.010945009997315012,
+          "std_net_R": 0.009009217194489766,
+          "cv": 0.8231346702012947,
+          "count": 855
+        },
+        "up": {
+          "mean_net_R": 0.014221923710037962,
+          "std_net_R": 0.01058077294293102,
+          "cv": 0.7439762129692072,
+          "count": 515
+        }
+      },
+      "cross_regime_mean": 0.013444748785234452,
+      "cross_regime_std": 0.001809228300877215,
+      "cross_regime_cv": 0.13456765386826566
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013182359126128416,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013182359126128416,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013182359126128416,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013182359126128416,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__d04"
+    ],
+    "support": 2064,
+    "lift": 1.0071428059716283,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013097140027311282,
+    "median_net_R": 0.011961217336106389,
+    "positive_rate": 0.9624515503875969,
+    "lift_over_base": 1.0006319984990155,
+    "profit_factor": 83.64878343541643,
+    "sharpe": 76.6363737814865,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008899461176914205,
+          "std_net_R": 0.006745086802102655,
+          "cv": 0.7579208075652782,
+          "count": 1288
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012072386720048999,
+          "std_net_R": 0.009141884564719328,
+          "cv": 0.7572557752426128,
+          "count": 1410
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.017888407525598872,
+          "std_net_R": 0.013593812750201184,
+          "cv": 0.7599230244921473,
+          "count": 1430
+        }
+      },
+      "cross_symbol_mean": 0.012953418474187359,
+      "cross_symbol_std": 0.003722226200249249,
+      "cross_symbol_cv": 0.2873547401920685
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014103481664458569,
+          "std_net_R": 0.011497759233113362,
+          "cv": 0.815242612190453,
+          "count": 1835
+        },
+        "range": {
+          "mean_net_R": 0.012008111055115244,
+          "std_net_R": 0.010325883163960707,
+          "cv": 0.8599090328667524,
+          "count": 1948
+        },
+        "up": {
+          "mean_net_R": 0.013893637226362315,
+          "std_net_R": 0.011166595414820239,
+          "cv": 0.80372009380181,
+          "count": 345
+        }
+      },
+      "cross_regime_mean": 0.013335076648645375,
+      "cross_regime_std": 0.0009422090839651124,
+      "cross_regime_cv": 0.07065644306295198
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013097140027311282,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013097140027311282,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013097140027311282,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013097140027311282,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 4128,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__strong_bear"
+    ],
+    "support": 4128,
+    "lift": 1.0006319984990155,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.0130721235463134,
+    "median_net_R": 0.011605031378891531,
+    "positive_rate": 0.9694619486185168,
+    "lift_over_base": 0.9987207192942332,
+    "profit_factor": 92.20713230410755,
+    "sharpe": 55.12160160543475,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008502042443302854,
+          "std_net_R": 0.006599144222465647,
+          "cv": 0.7761834013971385,
+          "count": 677
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012437353338208869,
+          "std_net_R": 0.009346485181251528,
+          "cv": 0.75148505691626,
+          "count": 680
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018065875172728726,
+          "std_net_R": 0.0129530067793796,
+          "cv": 0.7169875057552021,
+          "count": 706
+        }
+      },
+      "cross_symbol_mean": 0.013001756984746815,
+      "cross_symbol_std": 0.003924762220082331,
+      "cross_symbol_cv": 0.30186398843531054
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.015045918756440601,
+          "std_net_R": 0.012593626748599627,
+          "cv": 0.837012810747018,
+          "count": 593
+        },
+        "range": {
+          "mean_net_R": 0.01129728651983438,
+          "std_net_R": 0.009159404802591182,
+          "cv": 0.8107614856461532,
+          "count": 825
+        },
+        "up": {
+          "mean_net_R": 0.013527596394747135,
+          "std_net_R": 0.010495631456353372,
+          "cv": 0.7758681697828376,
+          "count": 645
+        }
+      },
+      "cross_regime_mean": 0.013290267223674039,
+      "cross_regime_std": 0.0015395464186814941,
+      "cross_regime_cv": 0.1158401402147197
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.0130721235463134,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.0130721235463134,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.0130721235463134,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.0130721235463134,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2063,
+    "rule_id": "",
+    "conditions": [
+      "volume_zscore__d06"
+    ],
+    "support": 2063,
+    "lift": 0.9987207192942332,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.01306455140682918,
+    "median_net_R": 0.011858399854778486,
+    "positive_rate": 0.9718992248062015,
+    "lift_over_base": 0.9981422017668029,
+    "profit_factor": 96.94563131114016,
+    "sharpe": 58.88579710599648,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008892546454033251,
+          "std_net_R": 0.006415282877373694,
+          "cv": 0.7214224756131599,
+          "count": 674
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012260768589105775,
+          "std_net_R": 0.008146973052289626,
+          "cv": 0.6644749057190888,
+          "count": 697
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.017930594642237074,
+          "std_net_R": 0.012431785154816475,
+          "cv": 0.6933281022109732,
+          "count": 693
+        }
+      },
+      "cross_symbol_mean": 0.013027969895125368,
+      "cross_symbol_std": 0.0037294349121586973,
+      "cross_symbol_cv": 0.2862637035685911
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.013930299944957023,
+          "std_net_R": 0.009882606873080124,
+          "cv": 0.7094324538688613,
+          "count": 651
+        },
+        "range": {
+          "mean_net_R": 0.01240993372617449,
+          "std_net_R": 0.01009788325801775,
+          "cv": 0.8136935684611865,
+          "count": 1268
+        },
+        "up": {
+          "mean_net_R": 0.014902157756821757,
+          "std_net_R": 0.010271718580552595,
+          "cv": 0.6892772676393466,
+          "count": 145
+        }
+      },
+      "cross_regime_mean": 0.013747463809317758,
+      "cross_regime_std": 0.0010256272695625679,
+      "cross_regime_cv": 0.07460483502909228
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.01306455140682918,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.01306455140682918,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.01306455140682918,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.01306455140682918,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "pullback_atr__d07"
+    ],
+    "support": 2064,
+    "lift": 0.9981422017668029,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013050769310837908,
+    "median_net_R": 0.011543195670323568,
+    "positive_rate": 0.9694767441860465,
+    "lift_over_base": 0.9970892385835053,
+    "profit_factor": 96.84525940429924,
+    "sharpe": 57.61124739548065,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008652413713908997,
+          "std_net_R": 0.00658816444458413,
+          "cv": 0.7614250384252281,
+          "count": 660
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012405509375169842,
+          "std_net_R": 0.008470365276071153,
+          "cv": 0.6827906069721693,
+          "count": 666
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01756656580288129,
+          "std_net_R": 0.012433478590305573,
+          "cv": 0.7077922190270235,
+          "count": 738
+        }
+      },
+      "cross_symbol_mean": 0.012874829630653376,
+      "cross_symbol_std": 0.003654287253166944,
+      "cross_symbol_cv": 0.28383189199385894
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014526647696536438,
+          "std_net_R": 0.011211237618326111,
+          "cv": 0.7717704629815719,
+          "count": 610
+        },
+        "range": {
+          "mean_net_R": 0.011286519647184107,
+          "std_net_R": 0.009195902366835504,
+          "cv": 0.8147686491760819,
+          "count": 853
+        },
+        "up": {
+          "mean_net_R": 0.014056791187411271,
+          "std_net_R": 0.010416923496590156,
+          "cv": 0.7410598448612623,
+          "count": 601
+        }
+      },
+      "cross_regime_mean": 0.013289986177043939,
+      "cross_regime_std": 0.0014295919900431428,
+      "cross_regime_cv": 0.1075691103812061
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013050769310837908,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013050769310837908,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013050769310837908,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013050769310837908,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__d05"
+    ],
+    "support": 2064,
+    "lift": 0.9970892385835053,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013041310944424418,
+    "median_net_R": 0.011687858013443991,
+    "positive_rate": 0.9665697674418605,
+    "lift_over_base": 0.9963666118064279,
+    "profit_factor": 85.79977106137763,
+    "sharpe": 57.3508162681235,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008577002394114455,
+          "std_net_R": 0.0061161105126640155,
+          "cv": 0.7130825236636165,
+          "count": 594
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.01164170637351321,
+          "std_net_R": 0.008557730253281399,
+          "cv": 0.7350924322186684,
+          "count": 693
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.0177024759978679,
+          "std_net_R": 0.012283392992952995,
+          "cv": 0.6938799405480011,
+          "count": 777
+        }
+      },
+      "cross_symbol_mean": 0.012640394921831855,
+      "cross_symbol_std": 0.0037917982748389392,
+      "cross_symbol_cv": 0.29997466837764186
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.013912196425133538,
+          "std_net_R": 0.010128793365507892,
+          "cv": 0.7280513483269533,
+          "count": 954
+        },
+        "range": {
+          "mean_net_R": 0.012212395465652153,
+          "std_net_R": 0.010390778881263017,
+          "cv": 0.85083871632617,
+          "count": 1065
+        },
+        "up": {
+          "mean_net_R": 0.014196205084334815,
+          "std_net_R": 0.011459201218887974,
+          "cv": 0.8072017240391194,
+          "count": 45
+        }
+      },
+      "cross_regime_mean": 0.013440265658373501,
+      "cross_regime_std": 0.000875942972746323,
+      "cross_regime_cv": 0.06517304010286408
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013041310944424418,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013041310944424418,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013041310944424418,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013041310944424418,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "pullback_atr__d08"
+    ],
+    "support": 2064,
+    "lift": 0.9963666118064279,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.013023322468088948,
+    "median_net_R": 0.011330504630613162,
+    "positive_rate": 0.9668039738308699,
+    "lift_over_base": 0.9949922777924388,
+    "profit_factor": 88.46620749037822,
+    "sharpe": 79.2992873784037,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008526398906489817,
+          "std_net_R": 0.006461862769910998,
+          "cv": 0.75786540610862,
+          "count": 1307
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011996603734441101,
+          "std_net_R": 0.008765064064069517,
+          "cv": 0.7306287894552903,
+          "count": 1383
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018101562623722235,
+          "std_net_R": 0.012750207277967633,
+          "cv": 0.7043705310423526,
+          "count": 1437
+        }
+      },
+      "cross_symbol_mean": 0.012874855088217717,
+      "cross_symbol_std": 0.0039580663741494515,
+      "cross_symbol_cv": 0.30742609116988295
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014318005155636393,
+          "std_net_R": 0.011329452680161781,
+          "cv": 0.7912731247831585,
+          "count": 1167
+        },
+        "range": {
+          "mean_net_R": 0.011329819851458102,
+          "std_net_R": 0.009392546655297257,
+          "cv": 0.829011120956921,
+          "count": 1700
+        },
+        "up": {
+          "mean_net_R": 0.014109084175949718,
+          "std_net_R": 0.010958037930830763,
+          "cv": 0.7766654301708531,
+          "count": 1260
+        }
+      },
+      "cross_regime_mean": 0.013252303061014737,
+      "cross_regime_std": 0.0013620739730789702,
+      "cross_regime_cv": 0.10278017087353535
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.013023322468088948,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.013023322468088948,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.013023322468088948,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.013023322468088948,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 4127,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__neutral"
+    ],
+    "support": 4127,
+    "lift": 0.9949922777924388,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012995862321005162,
+    "median_net_R": 0.011062326231419024,
+    "positive_rate": 0.9641299079011149,
+    "lift_over_base": 0.992894300539525,
+    "profit_factor": 81.40395661911913,
+    "sharpe": 54.63958008315284,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008397852116850464,
+          "std_net_R": 0.006327842399492646,
+          "cv": 0.7535072434528466,
+          "count": 647
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011616783432174246,
+          "std_net_R": 0.00901358684278528,
+          "cv": 0.7759107239462636,
+          "count": 717
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01866640905259294,
+          "std_net_R": 0.013052508334883663,
+          "cv": 0.6992511681335167,
+          "count": 699
+        }
+      },
+      "cross_symbol_mean": 0.01289368153387255,
+      "cross_symbol_std": 0.004288252710000253,
+      "cross_symbol_cv": 0.3325855923100576
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014089509733824859,
+          "std_net_R": 0.01145315726795984,
+          "cv": 0.8128854363515648,
+          "count": 557
+        },
+        "range": {
+          "mean_net_R": 0.011373426786813141,
+          "std_net_R": 0.009586310491702686,
+          "cv": 0.8428691432574642,
+          "count": 847
+        },
+        "up": {
+          "mean_net_R": 0.014156774746680536,
+          "std_net_R": 0.011429004871635095,
+          "cv": 0.8073169967131782,
+          "count": 659
+        }
+      },
+      "cross_regime_mean": 0.013206570422439513,
+      "cross_regime_std": 0.0012965191442516945,
+      "cross_regime_cv": 0.09817228112824479
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012995862321005162,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012995862321005162,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012995862321005162,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012995862321005162,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2063,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__d06"
+    ],
+    "support": 2063,
+    "lift": 0.992894300539525,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012946721313566334,
+    "median_net_R": 0.011423372182831744,
+    "positive_rate": 0.9699612403100775,
+    "lift_over_base": 0.9891398881732197,
+    "profit_factor": 110.6719359815337,
+    "sharpe": 79.4262026992467,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008710331737755758,
+          "std_net_R": 0.006654436912860013,
+          "cv": 0.7639705482187006,
+          "count": 1352
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012154169137927493,
+          "std_net_R": 0.009086156037938243,
+          "cv": 0.7475752505026927,
+          "count": 1405
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.017936607902383595,
+          "std_net_R": 0.012598761193587835,
+          "cv": 0.702404895181635,
+          "count": 1371
+        }
+      },
+      "cross_symbol_mean": 0.012933702926022283,
+      "cross_symbol_std": 0.0038067306761910536,
+      "cross_symbol_cv": 0.29432643520302354
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014657846464345554,
+          "std_net_R": 0.011821217148685153,
+          "cv": 0.8064770754312134,
+          "count": 1491
+        },
+        "range": {
+          "mean_net_R": 0.011044778319775815,
+          "std_net_R": 0.008973494941072043,
+          "cv": 0.8124649206408142,
+          "count": 1783
+        },
+        "up": {
+          "mean_net_R": 0.013930183559604596,
+          "std_net_R": 0.01021974115848282,
+          "cv": 0.7336400927349234,
+          "count": 854
+        }
+      },
+      "cross_regime_mean": 0.013210936114575321,
+      "cross_regime_std": 0.0015602463522815893,
+      "cross_regime_cv": 0.11810263396552236
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012946721313566334,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012946721313566334,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012946721313566334,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012946721313566334,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 4128,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__weak_bear"
+    ],
+    "support": 4128,
+    "lift": 0.9891398881732197,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012936473704531227,
+    "median_net_R": 0.011527444730763342,
+    "positive_rate": 0.9728682170542635,
+    "lift_over_base": 0.9883569626270888,
+    "profit_factor": 119.67879402987856,
+    "sharpe": 58.58807390841199,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.00904432633401211,
+          "std_net_R": 0.0064409046112003585,
+          "cv": 0.7121486303494691,
+          "count": 658
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.01178675881047546,
+          "std_net_R": 0.008417635080841647,
+          "cv": 0.7141602892018533,
+          "count": 713
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.017814943674608206,
+          "std_net_R": 0.012160349573756763,
+          "cv": 0.6825926478279589,
+          "count": 693
+        }
+      },
+      "cross_symbol_mean": 0.012882009606365258,
+      "cross_symbol_std": 0.003663387581935074,
+      "cross_symbol_cv": 0.2843801311966823
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014332677235847364,
+          "std_net_R": 0.010289797637160125,
+          "cv": 0.717925720913074,
+          "count": 212
+        },
+        "range": {
+          "mean_net_R": 0.012043485919759036,
+          "std_net_R": 0.009790155741140944,
+          "cv": 0.8129005012642406,
+          "count": 933
+        },
+        "up": {
+          "mean_net_R": 0.013520981272054011,
+          "std_net_R": 0.010132690602542842,
+          "cv": 0.749404972809607,
+          "count": 919
+        }
+      },
+      "cross_regime_mean": 0.01329904814255347,
+      "cross_regime_std": 0.0009476426738284077,
+      "cross_regime_cv": 0.07125642855567982
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012936473704531227,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012936473704531227,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012936473704531227,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012936473704531227,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__d09"
+    ],
+    "support": 2064,
+    "lift": 0.9883569626270888,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012907508525036243,
+    "median_net_R": 0.011941703083627827,
+    "positive_rate": 0.9656007751937985,
+    "lift_over_base": 0.986143999691325,
+    "profit_factor": 78.08369893971734,
+    "sharpe": 54.083032118548736,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008379252621280734,
+          "std_net_R": 0.006505984469485151,
+          "cv": 0.7764397093079571,
+          "count": 632
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011965794189088443,
+          "std_net_R": 0.009429615405788998,
+          "cv": 0.7880476010850851,
+          "count": 684
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.017594661381937018,
+          "std_net_R": 0.012931393231039898,
+          "cv": 0.7349611879609965,
+          "count": 748
+        }
+      },
+      "cross_symbol_mean": 0.012646569397435399,
+      "cross_symbol_std": 0.003792846848100604,
+      "cross_symbol_cv": 0.29991112442475953
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.013801416781259514,
+          "std_net_R": 0.01133227443657806,
+          "cv": 0.821095009025869,
+          "count": 837
+        },
+        "range": {
+          "mean_net_R": 0.012095496105203062,
+          "std_net_R": 0.01045524873396325,
+          "cv": 0.864391889594819,
+          "count": 1015
+        },
+        "up": {
+          "mean_net_R": 0.01326595850462024,
+          "std_net_R": 0.010380929852040007,
+          "cv": 0.7825239200337133,
+          "count": 212
+        }
+      },
+      "cross_regime_mean": 0.013054290463694274,
+      "cross_regime_std": 0.0007123406759462326,
+      "cross_regime_cv": 0.054567552172011737
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012907508525036243,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012907508525036243,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012907508525036243,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012907508525036243,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__d02"
+    ],
+    "support": 2064,
+    "lift": 0.986143999691325,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012866828441001153,
+    "median_net_R": 0.01102888705286253,
+    "positive_rate": 0.9699612403100775,
+    "lift_over_base": 0.9830360086564687,
+    "profit_factor": 109.29154487701813,
+    "sharpe": 55.06960270547887,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008748248447654006,
+          "std_net_R": 0.007010089604536166,
+          "cv": 0.8013135025235871,
+          "count": 643
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011406561748042611,
+          "std_net_R": 0.008522914984615196,
+          "cv": 0.7471940425937506,
+          "count": 733
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018271802891089563,
+          "std_net_R": 0.012937107178053842,
+          "cv": 0.7080367085375444,
+          "count": 688
+        }
+      },
+      "cross_symbol_mean": 0.012808871028928727,
+      "cross_symbol_std": 0.0040124286742333325,
+      "cross_symbol_cv": 0.31325388983707436
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014605543921774204,
+          "std_net_R": 0.011989199069305848,
+          "cv": 0.8208663185375888,
+          "count": 737
+        },
+        "range": {
+          "mean_net_R": 0.011721147169687854,
+          "std_net_R": 0.009555831828558507,
+          "cv": 0.8152642134953237,
+          "count": 1207
+        },
+        "up": {
+          "mean_net_R": 0.013711861650546275,
+          "std_net_R": 0.010210657640086225,
+          "cv": 0.7446587414831038,
+          "count": 120
+        }
+      },
+      "cross_regime_mean": 0.013346184247336112,
+      "cross_regime_std": 0.0012056052776580647,
+      "cross_regime_cv": 0.0903333308843464
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012866828441001153,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012866828441001153,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012866828441001153,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012866828441001153,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "distance_to_range_high__d04"
+    ],
+    "support": 2064,
+    "lift": 0.9830360086564687,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012853497178559698,
+    "median_net_R": 0.01123109995952738,
+    "positive_rate": 0.9646317829457365,
+    "lift_over_base": 0.9820174895178255,
+    "profit_factor": 99.90537028148296,
+    "sharpe": 55.41801890889975,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008535735380630152,
+          "std_net_R": 0.0063429013255356095,
+          "cv": 0.7430995740483398,
+          "count": 687
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011952829989700601,
+          "std_net_R": 0.00866497296451142,
+          "cv": 0.7249306626110946,
+          "count": 702
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01818471306264368,
+          "std_net_R": 0.013124030827736027,
+          "cv": 0.7217067864928998,
+          "count": 675
+        }
+      },
+      "cross_symbol_mean": 0.012891092810991477,
+      "cross_symbol_std": 0.003994658551813186,
+      "cross_symbol_cv": 0.3098774177164542
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014575966553537007,
+          "std_net_R": 0.011098274026743616,
+          "cv": 0.7614091309814721,
+          "count": 323
+        },
+        "range": {
+          "mean_net_R": 0.011924792664122724,
+          "std_net_R": 0.01007057022022747,
+          "cv": 0.8445069448063512,
+          "count": 914
+        },
+        "up": {
+          "mean_net_R": 0.013207158990020068,
+          "std_net_R": 0.010708972347388082,
+          "cv": 0.810846023393848,
+          "count": 827
+        }
+      },
+      "cross_regime_mean": 0.013235972735893267,
+      "cross_regime_std": 0.0010825289594098468,
+      "cross_regime_cv": 0.08178688344334893
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012853497178559698,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012853497178559698,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012853497178559698,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012853497178559698,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__d08"
+    ],
+    "support": 2064,
+    "lift": 0.9820174895178255,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012838426463638797,
+    "median_net_R": 0.011105487691167232,
+    "positive_rate": 0.9651162790697675,
+    "lift_over_base": 0.9808660748151756,
+    "profit_factor": 93.98009418666577,
+    "sharpe": 54.98698182674973,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008119882351907593,
+          "std_net_R": 0.0065243328326764554,
+          "cv": 0.8035009067765252,
+          "count": 607
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011146225386520972,
+          "std_net_R": 0.008787524839481857,
+          "cv": 0.7883857121809622,
+          "count": 591
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01730060557726175,
+          "std_net_R": 0.012172127795849898,
+          "cv": 0.7035665741000287,
+          "count": 866
+        }
+      },
+      "cross_symbol_mean": 0.012188904438563438,
+      "cross_symbol_std": 0.003819843316098662,
+      "cross_symbol_cv": 0.3133869278696931
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014139409695439217,
+          "std_net_R": 0.010939506774144918,
+          "cv": 0.7736890725836699,
+          "count": 381
+        },
+        "range": {
+          "mean_net_R": 0.011933683499801258,
+          "std_net_R": 0.010344957146521321,
+          "cv": 0.8668704132042386,
+          "count": 1192
+        },
+        "up": {
+          "mean_net_R": 0.014025349073778079,
+          "std_net_R": 0.010751720852959277,
+          "cv": 0.766592032497843,
+          "count": 491
+        }
+      },
+      "cross_regime_mean": 0.013366147423006186,
+      "cross_regime_std": 0.0010139747284214956,
+      "cross_regime_cv": 0.07586140540962566
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012838426463638797,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012838426463638797,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012838426463638797,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012838426463638797,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "volume_zscore__d01"
+    ],
+    "support": 2064,
+    "lift": 0.9808660748151756,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.0128364552907715,
+    "median_net_R": 0.011339420029110573,
+    "positive_rate": 0.9717514124293786,
+    "lift_over_base": 0.9807154756277594,
+    "profit_factor": 144.9863010651679,
+    "sharpe": 54.81463101893244,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008635398645097775,
+          "std_net_R": 0.006070068039103822,
+          "cv": 0.702928525777989,
+          "count": 585
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011394219127512532,
+          "std_net_R": 0.008229495399233695,
+          "cv": 0.7222518109523379,
+          "count": 612
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01866589101439038,
+          "std_net_R": 0.011647566045237923,
+          "cv": 0.6240026814824048,
+          "count": 573
+        }
+      },
+      "cross_symbol_mean": 0.01289850292900023,
+      "cross_symbol_std": 0.004230827075105845,
+      "cross_symbol_cv": 0.32800915721726925
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01540514537958328,
+          "std_net_R": 0.011494398818724117,
+          "cv": 0.7461402366223595,
+          "count": 30
+        },
+        "range": {
+          "mean_net_R": 0.010697061775670301,
+          "std_net_R": 0.00859038820472194,
+          "cv": 0.8030605398820975,
+          "count": 625
+        },
+        "up": {
+          "mean_net_R": 0.013966554164559745,
+          "std_net_R": 0.010254178620307825,
+          "cv": 0.7341953139971987,
+          "count": 1115
+        }
+      },
+      "cross_regime_mean": 0.01335625377327111,
+      "cross_regime_std": 0.001969917550062075,
+      "cross_regime_cv": 0.14749027560440087
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.0128364552907715,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.0128364552907715,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.0128364552907715,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.0128364552907715,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 1770,
+    "rule_id": "",
+    "conditions": [
+      "pullback_atr__d02"
+    ],
+    "support": 1770,
+    "lift": 0.9807154756277594,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012802715591646616,
+    "median_net_R": 0.01124386398149805,
+    "positive_rate": 0.967781007751938,
+    "lift_over_base": 0.9781377355643801,
+    "profit_factor": 110.18762074961998,
+    "sharpe": 80.48293320336273,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008484356382552002,
+          "std_net_R": 0.00628762380760736,
+          "cv": 0.7410843585658187,
+          "count": 1379
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011916805520551686,
+          "std_net_R": 0.008984419767014199,
+          "cv": 0.7539285382747664,
+          "count": 1395
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018113544172532074,
+          "std_net_R": 0.012125490560262034,
+          "cv": 0.6694156839084807,
+          "count": 1354
+        }
+      },
+      "cross_symbol_mean": 0.012838235358545254,
+      "cross_symbol_std": 0.00398472827040389,
+      "cross_symbol_cv": 0.31037974917258515
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014387160629907697,
+          "std_net_R": 0.010810373044153854,
+          "cv": 0.7513903071104594,
+          "count": 736
+        },
+        "range": {
+          "mean_net_R": 0.011601845071975129,
+          "std_net_R": 0.009642966928186477,
+          "cv": 0.831158050151831,
+          "count": 1849
+        },
+        "up": {
+          "mean_net_R": 0.013485967725614492,
+          "std_net_R": 0.0104350647018702,
+          "cv": 0.7737720358065534,
+          "count": 1543
+        }
+      },
+      "cross_regime_mean": 0.01315832447583244,
+      "cross_regime_std": 0.0011604620527074872,
+      "cross_regime_cv": 0.0881922356329545
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012802715591646616,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012802715591646616,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012802715591646616,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012802715591646616,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 4128,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__weak_bull"
+    ],
+    "support": 4128,
+    "lift": 0.9781377355643801,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012751934004733534,
+    "median_net_R": 0.011252599684379357,
+    "positive_rate": 0.9709302325581395,
+    "lift_over_base": 0.9742579816109347,
+    "profit_factor": 122.96851665589193,
+    "sharpe": 58.55897791627703,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008433348620009098,
+          "std_net_R": 0.006231841720517487,
+          "cv": 0.7389522242364936,
+          "count": 692
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011880313201154083,
+          "std_net_R": 0.009296688423516556,
+          "cv": 0.7825289002156486,
+          "count": 693
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.018042794539505067,
+          "std_net_R": 0.011043248843268278,
+          "cv": 0.6120586707945301,
+          "count": 679
+        }
+      },
+      "cross_symbol_mean": 0.012785485453556083,
+      "cross_symbol_std": 0.0039749100891146635,
+      "cross_symbol_cv": 0.310892386804844
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014239498854284773,
+          "std_net_R": 0.010577404276845385,
+          "cv": 0.7428213861376565,
+          "count": 413
+        },
+        "range": {
+          "mean_net_R": 0.011286150848207319,
+          "std_net_R": 0.009194832765196637,
+          "cv": 0.8147005023113912,
+          "count": 935
+        },
+        "up": {
+          "mean_net_R": 0.01380799960317956,
+          "std_net_R": 0.010099887412474523,
+          "cv": 0.7314518904062561,
+          "count": 716
+        }
+      },
+      "cross_regime_mean": 0.013111216435223885,
+      "cross_regime_std": 0.0013024838319176122,
+      "cross_regime_cv": 0.09934118915300869
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012751934004733534,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012751934004733534,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012751934004733534,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012751934004733534,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__d07"
+    ],
+    "support": 2064,
+    "lift": 0.9742579816109347,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012742468542966123,
+    "median_net_R": 0.011262584702106792,
+    "positive_rate": 0.9709302325581395,
+    "lift_over_base": 0.9735348127431293,
+    "profit_factor": 96.86104579020525,
+    "sharpe": 58.46811279593371,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008472588813990179,
+          "std_net_R": 0.0066749914446343865,
+          "cv": 0.7878337531986034,
+          "count": 664
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012297054066326621,
+          "std_net_R": 0.0085104167953121,
+          "cv": 0.6920695598644574,
+          "count": 734
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.0174904180413046,
+          "std_net_R": 0.011774369621159872,
+          "cv": 0.6731897198428328,
+          "count": 666
+        }
+      },
+      "cross_symbol_mean": 0.012753353640540468,
+      "cross_symbol_std": 0.0036956251586005807,
+      "cross_symbol_cv": 0.28977673345878974
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01387915123570152,
+          "std_net_R": 0.010347722816229797,
+          "cv": 0.7455587622398852,
+          "count": 958
+        },
+        "range": {
+          "mean_net_R": 0.011557733324837633,
+          "std_net_R": 0.009240341506221434,
+          "cv": 0.7994942647070675,
+          "count": 1048
+        },
+        "up": {
+          "mean_net_R": 0.015374545938796311,
+          "std_net_R": 0.011120020187396744,
+          "cv": 0.7232747055857014,
+          "count": 58
+        }
+      },
+      "cross_regime_mean": 0.013603810166445155,
+      "cross_regime_std": 0.001570323567683414,
+      "cross_regime_cv": 0.11543262868786112
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012742468542966123,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012742468542966123,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012742468542966123,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012742468542966123,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "distance_to_range_high__d03"
+    ],
+    "support": 2064,
+    "lift": 0.9735348127431293,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.01271108350100425,
+    "median_net_R": 0.011122487232721887,
+    "positive_rate": 0.9680232558139535,
+    "lift_over_base": 0.971136970374811,
+    "profit_factor": 94.18845504210672,
+    "sharpe": 56.418627519071975,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008805334773266735,
+          "std_net_R": 0.006588476505763791,
+          "cv": 0.7482369126687388,
+          "count": 682
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.011910115548965459,
+          "std_net_R": 0.009104893576190579,
+          "cv": 0.7644672747932704,
+          "count": 740
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.017783415147150188,
+          "std_net_R": 0.012348510698031844,
+          "cv": 0.6943835363372657,
+          "count": 642
+        }
+      },
+      "cross_symbol_mean": 0.012832955156460796,
+      "cross_symbol_std": 0.003722920583435306,
+      "cross_symbol_cv": 0.2901062567464041
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.014214220954057789,
+          "std_net_R": 0.011551424110747508,
+          "cv": 0.8126667052723616,
+          "count": 797
+        },
+        "range": {
+          "mean_net_R": 0.011136698487560284,
+          "std_net_R": 0.008939470940868034,
+          "cv": 0.8027038669362776,
+          "count": 928
+        },
+        "up": {
+          "mean_net_R": 0.013486979496261868,
+          "std_net_R": 0.009628547072268647,
+          "cv": 0.7139142663438728,
+          "count": 339
+        }
+      },
+      "cross_regime_mean": 0.012945966312626648,
+      "cross_regime_std": 0.001313343717793013,
+      "cross_regime_cv": 0.10144810252689006
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.01271108350100425,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.01271108350100425,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.01271108350100425,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.01271108350100425,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "momentum_rank__d03"
+    ],
+    "support": 2064,
+    "lift": 0.971136970374811,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  },
+  {
+    "mean_net_R": 0.012696419509949645,
+    "median_net_R": 0.01091542849540653,
+    "positive_rate": 0.9704457364341085,
+    "lift_over_base": 0.9700166297016302,
+    "profit_factor": 128.51831205042845,
+    "sharpe": 53.38206161231253,
+    "symbol_stability": {
+      "per_symbol": {
+        "BTCUSDT": {
+          "mean_net_R": 0.008518484682879995,
+          "std_net_R": 0.006379551987392564,
+          "cv": 0.7489069036202946,
+          "count": 689
+        },
+        "ETHUSDT": {
+          "mean_net_R": 0.012075718786494749,
+          "std_net_R": 0.009439616116831319,
+          "cv": 0.7817022144792245,
+          "count": 750
+        },
+        "SOLUSDT": {
+          "mean_net_R": 0.01804701573145711,
+          "std_net_R": 0.013617983730092561,
+          "cv": 0.7545836903303376,
+          "count": 625
+        }
+      },
+      "cross_symbol_mean": 0.012880406400277286,
+      "cross_symbol_std": 0.003931400734492801,
+      "cross_symbol_cv": 0.3052233456242628
+    },
+    "regime_stability": {
+      "per_regime": {
+        "down": {
+          "mean_net_R": 0.01295068675750276,
+          "std_net_R": 0.010857463062732966,
+          "cv": 0.8383696761442307,
+          "count": 471
+        },
+        "range": {
+          "mean_net_R": 0.011834983028707355,
+          "std_net_R": 0.01061222669325676,
+          "cv": 0.8966828822242809,
+          "count": 1084
+        },
+        "up": {
+          "mean_net_R": 0.014295706881401766,
+          "std_net_R": 0.010969322799804945,
+          "cv": 0.7673158725767989,
+          "count": 509
+        }
+      },
+      "cross_regime_mean": 0.013027125555870628,
+      "cross_regime_std": 0.0010060393091149567,
+      "cross_regime_cv": 0.07722649979846005
+    },
+    "cost_stress": {
+      "baseline_mean_net_R": 0.012696419509949645,
+      "fee_r": 0.0,
+      "scenarios": {
+        "fee_2x": {
+          "mean_net_R": 0.012696419509949645,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_5x": {
+          "mean_net_R": 0.012696419509949645,
+          "mean_change": 0.0,
+          "edge_survives": true
+        },
+        "fee_10x": {
+          "mean_net_R": 0.012696419509949645,
+          "mean_change": 0.0,
+          "edge_survives": true
+        }
+      }
+    },
+    "n_observations": 2064,
+    "rule_id": "",
+    "conditions": [
+      "volume_zscore__d03"
+    ],
+    "support": 2064,
+    "lift": 0.9700166297016302,
+    "p_value": 0.0,
+    "adjusted_p_value": 0.0,
+    "passes_correction": true
+  }
+]

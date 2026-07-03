@@ -52,6 +52,67 @@ That means the next work should be implementation-led, not more concept inventio
 
 ---
 
+## Make/Menu Test Harness Repair (2026-07-03)
+
+**What changed:**
+- `make test` / menu test choice now use a configurable `PYTHON` defaulting to `.venv/bin/python3` when present, otherwise `python3`; this fixes environments where `python` is not installed.
+- `make install` bootstraps pip with `ensurepip` when needed.
+- Duplicate `candidate` target and malformed `.PHONY` continuation were removed, eliminating Makefile override warnings during `make menu`.
+- `make test-all` now runs the documented local suite: `lib/tests/`, `integration/tests/`, and `simulation/tests/` while ignoring the CI-only Binance market-data test.
+- Menu Python module execution now uses the active interpreter (`sys.executable`) and passes it into sub-`make` through `PYTHON`.
+- Follow-on test blockers fixed: DataGateway no longer resolves symlinked temp paths, ModeResearchReport scaffolds include required `oos_ic`/`oos_rank_ic`, and CandidateOutcomeBuilder no longer imports `simulation` directly.
+
+**Lock status:** LOCKED for local test harness usability; no trading-mode threshold changes.
+
+**Remaining holds:** Pytest config still emits warnings for unknown `timeout` option and unknown `integration` marker; non-blocking cleanup hold, release condition is registering/adding the matching pytest plugin or removing those config assumptions.
+
+**Design lock score:** N/A — harness repair, no architecture threshold lock.
+
+**Evidence:** `make test`, `make test-all`, `make check-boundaries`, `make check-contracts`, and non-interactive `make menu` test selections pass on macOS with Python 3.14 venv.
+
+---
+
+## Pipeline Backfill/Report CLI Repair (2026-07-03)
+
+**What changed:**
+- `python -m cli backfill` no longer imports removed `AlphaForgeBackfillPipeline`; it delegates to the maintained Binance Vision downloader using the active interpreter.
+- `make backfill MODE=...` now passes mode, symbols, and data directory into the CLI and writes to the canonical `data_lake/raw/binance/um/klines` layout.
+- Pipeline Makefile targets now use `$(PYTHON)` instead of hardcoded `python3`, so menu and Make targets share the same venv.
+- `make install` now installs the practical CLI/test dependency set needed by downloader/report paths (`numpy`, `pandas`, `pyarrow`, `aiohttp`, `tqdm`, `jsonschema`, `jinja2`, `optuna`).
+- Binance Vision downloader now writes `timestamp` instead of `open_time` and accepts legacy `open_time` during 1h→4h resampling.
+- Empirical ModeResearchReport builder now emits required `oos_ic` and `oos_rank_ic`, fixing `make report MODE=...` schema validation.
+
+**Lock status:** LOCKED for Makefile/CLI harness repair. No promotion thresholds or trading decisions changed.
+
+**Remaining holds:** `simulate`, `build-dataset`, `train`, and `wfv` legacy CLI commands remain conservative stubs/gated outside the v0.2 pipeline path; release condition is explicit wiring to production implementations or documented deprecation in favor of `make pipeline-v0.2`.
+
+**Design lock score:** N/A — operational harness repair only.
+
+**Evidence:** Backfill dry-run resolves to downloader command, a one-file real Binance Vision smoke backfill succeeded to `/tmp`, `make report MODE=SCALP` generated a schema-valid report, boundaries/contracts pass, and local suite remains `792 passed, 2 skipped`.
+
+---
+
+## Menu/Data Health Rework + Command Audit (2026-07-03)
+
+**What changed:**
+- `make menu` was rewritten from a 32-option flat list into 6 workflow-first choices: Quick Start, Data, Pipeline, Tests, Reports, and Maintenance/Advanced.
+- Data workflows now ask for mode, symbol universe (BTC-only, core 4, full 20, custom), date range (smoke, half-year, year, production, custom), intervals, data directory, and execute confirmation.
+- Data health now respects the selected `DATA_DIR` during interval discovery and disk coverage scanning instead of using the global `data_lake` path; stale file-count catalog entries are overridden by healthy disk coverage.
+- `make data-health` accepts `ARGS` for `--intervals`, `--start`, `--end`, and `--no-auto-repair`; smoke health checks can be scoped to exactly the downloaded data range.
+- Legacy `make train` and `make wfv` no longer exit with errors when gates are not satisfied; they report gated no-op status and point to `pipeline-v0.2` for executable training/WFV.
+- `make pipeline` now defaults to the safe v0.2 synthetic pipeline path instead of the stale legacy chain.
+- `make diagnostic` was repaired for the current `generate_labels()` return signature.
+
+**Lock status:** LOCKED for CLI/menu usability and command health. No trading thresholds, mode authority, or live promotion semantics changed.
+
+**Remaining holds:** Full production download remains intentionally confirmation-gated because it can be large/slow. Legacy `simulate` and `build-dataset` still report no-op/not-implemented status rather than pretending to execute production simulation/dataset construction; release condition is explicit implementation wiring or formal deprecation.
+
+**Design lock score:** N/A — operational UX/harness repair only.
+
+**Evidence:** Menu workflows exercised non-interactively (quick synthetic pipeline, guided download preview, guided health check, tests, reports, advanced candidate preview). Make command audit covered install, help, checks, validate, smoke backfill, scoped data-health, pipeline synthetic, pipeline-v0.2 dry-run, download dry-run, diagnostic, train/WFV gates, report, lint, and typecheck. Focused tests: 87 passed. Local suite: 792 passed, 2 skipped. System/contracts/boundaries pass.
+
+---
+
 ## Mode Priority Alignment
 
 ### Primary vs Secondary Mode Classification

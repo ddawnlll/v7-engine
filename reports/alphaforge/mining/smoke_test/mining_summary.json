@@ -1,0 +1,32 @@
+{
+  "status": "complete",
+  "total_candidates": 19349,
+  "levels": [
+    1
+  ],
+  "min_support": 30,
+  "steps_completed": [
+    "bucketize",
+    "level1",
+    "score",
+    "mtc",
+    "oos",
+    "export"
+  ],
+  "results": {
+    "level1_count": 77,
+    "passes_correction": 77,
+    "fails_correction": 0,
+    "oos": {
+      "consistency_score": 0.0,
+      "survived_validation": 0,
+      "survived_holdout": 0,
+      "overfit_warning": "Consistency score 0.0000 is below threshold 0.5. OOS performance substantially lags IS \u2014 likely overfit."
+    },
+    "exported_specs": 50
+  },
+  "total_conditions": 77,
+  "total_rules_discovered": 77,
+  "elapsed_seconds": 0.19,
+  "output_dir": "reports/alphaforge/mining/smoke_test"
+}

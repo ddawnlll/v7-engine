@@ -63,8 +63,9 @@ class DataGateway:
     Parameters
     ----------
     data_dir:
-        Path to the data lake root directory.  Defaults to ``"data_lake"``
-        (resolved relative to the current working directory).
+        Path to the data lake root directory.  Defaults to ``"data_lake"``.
+        Preserved as supplied so callers/tests can compare stable paths on
+        platforms where temporary directories may be symlinked.
     catalog:
         Optional :class:`DataCatalog` instance.  If omitted, an in-memory
         catalog is created lazily for :meth:`coverage_summary`.
@@ -75,7 +76,7 @@ class DataGateway:
         data_dir: str = "data_lake",
         catalog: Optional[DataCatalog] = None,
     ) -> None:
-        self._data_dir: pathlib.Path = pathlib.Path(data_dir).resolve()
+        self._data_dir: pathlib.Path = pathlib.Path(data_dir)
         self._catalog: DataCatalog = (
             catalog
             if catalog is not None

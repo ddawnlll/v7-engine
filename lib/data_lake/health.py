@@ -172,13 +172,22 @@ class DataHealthChecker:
         coverage = self._catalog.coverage_pct(spec)
         gaps = self._catalog.find_gaps(spec)
 
-        # If catalog appears empty but files exist on disk, scan directories
-        if coverage == 0.0 and not self._catalog.query():
-            coverage = self._scan_disk_coverage(spec)
-            if coverage > 0.0:
-                gaps = []  # disk has files, trust the scan
+        # If catalog is cold/stale but files exist on disk, trust a direct
+        # data-dir scan.  Downloader catalog entries can be file-count based
+        # and may not carry exact start/end timestamps yet.
+        if coverage == 0.0 or gaps:
+            disk_coverage = self._scan_disk_coverage(spec)
+            if disk_coverage >= HEALTHY_COVERAGE_THRESHOLD:
+                coverage = disk_coverage
+                gaps = []
                 logger.info(
-                    "  Disk scan found data: coverage=%.1f%%",
+                    "  Disk scan found healthy data: coverage=%.1f%%",
+                    coverage,
+                )
+            elif disk_coverage > coverage:
+                coverage = disk_coverage
+                logger.info(
+                    "  Disk scan improved coverage estimate: coverage=%.1f%%",
                     coverage,
                 )
 
@@ -261,8 +270,6 @@ class DataHealthChecker:
         if spec.source != "binance" or spec.market != "um_futures":
             return 0.0
 
-        from lib.data_lake.storage import DataLakePaths
-
         expected = 0
         found = 0
         for symbol in spec.symbols:
@@ -272,18 +279,16 @@ class DataHealthChecker:
                     em = spec.end.month if year == spec.end.year else 12
                     for month in range(sm, em + 1):
                         expected += 1
-                        p = DataLakePaths.bronze_klines_path(
-                            symbol, interval, year, month
+                        bronze_path = (
+                            self._data_dir / "bronze" / "binance" / "um" / "klines"
+                            / symbol / interval / str(year) / f"{month:02d}.parquet"
                         )
-                        if p.exists():
+                        raw_path = (
+                            self._data_dir / "raw" / "binance" / "um" / "klines"
+                            / symbol / interval / str(year) / f"{month:02d}.parquet"
+                        )
+                        if bronze_path.exists() or raw_path.exists():
                             found += 1
-                        else:
-                            # Try raw path
-                            p = DataLakePaths.klines_path(
-                                symbol, interval, year, month
-                            )
-                            if p.exists():
-                                found += 1
 
         if expected == 0:
             return 0.0
@@ -407,7 +412,15 @@ class DataHealthChecker:
         try:
             for sym in symbols:
                 for interval in intervals:
-                    path = DataLakePaths.klines_path(sym, interval, 2024, 1)
+                    path = (
+                        self._data_dir / "raw" / "binance" / "um" / "klines"
+                        / sym / interval / "2024" / "01.parquet"
+                    )
+                    if not path.exists():
+                        path = (
+                            self._data_dir / "bronze" / "binance" / "um" / "klines"
+                            / sym / interval / "2024" / "01.parquet"
+                        )
                     if path.exists():
                         _ = compute_sha256(path)
             return True

@@ -1,0 +1,35 @@
+{
+  "status": "complete",
+  "total_candidates": 20639,
+  "levels": [
+    1,
+    2
+  ],
+  "min_support": 30,
+  "steps_completed": [
+    "bucketize",
+    "level1",
+    "level2",
+    "score",
+    "mtc",
+    "oos",
+    "export"
+  ],
+  "results": {
+    "level1_count": 77,
+    "level2_count": 100,
+    "passes_correction": 177,
+    "fails_correction": 0,
+    "oos": {
+      "consistency_score": 0.7304,
+      "survived_validation": 177,
+      "survived_holdout": 177,
+      "overfit_warning": null
+    },
+    "exported_specs": 50
+  },
+  "total_conditions": 77,
+  "total_rules_discovered": 177,
+  "elapsed_seconds": 0.58,
+  "output_dir": "reports/alphaforge/mining/smoke_005"
+}

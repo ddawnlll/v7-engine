@@ -7,8 +7,8 @@ Produces a flattened dataset with one row per SimulationOutput, containing:
   - Outcome fields (realized R, costs, path metrics, exit reason)
   - Lineage fields (simulation_run_id, candidate_id)
 
-Authority boundary: alphaforge/ consumes simulation/ outputs through this adapter.
-This module does NOT import v7/, runtime/, or interface/.
+Authority boundary: alphaforge/ consumes simulation output-shaped objects
+through this adapter without importing simulation/, v7/, runtime/, or interface/.
 """
 
 from __future__ import annotations
@@ -16,22 +16,16 @@ from __future__ import annotations
 import datetime
 import logging
 import math
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pyarrow as pa
 
 from lib.indicators.atr import compute_atr
 from lib.indicators.momentum import momentum
-from lib.indicators.rolling import rolling_max, rolling_mean, rolling_min
+from lib.indicators.rolling import rolling_max, rolling_min
 from lib.indicators.spread import parkinson_spread
-from lib.indicators.volatility import rolling_std
 from lib.market_data.contracts import KlineRecord
-from simulation.contracts.models import (
-    ActionOutcome,
-    SimulationOutput,
-)
-
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -94,18 +88,18 @@ def _find_entry_bar_index(
 
 
 def _sma(values: np.ndarray, period: int) -> np.ndarray:
-    """Simple moving average, NaN-padded at the start."""
+    """Simple moving average, NaN-padded at the start — vectorised via cumulative sum."""
     n = len(values)
     result = np.full(n, np.nan, dtype=np.float64)
     if n < period:
         return result
-    for i in range(period - 1, n):
-        result[i] = np.mean(values[i - period + 1 : i + 1])
+    cs = np.cumsum(values, dtype=np.float64)
+    result[period - 1:] = (cs[period - 1:] - np.concatenate([[0.0], cs[:n - period]])) / period
     return result
 
 
 def _linear_slope(values: np.ndarray, lookback: int) -> np.ndarray:
-    """Least-squares slope over the last `lookback` values.
+    """Least-squares slope over the last `lookback` values — vectorised via stride tricks.
 
     Returns NaN at indices < lookback.
     """
@@ -119,11 +113,13 @@ def _linear_slope(values: np.ndarray, lookback: int) -> np.ndarray:
     denom = np.sum(x_centered ** 2)
     if denom == 0.0:
         return result
-    for i in range(lookback - 1, n):
-        y = values[i - lookback + 1 : i + 1]
-        y_mean = np.mean(y)
-        slope = np.sum((y - y_mean) * x_centered) / denom
-        result[i] = slope
+    # Sliding windows of size `lookback`
+    shape = (n - lookback + 1, lookback)
+    strides = (values.strides[0], values.strides[0])
+    windows = np.lib.stride_tricks.as_strided(values, shape=shape, strides=strides, writeable=False)
+    y_mean = np.mean(windows, axis=1)
+    slopes = np.sum((windows - y_mean[:, None]) * x_centered[None, :], axis=1) / denom
+    result[lookback - 1:] = slopes
     return result
 
 
@@ -137,7 +133,7 @@ def _compute_pre_entry_features(
     entry_idx: int,
     btc_records: Optional[List[KlineRecord]] = None,
     funding_value: Optional[float] = None,
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """Compute all pre-entry features at the entry bar index.
 
     All features use only data from indices [0, entry_idx] — strictly causal.
@@ -154,14 +150,14 @@ def _compute_pre_entry_features(
     last_high = highs[-1]
     last_low = lows[-1]
 
-    # --- atr_pct: ATR(14) / close * 100 ---
-    atr_values = np.array(
+    # --- atr_pct: ATR(14) / close * 100 (compute ONCE, reuse below) ---
+    atr_all = np.array(
         compute_atr(
             highs.tolist(), lows.tolist(), closes.tolist(), period=ATR_PERIOD
         ),
         dtype=np.float64,
     )
-    last_atr = atr_values[-1] if len(atr_values) > 0 else np.nan
+    last_atr = atr_all[-1] if len(atr_all) > 0 else np.nan
     atr_pct = (last_atr / last_close * 100.0) if (
         not np.isnan(last_atr) and last_close > 0
     ) else np.nan
@@ -182,12 +178,6 @@ def _compute_pre_entry_features(
     # --- volatility_percentile: percentile rank of ATR/close over window ---
     if n_bars >= VOLATILITY_WINDOW and not np.isnan(last_atr):
         atr_pct_series = np.full(n_bars, np.nan, dtype=np.float64)
-        atr_all = np.array(
-            compute_atr(
-                highs.tolist(), lows.tolist(), closes.tolist(), period=ATR_PERIOD
-            ),
-            dtype=np.float64,
-        )
         for i in range(ATR_PERIOD, n_bars):
             if closes[i] > 0 and not np.isnan(atr_all[i]):
                 atr_pct_series[i] = atr_all[i] / closes[i] * 100.0
@@ -323,8 +313,8 @@ def _action_to_side(best_action: str) -> str:
 
 
 def _pick_outcome(
-    best_action: str, long_outcome: ActionOutcome, short_outcome: ActionOutcome
-) -> ActionOutcome:
+    best_action: str, long_outcome: Any, short_outcome: Any
+) -> Any:
     """Return the ActionOutcome corresponding to the best action.
 
     For NO_TRADE and AMBIGUOUS_STATE, returns long_outcome as fallback
@@ -436,7 +426,7 @@ class CandidateOutcomeBuilder:
     # Public API
     # ------------------------------------------------------------------
 
-    def build(self, simulation_outputs: List[SimulationOutput]) -> pa.Table:
+    def build(self, simulation_outputs: List[Any]) -> pa.Table:
         """Transform simulation outputs into a mining-ready pyarrow Table.
 
         Each row corresponds to one SimulationOutput. Pre-entry features
@@ -456,7 +446,7 @@ class CandidateOutcomeBuilder:
             logger.info("build() called with empty simulation_outputs list")
             return self._empty_table()
 
-        rows: List[Dict[str, any]] = []
+        rows: List[Dict[str, Any]] = []
 
         for idx, sim_out in enumerate(simulation_outputs):
             try:
@@ -483,8 +473,8 @@ class CandidateOutcomeBuilder:
     # ------------------------------------------------------------------
 
     def _process_single(
-        self, sim_out: SimulationOutput, idx: int
-    ) -> Optional[Dict[str, any]]:
+        self, sim_out: Any, idx: int
+    ) -> Optional[Dict[str, Any]]:
         """Process a single SimulationOutput into a row dict.
 
         Returns None if the output cannot be processed (missing market data,
@@ -619,7 +609,7 @@ class CandidateOutcomeBuilder:
         return pa.Table.from_pydict({field.name: [] for field in schema}, schema=schema)
 
     @staticmethod
-    def _rows_to_table(rows: List[Dict[str, any]]) -> pa.Table:
+    def _rows_to_table(rows: List[Dict[str, Any]]) -> pa.Table:
         """Convert a list of row dicts to a typed pyarrow Table.
 
         Casts each column to the canonical schema to ensure type correctness.
@@ -627,3 +617,47 @@ class CandidateOutcomeBuilder:
         schema = CandidateOutcomeBuilder._schema()
         table = pa.Table.from_pylist(rows, schema=schema)
         return table.cast(schema)
+
+# ---------------------------------------------------------------------------
+# AlphaRuleSpecExporter
+# ---------------------------------------------------------------------------
+
+
+class AlphaRuleSpecExporter:
+    """Export mined alpha rules as serialisable AlphaRuleSpec JSON artefacts.
+
+    Consumed by the mining CLI (Step 8) and by downstream deployment scripts.
+    """
+
+    def export(self, rules: list, output_dir: str) -> int:
+        """Write each rule as an individual JSON file under *output_dir*.
+
+        Returns the number of files written.
+        """
+        import json
+        import os
+
+        os.makedirs(output_dir, exist_ok=True)
+        count = 0
+        for i, rule in enumerate(rules):
+            spec = self._rule_to_spec(rule, i)
+            path = os.path.join(output_dir, f"alpha_rule_{i:04d}.json")
+            with open(path, "w") as f:
+                json.dump(spec, f, indent=2, default=str)
+            count += 1
+        return count
+
+    @staticmethod
+    def _rule_to_spec(rule: dict, idx: int) -> dict:
+        return {
+            "rule_id": f"alpha_rule_{idx:04d}",
+            "conditions": rule.get("conditions", []),
+            "mean_net_R": rule.get("mean_net_R", 0.0),
+            "win_rate": rule.get("win_rate", 0.0),
+            "support": rule.get("support", 0),
+            "lift": rule.get("lift", 0.0),
+            "sharpe": rule.get("sharpe", 0.0),
+            "profit_factor": rule.get("profit_factor", 0.0),
+            "p_value": rule.get("p_value"),
+            "passes_correction": rule.get("passes_correction", True),
+        }

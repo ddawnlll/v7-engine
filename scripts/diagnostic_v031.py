@@ -59,7 +59,12 @@ def train_and_collect():
 
     # Labels
     banner("GENERATING LABELS")
-    y_int, gross_r, net_r, label_metrics = generate_labels(ohlcv, MODE)
+    label_result = generate_labels(ohlcv, MODE)
+    if len(label_result) == 4:
+        y_int, gross_r, net_r, label_metrics = label_result
+    else:
+        y_int, net_r, label_metrics = label_result
+        gross_r = net_r
     label_dist = dict(Counter(y_int.tolist()))
     print(f"  Label distribution: {label_dist}")
     print(f"  Gross R stats: mean={np.mean(gross_r):.4f}, std={np.std(gross_r):.4f}")

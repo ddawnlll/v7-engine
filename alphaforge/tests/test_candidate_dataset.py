@@ -11,6 +11,7 @@ Tests cover:
 
 from __future__ import annotations
 
+import logging
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -725,3 +726,194 @@ class TestCandidateOutcomeBuilder:
         values = hold.to_pylist()
         assert all(isinstance(v, int) for v in values)
         assert values == [4, 4, 4]
+
+
+# ---------------------------------------------------------------------------
+# Simulation-to-dataset integration tests (smoke test from simulation layer)
+# ---------------------------------------------------------------------------
+
+
+class TestSimulationIntegration:
+    """End-to-end: synthetic klines -> triple-barrier -> CandidateOutcomeBuilder -> parquet Table."""
+
+    @staticmethod
+    def _generate_synthetic_klines(
+        n: int = 200,
+        start_price: float = 50000.0,
+        trend: float = 0.0005,
+        vol: float = 0.01,
+        symbol: str = "BTCUSDT",
+        interval: str = "1h",
+    ) -> List[KlineRecord]:
+        """Generate synthetic OHLCV bars with a mild uptrend and realistic noise."""
+        np.random.seed(42)
+        records: List[KlineRecord] = []
+        price = start_price
+        base_ts = 1704067200000  # 2024-01-01T00:00:00 UTC
+        bar_ms = 3600000  # 1h in ms
+
+        for i in range(n):
+            r = np.random.randn()
+            close = price * (1.0 + trend + vol * r)
+            high = max(price, close) * (1.0 + abs(vol * np.random.randn() * 0.5))
+            low = min(price, close) * (1.0 - abs(vol * np.random.randn() * 0.5))
+            records.append(KlineRecord(
+                symbol=symbol, timestamp=base_ts + i * bar_ms,
+                open=price, high=round(high, 2), low=round(low, 2),
+                close=round(close, 2), volume=1000.0 + abs(np.random.randn()) * 500,
+                quote_volume=0.0, trade_count=100, taker_buy_volume=0.0,
+                taker_buy_quote_volume=0.0,
+                interval=interval, source="test", is_closed=True,
+            ))
+            price = close
+
+        return records
+
+    @staticmethod
+    def _run_triple_barrier_sim(
+        records: List[KlineRecord],
+        max_hold: int = 12,
+        stop_mult: float = 1.5,
+        target_mult: float = 2.0,
+    ) -> List[SimulationOutput]:
+        """Minimal triple-barrier simulation — used only for integration testing."""
+        n = len(records)
+        closes = np.array([r.close for r in records], dtype=np.float64)
+        highs = np.array([r.high for r in records], dtype=np.float64)
+        lows = np.array([r.low for r in records], dtype=np.float64)
+
+        tr = np.maximum(highs[1:] - lows[1:],
+                        np.maximum(np.abs(highs[1:] - closes[:-1]), np.abs(lows[1:] - closes[:-1])))
+        atr = np.full(n, np.nan)
+        if n >= 15:
+            atr[14] = np.mean(tr[:14])
+            for i in range(15, n):
+                atr[i] = (atr[i - 1] * 13 + tr[i - 1]) / 14
+
+        outputs = []
+        lookback = 50
+        step = 4
+        for i in range(lookback, n - max_hold - 1, step):
+            if np.isnan(atr[i]) or atr[i] <= 0:
+                continue
+            entry = closes[i]
+            sd = atr[i] * stop_mult
+            td = atr[i] * target_mult
+
+            # LONG
+            lg, lx, lh = 0.0, "TIMEOUT", max_hold
+            for j in range(1, min(max_hold + 1, n - i)):
+                if lows[i + j] <= entry - sd:
+                    lg = -sd / entry; lx = "STOP_HIT"; lh = j; break
+                if highs[i + j] >= entry + td:
+                    lg = td / entry; lx = "TARGET_HIT"; lh = j; break
+                lg = (closes[i + j] - entry) / entry
+
+            # SHORT
+            sg, sx, sh = 0.0, "TIMEOUT", max_hold
+            for j in range(1, min(max_hold + 1, n - i)):
+                if highs[i + j] >= entry + sd:
+                    sg = -sd / entry; sx = "STOP_HIT"; sh = j; break
+                if lows[i + j] <= entry - td:
+                    sg = td / entry; sx = "TARGET_HIT"; sh = j; break
+                sg = (entry - closes[i + j]) / entry
+
+            rtc = 0.0008
+            nl, ns = lg - rtc, sg - rtc
+            if nl > ns and nl > 0.0:
+                ba = "LONG_NOW"
+            elif ns > nl and ns > 0.0:
+                ba = "SHORT_NOW"
+            else:
+                continue  # skip NO_TRADE for mining
+
+            gross = lg if ba == "LONG_NOW" else sg
+            net = nl if ba == "LONG_NOW" else ns
+            hb = lh if ba == "LONG_NOW" else sh
+            ex = lx if ba == "LONG_NOW" else sx
+            ph = highs[i + 1: i + 1 + hb]
+            pl = lows[i + 1: i + 1 + hb]
+
+            mfe_r = (np.max(ph) - entry) / entry if len(ph) > 0 else 0.0
+            mae_r = (entry - np.min(pl)) / entry if len(pl) > 0 else 0.0
+
+            pm = PathMetrics(mfe_r=mfe_r, mae_r=mae_r,
+                             path_quality_score=0.5, path_quality_bucket="medium")
+            ao = ActionOutcome(
+                action=ba, realized_r_gross=gross, realized_r_net=net,
+                fee_cost_r=rtc * 0.6, slippage_cost_r=rtc * 0.3,
+                funding_cost_r=rtc * 0.1, total_cost_r=rtc,
+                exit_reason=ex, exit_price=entry * (1 + gross),
+                exit_bar_index=hb, hold_duration_bars=hb,
+                action_utility=net, path_metrics=pm, same_candle_ambiguity=False,
+            )
+
+            from datetime import datetime, timezone
+            ts_iso = datetime.fromtimestamp(records[i].timestamp / 1000.0, tz=timezone.utc).isoformat()
+            outputs.append(SimulationOutput(
+                simulation_run_id=f"int_test_{records[i].symbol}",
+                symbol=records[i].symbol, decision_timestamp=ts_iso,
+                mode="SCALP", primary_interval=records[i].interval,
+                resolution_status="RESOLVED",
+                long_outcome=ao, short_outcome=ao, no_trade_outcome=NoTradeOutcome(),
+                best_action=ba, action_gap_r=abs(nl - ns), regret_r=0.0,
+                is_ambiguous=False,
+                lineage=SimulationLineage(
+                    simulation_family_version="test", simulation_profile_version="test",
+                    cost_model_version="test", fee_model_version="test",
+                    slippage_model_version="test", funding_model_version="test",
+                    horizon_family="triple_barrier", stop_family="atr_multiplicative",
+                    target_family="atr_multiplicative", time_exit_family="max_hold",
+                    adapter_kind="test",
+                ),
+                second_best_action="SHORT_NOW" if ba == "LONG_NOW" else "LONG_NOW",
+                invalidity_reason="", monte_carlo_run_id="", monte_carlo_family_version="",
+            ))
+        return outputs
+
+    def test_full_pipeline_integration(self, trending_btc_data: List[KlineRecord]) -> None:
+        """Smoke test: triple-barrier simulation -> CandidateOutcomeBuilder -> valid output."""
+        import time
+        t0 = time.time()
+
+        # Step 1: Run simulation on synthetic (trending) data
+        sim_outs = self._run_triple_barrier_sim(trending_btc_data)
+        assert len(sim_outs) > 0, "Simulation produced no outputs"
+
+        # Step 2: Build dataset via CandidateOutcomeBuilder
+        builder = CandidateOutcomeBuilder(
+            market_data={"BTCUSDT": MarketDataContext(trending_btc_data)},
+            lookback_bars=50,
+        )
+        table = builder.build(sim_outs)
+        elapsed = time.time() - t0
+
+        # Step 3: Assertions
+        assert table.num_rows > 0, "Builder produced empty table"
+        assert table.num_rows <= len(sim_outs), "Should not add rows"
+        expected_cols = {
+            "symbol", "timestamp", "side", "mode", "timeframe",
+            "regime_trend", "volatility_percentile", "momentum_rank",
+            "volume_zscore", "atr_pct", "btc_regime", "pullback_atr",
+            "distance_to_range_high", "spread_proxy", "funding_context",
+            "net_R", "gross_R", "cost_R", "mfe_R", "mae_R",
+            "exit_reason", "hold_duration", "simulation_run_id", "candidate_id",
+        }
+        assert set(table.column_names) == expected_cols, f"Schema mismatch: {set(table.column_names) - expected_cols}"
+
+        # All rows should be LONG or SHORT (NO_TRADE is filtered)
+        sides = set(table.column("side").to_pylist())
+        assert sides.issubset({"LONG", "SHORT"}), f"Unexpected sides: {sides}"
+
+        # Net R should have non-zero variation (positive mean, non-trivial spread)
+        net_r = table.column("net_R").to_numpy()
+        assert np.any(net_r > 0), "All net_R values are <= 0 — simulation may be broken"
+        assert np.std(net_r) > 0.0, "All net_R values are identical — variance is zero"
+        assert np.max(net_r) > np.min(net_r), "All net_R values are the same"
+
+        # Time budget: should complete well within 10s for 200 bars
+        assert elapsed < 10.0, f"Pipeline took {elapsed:.1f}s, expected <10s"
+
+        logger = logging.getLogger("test_sim_integration")
+        logger.info("Integration test passed: %d rows in %.2fs, net_R range [%.4f, %.4f]",
+                     table.num_rows, elapsed, float(np.min(net_r)), float(np.max(net_r)))

@@ -8,6 +8,7 @@
 
 - **P0.x — Research Artifact Registry (2026-07-01):** `ResearchRunIndex` class creates/maintains `alphaforge_report/research_run_index.json` — a single index tracking every research run with canonical/superseded distinction, duplicate detection, and artifact paths. Integrated into CLI report generation. 29 tests, 1640 total pass.
 - **Issue #146 — XGBoost Search Space Design (2026-07-01):** New `alphaforge/src/alphaforge/tuning/` package with mode-specific XGBoost hyperparameter search spaces (SWING, SCALP, AGGRESSIVE_SCALP). Log-uniform regularization sampling. Optuna integration via `suggest_params()` and `build_objective()`. 78 tests.
+- **Make/Menu + Pipeline CLI Repair (2026-07-03):** Scaffold and empirical ModeResearchReport builders now include required primary AlphaForge metrics `oos_ic` and `oos_rank_ic`; CandidateOutcomeBuilder consumes simulation-output-shaped objects without importing `simulation`, restoring AlphaForge boundary compliance. `make backfill` delegates to the maintained Binance Vision downloader and `make report MODE=...` validates. Relevant AlphaForge/integration boundary tests pass.
 
 ---
 

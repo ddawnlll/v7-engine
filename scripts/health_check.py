@@ -24,7 +24,8 @@ def main() -> int:
     parser.add_argument("--data-dir", default="data_lake")
     parser.add_argument("--start", default="2023-01-01T00:00:00+00:00")
     parser.add_argument("--end", default=None)  # None = now
-    parser.add_argument("--auto-repair", action="store_true", default=True)
+    parser.add_argument("--auto-repair", dest="auto_repair", action="store_true", default=True)
+    parser.add_argument("--no-auto-repair", dest="auto_repair", action="store_false")
     args = parser.parse_args()
 
     symbols = [s.strip() for s in args.symbols.split(",")]
@@ -32,21 +33,23 @@ def main() -> int:
     start = datetime.fromisoformat(args.start)
     end = datetime.fromisoformat(args.end) if args.end else datetime.now(timezone.utc)
 
-    # Only check intervals that exist on disk (4h doesn't from Vision)
-    from lib.data_lake.storage import DataLakePaths
+    # Only check intervals that exist on disk for the selected data dir.
+    from pathlib import Path
 
+    data_root = Path(args.data_dir)
     intervals = []
     for interval in intervals_arg:
         found = False
         for sym in symbols:
-            p = DataLakePaths.klines_path(sym, interval, start.year, 1)
-            if p.parent.parent.exists():  # symbol/interval dir exists
+            raw_dir = data_root / "raw" / "binance" / "um" / "klines" / sym / interval
+            bronze_dir = data_root / "bronze" / "binance" / "um" / "klines" / sym / interval
+            if raw_dir.exists() or bronze_dir.exists():
                 found = True
                 break
         if found:
             intervals.append(interval)
         else:
-            print(f"  [SKIP] {interval} — no data yet (resampled from 1h)")
+            print(f"  [SKIP] {interval} — no data in {args.data_dir}")
 
     if not intervals:
         print("  No data found for any interval")

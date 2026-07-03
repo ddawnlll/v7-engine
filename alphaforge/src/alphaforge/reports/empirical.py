@@ -715,6 +715,8 @@ def build_empirical_mode_research_report(
     oos_profit_factor = oos_summary.get("oos_profit_factor", 1.0)
     oos_max_drawdown_r = oos_summary.get("oos_max_drawdown_r", -3.0)
     oos_trade_count = oos_summary.get("oos_trade_count", 0)
+    oos_ic = oos_summary.get("oos_ic", wfv_results.get("oos_ic", 0.0))
+    oos_rank_ic = oos_summary.get("oos_rank_ic", wfv_results.get("oos_rank_ic", 0.0))
 
     # --- Active trade metrics (Issue 123) ---
     # Read from wfv_results["metrics"] first, fall back to oos_summary, then defaults
@@ -841,6 +843,8 @@ def build_empirical_mode_research_report(
             ),
         },
         "metrics": {
+            "oos_ic": _make_metric_ci(oos_ic, -1.0 if oos_ic == 0.0 else None, 1.0 if oos_ic == 0.0 else None),
+            "oos_rank_ic": _make_metric_ci(oos_rank_ic, -1.0 if oos_rank_ic == 0.0 else None, 1.0 if oos_rank_ic == 0.0 else None),
             "oos_sharpe": _make_metric_ci(oos_sharpe),
             "oos_expectancy_r": _make_metric_ci(oos_expectancy_r),
             "oos_win_rate": _make_metric_ci(oos_win_rate, max(0.0, oos_win_rate - 0.1), min(1.0, oos_win_rate + 0.1)),

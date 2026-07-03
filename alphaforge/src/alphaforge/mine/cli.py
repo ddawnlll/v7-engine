@@ -102,9 +102,11 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     # Step 4: Mine rules
     engine = BitsetEngine()
 
+    engine = BitsetEngine(min_support=min_support / max(1, len(target)))
+
     if 1 in levels:
         logger.info("Level 1: Single condition scan...")
-        level1 = engine.level1_scan(masks, target, min_support=min_support)
+        level1 = engine.level1_scan(masks, target)
         level1 = sorted(level1, key=lambda r: r["mean_net_R"], reverse=True)[:top_k]
         summary["results"]["level1_count"] = len(level1)
         summary["steps_completed"].append("level1")
@@ -158,7 +160,19 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         symbol_map = symbol_map.astype(str)
     if regime_map is not None:
         regime_map = regime_map.astype(str)
-    scored_rules = scorer.score_batch(all_rules, masks, target, symbol_map, regime_map)
+    # Build per-rule boolean masks from bucketizer masks (AND conditions)
+    per_rule_masks = []
+    for rule in all_rules:
+        conds = rule.get("conditions", [])
+        combined = None
+        for c in conds:
+            if c in masks and len(masks[c]) == len(target):
+                combined = masks[c] if combined is None else (combined & masks[c])
+        if combined is not None:
+            per_rule_masks.append({"combined": combined})
+        else:
+            per_rule_masks.append(masks)
+    scored_rules = scorer.score_batch(all_rules, per_rule_masks, target, symbol_map, regime_map)
     summary["steps_completed"].append("score")
 
     # Step 6: Multi-testing correction
@@ -173,13 +187,24 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     # Step 7: OOS Validation
     logger.info("Running OOS validation...")
     validator = OOSValidator()
-    oos_result = validator.validate(
-        passes,
-        {"net_R": target, "symbol": symbol_map, "regime": regime_map, "table": table},
-        discovery_end=args.discovery_end,
-        validation_end=args.validation_end,
-    )
-    summary["results"]["oos"] = oos_result.get("summary", {})
+    # OOS validation: split data temporally
+    try:
+        parts = validator.split(table, timestamp_col="timestamp")
+        oos_result = validator.validate(
+            discovery_rules=passes,
+            validation_table=parts["validation"],
+            holdout_table=parts["holdout"],
+            target_col="net_R",
+        )
+        summary["results"]["oos"] = {
+            "consistency_score": oos_result.get("consistency_score", 0),
+            "survived_validation": oos_result.get("survived_validation", 0),
+            "survived_holdout": oos_result.get("survived_holdout", 0),
+            "overfit_warning": oos_result.get("overfit_warning"),
+        }
+    except Exception as e:
+        logger.warning("OOS validation failed: %s", e)
+        summary["results"]["oos"] = {"error": str(e)}
     summary["steps_completed"].append("oos")
 
     # Step 8: Export AlphaRuleSpecs

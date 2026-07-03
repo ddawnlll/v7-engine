@@ -110,6 +110,7 @@ def _parse_zip_to_parquet(zip_bytes: bytes, symbol: str, interval: str,
                 "taker_buy_quote_volume": "float64",
             },
         )
+        df = df.rename(columns={"open_time": "timestamp"})
         df["interval"] = interval
 
         import pyarrow as pa
@@ -239,6 +240,8 @@ def _resample_one_month(args: tuple) -> tuple:
         df = pq.read_table(str(src_path)).to_pandas()
         if len(df) < 4:
             return (symbol, str(src_path), "skip_too_small", 0)
+        if "timestamp" not in df.columns and "open_time" in df.columns:
+            df = df.rename(columns={"open_time": "timestamp"})
         df["ts"] = pd.to_datetime(df["timestamp"], unit="ms")
         df = df.sort_values("ts").set_index("ts")
         ohlc = df.resample("4h").agg({
@@ -302,8 +305,13 @@ def update_catalog(data_dir: str, symbols: list[str], intervals: list[str]) -> N
     from lib.data_lake.catalog import DataCatalog
     from lib.data_lake.checksum import compute_sha256
 
-    cat = DataCatalog()
     base = Path(data_dir)
+    lake_root = base
+    # If caller points at the canonical klines root, store catalog at the
+    # enclosing data-lake root rather than mutating repo-level data/catalog.json.
+    if base.parts[-4:] == ("raw", "binance", "um", "klines"):
+        lake_root = base.parents[3]
+    cat = DataCatalog(catalog_path=str(lake_root / "catalog.json"))
     count = 0
     for sym in symbols:
         for interval in intervals:

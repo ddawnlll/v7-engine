@@ -38,52 +38,43 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def cmd_backfill(args: argparse.Namespace) -> int:
-    """Download and backfill market data."""
+    """Download and backfill market data via Binance Vision.
+
+    The old CLI referenced ``AlphaForgeBackfillPipeline``, which no longer
+    exists.  The maintained downloader is ``scripts/download_binance.py``;
+    call it with the active interpreter so Makefile/menu targets use the same
+    environment as the rest of the repo.
+    """
+    mode = (args.mode or os.environ.get("MODE") or "SCALP").upper()
+    symbols = args.symbols or os.environ.get("SYMBOLS") or "BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT"
+    intervals = args.intervals or _default_backfill_intervals(mode)
+    data_dir = args.data_dir or os.environ.get("V7_DATA_DIR") or "data_lake"
+    output_dir = _resolve_backfill_output_dir(data_dir)
+
+    cmd = [
+        sys.executable,
+        "scripts/download_binance.py",
+        "--symbols",
+        symbols,
+        "--intervals",
+        intervals,
+        "--output-dir",
+        output_dir,
+    ]
+    _extend_year_month_args(cmd, "--start", args.start)
+    _extend_year_month_args(cmd, "--end", args.end)
+
     if args.dry_run:
-        symbols = args.symbols or "default"
-        intervals = args.intervals or "default"
-        start = args.start or "default"
-        end = args.end or "default"
-        data_dir = args.data_dir or os.environ.get("V7_DATA_DIR") or "~/v7-data"
-        _log(
-            "backfill",
-            f"--symbols {symbols} --intervals {intervals} "
-            f"--start {start} --end {end} --data-dir {data_dir}",
-        )
+        _log("backfill", " ".join(cmd))
         return 0
 
-    from alphaforge.data.backfill import (
-        AlphaForgeBackfillPipeline,
-        BackfillConfig,
-    )
+    import subprocess
 
-    symbols = _parse_comma_list(args.symbols)
-    intervals = _parse_comma_list(args.intervals)
-    start = _parse_date(args.start)
-    end = _parse_date(args.end)
-    data_dir = args.data_dir or os.environ.get("V7_DATA_DIR")
-
-    config = AlphaForgeBackfillPipeline.default_config(
-        start=start,
-        end=end,
-        symbols=symbols,
-        intervals=intervals,
-        data_dir=data_dir,
-    )
-    pipeline = AlphaForgeBackfillPipeline()
-    result = pipeline.run(config)
-
-    print(f"Backfill ok: {result.ok}")
-    print(f"Records: {result.stats.get('total_records', 0)}")
-    print(f"Errors: {len(result.stats.get('errors', []))}")
-    print(f"Integrity reports: {len(result.integrity_reports)}")
-    for report in result.integrity_reports:
-        status = "PASS" if report.ok else "FAIL"
-        print(f"  [{status}] {report.path}: {report.row_count} rows")
-        for warning in report.warnings:
-            print(f"      WARNING: {warning}")
-
-    return 0 if result.ok else 1
+    print(f"Backfill mode: {mode}")
+    print(f"Symbols:       {symbols}")
+    print(f"Intervals:     {intervals}")
+    print(f"Output dir:    {output_dir}")
+    return subprocess.call(cmd)
 
 
 def cmd_simulate(args: argparse.Namespace) -> int:
@@ -115,19 +106,19 @@ def cmd_train(args: argparse.Namespace) -> int:
             print("[DRY RUN] GATE: Training not yet authorized — use --force to override")
         return 0
     if not args.force:
-        print("GATE: Training not yet authorized — use --force to override")
-        return 1
-    print("Not yet implemented — use --dry-run for now")
+        print("GATE: Training not authorized in legacy CLI — no-op. Use pipeline-v0.2 ARGS=--force for executable training.")
+        return 0
+    print("Legacy train command is not wired to production training — use make pipeline-v0.2 ARGS='--real --synthetic --force'.")
     return 0
 
 
 def cmd_wfv(args: argparse.Namespace) -> int:
-    """Run walk-forward validation (gated — requires trained model)."""
+    """Run walk-forward validation (legacy gated no-op)."""
     if args.dry_run:
-        print("[DRY RUN] GATE: WFV requires trained model — run train first")
+        print("[DRY RUN] WFV would run after a trained model exists")
         return 0
-    print("GATE: WFV requires trained model — run train first")
-    return 1
+    print("GATE: WFV requires a trained model — no-op in legacy CLI. Use pipeline-v0.2 with train,wfv steps.")
+    return 0
 
 
 def cmd_report(args: argparse.Namespace) -> int:
@@ -153,7 +144,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     # Build a default WFV results dict with INCONCLUSIVE data
     # (real data would come from an earlier wfv pipeline step)
     default_per_fold = [
-        {"fold": i + 1, "sharpe": 0.0, "expectancy_r": 0.0,
+        {"fold": i + 1, "ic": 0.0, "rank_ic": 0.0, "sharpe": 0.0, "expectancy_r": 0.0,
          "win_rate": 0.5, "trade_count": 0}
         for i in range(6)
     ]
@@ -171,6 +162,8 @@ def cmd_report(args: argparse.Namespace) -> int:
                 "oos_profit_factor": 1.0,
                 "oos_max_drawdown_r": -3.0,
                 "oos_trade_count": 0,
+                "oos_ic": 0.0,
+                "oos_rank_ic": 0.0,
             },
             "data_scope": {
                 "symbols": ["BTCUSDT"],
@@ -530,6 +523,37 @@ def _parse_date(value: Optional[str]) -> Optional[datetime]:
     return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
 
+def _default_backfill_intervals(mode: str) -> str:
+    """Return Binance Vision intervals needed by a mode.
+
+    ``4h`` is resampled from downloaded ``1h`` data by the downloader.
+    ``1d`` is intentionally excluded because the downloader currently supports
+    intraday kline archives only.
+    """
+    if mode == "AGGRESSIVE_SCALP":
+        return "5m,15m,1h"
+    if mode == "SWING":
+        return "1h,4h"
+    return "15m,1h,4h"
+
+
+def _resolve_backfill_output_dir(data_dir: str) -> str:
+    """Resolve a user data dir to the downloader's kline output root."""
+    path = Path(data_dir).expanduser()
+    parts = path.parts
+    if len(parts) >= 4 and parts[-4:] == ("raw", "binance", "um", "klines"):
+        return str(path)
+    return str(path / "raw" / "binance" / "um" / "klines")
+
+
+def _extend_year_month_args(cmd: list[str], prefix: str, value: Optional[str]) -> None:
+    """Append downloader year/month args from a YYYY-MM-DD value."""
+    if not value:
+        return
+    parsed = _parse_date(value)
+    cmd.extend([f"{prefix}-year", str(parsed.year), f"{prefix}-month", str(parsed.month)])
+
+
 def _build_parser() -> argparse.ArgumentParser:
     # Shared parent with the global --dry-run flag so every subcommand
     # accepts it after the subcommand name.
@@ -561,6 +585,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("backfill", parents=[_dry_run_parent], add_help=False,
                         help="Download and backfill market data")
+    p.add_argument("--mode", default=None, help="Trading mode (SCALP, AGGRESSIVE_SCALP, SWING)")
     p.add_argument("--symbols", default=None, help="Symbols to backfill (comma-separated)")
     p.add_argument("--intervals", default=None, help="Timeframe intervals (e.g. 4h, 1h)")
     p.add_argument("--start", default=None, help="Start date (YYYY-MM-DD)")
