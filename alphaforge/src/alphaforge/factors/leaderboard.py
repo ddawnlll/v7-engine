@@ -27,6 +27,12 @@ def write_alpha_leaderboard(results: list[dict], output_path: Path | None = None
 
     df = pd.DataFrame(results)
 
+    if df.empty:
+        # Write header only CSV when no results
+        df.to_csv(output_path, index=False)
+        print(f"[leaderboard] Wrote empty ALPHA_LEADERBOARD.csv: 0 rows")
+        return output_path
+
     # Sort: PASS first, then WATCH, then FAIL; within each group by |mean_rank_ic| desc
     sort_order = {"PASS": 0, "WATCH": 1, "FAIL": 2}
     df["_sort_pf"] = df["pass_fail"].map(sort_order).fillna(3)
