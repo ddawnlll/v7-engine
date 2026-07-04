@@ -201,3 +201,33 @@ class SimulationOutput:
     invalidity_reason: str = ""
     monte_carlo_run_id: str = ""
     monte_carlo_family_version: str = ""
+
+
+@dataclass
+class MonteCarloConfig:
+    """Configuration for Monte Carlo perturbation."""
+    num_paths: int = 100
+    perturbation_method: str = "price_noise"
+    perturbation_sigma: float = 0.002
+    perturbation_seed: int | None = None
+    monte_carlo_family_version: str = "mcfam-1.0"
+
+
+@dataclass
+class MonteCarloOutput:
+    """Distributional evidence from Monte Carlo simulation."""
+    monte_carlo_run_id: str
+    monte_carlo_family_version: str
+    perturbation_method: str
+    perturbation_sigma: float
+    num_paths: int
+    base_simulation_run_id: str
+    best_action_long_runs: float
+    best_action_short_runs: float
+    best_action_no_trade_runs: float
+    expected_r_distribution: dict[str, float]
+    downside_risk: float
+    target_before_stop_probability: float
+    stop_before_target_probability: float
+    tail_risk: float
+    confidence_stability: float
