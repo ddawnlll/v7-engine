@@ -50,7 +50,7 @@ def _handle_timeout(signum, frame):
     raise TimeoutException()
 
 # Guardrail – max seconds a single factor evaluation may take
-EVAL_TIMEOUT = 5
+EVAL_TIMEOUT = 30
 
 
 def evaluate_factor_with_timeout(factor_name, scores, fwd_returns, direction):
