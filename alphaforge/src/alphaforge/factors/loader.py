@@ -228,6 +228,7 @@ def load_or_build_aligned_panel(
         return panels
 
     panels = build_aligned_panel(data, columns)
+    return panels
 
 
 # ----------------------------------------------------------------------

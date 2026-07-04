@@ -21,6 +21,9 @@ from pathlib import Path
 # ----------------------------------------------------------------------
 PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
 sys.path.insert(0, PROJECT_ROOT)
+# Add the internal src directory to PYTHONPATH so that 'alphaforge' package resolves correctly
+ALPHAFORGE_SRC = str(Path(PROJECT_ROOT, "alphaforge", "src").resolve())
+sys.path.insert(0, ALPHAFORGE_SRC)
 
 # ----------------------------------------------------------------------
 # Imports – all of these live in alphaforge/factors/
@@ -54,20 +57,19 @@ EVAL_TIMEOUT = 30
 
 
 def evaluate_factor_with_timeout(factor_name, scores, fwd_returns, direction):
-    """Wrap evaluate_factor with a POSIX alarm timeout.
+    """Run evaluate_factor in a separate process with a timeout.
     Returns an empty list on timeout, printing a warning.
     """
-    def _handler(signum, frame):
-        raise TimeoutException()
-    signal.signal(signal.SIGALRM, _handler)
-    signal.alarm(EVAL_TIMEOUT)
-    try:
-        return evaluate_factor(factor_name, scores, fwd_returns, direction)
-    except TimeoutException:
-        print(f"  {factor_name}: evaluation timed out after {EVAL_TIMEOUT}s")
-        return []
-    finally:
-        signal.alarm(0)
+    import concurrent.futures
+    # Use a single-worker ProcessPoolExecutor for isolation
+    with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(evaluate_factor, factor_name, scores, fwd_returns, direction)
+        try:
+            return future.result(timeout=EVAL_TIMEOUT)
+        except concurrent.futures.TimeoutError:
+            print(f"  {factor_name}: evaluation timed out after {EVAL_TIMEOUT}s")
+            return []
+
 
 
 import psutil
@@ -81,6 +83,7 @@ import pandas as pd
 # ----------------------------------------------------------------------
 parser = argparse.ArgumentParser(description="FACTOR SPRINT – deterministic alpha evaluation")
 parser.add_argument("--gpu", action="store_true", help="Use ROCm GPU (cuDF) for data loading")
+parser.add_argument("--test", action="store_true", help="Run in test mode with limited symbols and one‑year data")
 args = parser.parse_args()
 
 # ----------------------------------------------------------------------
@@ -106,14 +109,23 @@ def main() -> None:
         data_1h = load_1h_ohlcv()
     loader_time = time.time() - loader_start
     loaded = {s: df for s, df in data_1h.items() if not df.empty}
+    if args.test:
+        # Limit to first 2 symbols for quick test
+        loaded = dict(list(loaded.items())[:2])
+        print(f"  TEST MODE: restricting to {len(loaded)} symbols")
+        # Slice each symbol's DataFrame to most recent year
+        for sym, df in loaded.items():
+            max_date = df.index.max()
+            start_date = max_date - pd.Timedelta(days=365)
+            loaded[sym] = df.loc[start_date:max_date]
+        print(f"  TEST MODE: data limited to one year per symbol")
     print(f"  Loaded {len(loaded)}/{len(data_1h)} symbols in {loader_time:.2f}s")
     # Show a quick progress bar for the symbols that were actually loaded
     with tqdm(total=len(loaded), desc="Loaded symbols") as pbar:
         for _ in loaded:
             pbar.update(1)
 
-
-    if len(loaded) < 5:
+    if len(loaded) < 5 and not args.test:
         print("  FATAL: Fewer than 5 symbols loaded. Aborting.")
         sys.exit(1)
 
@@ -128,6 +140,12 @@ def main() -> None:
     else:
         panels_1h = load_or_build_aligned_panel(loaded)
 
+    if args.test:
+        # Restrict data to the most recent year
+        max_date = panels_1h['close'].index.max()
+        start_date = max_date - pd.Timedelta(days=365)
+        panels_1h = {k: v.loc[start_date:max_date] if isinstance(v, pd.DataFrame) else v for k, v in panels_1h.items()}
+        print(f"  TEST MODE: data limited to one year from {start_date.date()} to {max_date.date()}")
     print(f"  Panel columns: {list(panels_1h.keys())}")
     print(f"  Built in {time.time()-t0:.1f}s")
     if "close" in panels_1h:
