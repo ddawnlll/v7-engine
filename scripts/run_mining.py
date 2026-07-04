@@ -27,6 +27,11 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+try:
+    from numba import njit
+except ImportError:
+    njit = lambda f: f
+
 # Ensure repo root is on path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -225,22 +230,119 @@ def _build_no_trade_outcome() -> NoTradeOutcome:
 # Pure-numpy vectorized indicator helpers (no lib.indicators dependency)
 # ---------------------------------------------------------------------------
 
-def _np_rolling_max(arr: np.ndarray, w: int) -> np.ndarray:
-    """Rolling max — O(n) via sliding window. Returns NaN for indices < w-1."""
+@njit
+def _np_rolling_max(arr, w):
     n = len(arr)
-    out = np.full(n, np.nan)
+    out = np.empty(n)
+    out[:w-1] = np.nan
     for i in range(w - 1, n):
-        out[i] = np.max(arr[i - w + 1: i + 1])
+        mx = arr[i - w + 1]
+        for j in range(i - w + 2, i + 1):
+            if arr[j] > mx:
+                mx = arr[j]
+        out[i] = mx
     return out
 
 
-def _np_rolling_min(arr: np.ndarray, w: int) -> np.ndarray:
-    """Rolling min — O(n) via sliding window. Returns NaN for indices < w-1."""
+@njit
+def _np_rolling_min(arr, w):
     n = len(arr)
-    out = np.full(n, np.nan)
+    out = np.empty(n)
+    out[:w-1] = np.nan
     for i in range(w - 1, n):
-        out[i] = np.min(arr[i - w + 1: i + 1])
+        mn = arr[i - w + 1]
+        for j in range(i - w + 2, i + 1):
+            if arr[j] < mn:
+                mn = arr[j]
+        out[i] = mn
     return out
+
+
+@njit
+def _compute_vol_pct(atr_pct, window):
+    n = len(atr_pct)
+    out = np.full(n, 50.0)
+    for i in range(window, n):
+        count = 0
+        less = 0
+        for j in range(i - window + 1, i + 1):
+            if not np.isnan(atr_pct[j]):
+                count += 1
+                if atr_pct[j] <= atr_pct[i]:
+                    less += 1
+        if count >= 5 and not np.isnan(atr_pct[i]):
+            out[i] = less / count * 100.0
+    return out
+
+
+@njit
+def _compute_mom_rank(mom_raw, volatility_window, momentum_period):
+    n = len(mom_raw)
+    out = np.full(n, 0.5)
+    start = momentum_period + volatility_window
+    for i in range(start, n):
+        count = 0
+        mn = 1e18
+        mx = -1e18
+        for j in range(i - volatility_window + 1, i + 1):
+            if not np.isnan(mom_raw[j]):
+                count += 1
+                if mom_raw[j] < mn:
+                    mn = mom_raw[j]
+                if mom_raw[j] > mx:
+                    mx = mom_raw[j]
+        if count >= 3 and mx > mn:
+            out[i] = (mom_raw[i] - mn) / (mx - mn)
+    return out
+
+
+@njit
+def _compute_vol_z(volumes, window):
+    n = len(volumes)
+    out = np.zeros(n)
+    for i in range(window, n):
+        s = 0.0
+        for j in range(i - window + 1, i + 1):
+            s += volumes[j]
+        mean = s / window
+        var = 0.0
+        for j in range(i - window + 1, i + 1):
+            var += (volumes[j] - mean) ** 2
+        std = np.sqrt(var / window)
+        if std > 1e-14:
+            out[i] = (volumes[i] - mean) / std
+    return out
+
+
+@njit
+def _compute_slope(closes, lookback):
+    n = len(closes)
+    out = np.full(n, np.nan)
+    x = np.arange(lookback, dtype=np.float64)
+    xm = np.mean(x)
+    xc = x - xm
+    den = np.sum(xc ** 2)
+    if den > 0:
+        for i in range(lookback - 1, n):
+            y = closes[i - lookback + 1: i + 1]
+            ym = np.mean(y)
+            out[i] = np.sum((y - ym) * xc) / den
+    return out
+
+
+@njit
+def _compute_pullback_dist(closes, rolling_high_closes, rolling_high_highs, rolling_low_lows, atr_raw, window):
+    n = len(closes)
+    pullback = np.zeros(n)
+    dist_range = np.full(n, 0.5)
+    for i in range(window, n):
+        if not np.isnan(atr_raw[i]) and atr_raw[i] > 0 and not np.isnan(rolling_high_closes[i]):
+            if rolling_high_closes[i] > closes[i]:
+                pullback[i] = (rolling_high_closes[i] - closes[i]) / atr_raw[i]
+        if not np.isnan(rolling_high_highs[i]) and not np.isnan(rolling_low_lows[i]):
+            if rolling_high_highs[i] > rolling_low_lows[i]:
+                dist_range[i] = (closes[i] - rolling_low_lows[i]) / (rolling_high_highs[i] - rolling_low_lows[i])
+    return pullback, dist_range
 
 
 def _np_sma(arr: np.ndarray, period: int) -> np.ndarray:
@@ -490,14 +592,8 @@ def build_candidate_dataset(
         # SMA50 — vectorized cumulative sum
         sma50 = _np_sma(closes, SMA_PERIOD)
 
-        # Linear slope (10-bar)
-        slope = np.full(n, np.nan)
-        x = np.arange(SLOPE_LOOKBACK, dtype=np.float64)
-        xm = np.mean(x); xc = x - xm; den = np.sum(xc**2)
-        if den > 0:
-            for i in range(SLOPE_LOOKBACK - 1, n):
-                y = closes[i - SLOPE_LOOKBACK + 1: i + 1]
-                slope[i] = np.sum((y - np.mean(y)) * xc) / den
+        # Linear slope (10-bar) — numba vectorized
+        slope = _compute_slope(closes, SLOPE_LOOKBACK)
         _wd_feed()
 
         # Regime — vectorized masks
@@ -507,46 +603,23 @@ def build_candidate_dataset(
         regime[mask_up] = "up"
         regime[mask_down] = "down"
 
-        # Volatility percentile
-        vol_pct = np.full(n, 50.0)
-        for i in range(VOLATILITY_WINDOW, n):
-            w = atr_pct[i - VOLATILITY_WINDOW + 1: i + 1]
-            v = w[~np.isnan(w)]
-            if len(v) >= 5 and not np.isnan(atr_pct[i]):
-                vol_pct[i] = np.sum(v <= atr_pct[i]) / len(v) * 100.0
+        # Volatility percentile — numba vectorized
+        vol_pct = _compute_vol_pct(atr_pct, VOLATILITY_WINDOW)
 
-        # Momentum rank — pure numpy
+        # Momentum rank — numba vectorized
         mom_raw = _np_momentum(closes, MOMENTUM_PERIOD)
-        mom_rank = np.full(n, 0.5)
-        for i in range(MOMENTUM_PERIOD + VOLATILITY_WINDOW, n):
-            w = mom_raw[i - VOLATILITY_WINDOW + 1: i + 1]
-            v = w[~np.isnan(w)]
-            if len(v) >= 3:
-                mn, mx = np.min(v), np.max(v)
-                if mx > mn:
-                    mom_rank[i] = (mom_raw[i] - mn) / (mx - mn)
+        mom_rank = _compute_mom_rank(mom_raw, VOLATILITY_WINDOW, MOMENTUM_PERIOD)
 
-        # Volume zscore
-        vol_z = np.zeros(n)
-        for i in range(VOLUME_WINDOW, n):
-            vw = volumes[i - VOLUME_WINDOW + 1: i + 1]
-            vm, vs = np.mean(vw), np.std(vw)
-            if vs > 1e-14:
-                vol_z[i] = (volumes[i] - vm) / vs
+        # Volume zscore — numba vectorized
+        vol_z = _compute_vol_z(volumes, VOLUME_WINDOW)
 
-        # Pullback ATR + distance to range high — pure numpy rolling (computed ONCE)
+        # Pullback ATR + distance to range high — numba vectorized
         rolling_high_closes = _np_rolling_max(closes, RANGE_WINDOW)
         rolling_high_highs = _np_rolling_max(highs, RANGE_WINDOW)
         rolling_low_lows = _np_rolling_min(lows, RANGE_WINDOW)
-        pullback = np.zeros(n)
-        dist_range = np.full(n, 0.5)
-        for i in range(RANGE_WINDOW, n):
-            if not np.isnan(atr_raw[i]) and atr_raw[i] > 0 and not np.isnan(rolling_high_closes[i]):
-                if rolling_high_closes[i] > closes[i]:
-                    pullback[i] = (rolling_high_closes[i] - closes[i]) / atr_raw[i]
-            if not np.isnan(rolling_high_highs[i]) and not np.isnan(rolling_low_lows[i]):
-                if rolling_high_highs[i] > rolling_low_lows[i]:
-                    dist_range[i] = (closes[i] - rolling_low_lows[i]) / (rolling_high_highs[i] - rolling_low_lows[i])
+        pullback, dist_range = _compute_pullback_dist(
+            closes, rolling_high_closes, rolling_high_highs, rolling_low_lows, atr_raw, RANGE_WINDOW
+        )
 
         btc_regime = np.full(n, "range", dtype="U10")
 
