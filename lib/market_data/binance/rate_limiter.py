@@ -13,7 +13,10 @@ call ``handle_error()`` to trigger exponential backoff with jitter.
 import random
 import time
 import threading
-from typing import Optional
+from typing import Any, Optional
+
+
+_Clock = Any  # clock-like: duck-typed with .time() and .sleep()
 
 
 class BinanceRateLimiter:
@@ -40,7 +43,7 @@ class BinanceRateLimiter:
     def __init__(
         self,
         max_weight_per_minute: int = 1200,
-        clock: Optional[object] = None,
+        clock: Optional[_Clock] = None,
     ) -> None:
         """Initialize rate limiter.
 

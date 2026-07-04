@@ -140,7 +140,6 @@ def test_plan_partial_catalog():
     spec = _spec()
     start_ms = int(spec.start.timestamp() * 1000)
     mid_ms = start_ms + 3600_000  # +1h
-    end_ms = int(spec.end.timestamp() * 1000)
 
     # Only BTCUSDT has partial coverage (1h), ETHUSDT has nothing
     cat = _catalog([

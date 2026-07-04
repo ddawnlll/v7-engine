@@ -124,7 +124,6 @@ class TestDatasetSpec:
 
     def test_expected_bar_count_zero_for_empty_range(self):
         """start == end → expected_bar_count = 0."""
-        t = datetime(2022, 1, 1, tzinfo=timezone.utc)
         # Can't test frozen dataclass with enforced start<end,
         # so test indirectly via property
         spec = _spec()

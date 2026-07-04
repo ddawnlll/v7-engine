@@ -4,6 +4,7 @@ import math
 import random
 from dataclasses import dataclass
 from statistics import mean, stdev
+from typing import Callable
 
 from lib.evidence_engine.metrics import compute_net_expectancy, compute_net_sharpe
 
@@ -165,7 +166,7 @@ def _simulate_trades(predictions: list[str],
 class BaselineLibrary:
     """Computes standard baseline metrics for model comparison."""
 
-    BASELINE_FUNCS: dict[str, callable] = {
+    BASELINE_FUNCS: dict[str, Callable | None] = {
         "NO_TRADE": _no_trade,
         "RANDOM_ACTION": _random_action,
         "ALWAYS_LONG": _always_long,

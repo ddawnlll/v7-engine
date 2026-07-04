@@ -14,6 +14,7 @@ simulation/docs/cost_model.md — Core Formula
 """
 from typing import Literal
 
+from lib.costs.fees import FeeTier
 from lib.costs.r_costs import fee_cost_r, slippage_cost_r
 from lib.costs.funding_impact import funding_cost_r, Mode
 
@@ -23,7 +24,7 @@ def total_cost_r(
     entry_price: float,
     atr: float,
     stop_multiplier: float,
-    tier: str = "taker",
+    tier: FeeTier = "taker",
     avg_liquidity: float = 0.0,
     mode: Mode = "SWING",
     funding_rate: float = 0.0001,

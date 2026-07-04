@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+from typing import Any
 
 from lib.data_lake.storage import DataLakePaths
 
@@ -90,7 +91,7 @@ def test_roundtrip() -> None:
 
 def test_all_data_types() -> None:
     """Exercise every path method to ensure no crashes."""
-    args = dict(symbol="ADAUSDT", interval="4h", year=2025, month=7)
+    args: dict[str, Any] = dict(symbol="ADAUSDT", interval="4h", year=2025, month=7)
 
     DataLakePaths.klines_path(**args)
     DataLakePaths.funding_rate_path(symbol="ADAUSDT", year=2025, month=7)

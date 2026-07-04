@@ -141,7 +141,7 @@ class BackfillOrchestrator:
         )
 
         # Write normalized Parquet
-        norm_path = self._storage.write_normalized_klines(
+        self._storage.write_normalized_klines(
             records, symbol, interval, records[0].timestamp, records[-1].timestamp,
         )
 

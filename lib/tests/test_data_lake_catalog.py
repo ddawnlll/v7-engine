@@ -96,7 +96,6 @@ def test_find_gaps_partial_coverage():
     spec = _spec()
     start_ms = int(spec.start.timestamp() * 1000)
     mid_ms = start_ms + 3600_000  # +1h
-    end_ms = int(spec.end.timestamp() * 1000)
 
     cat = _catalog([
         {"symbol": "BTCUSDT", "interval": "1h",
@@ -161,7 +160,6 @@ def test_coverage_pct_partial():
     spec = _spec()
     start_ms = int(spec.start.timestamp() * 1000)
     mid_ms = start_ms + 3600_000  # 1h covered
-    end_ms = int(spec.end.timestamp() * 1000)
 
     cat = _catalog([
         {"symbol": "BTCUSDT", "interval": "1h",
