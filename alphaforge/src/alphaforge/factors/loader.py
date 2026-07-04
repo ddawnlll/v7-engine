@@ -322,7 +322,17 @@ def load_or_build_aligned_panel_gpu(
     end: datetime = DEFAULT_END,
     columns: list[str] | None = None,
 ) -> dict[str, cudf.DataFrame]:
-    """Same caching logic as the CPU version but operates on cuDF."""
+    """Same caching logic as the CPU version but operates on cuDF.
+
+    If cuDF is unavailable, falls back to the CPU version and
+    returns pandas DataFrames.
+    """
+    if not HAS_CUDF:
+        print("[loader] INFO: cuDF not available, falling back to CPU aligned panel")
+        # Use CPU loader and convert if possible
+        from .loader import load_or_build_aligned_panel
+        return load_or_build_aligned_panel(data, start, end, columns)
+
     if columns is None:
         columns = ["close", "high", "low", "open", "volume"]
 
