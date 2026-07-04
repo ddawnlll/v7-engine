@@ -122,8 +122,9 @@ def main() -> None:
     t0 = time.time()
     if args.gpu:
         panels_1h = load_or_build_aligned_panel_gpu(loaded)
-        # Convert cuDF frames to pandas for downstream evaluation
-        panels_1h = {k: v.to_pandas() for k, v in panels_1h.items()}
+        # Convert cuDF frames to pandas for downstream evaluation (handle fallback)
+        if panels_1h and not isinstance(next(iter(panels_1h.values())), pd.DataFrame):
+            panels_1h = {k: v.to_pandas() if hasattr(v, 'to_pandas') else v for k, v in panels_1h.items()}
     else:
         panels_1h = load_or_build_aligned_panel(loaded)
 
