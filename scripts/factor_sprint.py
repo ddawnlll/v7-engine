@@ -33,6 +33,8 @@ from alphaforge.factors.loader import (
     load_1h_ohlcv_gpu,
     load_or_build_aligned_panel,
     load_or_build_aligned_panel_gpu,
+    load_funding_rates,
+    build_funding_panel,
 )
 from alphaforge.factors.factors import FACTOR_REGISTRY, compute_all_factors
 from alphaforge.factors.leaderboard import write_alpha_leaderboard
@@ -40,17 +42,6 @@ from alphaforge.factors.evaluation import (
     compute_forward_returns,
     evaluate_factor,
 )
-import signal
-
-# ----------------------------------------------------------------------
-# Timeout helper for factor evaluation – prevents a single factor from
-# hanging the whole run.  Uses the POSIX alarm signal (works on Linux).
-# ----------------------------------------------------------------------
-class TimeoutException(Exception):
-    pass
-
-def _handle_timeout(signum, frame):
-    raise TimeoutException()
 
 # Guardrail – max seconds a single factor evaluation may take
 EVAL_TIMEOUT = 30
@@ -82,9 +73,14 @@ import pandas as pd
 # Command‑line flags
 # ----------------------------------------------------------------------
 parser = argparse.ArgumentParser(description="FACTOR SPRINT – deterministic alpha evaluation")
-parser.add_argument("--gpu", action="store_true", help="Use ROCm GPU (cuDF) for data loading")
+parser.add_argument("--gpu", action="store_true", help="Use ROCm GPU (cuDF) for data loading (fallback to CPU if cuDF unavailable)")
+parser.add_argument("--parallel", action="store_true", help="Evaluate factors in parallel using threads")
 parser.add_argument("--test", action="store_true", help="Run in test mode with limited symbols and one‑year data")
 args = parser.parse_args()
+# When GPU flag is set, we no longer enforce test mode automatically.
+# Users can combine --gpu with --test explicitly if they want a quick test run.
+# The script will now run on the full dataset when --gpu is provided without --test.
+
 
 # ----------------------------------------------------------------------
 # Main routine – largely identical to the original script but with a GPU
@@ -101,7 +97,7 @@ def main() -> None:
     run_start = time.time()
 
     # ── STEP 1: Load data ──────────────────────────────────────────
-    print("\n[1/5] Loading 1h OHLCV from data lake...")
+    print("\n[1/6] Loading 1h OHLCV from data lake...")
     loader_start = time.time()
     if args.gpu:
         data_1h = load_1h_ohlcv_gpu()
@@ -130,7 +126,7 @@ def main() -> None:
         sys.exit(1)
 
     # ── STEP 2: Build aligned panels ───────────────────────────────
-    print("\n[2/5] Building aligned panels...")
+    print("\n[2/6] Building aligned panels...")
     t0 = time.time()
     if args.gpu:
         panels_1h = load_or_build_aligned_panel_gpu(loaded)
@@ -155,8 +151,28 @@ def main() -> None:
             f"  Date range: {panels_1h['close'].index.min()} to {panels_1h['close'].index.max()}"
         )
 
-    # ── STEP 3: Compute forward returns ────────────────────────────
-    print("\n[3/5] Computing forward returns...")
+    # ── STEP 3: Load funding rates ─────────────────────────────────
+    print("\n[3/6] Loading funding rates...")
+    fr_load_start = time.time()
+    syms = list(loaded.keys())
+    funding_data = load_funding_rates(symbols=syms)
+    funding_loaded = {s: df for s, df in funding_data.items() if not df.empty}
+    print(f"  Loaded funding rates for {len(funding_loaded)}/{len(syms)} symbols in {time.time()-fr_load_start:.2f}s")
+    if funding_loaded:
+        sample_sym = list(funding_loaded.keys())[0]
+        print(f"  Sample ({sample_sym}): {len(funding_loaded[sample_sym])} records, "
+              f"range: {funding_loaded[sample_sym].index.min()} to {funding_loaded[sample_sym].index.max()}")
+
+    # Build funding panel aligned to OHLCV index
+    if funding_loaded and "close" in panels_1h:
+        funding_panel = build_funding_panel(funding_data, panels_1h["close"].index)
+        panels_1h["funding_rate"] = funding_panel
+        print(f"  Funding panel: {funding_panel.shape[0]} timestamps × {funding_panel.shape[1]} symbols")
+    else:
+        print("  WARNING: No funding rate data available, funding factors will be skipped")
+
+    # ── STEP 4: Compute forward returns ────────────────────────────
+    print("\n[4/6] Computing forward returns...")
     fr_start = time.time()
     close = panels_1h.get("close")
     if close is None or close.empty:
@@ -170,7 +186,7 @@ def main() -> None:
     print(f"  Forward return computation took {fr_time:.2f}s")
 
     # ── STEP 4: Compute factors ────────────────────────────────────
-    print("\n[4/5] Computing 12 alpha factors...")
+    print("\n[5/6] Computing alpha factors...")
     factor_scores = compute_all_factors(panels_1h)
     print(f"  Computed {len(factor_scores)} factors: {list(factor_scores.keys())}")
 
@@ -180,21 +196,45 @@ def main() -> None:
         print(f"  {name}: {valid}/{total} valid values ({100*valid/total:.1f}%)")
 
     # ── STEP 5: Evaluate all factors ───────────────────────────────
-    print("\n[5/5] Evaluating factors across horizons...")
+    print("\n[6/6] Evaluating factors across horizons...")
     all_results = []
 
-    for factor_name, scores in tqdm(factor_scores.items(), desc="Evaluating factors"):
+    if args.parallel:
+        # Parallel evaluation using separate processes
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+        max_workers = os.cpu_count() or 1
+        futures = {}
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            for factor_name, scores in factor_scores.items():
+                if factor_name not in FACTOR_REGISTRY:
+                    continue
+                direction, _ = FACTOR_REGISTRY[factor_name]
+                futures[executor.submit(evaluate_factor, factor_name, scores, fwd_returns, direction)] = factor_name
+            for future in as_completed(futures):
+                factor_name = futures[future]
+                try:
+                    results = future.result()
+                except Exception as exc:
+                    print(f"  {factor_name}: evaluation error {exc}")
+                    results = []
+                all_results.extend(results)
+                pass_count = sum(1 for r in results if r["pass_fail"] == "PASS")
+                watch_count = sum(1 for r in results if r["pass_fail"] == "WATCH")
+                fail_count = sum(1 for r in results if r["pass_fail"] == "FAIL")
+                print(f"  {factor_name}: PASS={pass_count} WATCH={watch_count} FAIL={fail_count}")
+    else:
+        for factor_name, scores in tqdm(factor_scores.items(), desc="Evaluating factors"):
 
-        if factor_name not in FACTOR_REGISTRY:
-            continue
-        direction, _ = FACTOR_REGISTRY[factor_name]
-        results = evaluate_factor_with_timeout(factor_name, scores, fwd_returns, direction)
-        all_results.extend(results)
-        # Print summary
-        pass_count = sum(1 for r in results if r["pass_fail"] == "PASS")
-        watch_count = sum(1 for r in results if r["pass_fail"] == "WATCH")
-        fail_count = sum(1 for r in results if r["pass_fail"] == "FAIL")
-        print(f"  {factor_name}: PASS={pass_count} WATCH={watch_count} FAIL={fail_count}")
+            if factor_name not in FACTOR_REGISTRY:
+                continue
+            direction, _ = FACTOR_REGISTRY[factor_name]
+            results = evaluate_factor_with_timeout(factor_name, scores, fwd_returns, direction)
+            all_results.extend(results)
+            # Print summary
+            pass_count = sum(1 for r in results if r["pass_fail"] == "PASS")
+            watch_count = sum(1 for r in results if r["pass_fail"] == "WATCH")
+            fail_count = sum(1 for r in results if r["pass_fail"] == "FAIL")
+            print(f"  {factor_name}: PASS={pass_count} WATCH={watch_count} FAIL={fail_count}")
 
     # ── WRITE OUTPUT ───────────────────────────────────────────────
     print("\n" + "=" * 60)

@@ -1,0 +1,37 @@
+factor,context_horizon,execution_tf,regime,direction,event_rule,threshold,events,adj_ic,adj_ic_ir,spread_mean,n_timestamps,favorable_regime,status
+breakdown_n_low,12h,1h,uptrend,short,Price breaks below N-period low,p80,2899,0.0403,0.0983,-4e-05,2899,True,CANDIDATE
+breakdown_n_low,12h,1h,downtrend,short,Price breaks below N-period low,p80,2962,0.0395,0.0966,0.000265,2962,True,CANDIDATE
+breakdown_n_low,12h,1h,range,short,Price breaks below N-period low,p80,2889,0.0394,0.0927,0.000126,2888,True,CANDIDATE
+breakdown_n_low,12h,1h,uptrend,short,Price breaks below N-period low,p80,2899,0.0519,0.1265,-8.3e-05,2899,True,CANDIDATE
+breakdown_n_low,12h,1h,downtrend,short,Price breaks below N-period low,p80,2962,0.0408,0.099,0.000234,2962,True,CANDIDATE
+breakdown_n_low,12h,1h,range,short,Price breaks below N-period low,p80,2889,0.0728,0.1721,0.000569,2885,True,CANDIDATE
+breakdown_n_low,12h,1h,uptrend,short,Price breaks below N-period low,p80,2899,0.0658,0.1569,0.000268,2899,True,CANDIDATE
+breakdown_n_low,12h,1h,downtrend,short,Price breaks below N-period low,p80,2962,0.0298,0.0711,-0.000351,2959,True,CANDIDATE
+breakdown_n_low,12h,1h,range,short,Price breaks below N-period low,p80,2889,0.0829,0.1879,0.001173,2880,True,CANDIDATE
+breakdown_n_low,12h,1h,uptrend,short,Price breaks below N-period low,p80,2899,0.0683,0.1586,0.000797,2892,True,CANDIDATE
+breakdown_n_low,12h,1h,downtrend,short,Price breaks below N-period low,p80,2962,0.028,0.0696,-0.001257,2959,True,CANDIDATE
+breakdown_n_low,12h,1h,range,short,Price breaks below N-period low,p80,2889,0.0772,0.1794,0.001656,2875,True,CANDIDATE
+range_zscore,24h,1h,uptrend,long,High volatility range expansion,p75,2899,0.0447,0.1044,5.1e-05,2899,True,CANDIDATE
+range_zscore,24h,1h,downtrend,long,High volatility range expansion,p75,2962,0.0047,0.0109,6.2e-05,2962,False,SKIP
+range_zscore,24h,1h,range,long,High volatility range expansion,p75,2895,0.0279,0.0647,3e-05,2894,True,CANDIDATE
+range_zscore,24h,1h,uptrend,long,High volatility range expansion,p75,2899,0.0632,0.1441,0.000196,2899,True,CANDIDATE
+range_zscore,24h,1h,downtrend,long,High volatility range expansion,p75,2962,0.0038,0.0089,-2e-05,2962,False,SKIP
+range_zscore,24h,1h,range,long,High volatility range expansion,p75,2895,0.0384,0.0895,0.0004,2891,True,CANDIDATE
+range_zscore,24h,1h,uptrend,long,High volatility range expansion,p75,2899,0.0995,0.2224,0.000804,2899,True,CANDIDATE
+range_zscore,24h,1h,downtrend,long,High volatility range expansion,p75,2962,-0.017,-0.0409,-0.000578,2959,False,SKIP
+range_zscore,24h,1h,range,long,High volatility range expansion,p75,2895,0.0743,0.1673,0.00155,2886,True,CANDIDATE
+range_zscore,24h,1h,uptrend,long,High volatility range expansion,p75,2899,0.1151,0.2533,0.001691,2892,True,CANDIDATE
+range_zscore,24h,1h,downtrend,long,High volatility range expansion,p75,2962,-0.0072,-0.0176,-0.000599,2959,False,SKIP
+range_zscore,24h,1h,range,long,High volatility range expansion,p75,2895,0.1064,0.2334,0.002739,2881,True,CANDIDATE
+volume_zscore,24h,1h,uptrend,short,Volume spike exhaustion,p80,2899,0.0454,0.1031,6.9e-05,2899,True,CANDIDATE
+volume_zscore,24h,1h,downtrend,short,Volume spike exhaustion,p80,2962,0.0065,0.015,8.6e-05,2962,False,SKIP
+volume_zscore,24h,1h,range,short,Volume spike exhaustion,p80,2889,0.0276,0.0627,3.7e-05,2888,True,CANDIDATE
+volume_zscore,24h,1h,uptrend,short,Volume spike exhaustion,p80,2899,0.0642,0.1413,0.000255,2899,True,CANDIDATE
+volume_zscore,24h,1h,downtrend,short,Volume spike exhaustion,p80,2962,0.0098,0.0228,7.7e-05,2962,False,SKIP
+volume_zscore,24h,1h,range,short,Volume spike exhaustion,p80,2889,0.039,0.089,0.000434,2885,True,CANDIDATE
+volume_zscore,24h,1h,uptrend,short,Volume spike exhaustion,p80,2899,0.0999,0.2123,0.001099,2899,True,CANDIDATE
+volume_zscore,24h,1h,downtrend,short,Volume spike exhaustion,p80,2962,-0.0078,-0.0185,-0.000576,2959,False,SKIP
+volume_zscore,24h,1h,range,short,Volume spike exhaustion,p80,2889,0.0768,0.1694,0.00188,2880,True,CANDIDATE
+volume_zscore,24h,1h,uptrend,short,Volume spike exhaustion,p80,2899,0.1158,0.2442,0.002166,2892,True,CANDIDATE
+volume_zscore,24h,1h,downtrend,short,Volume spike exhaustion,p80,2962,0.0099,0.024,-0.00042,2959,False,SKIP
+volume_zscore,24h,1h,range,short,Volume spike exhaustion,p80,2889,0.1061,0.2288,0.003102,2875,True,CANDIDATE

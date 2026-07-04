@@ -77,4 +77,9 @@ config.local.json
 .grafana/
 .claude/worktrees/
 
+# --- Large generated report artifacts ---
+reports/**/FACTOR_SIGNAL_EVENTS.csv
+reports/**/candidate_dataset.parquet
+
+# --- Data lake ---
 data_lake/

@@ -1,21 +1,25 @@
 """Numba-accelerated R-based trade simulation kernel.
 
-Runs bar-by-bar simulation for ALL symbols simultaneously using fixed-size
-numpy arrays, avoiding per-symbol Python dicts and pandas overhead.
+POSITION MANAGEMENT authority — bar-by-bar entry/exit tracking.
+Cost parameters sourced from ``simulation.engine.costs`` (economic truth authority).
 
-The core kernel ``fast_simulate_factor`` is a @njit function that:
-- Computes quantile thresholds via sort (numba-compatible, no pandas)
-- Tracks one active position per symbol in fixed arrays
-- Checks stop before target (conservative same-bar rule from exits.py)
-- Computes R = pnl / initial_risk
-- Uses TOTAL_COST_RATE = 0.0012 for cost
+**Architecture (Authority Map Aşama 2):**
+- ``fast_simulate_factor`` (this module) = bar-by-bar position tracking engine.
+  Owns: entry timing, exit decisions (stop/target/max_hold), per-bar state.
+- ``simulation/engine/costs.py`` = cost formula authority.
+  Owns: fee, slippage, funding cost rates.
+- ``simulation/engine/engine.py::simulate()`` = single-decision-point R computation.
+  NOT used for bar-by-bar position management (it's not designed for that).
+
+This module keeps the correct position management logic but uses authority-aligned
+cost rates imported from ``simulation.engine.costs`` instead of hardcoded constants.
 
 Works WITHOUT numba: the fallback decorator makes @njit a no-op.
 
-Cost model (from r_simulator.py):
-    Taker fee:  0.04% per side (0.08% round trip)
-    Slippage:   0.02% per side (0.04% round trip)
-    Total:      0.12% round trip  (TOTAL_COST_RATE = 0.0012)
+Cost model (sourced from simulation.engine.costs):
+    Taker fee:  4bps per side (8bps round trip)
+    Slippage:   1bp per side (2bps round trip)
+    Total:     10bps round trip (TOTAL_COST_RATE = 0.0010)
 """
 
 from __future__ import annotations
@@ -32,9 +36,18 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Cost model constant (must match r_simulator.py TOTAL_COST_RATE)
+# Cost model constant — sourced from simulation.engine.costs (authority)
 # ---------------------------------------------------------------------------
-TOTAL_COST_RATE: float = 0.0012
+# Authority: simulation/engine/costs.py defines:
+#   DEFAULT_TAKER_FEE_BPS = 4.0   → 4bps entry + 4bps exit = 8bps
+#   DEFAULT_SLIPPAGE_BPS = 1.0    → 1bp entry + 1bp exit = 2bps
+# Total round trip = 10bps = 0.0010 as fraction of notional.
+# This replaces the old hardcoded 0.0012 (12bps) which did not match the engine.
+from simulation.engine.costs import DEFAULT_TAKER_FEE_BPS, DEFAULT_SLIPPAGE_BPS
+
+TOTAL_COST_RATE: float = (DEFAULT_TAKER_FEE_BPS * 2 + DEFAULT_SLIPPAGE_BPS * 2) / 10_000
+assert abs(TOTAL_COST_RATE - 0.0010) < 1e-10, f"TOTAL_COST_RATE={TOTAL_COST_RATE} != 0.0010"
+
 
 
 # ---------------------------------------------------------------------------

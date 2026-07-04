@@ -134,6 +134,97 @@ def load_1h_ohlcv(
     return result
 
 
+# ── FUNDING RATE LOADER ────────────────────────────────────────────
+
+def load_funding_rates(
+    symbols: list[str] | None = None,
+    start: datetime = DEFAULT_START,
+    end: datetime = DEFAULT_END,
+) -> dict[str, pd.DataFrame]:
+    """Load historical funding rates from data_lake and resample to 1h.
+
+    Funding rates are published every 8h on Binance. We forward-fill
+    to 1h to align with the OHLCV panels.
+
+    Returns:
+        Dict mapping symbol → DataFrame with columns [funding_rate]
+        indexed by 1h timestamps.
+    """
+    if symbols is None:
+        symbols = DEFAULT_SYMBOLS
+
+    import glob
+
+    base_dir = Path(__file__).resolve().parents[4] / "data_lake" / "raw" / "binance" / "um" / "fundingRate"
+    result: dict[str, pd.DataFrame] = {}
+
+    for sym in symbols:
+        try:
+            pattern = str(base_dir / sym / "*" / "*.parquet")
+            files = sorted(glob.glob(pattern))
+            if not files:
+                result[sym] = pd.DataFrame()
+                continue
+
+            frames = []
+            for f in files:
+                try:
+                    df = pd.read_parquet(f)
+                    frames.append(df)
+                except Exception:
+                    continue
+
+            if not frames:
+                result[sym] = pd.DataFrame()
+                continue
+
+            df = pd.concat(frames)
+            df = df[~df.index.duplicated(keep="last")]
+            df = df.sort_index()
+
+            # Filter to date range
+            df = df[(df.index >= pd.Timestamp(start, tz="UTC")) &
+                    (df.index < pd.Timestamp(end, tz="UTC"))]
+
+            # Keep only funding_rate column
+            if "funding_rate" in df.columns:
+                df = df[["funding_rate"]].copy()
+                df["funding_rate"] = pd.to_numeric(df["funding_rate"], errors="coerce")
+            else:
+                result[sym] = pd.DataFrame()
+                continue
+
+            # Resample to 1h by forward-filling (funding is every 8h)
+            df = df.resample("1h").ffill()
+
+            result[sym] = df
+
+        except Exception as e:
+            print(f"[loader] WARNING: {sym} funding rate load failed: {e}")
+            result[sym] = pd.DataFrame()
+
+    return result
+
+
+def build_funding_panel(
+    funding_data: dict[str, pd.DataFrame],
+    aligned_index: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    """Build a funding rate panel aligned to the OHLCV panel index.
+
+    Returns DataFrame[timestamps × symbols] of funding rates.
+    """
+    panel_data = {}
+    for sym, df in funding_data.items():
+        if not df.empty and "funding_rate" in df.columns:
+            panel_data[sym] = df["funding_rate"].reindex(aligned_index)
+
+    if not panel_data:
+        return pd.DataFrame(index=aligned_index)
+
+    return pd.DataFrame(panel_data, index=aligned_index)
+
+
 def resample_to_4h(data_1h: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
     """Resample 1h data to 4h OHLCV using standard bar aggregation.
 

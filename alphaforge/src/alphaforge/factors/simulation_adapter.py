@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -32,12 +32,6 @@ from simulation.contracts.models import (
     TradingMode,
 )
 from simulation.adapters.training_adapter import TrainingAdapter
-
-try:
-    from alphaforge.factors.fast_simulator import simulate_factor_fast, aggregate_trades_fast, fast_compute_atr
-    HAS_FAST_SIM = True
-except ImportError:
-    HAS_FAST_SIM = False
 
 
 # ── Trade Record (compatible with leaderboard) ─────────────────────
@@ -143,26 +137,6 @@ def _compute_atr_from_panel(
     return pd.DataFrame(atr_data)
 
 
-def _compute_atr_panel_numba(high, low, close, period=14):
-    """Compute ATR using numba-compiled kernel."""
-    atr_data = {}
-    for sym in close.columns:
-        if sym not in high.columns or sym not in low.columns:
-            continue
-        h = high[sym].dropna().values.astype(np.float64)
-        l = low[sym].dropna().values.astype(np.float64)
-        c = close[sym].dropna().values.astype(np.float64)
-        if len(h) < period + 1:
-            continue
-        atr_values = fast_compute_atr(h, l, c, period)
-        sym_index = close[sym].dropna().index
-        atr_series = pd.Series(atr_values, index=sym_index)
-        atr_data[sym] = atr_series
-    if not atr_data:
-        return pd.DataFrame()
-    return pd.DataFrame(atr_data)
-
-
 # ── Core Adapter ───────────────────────────────────────────────────
 
 
@@ -197,8 +171,6 @@ def simulate_trades_for_factor(
     atr_period = 14
     if atr_panel is not None and not atr_panel.empty:
         atr = atr_panel
-    elif HAS_FAST_SIM:
-        atr = _compute_atr_panel_numba(high, low, close, period=atr_period)
     else:
         atr = _compute_atr_from_panel(high, low, close, period=atr_period)
 
@@ -506,17 +478,13 @@ def simulate_trades_fast(
     direction: str,
     atr_panel: pd.DataFrame | None = None,
 ) -> list[dict]:
-    """Fast simulation using numba kernel. Falls back to slow path if numba unavailable."""
-    if HAS_FAST_SIM:
-        return simulate_factor_fast(
-            factor_scores=factor_scores,
-            close=close, high=high, low=low,
-            config_stop_mult=config.stop_mult,
-            config_target_mult=config.target_mult,
-            config_max_hold=config.max_hold_bars,
-            direction=direction,
-            atr_panel=atr_panel,
-        )
+    """Simulate trades using centralized simulation engine.
+
+    Always uses simulation.engine via TrainingAdapter. The numba fast-simulator
+    fallback was removed in Aşama 1 (see authority_map.md).
+
+    Returns list of trade dicts compatible with leaderboard format.
+    """
     trades = simulate_trades_for_factor(
         factor_scores=factor_scores,
         close=close, high=high, low=low,
@@ -534,3 +502,145 @@ def simulate_trades_fast(
         }
         for t in trades
     ]
+
+
+# ── Aggregation (moved from fast_simulator.py) ─────────────────────
+
+def aggregate_trades_fast(
+    trades: list[dict[str, Any]],
+    alpha_name: str,
+    config_name: str,
+    direction: str,
+) -> dict[str, Any]:
+    """Aggregate trade dicts into summary statistics for the R leaderboard.
+
+    Operates on numpy arrays extracted from the trade dicts for speed.
+    Returns a dict matching ALPHA_R_LEADERBOARD.csv columns.
+
+    Moved from fast_simulator.py during Aşama 1 authority cleanup.
+    """
+    n_trades = len(trades)
+
+    if n_trades == 0:
+        return {
+            "alpha_name": alpha_name,
+            "config_name": config_name,
+            "side_mode": direction,
+            "trades": 0,
+            "avg_R": np.nan,
+            "median_R": np.nan,
+            "total_R": np.nan,
+            "expectancy_R": np.nan,
+            "profit_factor": np.nan,
+            "win_rate": np.nan,
+            "max_drawdown_R": np.nan,
+            "fee_drag_R": np.nan,
+            "avg_hold_bars": np.nan,
+            "turnover": np.nan,
+            "best_symbol": "",
+            "worst_symbol": "",
+            "dominant_symbol_share": np.nan,
+            "start_ts": "",
+            "end_ts": "",
+            "pass_fail": "FAIL",
+            "notes": "no trades",
+        }
+
+    # Extract arrays in one pass
+    R_arr = np.empty(n_trades, dtype=np.float64)
+    cost_arr = np.empty(n_trades, dtype=np.float64)
+    hold_arr = np.empty(n_trades, dtype=np.float64)
+    initial_risk_arr = np.empty(n_trades, dtype=np.float64)
+    symbols = [t["symbol"] for t in trades]
+
+    for i, t in enumerate(trades):
+        R_arr[i] = t["R"]
+        cost_arr[i] = t["cost"]
+        hold_arr[i] = t["hold_bars"]
+        initial_risk_arr[i] = t["initial_risk"]
+
+    total_R = float(R_arr.sum())
+    avg_R = float(R_arr.mean())
+    median_R = float(np.median(R_arr))
+    expectancy_R = avg_R
+
+    # Profit factor
+    gross_profit = float(R_arr[R_arr > 0].sum()) if (R_arr > 0).any() else 0.0
+    gross_loss = float(np.abs(R_arr[R_arr < 0]).sum()) if (R_arr < 0).any() else 0.0
+    profit_factor = gross_profit / gross_loss if gross_loss > 0 else float("inf")
+
+    win_rate = float((R_arr > 0).sum()) / n_trades
+
+    # Max drawdown in R
+    cum_R = np.cumsum(R_arr)
+    peak = np.maximum.accumulate(cum_R)
+    drawdowns = cum_R - peak
+    max_drawdown_R = float(drawdowns.min())
+
+    # Fee drag
+    mean_risk = float(initial_risk_arr.mean()) if initial_risk_arr.mean() > 0 else 1.0
+    fee_drag_R = float(cost_arr.sum() / mean_risk)
+
+    # Per-symbol aggregation (vectorized via numpy unique)
+    sym_arr = np.array(symbols)
+    unique_syms, sym_inverse = np.unique(sym_arr, return_inverse=True)
+    n_unique = len(unique_syms)
+
+    sym_R_totals = np.zeros(n_unique, dtype=np.float64)
+    for i in range(n_trades):
+        sym_R_totals[sym_inverse[i]] += R_arr[i]
+
+    best_idx = int(np.argmax(sym_R_totals))
+    worst_idx = int(np.argmin(sym_R_totals))
+    best_sym = str(unique_syms[best_idx])
+    worst_sym = str(unique_syms[worst_idx])
+
+    total_abs = float(np.abs(sym_R_totals).sum())
+    dominant_share = float(np.abs(sym_R_totals[best_idx]) / total_abs) if total_abs > 0 else 0.0
+
+    # Pass/fail logic
+    if total_R < 0:
+        pf = "REJECT"
+        notes = f"negative total R ({total_R:.2f})"
+    elif expectancy_R <= 0:
+        pf = "REJECT"
+        notes = f"non-positive expectancy ({expectancy_R:.4f})"
+    elif profit_factor < 1.0:
+        pf = "REJECT"
+        notes = f"PF < 1.0 ({profit_factor:.2f})"
+    elif profit_factor < 1.05:
+        pf = "WATCH"
+        notes = f"marginal PF ({profit_factor:.2f})"
+    elif dominant_share > 0.50:
+        pf = "WATCH"
+        notes = f"dominated by {best_sym} ({dominant_share:.0%})"
+    elif n_trades < 30:
+        pf = "WATCH"
+        notes = f"small sample ({n_trades} trades)"
+    else:
+        pf = "PROMOTE_TO_MINI_V7"
+        notes = f"PF={profit_factor:.2f}, E[R]={expectancy_R:.4f}"
+
+    return {
+        "alpha_name": alpha_name,
+        "config_name": config_name,
+        "side_mode": direction,
+        "trades": n_trades,
+        "avg_R": round(avg_R, 6),
+        "median_R": round(median_R, 6),
+        "total_R": round(total_R, 4),
+        "expectancy_R": round(expectancy_R, 6),
+        "profit_factor": round(profit_factor, 4),
+        "win_rate": round(win_rate, 4),
+        "max_drawdown_R": round(max_drawdown_R, 4),
+        "fee_drag_R": round(fee_drag_R, 6),
+        "avg_hold_bars": round(float(hold_arr.mean()), 2),
+        "turnover": np.nan,
+        "best_symbol": best_sym,
+        "worst_symbol": worst_sym,
+        "dominant_symbol_share": round(dominant_share, 4),
+        "start_ts": str(trades[0]["entry_ts"]),
+        "end_ts": str(trades[-1]["exit_ts"]),
+        "pass_fail": pf,
+        "notes": notes,
+    }

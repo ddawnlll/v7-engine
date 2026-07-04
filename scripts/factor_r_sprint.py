@@ -9,6 +9,9 @@ exit logic, and path metrics. Replaces the standalone R simulator.
 
 Usage:
     PYTHONPATH=. .venv/bin/python3 scripts/factor_r_sprint.py
+
+Auto-detects GPU (cuDF/ROCm) — if available, uses GPU-accelerated loader;
+otherwise falls back to CPU automatically.
 """
 
 from __future__ import annotations
@@ -20,6 +23,9 @@ from pathlib import Path
 # Ensure project root on path
 PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
 sys.path.insert(0, PROJECT_ROOT)
+# Add the internal src directory so alphaforge package resolves correctly
+ALPHAFORGE_SRC = str(Path(PROJECT_ROOT, "alphaforge", "src").resolve())
+sys.path.insert(0, ALPHAFORGE_SRC)
 
 import numpy as np
 import pandas as pd
@@ -27,15 +33,18 @@ import pandas as pd
 from alphaforge.factors.factors import FACTOR_REGISTRY, compute_all_factors
 from alphaforge.factors.leaderboard import write_alpha_r_leaderboard
 from alphaforge.factors.loader import (
-    build_aligned_panel,
-    load_1h_ohlcv,
+    load_1h_ohlcv_gpu,
+    load_or_build_aligned_panel_gpu,
 )
 from alphaforge.factors.r_simulator import (
     CONFIGS,
     TradeConfig,
 )
-from alphaforge.factors.fast_simulator import simulate_factor_fast, aggregate_trades_fast
-from alphaforge.factors.simulation_adapter import _compute_atr_from_panel
+from alphaforge.factors.simulation_adapter import (
+    simulate_trades_fast,
+    aggregate_trades_fast,
+    _compute_atr_from_panel,
+)
 from tqdm import tqdm
 
 
@@ -47,7 +56,8 @@ def main() -> None:
 
     # ── STEP 1: Load data ──────────────────────────────────────────
     print("\n[1/4] Loading 1h OHLCV from data lake...")
-    data_1h = load_1h_ohlcv()
+    print("  GPU acceleration auto-detected — will use cuDF/ROCm if available")
+    data_1h = load_1h_ohlcv_gpu()
     loaded = {s: df for s, df in data_1h.items() if not df.empty}
     print(f"  Loaded {len(loaded)}/{len(data_1h)} symbols")
 
@@ -57,7 +67,7 @@ def main() -> None:
 
     # ── STEP 2: Build aligned panels ───────────────────────────────
     print("\n[2/4] Building aligned panels...")
-    panels_1h = build_aligned_panel(loaded)
+    panels_1h = load_or_build_aligned_panel_gpu(loaded)
     close = panels_1h.get("close")
     high = panels_1h.get("high")
     low = panels_1h.get("low")
@@ -94,15 +104,13 @@ def main() -> None:
         direction = FACTOR_REGISTRY.get(factor_name, ("long", None))[0]
 
         for config_name, config in CONFIGS.items():
-            trades = simulate_factor_fast(
+            trades = simulate_trades_fast(
                 factor_scores=scores,
                 close=close,
                 high=high,
                 low=low,
                 atr_panel=atr_panel,
-                config_stop_mult=config.stop_mult,
-                config_target_mult=config.target_mult,
-                config_max_hold=config.max_hold_bars,
+                config=config,
                 direction=direction,
             )
 
