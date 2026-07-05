@@ -439,7 +439,8 @@ def walk_forward_validate(
     min_folds: int = 6,
     dump_softmax_path: str | None = None,
     threshold: float | None = None,
-) -> List[dict]:
+    return_raw_preds: bool = False,
+) -> List[dict] | tuple[list[dict], list[np.ndarray], list[np.ndarray]]:
     """6-fold anchored expanding walk-forward validation.
 
     Returns per-fold result dicts.
@@ -458,6 +459,12 @@ def walk_forward_validate(
         "WFV: folds=%d, fold_size=%d, purge=%d, embargo=%d",
         min_folds, fold_size, purge_bars, embargo_bars,
     )
+
+    # Init raw preds storage if needed
+    if return_raw_preds:
+        walk_forward_validate._fold_preds = []
+        walk_forward_validate._fold_y_class = []
+        walk_forward_validate._fold_y_val = []
 
     for fold in range(min_folds):
         train_end = (fold + 1) * fold_size
@@ -489,6 +496,12 @@ def walk_forward_validate(
         y_pred_prob = fold_result.model.predict(dval)
         y_pred_prob_max = np.max(y_pred_prob, axis=1)
         y_pred = np.argmax(y_pred_prob, axis=1)
+
+        # Save raw preds for post-hoc threshold sweep (before threshold applied)
+        if return_raw_preds:
+            walk_forward_validate._fold_preds.append(y_pred_prob_max.copy())
+            walk_forward_validate._fold_y_class.append(y_pred.copy())
+            walk_forward_validate._fold_y_val.append(y_val.copy())
 
         # Apply confidence threshold: force NO_TRADE when model is uncertain
         _threshold = threshold if threshold is not None else float(CONFIDENCE_THRESHOLD)
@@ -556,6 +569,9 @@ def walk_forward_validate(
         np.save(dump_softmax_path, all_probs)
         logger.info("Saved %d softmax probs to %s", len(all_probs), dump_softmax_path)
         del walk_forward_validate._softmax_bins
+
+    if return_raw_preds:
+        return results, walk_forward_validate._fold_preds, walk_forward_validate._fold_y_class, walk_forward_validate._fold_y_val
 
     return results
 
@@ -804,52 +820,48 @@ def main():
         sys.exit(1)
 
     # Step 4: Walk-forward validation
-    print(f"\n[4/6] Walk-forward validation ({args.folds} folds, anchored expanding)...")
-    t0 = time.time()
-    wfv_results = walk_forward_validate(
-        X_clean, y_clean, r_clean, mode, min_folds=args.folds,
-        dump_softmax_path=args.dump_softmax,
-    )
-    wfv_duration = time.time() - t0
-    print(f"  {len(wfv_results)} folds completed in {wfv_duration:.1f}s")
-
-    # ── Threshold Sweep ────────────────────────────────────────────
     if args.threshold_sweep:
+        # ── Threshold Sweep (train once, sweep thresholds on saved preds) ──
         thresholds = [float(t.strip()) for t in args.threshold_sweep.split(",")]
         thresholds = sorted(set(thresholds))
         print(f"\n{'='*60}")
         print(f"  THRESHOLD SWEEP — {len(thresholds)} thresholds")
         print(f"{'='*60}")
+
+        wfv_results, fold_preds, fold_y_class, fold_y_val = walk_forward_validate(
+            X_clean, y_clean, r_clean, mode, min_folds=args.folds,
+            return_raw_preds=True,
+        )
+
+        all_probs = np.concatenate(fold_preds)
+        all_y_class = np.concatenate(fold_y_class)
+        all_y_val = np.concatenate(fold_y_val)
+
         print(f"{"Threshold":10s}  {"OOS Acc":8s}  {"Trades":10s}  {"Exposure":10s}  {"No-trade":10s}")
         print(f"{'-'*50}")
 
         sweep_results = []
         for thresh in thresholds:
-            swfv = walk_forward_validate(
-                X_clean, y_clean, r_clean, mode, min_folds=args.folds,
-                threshold=thresh,
-            )
-            val_accs = [r["val_accuracy"] for r in swfv if r["val_accuracy"] is not None]
-            active_trades = sum(r.get("active_trade_count", 0) for r in swfv)
-            no_trade = sum(r.get("no_trade_count", 0) for r in swfv)
-            total_preds = active_trades + no_trade
-            exposure = 100.0 * active_trades / total_preds if total_preds else 0.0
-            avg_acc = float(np.mean(val_accs)) if val_accs else 0.0
+            y_pred_adj = all_y_class.copy()
+            low_conf = all_probs < thresh
+            y_pred_adj[low_conf] = 2
 
-            line = f"{thresh:<8.2f}  {avg_acc:<8.4f}  {active_trades:<10d}  {exposure:<9.2f}%  {no_trade:<10d}"
-            print(line)
+            active_count = int((~low_conf).sum())
+            no_trade_count = int(low_conf.sum())
+            total = len(y_pred_adj)
+            exposure = 100.0 * active_count / total if total else 0.0
+            acc = float(np.mean(y_pred_adj == all_y_val)) if total else 0.0
+
+            print(f"{thresh:<8.2f}  {acc:<8.4f}  {active_count:<10d}  {exposure:<9.2f}%  {no_trade_count:<10d}")
             sweep_results.append({
                 "threshold": thresh,
-                "oos_accuracy": round(avg_acc, 4),
-                "active_trades": active_trades,
+                "oos_accuracy": round(acc, 4),
+                "active_trades": active_count,
                 "exposure_pct": round(exposure, 2),
-                "no_trade_count": no_trade,
+                "no_trade_count": no_trade_count,
             })
 
-        # Suggest best
         print(f"{'-'*50}")
-        # Pareto: max accuracy at min threshold drop
-        # Prefer highest accuracy among thresholds with >10% exposure
         viable = [r for r in sweep_results if r["exposure_pct"] > 10.0]
         if viable:
             best = max(viable, key=lambda r: r["oos_accuracy"])
@@ -857,9 +869,17 @@ def main():
                   f"(acc={best['oos_accuracy']:.4f}, "
                   f"exposure={best['exposure_pct']:.1f}%)")
         else:
-            print(f"  No threshold achieves >10% exposure — model may need tuning")
-        print(f"{'='*60}")
-        print()
+            print(f"  No threshold achieves >10% exposure")
+        print(f"{'='*60}\n")
+    else:
+        print(f"\n[4/6] Walk-forward validation ({args.folds} folds, anchored expanding)...")
+        t0 = time.time()
+        wfv_results = walk_forward_validate(
+            X_clean, y_clean, r_clean, mode, min_folds=args.folds,
+            dump_softmax_path=args.dump_softmax,
+        )
+        wfv_duration = time.time() - t0
+        print(f"  {len(wfv_results)} folds completed in {wfv_duration:.1f}s")
 
     # Step 5: Train final model
     print("\n[5/6] Training final model on all data...")

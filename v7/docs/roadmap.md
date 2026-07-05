@@ -872,6 +872,32 @@ Phase 5 — v0.30G: 20-Symbol Expansion                    (future — after E s
 
 ---
 
+## AlphaForge SCALP Training Diagnostic HOLD (2026-07-05)
+
+**What changed:**
+- Audited the `alphaforge.train` SCALP command against the `cache/factor_sprint` panel cache for BTCUSDT, ETHUSDT, and SOLUSDT.
+- Confirmed the poor OOS result is not yet evidence that no profitable alpha exists. The active training path has structural validity issues before alpha quality can be judged.
+- Identified a feature/label alignment defect: labels are generated per symbol with `max_hold + 1` tail rows removed, but features are concatenated per symbol at full length and then globally truncated. This shifts labels against features at symbol boundaries.
+- Identified a validation-shape defect: panel data is flattened symbol-major, while walk-forward validation slices by global row index. This validates contiguous symbol blocks rather than synchronized chronological panel timestamps.
+- Identified a metric ownership/reporting defect: OOS Sharpe and expectancy are computed from all validation label returns, not from returns realized by the model's predicted active trades.
+- Positive-control training on a synthetic feature-derived label also failed OOS, confirming the current training harness is not a reliable alpha-quality judge.
+
+**Lock status:** HOLD for `alphaforge.train` profitability claims and SCALP threshold evidence.
+
+**Remaining holds:**
+- Feature/label alignment repair: release condition is per-symbol tail trimming or timestamp-keyed dataset assembly with invariant tests at symbol boundaries.
+- Chronological panel WFV repair: release condition is timestamp-major panel splits with purge/embargo applied by time, not global flattened row blocks.
+- Active-trade metric repair: release condition is predicted-action PnL/expected-R metrics computed only for selected LONG/SHORT decisions, with NO_TRADE handled separately.
+- Positive-control gate: release condition is a deterministic feature-derived label test that clears OOS baseline before real alpha results are trusted.
+
+**Design lock score:** N/A. This is a diagnostic HOLD, not a threshold lock.
+
+**Evidence:** `alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT --folds 3 --panel-cache cache/factor_sprint --threshold-sweep 0.3,0.45,0.55,0.7` produced OOS accuracy 0.2507, train accuracy 0.5981, overfit gap 0.3474, PBO HIGH, and 31.4% exposure at threshold 0.55. A positive-control run produced OOS accuracy 0.1600 with PBO HIGH.
+
+**2026-07-05 update (Faz 3):** Fast threshold sweep implemented. `walk_forward_validate` now accepts `return_raw_preds=True` — trains XGBoost once, saves fold-level `y_pred_prob_max` and `y_pred` before threshold, then sweeps N thresholds in-memory (~milliseconds). Eliminates N× retraining cost. 5-threshold sweep dropped from ~25s to ~6s (**4× faster**). `--threshold-sweep` flag unchanged.
+
+---
+
 ## Final Position
 
 The roadmap for V7 is not:
