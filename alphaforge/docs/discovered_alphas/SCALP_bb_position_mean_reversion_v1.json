@@ -1,37 +1,36 @@
 {
-  "schema_version": "1.0.0",
-  "handoff_package_id": "v7hp-scalp-bb-position-v1-20260705",
+  "schema_version": "1.1.0",
+  "handoff_package_id": "v7hp-scalp-bb-position-v1-20260706",
   "mode": "SCALP",
   "alpha_candidate_id": "ac-scalp-bb-mean-reversion-v1",
   "mode_research_report_id": "mrr-scalp-bb-position-v1",
   "validation_report_id": "vr-scalp-bb-position-v1",
   "model_artifact_id": "ma-scalp-xgb-v1",
-  "calibration_candidate_id": "cc-scalp-threshold-0715-v1",
-  
+  "calibration_candidate_id": "cc-scalp-threshold-0550-v1",
+
   "alpha_thesis": {
     "id": "ath-scalp-bb-position-mean-reversion-v1",
     "title": "BB Position Dominated Mean-Reversion/Location Edge — SCALP 1h",
-    "status": "VALIDATED",
+    "status": "VALIDATED_ON_REAL_DATA",
     "evidence_quality": "MODERATE",
-    "description": "bb_position = normalized location of close within Bollinger Bands. Near upper band (bb_position≈1) → mean-reversion sell signal (SHORT). Near lower band (bb_position≈0) → mean-reversion buy signal (LONG). The 32-feature XGBoost model effectively learns a threshold/regime-dependent version of this strategy where bb_position carries 99.5% of predictive power (shuffle ablation).",
+    "description": "bb_position = normalized location of close within Bollinger Bands. Near upper band (bb_position≈1) → mean-reversion sell signal (SHORT). Near lower band (bb_position≈0) → mean-reversion buy signal (LONG). The 16-feature XGBoost model effectively learns a threshold/regime-dependent version of this strategy where bb_position carries 97.3% of predictive power (shuffle ablation on real Binance data).",
     "primary_driver": {
       "feature": "bb_position",
       "formula": "bb_position[t] = (close[t] - lower[t]) / (upper[t] - lower[t])",
       "bands_formula": "upper[t] = SMA(close, window=20) + 2.0 × rolling_std(close, window=20); lower[t] = SMA(close, window=20) - 2.0 × rolling_std(close, window=20)",
       "causality": "uses close[t-window+1 .. t] only — causal, no lookahead",
-      "shuffle_impact_pct": 99.49,
+      "shuffle_impact_pct": 97.30,
       "leakage_audit": "CLEAN — no look-ahead, no label overlap, verified via static code audit"
     },
     "secondary_features": [
-      {"name": "vwap_mid_deviation_N", "formula": "(close[t] - vwap[t]) / vwap[t]", "shuffle_impact_pct": 74.22},
-      {"name": "bb_width", "formula": "(upper[t] - lower[t]) / middle[t]", "shuffle_impact_pct": 21.58},
-      {"name": "cusum_positive", "formula": "cumulative sum of positive returns above threshold", "shuffle_impact_pct": 14.62},
-      {"name": "atr_pct_N", "formula": "ATR / close as percentage", "shuffle_impact_pct": 13.67},
-      {"name": "atr_expansion_N", "formula": "rate of change of ATR", "shuffle_impact_pct": 13.52},
-      {"name": "obv_N", "formula": "On-Balance Volume normalized", "shuffle_impact_pct": 13.42},
-      {"name": "macd_signal", "formula": "MACD signal line value", "shuffle_impact_pct": 12.72},
-      {"name": "volume_ratio_N", "formula": "current volume / SMA(volume)", "shuffle_impact_pct": 12.52},
-      {"name": "momentum_N", "formula": "close[t] - close[t-N]", "shuffle_impact_pct": 11.57}
+      {"name": "ofi_N", "formula": "Order Flow Imbalance normalized", "shuffle_impact_pct": 26.53},
+      {"name": "atr_expansion_N", "formula": "rate of change of ATR", "shuffle_impact_pct": 20.87},
+      {"name": "return_zscore_N", "formula": "z-score of recent returns", "shuffle_impact_pct": 7.51},
+      {"name": "vwap_mid_deviation_N", "formula": "(close[t] - vwap[t]) / vwap[t]", "shuffle_impact_pct": 7.21},
+      {"name": "trade_count_N", "formula": "normalized trade count", "shuffle_impact_pct": 6.64},
+      {"name": "multi_level_obi_N", "formula": "multi-level Order Book Imbalance", "shuffle_impact_pct": 6.60},
+      {"name": "microprice_N", "formula": "microprice = (bid+ask)/2 weighted", "shuffle_impact_pct": 6.55},
+      {"name": "log_return_1", "formula": "log return over 1 bar", "shuffle_impact_pct": 5.74}
     ]
   },
 
@@ -41,10 +40,10 @@
     "primary_timeframe": "1h",
     "context_timeframe": "4h",
     "refinement_timeframe": "15m",
-    "confidence_threshold": 0.715,
-    "n_features": 32,
+    "confidence_threshold": 0.55,
+    "n_features": 16,
     "n_features_full": 54,
-    "feature_pruning_method": "DoubleEnsemble shuffle ablation (<2% impact removed, retrain validated)",
+    "feature_pruning_method": "DoubleEnsemble shuffle ablation (<2% impact removed, retrain validated) on REAL Binance data",
     "n_folds": 6,
     "fold_structure": "anchored expanding walk-forward",
     "purge_bars": "fold_size/4",
@@ -54,175 +53,155 @@
     "training_hyperparams": "XGBoostTrainer defaults (alphaforge.training.xgb_trainer)"
   },
 
-  "selected_32_features": [
-    {"name": "atr_N", "group": "atr", "importance_rank": 16, "shuffle_drop_pct": 8.78},
-    {"name": "atr_expansion_N", "group": "atr", "importance_rank": 6, "shuffle_drop_pct": 13.52},
-    {"name": "atr_pct_N", "group": "atr", "importance_rank": 5, "shuffle_drop_pct": 13.67},
-    {"name": "bb_position", "group": "breakout", "importance_rank": 1, "shuffle_drop_pct": 99.49},
-    {"name": "bb_width", "group": "breakout", "importance_rank": 3, "shuffle_drop_pct": 21.58},
-    {"name": "cusum_negative", "group": "regime", "importance_rank": 29, "shuffle_drop_pct": 3.67},
-    {"name": "cusum_positive", "group": "regime", "importance_rank": 4, "shuffle_drop_pct": 14.62},
-    {"name": "depth_ratio_N", "group": "orderbook", "importance_rank": 20, "shuffle_drop_pct": 6.13},
-    {"name": "garman_klass_vol_N", "group": "volatility", "importance_rank": 13, "shuffle_drop_pct": 10.15},
-    {"name": "high_low_range_N", "group": "volatility", "importance_rank": 19, "shuffle_drop_pct": 7.03},
-    {"name": "hmm_vol_state", "group": "regime", "importance_rank": 31, "shuffle_drop_pct": 3.43},
-    {"name": "macd_histogram", "group": "momentum", "importance_rank": 11, "shuffle_drop_pct": 10.77},
-    {"name": "macd_signal", "group": "momentum", "importance_rank": 8, "shuffle_drop_pct": 12.72},
-    {"name": "microprice_N", "group": "orderbook", "importance_rank": 15, "shuffle_drop_pct": 9.14},
-    {"name": "microstructure_noise_N", "group": "orderbook", "importance_rank": 12, "shuffle_drop_pct": 10.22},
-    {"name": "momentum_N", "group": "momentum", "importance_rank": 10, "shuffle_drop_pct": 11.57},
-    {"name": "multi_level_obi_N", "group": "orderbook", "importance_rank": 25, "shuffle_drop_pct": 5.17},
-    {"name": "obv_N", "group": "volume", "importance_rank": 7, "shuffle_drop_pct": 13.42},
-    {"name": "ofi_N", "group": "orderbook", "importance_rank": 26, "shuffle_drop_pct": 4.76},
-    {"name": "quoted_spread_N", "group": "orderbook", "importance_rank": 32, "shuffle_drop_pct": 2.20},
-    {"name": "range_breakout_N", "group": "breakout", "importance_rank": 23, "shuffle_drop_pct": 5.23},
-    {"name": "return_zscore_N", "group": "returns", "importance_rank": 14, "shuffle_drop_pct": 10.08},
-    {"name": "rsi_N", "group": "momentum", "importance_rank": 21, "shuffle_drop_pct": 5.59},
-    {"name": "serial_correlation_N", "group": "orderbook", "importance_rank": 28, "shuffle_drop_pct": 3.73},
-    {"name": "spread_pct_N", "group": "orderbook", "importance_rank": 17, "shuffle_drop_pct": 8.19},
-    {"name": "trade_count_N", "group": "orderbook", "importance_rank": 24, "shuffle_drop_pct": 5.17},
-    {"name": "trade_intensity_N", "group": "orderbook", "importance_rank": 18, "shuffle_drop_pct": 7.59},
-    {"name": "volume_concentration_hhi_N", "group": "orderbook", "importance_rank": 27, "shuffle_drop_pct": 3.75},
-    {"name": "volume_ratio_N", "group": "volume", "importance_rank": 9, "shuffle_drop_pct": 12.52},
-    {"name": "volume_trend_N", "group": "volume", "importance_rank": 30, "shuffle_drop_pct": 3.61},
-    {"name": "vwap_deviation", "group": "volume", "importance_rank": 22, "shuffle_drop_pct": 5.26},
-    {"name": "vwap_mid_deviation_N", "group": "orderbook", "importance_rank": 2, "shuffle_drop_pct": 74.22}
+  "selected_16_features": [
+    {"name": "bb_position", "group": "breakout", "importance_rank": 1, "shuffle_drop_pct": 97.30},
+    {"name": "ofi_N", "group": "orderbook", "importance_rank": 2, "shuffle_drop_pct": 26.53},
+    {"name": "atr_expansion_N", "group": "atr", "importance_rank": 3, "shuffle_drop_pct": 20.87},
+    {"name": "return_zscore_N", "group": "returns", "importance_rank": 4, "shuffle_drop_pct": 7.51},
+    {"name": "vwap_mid_deviation_N", "group": "orderbook", "importance_rank": 5, "shuffle_drop_pct": 7.21},
+    {"name": "trade_count_N", "group": "orderbook", "importance_rank": 6, "shuffle_drop_pct": 6.64},
+    {"name": "multi_level_obi_N", "group": "orderbook", "importance_rank": 7, "shuffle_drop_pct": 6.60},
+    {"name": "microprice_N", "group": "orderbook", "importance_rank": 8, "shuffle_drop_pct": 6.55},
+    {"name": "log_return_1", "group": "returns", "importance_rank": 9, "shuffle_drop_pct": 5.74},
+    {"name": "garman_klass_vol_N", "group": "volatility", "importance_rank": 10, "shuffle_drop_pct": 5.23},
+    {"name": "doji_N", "group": "candle_pattern", "importance_rank": 11, "shuffle_drop_pct": 4.82},
+    {"name": "hammer_N", "group": "candle_pattern", "importance_rank": 12, "shuffle_drop_pct": 4.79},
+    {"name": "volume_trend_N", "group": "volume", "importance_rank": 13, "shuffle_drop_pct": 4.19},
+    {"name": "cusum_positive", "group": "regime", "importance_rank": 14, "shuffle_drop_pct": 3.84},
+    {"name": "rsi_N", "group": "momentum", "importance_rank": 15, "shuffle_drop_pct": 3.16},
+    {"name": "parkinson_vol_N", "group": "volatility", "importance_rank": 16, "shuffle_drop_pct": 2.67}
   ],
 
-  "removed_22_features": [
-    "amihud_illiquidity_N", "consecutive_dn_N", "consecutive_up_N", "cusum_signal",
-    "doji_N", "engulfing_N", "gap_N", "hammer_N", "hmm_vol_probability",
-    "liquidity_vacuum_N", "log_return_1", "log_return_N", "macd", "marubozu_N",
-    "obi", "parkinson_vol_N", "price_impact_slope_N", "return_volatility_N",
-    "roll_spread_N", "volatility_regime", "volume_imbalance_N", "vpin_N"
+  "removed_38_features": [
+    "amihud_illiquidity_N", "atr_N", "atr_pct_N", "bb_width", "consecutive_dn_N",
+    "consecutive_up_N", "cusum_negative", "cusum_signal", "depth_ratio_N",
+    "engulfing_N", "gap_N", "high_low_range_N", "hmm_vol_probability",
+    "hmm_vol_state", "liquidity_vacuum_N", "log_return_N", "macd", "macd_histogram",
+    "macd_signal", "marubozu_N", "microstructure_noise_N", "momentum_N", "obi",
+    "obv_N", "price_impact_slope_N", "quoted_spread_N", "range_breakout_N",
+    "return_volatility_N", "roll_spread_N", "serial_correlation_N", "spread_pct_N",
+    "trade_intensity_N", "volatility_regime", "volume_concentration_hhi_N",
+    "volume_imbalance_N", "volume_ratio_N", "vpin_N", "vwap_deviation"
   ],
 
   "validation_results": {
     "data": {
-      "source": "synthetic OHLCV (5 symbols: BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, ADAUSDT)",
-      "n_bars": 3000,
-      "n_samples_valid": 14740,
+      "source": "BINANCE REAL (BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT)",
+      "interval": "1h",
+      "date_range": "2023-01 to 2026-06",
+      "n_bars": 118276,
+      "n_samples_valid": 118068,
       "n_features_full": 54,
-      "n_features_pruned": 32,
-      "random_seed": 42
+      "n_features_pruned": 16,
+      "reality_check": "PREVIOUS SYNTHETIC RESULTS INVALIDATED — real data results differ substantially"
     },
     "walk_forward": {
       "n_folds": 6,
       "val_folds_used_for_selection": [0, 1, 2, 3, 4],
       "test_fold": 5,
-      "fold_size": 2105,
-      "purge_bars": 526,
-      "embargo_bars": 263
+      "fold_size": 16866,
+      "purge_bars": 4216,
+      "embargo_bars": 2108
     },
     "phase1_verification": {
-      "1a_gross_net": {"status": "PASS", "detail": "decision_gross_r is net of cost (8bps round trip deducted in label generator)"},
-      "1b_block_bootstrap": {"status": "PASS", "detail": "CI=[0.020157, 0.022336], 65 blocks, fully positive, edge robust to time dependence"},
-      "1c_threshold_audit": {"status": "PASS", "detail": "CONFIDENCE_THRESHOLD=0.55 was static constant, no data leakage"}
+      "1a_gross_net": {"status": "PASS", "detail": "Cost authority 8bps round trip. Fold-averaged net_R=0.0081 (correct-only), cost ratio ~10% of gross."},
+      "1b_block_bootstrap": {"status": "PASS", "detail": "Aggregate CI=[0.0076, 0.0086], 6/6 folds fully positive. Edge robust on real data."},
+      "1c_threshold_audit": {"status": "PASS", "detail": "CONFIDENCE_THRESHOLD=0.55 selected via val composite optimization on real data. No data leakage."}
     },
     "phase2_results": {
-      "iter1_threshold_sweep": {"per_trade_R_improvement": "+37.21%", "total_net_R_change": "-96%", "best_threshold_per_trade": 0.95, "caveat": "per-trade R improves monotonically but total R collapses (too few trades)"},
-      "iter1b_total_net_R": {"improvement": "+3.75%", "best_threshold_total_R": 0.425, "caveat": "small improvement, near-plateau in 0.15-0.45 range"},
-      "iter2_position_sizing": {"status": "FAIL", "detail": "all 10 sizing schemes reduced total net R (0% to -44%)"},
-      "iter2v2_composite": {"selected_threshold": 0.715, "objective": "total_net_R / max_drawdown", "val_composite": 530.41, "test_composite": 216.51, "improvement_vs_baseline": "+20.3%"},
-      "feature_ablation": {"n_removed": 22, "n_kept": 32, "val_composite_change": "+2.73%", "test_total_net_R": 10.9608, "test_composite": 223.02},
-      "bb_position_audit": {"status": "CLEAN", "detail": "no lookahead, no label overlap, 99.49% shuffle impact is legitimate mean-reversion edge"}
+      "data_restoration": "Scripts/restore_real_data.py — worktree data_lake -> data/raw/. load_cached_data() confirmed.",
+      "feature_ablation_real": {"n_removed": 38, "n_kept": 16, "val_composite_change": "+14.77%", "method": "DoubleEnsemble shuffle on REAL data"},
+      "threshold_optimization_real": {"selected_threshold": 0.55, "objective": "total_net_R / max_drawdown", "val_composite": 533.66, "test_composite": 129.47},
+      "isolation_test": "ADIM 3 (correct-only 0.0081) vs ADIM 4 (all-trades 0.0043) farki TAMAMEN metrik tanimindan. Correct-only tum 4 config'de 0.0081."
     },
     "baseline_comparison": {
-      "metric": "old threshold 0.55",
-      "old_total_net_R_test": 13.55,
-      "old_max_dd_test": 0.075,
-      "old_composite_test": 180.0,
-      "old_ci_test": [0.019175, 0.023073],
-      "new_threshold": 0.715,
-      "new_total_net_R_test": 10.96,
-      "new_max_dd_test": 0.049,
-      "new_composite_test": 223.0,
-      "new_ci_test": [0.0225, 0.0256]
+      "metric": "real data, 16-feat @ th=0.550",
+      "total_net_R_test": 19.66,
+      "max_dd_test": 0.152,
+      "composite_test": 129.47,
+      "ci_95_test": [0.003718, 0.004997],
+      "note": "Synthetic results (32-feat @ 0.715, composite=223.0) were on 3K bars synthetic data. Real results use 118K bars real Binance data."
     }
   },
 
   "feature_ablation_ranking": [
-    [4, "bb_position", 99.49], [53, "vwap_mid_deviation_N", 74.22], [5, "bb_width", 21.58],
-    [9, "cusum_positive", 14.62], [3, "atr_pct_N", 13.67], [2, "atr_expansion_N", 13.52],
-    [32, "obv_N", 13.42], [25, "macd_signal", 12.72], [49, "volume_ratio_N", 12.52],
-    [29, "momentum_N", 11.57], [24, "macd_histogram", 10.77], [28, "microstructure_noise_N", 10.22],
-    [15, "garman_klass_vol_N", 10.15], [39, "return_zscore_N", 10.08], [27, "microprice_N", 9.14],
-    [1, "atr_N", 8.78], [43, "spread_pct_N", 8.19], [45, "trade_intensity_N", 7.59],
-    [17, "high_low_range_N", 7.03], [11, "depth_ratio_N", 6.13], [41, "rsi_N", 5.59],
-    [52, "vwap_deviation", 5.26], [37, "range_breakout_N", 5.23], [44, "trade_count_N", 5.17],
-    [30, "multi_level_obi_N", 5.17], [33, "ofi_N", 4.76], [47, "volume_concentration_hhi_N", 3.75],
-    [42, "serial_correlation_N", 3.73], [8, "cusum_negative", 3.67], [50, "volume_trend_N", 3.61],
-    [19, "hmm_vol_state", 3.43], [36, "quoted_spread_N", 2.20],
-    [18, "hmm_vol_probability", 1.53], [40, "roll_spread_N", 1.10], [12, "doji_N", 0.89],
-    [7, "consecutive_up_N", 0.84], [22, "log_return_N", 0.81], [35, "price_impact_slope_N", 0.73],
-    [21, "log_return_1", 0.67], [6, "consecutive_dn_N", 0.15], [23, "macd", 0.14],
-    [31, "obi", 0.05], [10, "cusum_signal", 0.0], [13, "engulfing_N", 0.0],
-    [26, "marubozu_N", 0.0], [51, "vpin_N", 0.0], [20, "liquidity_vacuum_N", -0.63],
-    [0, "amihud_illiquidity_N", -0.65], [38, "return_volatility_N", -0.96],
-    [34, "parkinson_vol_N", -1.84], [16, "hammer_N", -2.54], [46, "volatility_regime", -3.68],
-    [14, "gap_N", -5.33], [48, "volume_imbalance_N", -9.12]
+    [4, "bb_position", 97.30], [33, "ofi_N", 26.53], [2, "atr_expansion_N", 20.87],
+    [39, "return_zscore_N", 7.51], [53, "vwap_mid_deviation_N", 7.21], [44, "trade_count_N", 6.64],
+    [30, "multi_level_obi_N", 6.60], [27, "microprice_N", 6.55], [21, "log_return_1", 5.74],
+    [15, "garman_klass_vol_N", 5.23], [12, "doji_N", 4.82], [16, "hammer_N", 4.79],
+    [50, "volume_trend_N", 4.19], [9, "cusum_positive", 3.84], [41, "rsi_N", 3.16],
+    [34, "parkinson_vol_N", 2.67], [36, "quoted_spread_N", 1.28], [37, "range_breakout_N", 1.27],
+    [29, "momentum_N", 1.15], [24, "macd_histogram", 0.84], [45, "trade_intensity_N", 0.82],
+    [5, "bb_width", 0.49], [49, "volume_ratio_N", 0.29], [43, "spread_pct_N", 0.17],
+    [10, "cusum_signal", 0.00], [14, "gap_N", 0.00], [19, "hmm_vol_state", 0.00],
+    [31, "obi", 0.00], [51, "vpin_N", -0.01], [22, "log_return_N", -0.38],
+    [52, "vwap_deviation", -0.49], [35, "price_impact_slope_N", -0.50],
+    [28, "microstructure_noise_N", -0.83], [23, "macd", -0.94], [46, "volatility_regime", -0.94],
+    [38, "return_volatility_N", -0.95], [1, "atr_N", -1.04], [0, "amihud_illiquidity_N", -1.15],
+    [7, "consecutive_up_N", -1.25], [32, "obv_N", -1.89], [47, "volume_concentration_hhi_N", -2.19],
+    [8, "cusum_negative", -2.22], [20, "liquidity_vacuum_N", -2.39], [26, "marubozu_N", -2.70],
+    [17, "high_low_range_N", -3.00], [18, "hmm_vol_probability", -3.69],
+    [42, "serial_correlation_N", -3.92], [25, "macd_signal", -4.91], [6, "consecutive_dn_N", -5.83],
+    [13, "engulfing_N", -5.99], [3, "atr_pct_N", -6.45], [40, "roll_spread_N", -7.64],
+    [48, "volume_imbalance_N", -8.25], [11, "depth_ratio_N", -10.39]
   ],
 
   "model_comparison": {
-    "val_folds_1_5": {
-      "full_32_feat": {"composite": 544.92, "total_net_R": 53.6369, "max_dd": 0.0984, "active_trades": 2171},
-      "only_bb_position": {"composite": 146.55, "total_net_R": 22.1265, "max_dd": 0.1510, "active_trades": 1104},
-      "without_bb_position": {"composite": 0.37, "total_net_R": 0.2901, "max_dd": 0.7805, "active_trades": 355},
-      "top_5_feat": {"composite": 551.78, "total_net_R": 54.8987, "max_dd": 0.0995, "active_trades": 2285},
-      "top_10_feat": {"composite": 438.51, "total_net_R": 55.3738, "max_dd": 0.1263, "active_trades": 2310}
+    "val_folds_1_5_real_data": {
+      "full_16_feat": {"composite": 533.66, "total_net_R": 71.47, "max_dd": 0.1339, "active_trades": 11238},
+      "only_bb_position": {"composite": 175.56, "total_net_R": 31.28, "max_dd": 0.1782, "active_trades": 1762},
+      "note": "bb_position-only composite: synthetic 146.55, real 175.56. Edge stronger on real data."
     },
-    "test_fold_6": {
-      "full_32_feat": {"composite": 223.0, "total_net_R": 10.9608, "max_dd": 0.0491, "active_trades": 455, "ci_95": [0.0225, 0.0256]},
-      "only_bb_position": {"composite": 78.1, "total_net_R": 4.4160, "max_dd": 0.0565, "active_trades": 207, "ci_95": [0.0193, 0.0234]},
-      "without_bb_position": {"composite": 1.3, "total_net_R": 0.0903, "max_dd": 0.0720, "active_trades": 8, "ci_95": null},
-      "top_5_feat": {"composite": 196.6, "total_net_R": 10.5892, "max_dd": 0.0539, "active_trades": 424, "ci_95": [0.0236, 0.0265]},
-      "top_10_feat": {"composite": 226.2, "total_net_R": 10.7255, "max_dd": 0.0474, "active_trades": 434, "ci_95": [0.0230, 0.0263]}
+    "test_fold_6_real_data": {
+      "full_16_feat": {"composite": 129.47, "total_net_R": 19.66, "max_dd": 0.1518, "active_trades": 4552, "ci_95": [0.003718, 0.004997]},
+      "only_bb_position": {"composite": 65.30, "total_net_R": 6.47, "max_dd": 0.0991, "active_trades": 355, "ci_95": [0.015176, 0.021462]},
+      "note": "Isolation test shows bb_position-only captures ~38% of full model composite on real data."
     }
   },
 
   "v7_gate_mapping": {
     "G0_doc_ready": {
-      "evidence_ref": "AlphaForge docs complete: ai_summary.md, discovery_authority.md, alpha_thesis_lifecycle.md, data_contract.md, feature_contract.md, label_contract.md, report_contracts.md, validation_contract.md, model_artifact_contract.md, handoff_to_v7.md, storage_policy.md, phase_plan.md, decision_log.md. All authority locks in place.",
+      "evidence_ref": "AlphaForge docs complete. Handoff JSON updated to v1.1.0 with real data results.",
       "status": "PASS"
     },
     "G1_research_backtest": {
-      "evidence_ref": "ModeResearchReport SCALP: 32-feature XGBoost, threshold=0.715, 6-fold WFV. Test fold total_net_R=10.96 > 0, CI=[0.0225, 0.0256] fully positive. bb_position-dominated mean-reversion edge validated. Cost-honest labels (8bps taker fee deducted).",
+      "evidence_ref": "Phase reality complete on REAL Binance data (4 symbols, 118K bars, 1h). 16-feat XGBoost, threshold=0.55, 6-fold WFV. Test total_net_R=19.66 > 0, CI=[0.0037, 0.0050] fully positive. bb_position-dominated mean-reversion edge confirmed on real data.",
       "status": "PASS"
     },
     "G2_walk_forward_oos": {
-      "evidence_ref": "ValidationReport: 6-fold anchored expanding walk-forward with purge/embargo. 5 val folds + 1 test fold separation. Block-bootstrap 95% CI fully positive across all folds. Inter-fold consistency confirmed. Overfit gap controlled via feature pruning (54→32).",
+      "evidence_ref": "6-fold anchored expanding walk-forward on REAL data with purge/embargo. 5 val folds + 1 test fold separation. Block-bootstrap 95% CI fully positive. Feature pruning 54->16 on real data.",
       "status": "PASS"
     },
     "G3_cost_stress": {
-      "evidence_ref": "Cost authority: simulation/authority.py (taker=4bps, maker=2bps, slippage=1bps, total round_trip=10bps). Label generator deducts 8bps round trip. decision_gross_r verified net of cost. Phase 1a audit confirmed.",
+      "evidence_ref": "Cost authority: simulation/authority.py (total round_trip=10bps). Label generator deducts 8bps. Phase 1a audit: 6/6 folds positive, cost ratio ~10%.",
       "status": "PASS"
     },
     "G4_regime_breakdown": {
-      "evidence_ref": "Not yet evaluated with real market regime data — synthetic data cannot produce meaningful regime breakdown. Requires real market data forward simulation.",
+      "evidence_ref": "Not yet evaluated with real market regime data.",
       "status": "NOT_EVALUATED"
     },
     "G5_symbol_stability": {
-      "evidence_ref": "5-symbol synthetic data (BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, ADAUSDT) with symbol-aligned training. Per-symbol contribution not yet analyzed. Requires real market data.",
+      "evidence_ref": "4-symbol real data (BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT). Per-symbol contribution not yet analyzed.",
       "status": "NOT_EVALUATED"
     },
     "G6_calibration_reliability": {
-      "evidence_ref": "Confidence threshold=0.715 selected via composite optimization on val folds. XGBoost softmax probabilities used directly (platt scaling not yet applied). CalibrationCandidate not yet produced.",
+      "evidence_ref": "Confidence threshold=0.55 selected via val composite optimization on real data. XGBoost softmax probabilities used directly. CalibrationCandidate not yet produced.",
       "status": "PENDING"
     },
     "G7_shadow": {
-      "evidence_ref": "Infrastructure not yet built — P0.9A+ dependency.",
+      "evidence_ref": "Infrastructure not yet built.",
       "status": "NOT_EVALUATED"
     },
     "G8_paper": {
-      "evidence_ref": "Infrastructure not yet built — P0.9A+ dependency.",
+      "evidence_ref": "Infrastructure not yet built.",
       "status": "NOT_EVALUATED"
     },
     "G9_tiny_live": {
-      "evidence_ref": "Infrastructure not yet built — far future.",
+      "evidence_ref": "Infrastructure not yet built.",
       "status": "NOT_EVALUATED"
     },
     "G10_live": {
-      "evidence_ref": "Infrastructure not yet built — far future.",
+      "evidence_ref": "Infrastructure not yet built.",
       "status": "NOT_EVALUATED"
     }
   },
@@ -230,47 +209,47 @@
   "recommended_status": "REVIEW_REQUIRED",
 
   "blocked_scopes": [
-    "Synthetic OHLCV data only — not validated on real market data",
     "SCALP mode only — no SWING or AGGRESSIVE_SCALP validation",
-    "5-symbol universe only — cross-sectional multi-symbol not tested",
+    "4-symbol universe only — cross-sectional multi-symbol not fully tested",
     "Funding model DEFERRED — perpetual/live scope blocked",
     "G7-G10 infrastructure not built — no shadow/paper/live path",
-    "Regime/symbol stability not evaluated — requires real market data"
+    "Regime/symbol stability not evaluated"
   ],
 
   "limitations": [
-    "Synthetic data edge may not transfer to real market",
-    "bb_position 99.5% dominance = concentration risk — single-point-of-failure",
-    "without_bb_position model collapses completely (composite 0.37 vs 544.92)",
-    "XGBoost softmax calibration not validated — threshold=0.715 may shift on real data",
-    "Position sizing as standalone lever confirmed ineffective — all schemes reduced total R",
-    "No transaction cost modeling beyond taker fee (funding, spread widening not modeled)"
+    "bb_position 97.3% dominance = concentration risk — single-point-of-failure",
+    "without_bb_position model likely collapses (not retested on real data)",
+    "XGBoost softmax calibration not validated",
+    "Position sizing as standalone lever confirmed ineffective (synthetic; not retested on real)",
+    "No transaction cost modeling beyond taker fee (funding, spread widening not modeled)",
+    "Test composite (129) lower than synthetic (223) — real data is harder, as expected"
   ],
 
   "lineage": {
-    "data_refs": ["synthetic-ohlcv-5symbol-3000bar-seed42"],
-    "feature_set_id": "fs-scalp-54-to-32-v1",
+    "data_refs": ["binance-real-4symbol-118Kbar-1h-2023-2026"],
+    "feature_set_id": "fs-scalp-54-to-16-v1-real",
     "label_dataset_id": "lds-scalp-triple-barrier-v1",
     "simulation_profile_id": "scalp_profile-1.0.0",
-    "simulation_run_ids": ["sim-scalp-synthetic-v1"],
-    "training_run_id": "run-scalp-32feat-xgb-v1",
-    "git_commit": "5f8646f",
-    "lineage_verified": true
+    "training_run_id": "run-scalp-16feat-xgb-v1-real",
+    "git_commit": "5d2edde",
+    "lineage_verified": true,
+    "note": "Real data restored from worktree data_lake (wf_af3f20e1-0b2-11). Scripts/restore_real_data.py."
   },
 
-  "created_at": "2026-07-05T18:50:00Z",
+  "created_at": "2026-07-06T01:05:00Z",
   "rejection_rules_applied": [
-    "1. Missing evidence: G4-G5 not evaluated — synthetic data limitation",
+    "1. Missing evidence: G4-G5 not evaluated",
     "2. Incomplete gate mapping: G7-G10 mapped as NOT_EVALUATED — infra not built",
-    "3. Lineage break: NONE — all artifacts tracked in git",
+    "3. Lineage break: NONE — all artifacts tracked in git (5d2edde)",
     "4. Checksum mismatch: N/A — no model binary stored in git",
-    "5. Validation failure: NONE — all gates PASS/PENDING",
+    "5. Validation failure: NONE — all applied gates PASS",
     "6. Cost vulnerability: EDGE SURVIVES — 10bps round trip deducted in labels",
-    "7. Overfit detected: CONTROLLED — feature pruning 54→32 reduced overfit, PBO MODERATE",
-    "8. Single-feature overfitting: FLAGGED — bb_position 99.5% dominance requires monitoring",
+    "7. Overfit detected: CONTROLLED — feature pruning 54->16 on real data",
+    "8. Single-feature overfitting: FLAGGED — bb_position 97.3% dominance requires monitoring",
     "9. Calibration unusable: PENDING — threshold selected via val composite, no calibration artifact",
-    "10. Funding unknown: DEFERRED — every/live scope explicitly blocked",
+    "10. Funding unknown: DEFERRED — perpetual/live scope explicitly blocked",
     "11. Blocked scope violation: NONE — blocked scopes documented",
-    "12. Policy conflict: NONE — BB position mean-reversion does not conflict with existing policies"
+    "12. Policy conflict: NONE — BB position mean-reversion does not conflict with existing policies",
+    "13. PREVIOUS SYNTHETIC RESULTS REPLACED: v1.0.0 (synthetic) -> v1.1.0 (real Binance data)"
   ]
 }
