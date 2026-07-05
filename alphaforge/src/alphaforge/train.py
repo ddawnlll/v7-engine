@@ -710,7 +710,9 @@ def walk_forward_validate(
 
         pred_labels = np.array(["LONG_NOW" if p == 0 else "SHORT_NOW" if p == 1 else "NO_TRADE" for p in y_pred], dtype=object)
         pred_gross_r = val_action_net[np.arange(len(y_pred)), y_pred]
-        pred_metrics = compute_oos_metrics(pred_labels.tolist(), pred_gross_r.tolist(), fee_pct=_ROUND_TRIP_COST_FRACTIONAL)
+        # pred_gross_r is ALREADY net of cost (deducted in label generator).
+        # fee_pct=0.0 avoids double-counting.
+        pred_metrics = compute_oos_metrics(pred_labels.tolist(), pred_gross_r.tolist(), fee_pct=0.0)
 
         val_accuracy = float(np.mean(y_pred == y_val))
         train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
@@ -729,7 +731,7 @@ def walk_forward_validate(
 
         true_labels = np.array(["LONG_NOW" if t == 0 else "SHORT_NOW" if t == 1 else "NO_TRADE" for t in y_val], dtype=object)
         true_gross_r = val_action_net[np.arange(len(y_val)), y_val]
-        oracle_metrics = compute_oos_metrics(true_labels.tolist(), true_gross_r.tolist(), fee_pct=_ROUND_TRIP_COST_FRACTIONAL)
+        oracle_metrics = compute_oos_metrics(true_labels.tolist(), true_gross_r.tolist(), fee_pct=0.0)
         net_r_expectancy_val = float(pred_metrics.get("avg_net_R_per_active_trade", 0.0))
 
         results.append({
@@ -861,7 +863,8 @@ def collect_metrics(
     wfv_results: List[dict],
     X: np.ndarray,
     feature_names: List[str],
-    fee_pct: float = _ROUND_TRIP_COST_FRACTIONAL,
+    fee_pct: float = 0.0,
+    route_cost_bps: float = 8.0,
 ) -> dict:
     """Collect and aggregate training metrics."""
     val_accs = [r["val_accuracy"] for r in wfv_results]
@@ -873,7 +876,7 @@ def collect_metrics(
 
     overfit = compute_overfit_gap(wfv_results)
     inter_fold_consistency = compute_inter_fold_consistency(wfv_results)
-    round_trip_cost_r = fee_pct  # authority: 8 bps in fractional return space
+    round_trip_cost_r = 0.0  # fees already deducted in decision_gross_r
 
     from alphaforge.reports.metrics import compute_oos_metrics
 
@@ -945,9 +948,9 @@ def collect_metrics(
         "confidence_threshold": CONFIDENCE_THRESHOLD,
         "low_conf_rate_pct": round(low_conf_rate, 2),
         "cost_decomposition": {
-            "fee_pct": fee_pct,
-            "round_trip_cost_bps": round_trip_cost_bps,
-            "round_trip_cost_r": round_trip_cost_r,
+            "fee_pct (already in decision_gross_r)": 0.0,
+            "authority_round_trip_cost_bps": _AUTHORITY["round_trip_taker_fee_bps"],
+            "round_trip_cost_r (in values)": 0.0,
         },
         "features": feature_names,
     }
@@ -1239,8 +1242,7 @@ def main():
 
     # Step 6: Collect metrics
     print("\n[6/6] Collecting metrics...")
-    fee_pct = _ROUND_TRIP_COST_FRACTIONAL  # authority: 8 bps round trip
-    metrics = collect_metrics(wfv_results, X_clean, feat_names, fee_pct=fee_pct)
+    metrics = collect_metrics(wfv_results, X_clean, feat_names)
 
     print(f"\n{'='*60}")
     print(f"  TRAINING RESULTS â€” {mode}")
@@ -1252,6 +1254,7 @@ def main():
     print(f"  Overfit Gap:                 {metrics['overfit_gap']:.4f}")
     print(f"  Train-OOS Correlation:       {metrics['train_oos_correlation']:.4f}")
     print(f"  PBO Risk:                    {metrics['pbo_risk']}")
+    print(f"  Net Expectancy R (per active trade): {metrics['net_expectancy_r']:.6f}")
     print(f"  Feature Count:               {metrics['feature_count']}")
     print(f"  Total Samples:               {metrics['n_samples']}")
     print(f"  Walk-Forward Folds:          {metrics['n_folds']}")
@@ -1261,7 +1264,7 @@ def main():
     print(f"  Confidence Threshold:        {metrics['confidence_threshold']}")
     print(f"  Low Confidence Rate:         {metrics['low_conf_rate_pct']:.1f}%")
     cd = metrics['cost_decomposition']
-    print(f"  Fee (bps):                   {cd['fee_pct']} ({cd['round_trip_cost_bps']} bps round-trip)")
+    print(f"  Authority round-trip cost: {cd['authority_round_trip_cost_bps']:.0f} bps (already in decision_gross_r)")
     print(f"{'='*60}\n")
 
     # Save report if requested
