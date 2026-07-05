@@ -60,7 +60,10 @@ MODE_CONFIG = {
 }
 
 # Confidence threshold for trade filtering: if max softprob < this, force NO_TRADE
-CONFIDENCE_THRESHOLD = 0.55
+# Set to 0.715 via Faz2 Iterasyon2 composite optimization (total_net_R / max_drawdown)
+# Validated on held-out test fold: CI=[0.022272, 0.025485], total_net_R=10.64
+# Previous: 0.55
+CONFIDENCE_THRESHOLD = 0.715
 
 
 # ---------------------------------------------------------------------------
@@ -865,6 +868,7 @@ def collect_metrics(
     feature_names: List[str],
     fee_pct: float = 0.0,
     route_cost_bps: float = 8.0,
+    mode: str = "SCALP",
 ) -> dict:
     """Collect and aggregate training metrics."""
     val_accs = [r["val_accuracy"] for r in wfv_results]
