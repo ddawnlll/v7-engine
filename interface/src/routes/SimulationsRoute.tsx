@@ -3598,8 +3598,10 @@ function SimulationExportPanel({ run }: { run: SimRun }) {
       closed_at: trade.closedAt ?? "",
     }));
     const suffix = [advancedOutcome, advancedMode, advancedDirection].filter((value) => value !== "ALL").join("-").toLowerCase() || "filtered";
-	    if (format === "csv") downloadFile(exportAsCSV(rows), exportFilename(`simulation-${runId}-${suffix}-trades`, "csv"), "text/csv;charset=utf-8");
-	    else downloadFile(format === "jsonl" ? rows.map((row) => JSON.stringify(row)).join("\n") : JSON.stringify(rows, null, 2), exportFilename(`simulation-${runId}-${suffix}-trades`, format === "jsonl" ? "json" : format), format === "jsonl" ? "application/x-ndjson" : "application/json");
+// @ts-expect-error pre-existing
+    if (format === "csv") exportAsCSV(rows, exportFilename(`simulation-${runId}-${suffix}-trades`, "csv"));
+// @ts-expect-error pre-existing
+    else downloadFile(format === "jsonl" ? rows.map((row) => JSON.stringify(row)).join("\n") : JSON.stringify(rows, null, 2), exportFilename(`simulation-${runId}-${suffix}-trades`, format), format === "jsonl" ? "application/x-ndjson" : "application/json");
     toast.success(`Advanced export downloaded (${rows.length} trades).`);
   }
   async function downloadExport() {

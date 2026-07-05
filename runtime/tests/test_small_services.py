@@ -272,3 +272,148 @@ class TestSwingPatchValidation:
     def test_imports(self):
         svc = SwingPatchValidationService()
         assert svc is not None
+
+
+# ── dashboard_service ──────────────────────────────────────────────
+
+class TestDashboardService:
+    def test_build_portfolio_summary_none(self):
+        from runtime.services.dashboard_service import DashboardService
+        result = DashboardService._build_portfolio_summary(None)
+        assert result["total_equity"] == 0.0
+        assert result["open_positions"] == 0
+
+    def test_build_portfolio_summary_with_data(self):
+        from runtime.services.dashboard_service import DashboardService
+        result = DashboardService._build_portfolio_summary({
+            "total_equity": 50000.0, "cash_balance": 30000.0,
+            "open_positions": 2, "closed_trades": 10,
+            "snapshot": {"net_r": 5.5},
+        })
+        assert result["total_equity"] == 50000.0
+        assert result["net_r"] == 5.5
+
+    def test_build_recent_events(self):
+        from runtime.services.dashboard_service import DashboardService
+        signals = [{"created_at_utc": "2026-01-01T01:00:00Z", "direction": "BUY", "symbol": "BTC", "summary": "ok"}]
+        runs = [{"finished_at_utc": "2026-01-01T00:00:00Z", "status": "COMPLETED", "symbols": ["BTC"], "summary": "done"}]
+        events = DashboardService._build_recent_events(signals, runs)
+        assert len(events) == 2
+        event_types = {e["event_type"] for e in events}
+        assert "SIGNAL_EMITTED" in event_types
+        assert "SCAN_COMPLETED" in event_types
+
+    def test_build_equity_curve(self):
+        from runtime.services.dashboard_service import DashboardService
+        history = [
+            {"created_at_utc": "2026-01-01T00:00:00Z", "total_equity": 1000.0, "snapshot": {"net_r": 0.0}},
+            {"created_at_utc": "2026-01-02T00:00:00Z", "total_equity": 1050.0, "snapshot": {"net_r": 1.5}},
+        ]
+        curve = DashboardService._build_equity_curve(history)
+        assert len(curve) == 2
+        assert curve[-1]["equity"] == 1000.0  # reversed
+
+    def test_split_csv(self):
+        from runtime.services.dashboard_service import _split_csv
+        assert _split_csv("a,b,c", []) == ["a", "b", "c"]
+        assert _split_csv(None, ["x"]) == ["x"]
+        assert _split_csv("", ["y"]) == ["y"]
+        assert _split_csv(" a , b ", []) == ["a", "b"]
+
+
+# ── learning_effectiveness_service ─────────────────────────────────
+
+class TestLearningEffectiveness:
+    def test_avg_realized_r(self):
+        from runtime.services.learning_effectiveness_service import LearningEffectivenessService
+        assert LearningEffectivenessService._avg_realized_r([{"realized_r": 1.0}, {"realized_r": -0.5}]) == 0.25
+        assert LearningEffectivenessService._avg_realized_r([]) == 0.0
+
+    def test_avg_severity(self):
+        from runtime.services.learning_effectiveness_service import LearningEffectivenessService
+        rows = [{"order_id": "o1"}, {"order_id": "o2"}]
+        sev = {"o1": 4.0, "o2": 2.0}
+        assert LearningEffectivenessService._avg_severity(rows, sev) == 3.0
+
+    def test_win_rate(self):
+        from runtime.services.learning_effectiveness_service import LearningEffectivenessService
+        rows = [{"realized_r": 1.0}, {"realized_r": -0.5}, {"realized_r": 0.3}]
+        assert LearningEffectivenessService._win_rate(rows) == 2 / 3
+
+    def test_is_adjustment_active(self):
+        from runtime.services.learning_effectiveness_service import LearningEffectivenessService
+        adj = {"calibration_multiplier": 1.05, "entry_penalty": 0.02, "component_penalty": 0.0, "stop_loss_multiplier": 1.02}
+        assert LearningEffectivenessService._is_adjustment_active(adj, "confidence_calibration") is True
+        assert LearningEffectivenessService._is_adjustment_active(adj, "entry_penalty") is True
+        assert LearningEffectivenessService._is_adjustment_active(adj, "component_penalty") is False
+        assert LearningEffectivenessService._is_adjustment_active(adj, "adaptive_stop") is True
+        assert LearningEffectivenessService._is_adjustment_active(adj, "unknown") is False
+
+    def test_health_score(self):
+        from runtime.services.learning_effectiveness_service import LearningEffectivenessService
+        assert LearningEffectivenessService._health_score({"IMPROVING": 3, "DEGRADING": 1}, 4) == 0.5
+        assert LearningEffectivenessService._health_score({}, 0) == 0.0
+
+    def test_safety_notes(self):
+        from runtime.services.learning_effectiveness_service import LearningEffectivenessService
+        notes = LearningEffectivenessService._safety_notes({"provisional": True, "summary": "test"}, {"status": "FAIL", "summary": "bad"})
+        assert len(notes) == 2
+        assert LearningEffectivenessService._safety_notes({"provisional": False}, {"status": "PASS"}) == []
+
+
+# ── simulation_diagnostics_service ─────────────────────────────────
+
+class TestSimulationDiagnostics:
+    def test_zero_distribution(self):
+        from runtime.services.simulation_diagnostics_service import SimulationDiagnosticsService
+        dist = SimulationDiagnosticsService._zero_distribution()
+        assert dist["BUY"] == 0
+        assert dist["SELL"] == 0
+        assert len(dist) > 5
+
+    def test_percentile(self):
+        from runtime.services.simulation_diagnostics_service import SimulationDiagnosticsService
+        values = [1.0, 2.0, 3.0, 4.0, 5.0]
+        assert SimulationDiagnosticsService._percentile(values, 0.0) == 1.0
+        assert SimulationDiagnosticsService._percentile(values, 0.5) == 3.0
+        assert SimulationDiagnosticsService._percentile(values, 1.0) == 5.0
+        assert SimulationDiagnosticsService._percentile([], 0.5) is None
+
+    def test_group(self):
+        from runtime.services.simulation_diagnostics_service import SimulationDiagnosticsService
+        rows = [{"mode": "SWING"}, {"mode": "SWING"}, {"mode": "SCALP"}]
+        grouped = SimulationDiagnosticsService._group(rows, "mode")
+        assert len(grouped["SWING"]) == 2
+        assert len(grouped["SCALP"]) == 1
+
+    def test_classify(self):
+        from runtime.services.simulation_diagnostics_service import SimulationDiagnosticsService
+        svc = SimulationDiagnosticsService()
+        assert svc._classify({"analysis_error": True}, 0.5) == "analysis_error"
+        assert svc._classify({"direction": "BUY", "confidence": 0.6}, 0.5) == "BUY"
+        assert svc._classify({"direction": "BUY", "confidence": 0.3}, 0.7) == "low_confidence"
+        assert svc._classify({"direction": "NEUTRAL"}, 0.5) == "NO_TRADE"
+        assert svc._classify({"runtime_filter_reason": "duplicate"}, 0.5) == "duplicate_open"
+        assert svc._classify({"fallback_used": True, "direction": "BUY"}, 0.5) == "analysis_fallback"
+
+
+# ── calibration_status_service ─────────────────────────────────────
+
+class TestCalibrationStatusService:
+    def test_new_bucket(self):
+        from runtime.services.calibration_service import CalibrationStatusService
+        bucket = CalibrationStatusService._new_bucket()
+        assert bucket["total"] == 0
+        assert bucket["regime"] == "UNKNOWN"
+
+    def test_average(self):
+        from runtime.services.calibration_service import CalibrationStatusService
+        assert CalibrationStatusService._average(10.0, 5) == 2.0
+        assert CalibrationStatusService._average(10.0, 0) is None
+
+    def test_to_float(self):
+        from runtime.services.calibration_service import CalibrationStatusService
+        assert CalibrationStatusService._to_float("3.14") == 3.14
+        assert CalibrationStatusService._to_float(None) is None
+        assert CalibrationStatusService._to_float("") is None
+        assert CalibrationStatusService._to_float("abc") is None

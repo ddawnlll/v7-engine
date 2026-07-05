@@ -1,0 +1,11 @@
+services:
+  v7-engine:
+    build: .
+    image: v7-engine:latest
+    container_name: v7-engine
+    environment:
+      - PYTHONPATH=/app/alphaforge/src:/app/v7/src
+      - V4_DATABASE_URL=${V4_DATABASE_URL:-sqlite://}
+    volumes:
+      - ./data:/app/data
+    command: python -m pytest lib/tests/ simulation/tests/ integration/tests/ runtime/tests/ v7/tests/ alphaforge/tests/ -q

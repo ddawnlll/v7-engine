@@ -198,10 +198,10 @@ describe('queueLegacyScan', () => {
 
     const payload = await fetchOrdersForScope(1000, 'binance-usdm-main')
 
-    expect(payload.open_orders).toHaveLength(1)
-    expect(payload.closed_orders).toHaveLength(0)
-    expect(payload?.open_orders?.[0]?.lifecycle_status).toBe('OPEN')
-    expect(payload?.open_orders?.[0]?.is_open).toBe(true)
+    expect(payload.open_orders!).toHaveLength(1)
+    expect(payload.closed_orders!).toHaveLength(0)
+    expect(payload.open_orders![0]?.lifecycle_status).toBe('OPEN')
+    expect(payload.open_orders![0]?.is_open).toBe(true)
   })
 
   it('posts explicit live sync requests through the runtime profile sync route', async () => {

@@ -49,6 +49,8 @@ install:
 
 PYTHONPATH_V7 := alphaforge/src:v7/src
 
+PYTHONPATH_V7 := alphaforge/src:v7/src
+
 test:
 ifdef file
 	PYTHONPATH=$(PYTHONPATH_V7) $(PYTHON) -m pytest $(file) -v
