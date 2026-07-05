@@ -24,11 +24,13 @@ setup:
 install:
 	pip install -q -U pip pytest requests mypy ruff
 
+PYTHONPATH_V7 := alphaforge/src:v7/src
+
 test:
 ifdef file
-	python -m pytest $(file) -v
+	PYTHONPATH=$(PYTHONPATH_V7) python -m pytest $(file) -v
 else
-	python -m pytest lib/tests/ -v
+	PYTHONPATH=$(PYTHONPATH_V7) python -m pytest lib/tests/ simulation/tests/ integration/tests/ runtime/tests/ v7/tests/ alphaforge/tests/ -v
 endif
 
 check-lib-boundaries:
@@ -62,11 +64,8 @@ test-system:
 	@echo "  System tests complete ✓"
 
 test-all:
-	@echo "=== Running all lib/ tests ==="
-	@python -m pytest lib/tests/ -v -q 2>&1
-	@echo ""
-	@echo "=== Running all system tests ==="
-	@python -m pytest integration/tests/ -v -q 2>&1
+	@echo "=== Running all tests ==="
+	@PYTHONPATH=$(PYTHONPATH_V7) python -m pytest lib/tests/ simulation/tests/ integration/tests/ runtime/tests/ v7/tests/ alphaforge/tests/ -q 2>&1
 	@echo ""
 	@echo "  All tests complete ✓"
 
