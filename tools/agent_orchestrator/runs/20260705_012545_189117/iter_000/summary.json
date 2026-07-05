@@ -1,0 +1,17 @@
+{
+  "iteration": 1,
+  "goal": "Create and test one deterministic AlphaForge alpha candidate",
+  "strategist_task": "Create a new alpha factor in the AlphaForge framework that uses a volume-weighted momentum signal. Write the factor to a file named 'vwap_momentum_factor.py' in the factors directory. The factor should: 1) load daily price and volume data from a data source (assume a CSV with columns: date, ticker, close, volume, vwap), 2) compute the 20-day rolling VWAP, 3) calculate the percentage difference between current close and 20-day VWAP, 4) normalize the signal to z-scores over a 60-day rolling window, 5) generate long/short signals based on z-score thresholds of ±1.5. Train on data from 2020-01-01 to 2021-12-31, test on 2022-01-01 to 2022-12-31. Run a parameter sweep over lookback periods [10, 20, 30, 40] and z-score thresholds [1.0, 1.5, 2.0] (12 combinations total). Output a CSV with columns: ticker, date, signal, and a performance summary. In your completion summary, include: train_start, train_end, test_start, test_end, n_combinations (12), and the metric (IC or Sharpe ratio of the best parameter set).",
+  "worker_exit_code": -1,
+  "gate_verdict": "FAIL",
+  "gate_reasons": [
+    "Worker exited with code -1",
+    "Worker log exists (146667 bytes)",
+    "Git HEAD: 97ed1227d68e",
+    "No tracked files modified",
+    "Changes outside allowed paths:\n?? tools/momentum_factor_research/",
+    "No authority files touched",
+    "Report missing required fields: train_start, train_end, test_start, test_end, n_combinations, metric"
+  ],
+  "overall_status": "FAIL"
+}

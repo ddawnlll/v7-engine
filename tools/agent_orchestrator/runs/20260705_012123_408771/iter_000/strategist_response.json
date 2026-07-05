@@ -1,0 +1,15 @@
+{
+  "worker_task": "Create a new file `factors/momentum_1d.py` implementing a simple 1-day momentum factor. The factor should compute the daily return (close(t) / close(t-1) - 1) for each stock in the universe. Use the data loading pattern from existing factors (e.g., `factors/example_factor.py` if it exists, otherwise use `pandas-datareader` or a simple mock). Train on 2020-01-01 to 2020-12-31, test on 2021-01-01 to 2021-12-31. Run a backtest using `backtest.py` with 5 parameter combinations (e.g., different lookback windows). Report the performance metric (IC) for each combination. In your completion summary, include: train_start='2020-01-01', train_end='2020-12-31', test_start='2021-01-01', test_end='2021-12-31', n_combinations=5, metric=IC (the best IC value from the test period).",
+  "rationale": "This is a small, safe, reversible first step: implementing the simplest possible momentum factor (1-day return) to establish the factor creation pipeline and test the backtesting infrastructure. The 1-day momentum is easy to verify and debug.",
+  "expected_artifacts": [
+    "factors/momentum_1d.py",
+    "backtest results output (printed or logged)"
+  ],
+  "success_criteria": [
+    "factors/momentum_1d.py is created and importable",
+    "backtest runs without errors",
+    "IC metric is computed and reported",
+    "completion summary contains all required report fields"
+  ],
+  "risk_notes": "Low risk. The factor is simple and deterministic. Ensure no modification to protected files (evaluation.py, factors.py, simulation_adapter.py, fast_simulator.py, authority_map.md). The backtest may fail if data is unavailable; mock data can be used as fallback."
+}
