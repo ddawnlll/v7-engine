@@ -451,12 +451,16 @@ def build_aligned_training_frame(
     ohlcv: dict,
     mode: str,
     feature_groups: Optional[List[str]] = None,
+    n_jobs: int = 1,
 ) -> dict:
     """Build a timestamp-aligned training frame.
 
     Rows are aligned per symbol first, then merged into a timestamp-major
     order so walk-forward validation can operate on chronological windows
     instead of flattened symbol blocks.
+
+    When n_jobs > 1, per-symbol processing is parallelised with joblib.loky
+    (separate processes, bypasses the GIL for numpy-heavy feature computation).
     """
     from alphaforge.features.pipeline import compute_features
 

@@ -1212,3 +1212,38 @@ It is:
 - CPCV validation: LOCKABLE_WITH_HOLDS (needs empirical calibration)
 - Meta-labeling: LOCKABLE_WITH_HOLDS (threshold tuning needed)
 
+---
+
+## Phase Reality — Real Data Verification + Alpha #1 Lock (2026-07-06)
+
+### What happened
+1. **Veri kaynagi netlesti**: candidate_v031d.py sonucu (6-fold WFV, net_R=0.0047) **gercek Binance data** ile uretildi. DataPassport: is_real_data=true.
+2. **Data restored**: worktree data_lake → data/raw/ kopyalandi, 4 symbol (BTCUSDT/ETHUSDT/SOLUSDT/BNBUSDT), 1h, 2023-2026, ~118K bars.
+3. **Phase 1 verified**: 6/6 fold fully positive CI. net_R=0.008085, CI=[0.0076, 0.0086]. Cost audit PASS.
+4. **Phase 2-3 on real data**: Feature ablation 54→16 (vs 32 on synthetic). Threshold=0.550 (vs 0.715 on synthetic). Test CI fully positive.
+5. **Isolation test**: ADIM 3 (net_R=0.008085) vs ADIM 4 (CI=[0.0037, 0.0050]) farki TAMAMEN metrik tanimindan kaynaklanir:
+   - ADIM 3: correct-predictions only → 0.0081
+   - ADIM 4: all active trades → 0.0043
+   - Ayni metrikle (correct-only): 4 konfigurasyon da 0.0081 → **model kalitesi degismemis**
+
+### Lock status
+- **Feature set: LOCKED** — 16 features (pruned from 54 on real data)
+- **Threshold: LOCKED** — 0.550 (val grid optimum)
+- **Synthetic results (32-feat, 0.715): INVALIDATED**
+- **Alpha #1 official**: mean_R=0.0043, CI=[0.0037, 0.0050], composite=129.86
+- **Model quality** (correct-only): mean_R=0.0081, CI=[0.0073, 0.0089] — stable across all configs
+- **Test decision: PASS**
+
+### Remaining holds
+- bb_position 97.3% dominance = concentration risk
+- XGBoost softmax calibration not validated
+- G4/G5/G7-G10 gates not evaluated
+
+### Evidence
+- `reports/iso_alpha1.json` — isolation test: 4 configs, 2 metrics each
+- `reports/iso_alpha1.accp.yaml` — ACCP completion report
+- `reports/phase_reality_complete.json` — Phase 2-3 on real data
+- `reports/phase_reality_complete.accp.yaml`
+- `reports/candidates/alphaforge_scalp_1h_direction_v01_verified.json`
+- `scripts/iso_alpha1.py`, `scripts/phase_reality_complete.py`, `scripts/restore_real_data.py`
+

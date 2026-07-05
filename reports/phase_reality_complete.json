@@ -1,0 +1,414 @@
+{
+  "phase": "Phase2_3_RealData",
+  "mode": "SCALP",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT"
+  ],
+  "interval": "1h",
+  "n_features_full": 54,
+  "n_features_pruned": 16,
+  "data_source": "BINANCE_REAL",
+  "data_bars": 118276,
+  "ablation": {
+    "baseline_val_composite": 464.995931228678,
+    "pruned_val_composite": 533.6576465031327,
+    "val_composite_change_pct": 14.766089478036296,
+    "kept_indices": [
+      2,
+      4,
+      9,
+      12,
+      15,
+      16,
+      21,
+      27,
+      30,
+      33,
+      34,
+      39,
+      41,
+      44,
+      50,
+      53
+    ],
+    "removed_features": [
+      "quoted_spread_N",
+      "range_breakout_N",
+      "momentum_N",
+      "macd_histogram",
+      "trade_intensity_N",
+      "bb_width",
+      "volume_ratio_N",
+      "spread_pct_N",
+      "cusum_signal",
+      "gap_N",
+      "hmm_vol_state",
+      "obi",
+      "vpin_N",
+      "log_return_N",
+      "vwap_deviation",
+      "price_impact_slope_N",
+      "microstructure_noise_N",
+      "macd",
+      "volatility_regime",
+      "return_volatility_N",
+      "atr_N",
+      "amihud_illiquidity_N",
+      "consecutive_up_N",
+      "obv_N",
+      "volume_concentration_hhi_N",
+      "cusum_negative",
+      "liquidity_vacuum_N",
+      "marubozu_N",
+      "high_low_range_N",
+      "hmm_vol_probability",
+      "serial_correlation_N",
+      "macd_signal",
+      "consecutive_dn_N",
+      "engulfing_N",
+      "atr_pct_N",
+      "roll_spread_N",
+      "volume_imbalance_N",
+      "depth_ratio_N"
+    ],
+    "full_ranking": [
+      [
+        4,
+        "bb_position",
+        97.299
+      ],
+      [
+        33,
+        "ofi_N",
+        26.5303
+      ],
+      [
+        2,
+        "atr_expansion_N",
+        20.868
+      ],
+      [
+        39,
+        "return_zscore_N",
+        7.5068
+      ],
+      [
+        53,
+        "vwap_mid_deviation_N",
+        7.2096
+      ],
+      [
+        44,
+        "trade_count_N",
+        6.6407
+      ],
+      [
+        30,
+        "multi_level_obi_N",
+        6.6033
+      ],
+      [
+        27,
+        "microprice_N",
+        6.5539
+      ],
+      [
+        21,
+        "log_return_1",
+        5.7373
+      ],
+      [
+        15,
+        "garman_klass_vol_N",
+        5.2263
+      ],
+      [
+        12,
+        "doji_N",
+        4.8166
+      ],
+      [
+        16,
+        "hammer_N",
+        4.7875
+      ],
+      [
+        50,
+        "volume_trend_N",
+        4.1931
+      ],
+      [
+        9,
+        "cusum_positive",
+        3.8435
+      ],
+      [
+        41,
+        "rsi_N",
+        3.1636
+      ],
+      [
+        34,
+        "parkinson_vol_N",
+        2.668
+      ],
+      [
+        36,
+        "quoted_spread_N",
+        1.2831
+      ],
+      [
+        37,
+        "range_breakout_N",
+        1.2722
+      ],
+      [
+        29,
+        "momentum_N",
+        1.1485
+      ],
+      [
+        24,
+        "macd_histogram",
+        0.837
+      ],
+      [
+        45,
+        "trade_intensity_N",
+        0.8173
+      ],
+      [
+        5,
+        "bb_width",
+        0.4943
+      ],
+      [
+        49,
+        "volume_ratio_N",
+        0.2912
+      ],
+      [
+        43,
+        "spread_pct_N",
+        0.1674
+      ],
+      [
+        10,
+        "cusum_signal",
+        0.0
+      ],
+      [
+        14,
+        "gap_N",
+        0.0
+      ],
+      [
+        19,
+        "hmm_vol_state",
+        0.0
+      ],
+      [
+        31,
+        "obi",
+        0.0
+      ],
+      [
+        51,
+        "vpin_N",
+        -0.0083
+      ],
+      [
+        22,
+        "log_return_N",
+        -0.3787
+      ],
+      [
+        52,
+        "vwap_deviation",
+        -0.4853
+      ],
+      [
+        35,
+        "price_impact_slope_N",
+        -0.4968
+      ],
+      [
+        28,
+        "microstructure_noise_N",
+        -0.8254
+      ],
+      [
+        23,
+        "macd",
+        -0.9377
+      ],
+      [
+        46,
+        "volatility_regime",
+        -0.9416
+      ],
+      [
+        38,
+        "return_volatility_N",
+        -0.9523
+      ],
+      [
+        1,
+        "atr_N",
+        -1.0417
+      ],
+      [
+        0,
+        "amihud_illiquidity_N",
+        -1.1509
+      ],
+      [
+        7,
+        "consecutive_up_N",
+        -1.2479
+      ],
+      [
+        32,
+        "obv_N",
+        -1.894
+      ],
+      [
+        47,
+        "volume_concentration_hhi_N",
+        -2.1881
+      ],
+      [
+        8,
+        "cusum_negative",
+        -2.2207
+      ],
+      [
+        20,
+        "liquidity_vacuum_N",
+        -2.3916
+      ],
+      [
+        26,
+        "marubozu_N",
+        -2.6958
+      ],
+      [
+        17,
+        "high_low_range_N",
+        -3.0046
+      ],
+      [
+        18,
+        "hmm_vol_probability",
+        -3.6864
+      ],
+      [
+        42,
+        "serial_correlation_N",
+        -3.916
+      ],
+      [
+        25,
+        "macd_signal",
+        -4.9147
+      ],
+      [
+        6,
+        "consecutive_dn_N",
+        -5.8333
+      ],
+      [
+        13,
+        "engulfing_N",
+        -5.9948
+      ],
+      [
+        3,
+        "atr_pct_N",
+        -6.4526
+      ],
+      [
+        40,
+        "roll_spread_N",
+        -7.6353
+      ],
+      [
+        48,
+        "volume_imbalance_N",
+        -8.2546
+      ],
+      [
+        11,
+        "depth_ratio_N",
+        -10.3852
+      ]
+    ]
+  },
+  "threshold_optimization": {
+    "grid": {
+      "0.385": {
+        "total_net_R": 108.42190199999999,
+        "max_dd": 0.18335550247805088,
+        "composite": 591.3206807373812,
+        "n_trades": 31270
+      },
+      "0.44": {
+        "total_net_R": 111.40857299999999,
+        "max_dd": 0.16828122892020048,
+        "composite": 662.0380262543275,
+        "n_trades": 28715
+      },
+      "0.495": {
+        "total_net_R": 111.255543,
+        "max_dd": 0.18026718868745206,
+        "composite": 617.1702342587747,
+        "n_trades": 25462
+      },
+      "0.55": {
+        "total_net_R": 107.57923,
+        "max_dd": 0.15147734117942235,
+        "composite": 710.2001476684442,
+        "n_trades": 22126
+      },
+      "0.605": {
+        "total_net_R": 99.515106,
+        "max_dd": 0.17035728969001696,
+        "composite": 584.155250630643,
+        "n_trades": 18718
+      },
+      "0.66": {
+        "total_net_R": 88.226041,
+        "max_dd": 0.15147734117942235,
+        "composite": 582.4372136530922,
+        "n_trades": 15087
+      },
+      "0.715": {
+        "total_net_R": 71.469285,
+        "max_dd": 0.13392347416604977,
+        "composite": 533.6576465031327,
+        "n_trades": 11238
+      }
+    },
+    "selected_threshold": 0.55,
+    "val_composite_at_selected": 710.2001476684442
+  },
+  "test": {
+    "threshold_used": 0.55,
+    "total_net_R": 19.65582,
+    "max_dd": 0.1518224950164715,
+    "composite": 129.4657968236226,
+    "active_trades": 4552,
+    "long_count": 2062,
+    "short_count": 2490,
+    "no_trade_count": 1773,
+    "exposure_pct": 71.97,
+    "block_ci_95": [
+      0.0037179032047575324,
+      0.004996623840717394
+    ],
+    "decision": "PASS"
+  }
+}
