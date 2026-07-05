@@ -201,3 +201,20 @@ class SimulationOutput:
     invalidity_reason: str = ""
     monte_carlo_run_id: str = ""
     monte_carlo_family_version: str = ""
+
+
+@dataclass
+class MonteCarloOutput:
+    """Aggregated output from N Monte Carlo perturbations of a SimulationInput.
+
+    Contains the baseline (unperturbed) simulation result plus N perturbed
+    results with aggregate statistics for robustness assessment.
+
+    Perturbation params record the noise parameters used so downstream
+    consumers can interpret the distributional evidence.
+    """
+    baseline_output: SimulationOutput
+    perturbed_outputs: list[SimulationOutput]
+    monte_carlo_run_id: str
+    perturbation_params: dict
+    aggregate_stats: dict

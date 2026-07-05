@@ -1,0 +1,99 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ISSUE-42-GATE-AUTOMATION
+  report_type: FEATURE_IMPLEMENTATION
+  generated_at: "2026-07-05T22:00:00Z"
+  issue: "42"
+  title: "Promotion gate automation -- CI-integrated G0-G10 evaluation pipeline"
+
+result: PASS
+scope_confirmation:
+  files_changed:
+    - v7/gates/evaluator.py
+    - v7/gates/config.py
+    - v7/gates/runner.py
+    - v7/gates/__init__.py
+    - v7/tests/test_gate_runner.py
+    - configs/gates.yaml
+    - .github/actions/gate-check/action.yml
+    - .github/workflows/ci.yml
+    - v7/docs/roadmap.md
+  acceptance_criteria_met:
+    - "G1 RESEARCH_BACKTEST checks real backtest metrics (oos_sharpe, trade_count, fold_count, win_rate, profit_factor, max_drawdown_r) with fallback to legacy flag"
+    - "G5 SYMBOL_STABILITY checks per-symbol contribution from context with 40% threshold, handles single-symbol and missing data gracefully"
+    - "v7/gates/config.py: GateConfig dataclass, DEFAULT_GATE_CONFIG list, load_gate_config(path) YAML loader"
+    - "v7/gates/runner.py: run_gates(), to_json_report(), write_report() with structured JSON output"
+    - "configs/gates.yaml: version-controlled gate configuration"
+    - ".github/actions/gate-check/action.yml: reusable CI action with inputs/outputs"
+    - ".github/workflows/ci.yml: gate check self-validator step for PRs"
+    - "v7/tests/test_gate_runner.py: 50 tests covering config, runner, report, G1/G5 enhancement, integration"
+
+evidence:
+  commands:
+    - id: CMD-gate-runner-tests
+      description: "Run new gate runner tests (50 tests)"
+      exit_code: 0
+      count: 50
+      verdict: PASS
+    - id: CMD-original-gate-tests
+      description: "Run original gate evaluator tests (34 tests)"
+      exit_code: 0
+      count: 34
+      verdict: PASS
+    - id: CMD-all-gate-tests
+      description: "Run combined gate test suite (84 tests)"
+      exit_code: 0
+      count: 84
+      verdict: PASS
+    - id: CMD-yaml-config-load
+      description: "Load gates.yaml via load_gate_config()"
+      exit_code: 0
+      verdict: PASS
+    - id: CMD-ci-self-validator
+      description: "Run CI gate check self-validator locally"
+      exit_code: 0
+      verdict: PASS
+    - id: CMD-write-report
+      description: "Write gate report to /tmp/test-gate-report.json and verify JSON validity"
+      exit_code: 0
+      verdict: PASS
+    - id: CMD-boundary-checks
+      description: "Run import boundary checks"
+      exit_code: 0
+      verdict: PASS
+    - id: CMD-contract-checks
+      description: "Run contract registry + schema parity checks"
+      exit_code: 0
+      verdict: PASS
+
+  test_validation:
+    gate_runner_tests: 50
+    original_gate_tests: 34
+    total_gate_tests: 84
+    all_passing: true
+
+verdict_detail: >
+  Issue #42 fully implemented. G1 and G5 are enhanced with real metric checking.
+  The automated gate runner (config + runner + report) produces structured JSON
+  output with meta, gate_results, and summary sections. The CI action integrates
+  with GitHub Actions workflow for PR gate checks. All 84 tests pass. Boundaries
+  and contracts unaffected.
+
+decisions_locked:
+  - "G1 RESEARCH_BACKTEST (enhanced): LOCKED_INITIAL_BASELINE"
+  - "G5 SYMBOL_STABILITY (enhanced): LOCKED_INITIAL_BASELINE"
+  - "Gate runner (config + runner + report): LOCKED"
+  - "CI gate-check action: LOCKED"
+  - "Gate configuration YAML: LOCKED"
+  - "CI self-validator: LOCKED"
+
+remaining_holds:
+  - "Real backtest evidence required to validate G1 threshold calibration (HOLD)"
+  - "Multi-symbol WFV data required to exercise G5 symbol contribution check (HOLD)"
+  - "G7-G10 remain disabled until shadow/paper/live infrastructure is built (DEFERRED)"
+
+safe_next_step: >
+  Run walk-forward validation with a trained model and produce a candidate JSON
+  with real OOS metrics, then trigger the gate-check CI action to verify the
+  full automated pipeline against empirical data.

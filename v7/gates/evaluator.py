@@ -85,9 +85,78 @@ def _gate_g0_doc_ready(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateRe
 def _gate_g1_research_backtest(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
     """G1 RESEARCH_BACKTEST: Initial cost-honest backtest metrics.
 
-    Placeholder — full implementation requires empirical backtest evidence
-    with realistic fee/slippage/funding costs applied.
+    Evaluates actual research backtest metrics from the evaluation context:
+      - oos_sharpe:       Out-of-sample Sharpe ratio
+      - oos_trade_count:  Number of OOS trades
+      - fold_count:       Number of walk-forward folds
+      - win_rate:         Fraction of winning trades
+      - profit_factor:    Gross win / gross loss
+      - max_drawdown_r:   Maximum drawdown in R units
+
+    Falls back to the legacy g1_research_backtest_pass flag when no
+    structured metrics are available.
     """
+    # Check for structured backtest metrics
+    oos_sharpe = ctx.get("oos_sharpe")
+    oos_trade_count = ctx.get("oos_trade_count")
+    fold_count = ctx.get("fold_count")
+    win_rate = ctx.get("win_rate")
+    profit_factor = ctx.get("profit_factor")
+    max_drawdown_r = ctx.get("max_drawdown_r")
+
+    # If structured metrics are present, evaluate against thresholds
+    if oos_sharpe is not None or win_rate is not None:
+        failures: list[str] = []
+
+        # Minimum OOS sample size
+        if oos_trade_count is not None and oos_trade_count < 50:
+            failures.append(f"oos_trade_count={oos_trade_count} < 50")
+
+        # Minimum folds
+        if fold_count is not None and fold_count < 3:
+            failures.append(f"fold_count={fold_count} < 3")
+
+        # Minimum OOS Sharpe (research quality baseline)
+        if oos_sharpe is not None and oos_sharpe < 0.3:
+            failures.append(f"oos_sharpe={oos_sharpe:.4f} < 0.3")
+
+        # Minimum win rate (better than random in non-symmetric markets)
+        if win_rate is not None and win_rate < 0.3:
+            failures.append(f"win_rate={win_rate:.4f} < 0.3")
+
+        # Minimum profit factor (profit_factor < 1 means net loss)
+        if profit_factor is not None and profit_factor < 1.0:
+            failures.append(f"profit_factor={profit_factor:.4f} < 1.0")
+
+        # Maximum drawdown bound
+        if max_drawdown_r is not None and max_drawdown_r < -5.0:
+            failures.append(f"max_drawdown_r={max_drawdown_r:.4f} < -5.0")
+
+        # Build detail from available metrics
+        detail_parts = []
+        for name, val in [("oos_sharpe", oos_sharpe), ("oos_trade_count", oos_trade_count),
+                          ("fold_count", fold_count), ("win_rate", win_rate),
+                          ("profit_factor", profit_factor), ("max_drawdown_r", max_drawdown_r)]:
+            if val is not None:
+                detail_parts.append(f"{name}={val:.4f}" if isinstance(val, float) else f"{name}={val}")
+
+        passed = len(failures) == 0
+        detail = "; ".join(detail_parts)
+        if failures:
+            detail += " | FAIL: " + "; ".join(failures)
+
+        return GateResult(
+            gate_id="G1",
+            name="RESEARCH_BACKTEST",
+            status=GateStatus.PASS if passed else GateStatus.FAIL,
+            score=(min(1.0, max(0.0, len(detail_parts) - len(failures)) / max(len(detail_parts), 1)))
+            if detail_parts
+            else (1.0 if passed else 0.0),
+            threshold=0.9,
+            detail=detail,
+        )
+
+    # Fallback to legacy flag
     passed = ctx.get("g1_research_backtest_pass", True)
     return GateResult(
         gate_id="G1",
@@ -246,16 +315,88 @@ def _gate_g4_regime_breakdown(candidate: dict[str, Any], ctx: dict[str, Any]) ->
 def _gate_g5_symbol_stability(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
     """G5 SYMBOL_STABILITY: No single symbol >40% of total edge.
 
-    Per-symbol contribution must be balanced. Placeholder for single-symbol
-    or small-universe evaluation.
+    Reads per-symbol contribution from context (symbol_contributions dict
+    mapping symbol -> contribution_value, e.g. expectancy_r or net_R).
+    Computes each symbol's fraction of total absolute contribution.
+    The gate passes if every symbol contributes <= 40% of the total.
+
+    When no multi-symbol data is available, the gate passes with a note
+    (graceful degradation — not a hard failure).
     """
+    symbol_contributions = ctx.get("symbol_contributions")
+
+    # No multi-symbol data — pass with explanatory note
+    if symbol_contributions is None:
+        return GateResult(
+            gate_id="G5",
+            name="SYMBOL_STABILITY",
+            status=GateStatus.PASS,
+            score=1.0,
+            threshold=0.7,
+            detail="No per-symbol contribution data — gate passes by default",
+        )
+
+    if not isinstance(symbol_contributions, dict) or len(symbol_contributions) == 0:
+        return GateResult(
+            gate_id="G5",
+            name="SYMBOL_STABILITY",
+            status=GateStatus.PASS,
+            score=1.0,
+            threshold=0.7,
+            detail="Empty symbol contributions dict — gate passes by default",
+        )
+
+    if len(symbol_contributions) == 1:
+        symbol = next(iter(symbol_contributions))
+        return GateResult(
+            gate_id="G5",
+            name="SYMBOL_STABILITY",
+            status=GateStatus.PASS,
+            score=1.0,
+            threshold=0.7,
+            detail=f"Single symbol ({symbol}) — concentration check not applicable",
+        )
+
+    # Sum absolute contributions for total edge magnitude
+    total_abs = sum(abs(v) for v in symbol_contributions.values())
+    if total_abs == 0:
+        return GateResult(
+            gate_id="G5",
+            name="SYMBOL_STABILITY",
+            status=GateStatus.PASS,
+            score=1.0,
+            threshold=0.7,
+            detail="All symbol contributions are zero — gate passes by default",
+        )
+
+    # Compute each symbol's share and check against 40% threshold
+    MAX_SHARE = 0.40
+    violations: list[str] = []
+    contributions_detail: list[str] = []
+
+    for symbol, contrib in sorted(symbol_contributions.items()):
+        share = abs(contrib) / total_abs
+        pct = share * 100
+        contributions_detail.append(f"{symbol}={pct:.1f}%")
+        if share > MAX_SHARE:
+            violations.append(f"{symbol} at {pct:.1f}% > 40% threshold")
+
+    passed = len(violations) == 0
+    detail = "; ".join(contributions_detail)
+    if violations:
+        detail += " | FAIL: " + "; ".join(violations)
+
+    # Score: 1.0 if all pass, proportionally reduced by max violation
+    max_share = max(abs(v) / total_abs for v in symbol_contributions.values())
+    score = min(1.0, MAX_SHARE / max(max_share, 0.01))
+
     return GateResult(
         gate_id="G5",
         name="SYMBOL_STABILITY",
-        status=GateStatus.PASS,
-        score=1.0,
+        status=GateStatus.PASS if passed else GateStatus.FAIL,
+        score=round(score, 4),
         threshold=0.7,
-        detail="Symbol stability baseline (single-symbol or small universe)",
+        detail=detail,
     )
 
 

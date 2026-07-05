@@ -2,53 +2,279 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://v7-engine/contracts/schemas/analysis_request.schema.json",
   "title": "AnalysisRequest",
-  "description": "Request from V7 runtime to the policy engine for a trade analysis decision on a given symbol at a point in time.",
+  "description": "V7 AnalysisRequest — atomic runtime-to-engine analysis input contract. Top-level shape: contract, identity, scope, canonical_state, plus optional sections.",
   "type": "object",
   "required": [
-    "request_id",
-    "mode",
-    "symbol",
-    "timestamp",
-    "requested_trade_mode",
-    "model_scope",
-    "caller"
+    "contract",
+    "identity",
+    "scope",
+    "canonical_state"
   ],
   "properties": {
-    "request_id": {
-      "type": "string",
-      "description": "Unique identifier for this analysis request, assigned by the caller."
-    },
-    "mode": {
-      "type": "string",
-      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"],
-      "description": "The trading mode this request operates under."
-    },
-    "symbol": {
-      "type": "string",
-      "description": "Trading symbol, e.g. 'BTCUSDT'."
-    },
-    "timestamp": {
-      "type": "string",
-      "format": "date-time",
-      "description": "UTC timestamp at which the request was generated."
-    },
-    "requested_trade_mode": {
-      "type": "string",
-      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"],
-      "description": "The trade mode requested for analysis (redundant with 'mode' for routing clarity)."
-    },
-    "model_scope": {
-      "type": "string",
-      "description": "Identifier for the model scope or alpha candidate to use, e.g. 'swing_v1', 'scalp_xgb_002'."
-    },
-    "caller": {
-      "type": "string",
-      "description": "Component that issued the request, e.g. 'v7_runtime', 'replay_tool'."
-    },
-    "raw_signal": {
+    "contract": {
       "type": "object",
-      "description": "Optional raw signal payload from upstream signal sources (alphaforge, external adapter, etc.).",
+      "description": "Versioned contract artifact defining the request semantics.",
+      "required": [
+        "contract_version",
+        "state_schema_version",
+        "snapshot_builder_version",
+        "request_kind"
+      ],
+      "properties": {
+        "contract_version": {
+          "type": "string",
+          "description": "Identifies the request contract semantics (e.g. 'v7-0.2')."
+        },
+        "state_schema_version": {
+          "type": "string",
+          "description": "Identifies the semantic meaning of canonical_state (e.g. 'state-0.2')."
+        },
+        "snapshot_builder_version": {
+          "type": "string",
+          "description": "Identifies the builder logic used (e.g. 'snapshot-0.2')."
+        },
+        "request_kind": {
+          "type": "string",
+          "enum": ["live_scan", "paper_scan", "replay_eval", "shadow", "validation"],
+          "description": "Distinguishes request context: live_scan, paper_scan, replay_eval, shadow, validation."
+        }
+      },
+      "additionalProperties": false
+    },
+    "identity": {
+      "type": "object",
+      "description": "Uniquely identifies one request instance.",
+      "required": ["request_id", "timestamp_utc"],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "description": "Unique request identifier, assigned by the caller."
+        },
+        "timestamp_utc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC timestamp when the request was generated."
+        },
+        "run_id": {
+          "type": "string",
+          "description": "Optional scan-run or evaluation-run identifier."
+        },
+        "trace_id": {
+          "type": "string",
+          "description": "Optional distributed tracing identifier."
+        },
+        "parent_decision_event_id": {
+          "type": "string",
+          "description": "Optional lineage back to a prior decision event (re-evaluation, retry, shadow)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "description": "Defines what instrument and operating mode the request belongs to.",
+      "required": [
+        "symbol",
+        "requested_trade_mode",
+        "model_scope",
+        "primary_interval",
+        "analysis_mode"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Trading symbol, e.g. 'BTCUSDT'."
+        },
+        "requested_trade_mode": {
+          "type": "string",
+          "enum": ["SWING", "SCALP", "AGGRESSIVE_SCALP"],
+          "description": "The trade mode requested for analysis."
+        },
+        "model_scope": {
+          "type": "string",
+          "description": "Identifier for the model scope or alpha candidate, e.g. 'swing_v1'."
+        },
+        "primary_interval": {
+          "type": "string",
+          "description": "Primary analysis interval, e.g. '4h', '1h', '15m'."
+        },
+        "analysis_mode": {
+          "type": "string",
+          "enum": ["live", "paper", "replay", "shadow", "validation"],
+          "description": "Analysis context: live, paper, replay, shadow, validation."
+        },
+        "context_intervals": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Higher-timeframe context intervals, e.g. ['1d']."
+        },
+        "refinement_intervals": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Lower-timeframe refinement intervals, e.g. ['1h']."
+        },
+        "label_horizon_family": {
+          "type": "string",
+          "description": "Label horizon family for training/evaluation/replay lineage."
+        },
+        "exchange": {
+          "type": "string",
+          "description": "Exchange identifier, e.g. 'BINANCE'."
+        },
+        "market_type": {
+          "type": "string",
+          "description": "Market type, e.g. 'PERP', 'SPOT'."
+        },
+        "base_asset": {
+          "type": "string",
+          "description": "Base asset, e.g. 'BTC'."
+        },
+        "quote_asset": {
+          "type": "string",
+          "description": "Quote asset, e.g. 'USDT'."
+        },
+        "symbol_class": {
+          "type": "string",
+          "description": "Symbol classification, e.g. 'MAJOR', 'ALT'."
+        }
+      },
+      "additionalProperties": false
+    },
+    "canonical_state": {
+      "type": "object",
+      "description": "Fully assembled market state the engine should evaluate. Contains raw_window, derived_state, context, quality, metadata.",
+      "properties": {
+        "raw_window": {
+          "type": "object",
+          "description": "Raw local market window with candles.",
+          "properties": {
+            "candles": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "open": {"type": "number"},
+                  "high": {"type": "number"},
+                  "low": {"type": "number"},
+                  "close": {"type": "number"},
+                  "volume": {"type": "number"},
+                  "close_time_utc": {"type": "string"}
+                }
+              }
+            },
+            "window_length": {"type": "integer"},
+            "window_start_utc": {"type": "string"},
+            "window_end_utc": {"type": "string"}
+          }
+        },
+        "derived_state": {
+          "type": "object",
+          "description": "State derived from visible market window."
+        },
+        "context": {
+          "type": "object",
+          "description": "Non-primary but decision-relevant context (HTF, regime, symbol)."
+        },
+        "quality": {
+          "type": "object",
+          "description": "State quality and freshness semantics."
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Compact semantic metadata for state interpretation."
+        }
+      },
       "additionalProperties": true
+    },
+    "state_views": {
+      "type": "object",
+      "description": "Interval-aware context: primary, higher_timeframe, refinement views.",
+      "additionalProperties": {"type": "string"}
+    },
+    "deterministic_context": {
+      "type": "object",
+      "description": "Runtime-supplied annotation layer: regime hints, volatility bucket, warning flags.",
+      "additionalProperties": true
+    },
+    "runtime_context": {
+      "type": "object",
+      "description": "Runtime-owned analysis context not part of market state.",
+      "properties": {
+        "source_context": {"type": "string"},
+        "requested_by": {"type": "string"},
+        "paper_or_live_mode": {"type": "string"},
+        "runtime_phase": {"type": "string"},
+        "engine_budget_hint": {"type": "string"},
+        "engine_timeout_ms": {"type": "integer"}
+      },
+      "additionalProperties": true
+    },
+    "quality_and_freshness": {
+      "type": "object",
+      "description": "Top-level runtime-visible quality surface. Must be semantically consistent with canonical_state.quality.",
+      "properties": {
+        "stale_flag": {"type": "boolean"},
+        "data_source": {"type": "string"},
+        "data_quality_flags": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "snapshot_validity": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "degradation_context": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "description": "Explicit degraded request assembly info.",
+          "properties": {
+            "missing_htf_context": {"type": "boolean"},
+            "fallback_builder_path": {"type": "string"},
+            "incomplete_auxiliary_view": {"type": "boolean"},
+            "partial_state": {"type": "boolean"},
+            "reduced_confidence_reason": {"type": "string"}
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "portfolio_context": {
+      "type": "object",
+      "description": "Optional lightweight portfolio context.",
+      "properties": {
+        "open_position_count": {"type": "integer"},
+        "symbol_exposure_tier": {"type": "string"},
+        "cluster_hint": {"type": "string"},
+        "drawdown_state_tier": {"type": "string"},
+        "portfolio_pressure_tier": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "risk_context": {
+      "type": "object",
+      "description": "Optional advisory risk context.",
+      "properties": {
+        "cooldown_active": {"type": "boolean"},
+        "exposure_cap_near": {"type": "boolean"},
+        "operational_caution_tier": {"type": "string"},
+        "runtime_risk_regime_tag": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "lineage": {
+      "type": "object",
+      "description": "Batch/session lineage for request grouping.",
+      "properties": {
+        "analysis_batch_id": {"type": "string"},
+        "decision_session_id": {"type": "string"},
+        "batch_rank_context": {
+          "type": "string",
+          "description": "Optional rank context within batch."
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

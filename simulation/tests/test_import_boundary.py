@@ -92,6 +92,13 @@ def test_simulation_modules_importable():
         "simulation.engine.writer",
         "simulation.adapters",
         "simulation.adapters.market_data_adapter",
+        "simulation.adapters.training_adapter",
+        "simulation.adapters.evaluation_adapter",
+        "simulation.adapters.paper_driver",
+        "simulation.adapters.replay_driver",
+        "simulation.adapters.monte_carlo_adapter",
+        "simulation.adapters._validation",
+        "simulation.engine.interface",
     ]
     for mod_name in modules:
         importlib.import_module(mod_name)

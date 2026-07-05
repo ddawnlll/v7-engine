@@ -84,22 +84,26 @@ Q(s, NO_TRADE)  -- same, for not trading (first-class action, zero-cost baseline
 2. ~~**regret_r hardcoded to 0.0**~~ — RESOLVED (#37): `v7/policy_critic/regret.py` — compute_regret_r with R_NET and SHAPED_REWARD bases, mode-specific drawdown penalties (lambda_dd: SWING=0.5, SCALP=1.0, AGGRESSIVE_SCALP=2.0), compute_regret_from_simulation convenience
 3. **funding_cost_r DEFERRED** — critic spot-only-valid, perp blocked
 4. ~~**Per-direction expected_R not in V6**~~ — RESOLVED (#37): `v7/policy_critic/expected_return.py` — rule-based (v1 shadow, source=RULE_BASED) and simulation-mean (v2, source=SIMULATION_MEAN) per-direction expected_R; compare_directions for best-action selection with ambiguity detection
-5. **bad_trade_probability, model_disagreement, recent_prediction_error don't exist live** — must be synthesized (v2+) or wait for P9
-6. **Per-decision portfolio drawdown doesn't exist** — mae_r used as proxy
-7. **Conformal exchangeability violated** by time-series — which time-aware variant is implementable?
-8. **Decision-event family contracts not registered** — PolicyCriticReview can proceed independently
-9. ~~**v7/src greenfield**~~ — RESOLVED (#37): `v7/policy_critic/` package created with 64 passing unit tests
-10. **IQL expectile tau, conformal coverage** — numeric thresholds not lockable without empirical evidence
+5. ~~**No metrics pipeline**~~ — RESOLVED (#91): `v7/policy_critic/metrics.py` — CriticMetrics dataclass + CriticMetricsPipeline with ingest, to_review_schema, validate (23 tests).
+6. ~~**No shadow replay buffer collector**~~ — RESOLVED (#92): `v7/policy_critic/shadow_collector.py` — ShadowCollector, SubsamplingStrategy, ShadowIntegration for collecting (s,a,r,s',t) tuples from paper trading (33 tests).
+7. **bad_trade_probability, model_disagreement, recent_prediction_error don't exist live** — must be synthesized (v2+) or wait for P9
+8. **Per-decision portfolio drawdown doesn't exist** — mae_r used as proxy
+9. **Conformal exchangeability violated** by time-series — which time-aware variant is implementable?
+10. **Decision-event family contracts not registered** — PolicyCriticReview can proceed independently
+11. ~~**v7/src greenfield**~~ — RESOLVED (#37): `v7/policy_critic/` package created with 64 passing unit tests
+12. **IQL expectile tau, conformal coverage** — numeric thresholds not lockable without empirical evidence
 
 ## Code Locations
 
 | Module | Path | Purpose |
 |--------|------|---------|
-| `policy_critic/` | `v7/policy_critic/__init__.py` | Package init, version 0.1.0 |
+| `policy_critic/` | `v7/policy_critic/__init__.py` | Package init, version 0.2.0 |
 | `replay_buffer` | `v7/policy_critic/replay_buffer.py` | ReplayBuffer, ReplayTuple, build_replay_tuple, build_state_feature_vector, map_decision_to_critic_action |
 | `regret` | `v7/policy_critic/regret.py` | compute_regret_r (R_NET + SHAPED_REWARD bases), compute_regret_from_simulation, RegretBasis, RegretResult, get_lambda_dd |
 | `expected_return` | `v7/policy_critic/expected_return.py` | compute_rule_based_expected_r, compute_expected_r_from_simulation, compare_directions, ExpectedReturn |
-| `tests/` | `v7/policy_critic/tests/` | 64 unit tests (all passing): test_replay_buffer (33), test_regret (20), test_expected_return (11) |
+| `metrics` | `v7/policy_critic/metrics.py` | CriticMetrics dataclass + CriticMetricsPipeline for extracting metrics from DecisionEvents and converting to PolicyCriticReview contract schema (Phase 1). |
+| `shadow_collector` | `v7/policy_critic/shadow_collector.py` | Shadow replay buffer collector (Phase 2). Collects (s,a,r,s',t) tuples via ShadowCollector, rebalances via SubsamplingStrategy, aggregates via ShadowIntegration. |
+| `tests/` | `v7/policy_critic/tests/` | 137 unit tests (all passing): test_replay_buffer (33), test_regret (20), test_expected_return (11), test_metrics (23), test_shadow_collector (33) |
 
 ## Doc Tree
 

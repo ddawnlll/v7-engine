@@ -1,0 +1,27 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Issue #92 -- PC Phase 2: Shadow replay buffer. ShadowCollector, SubsamplingStrategy, ShadowIntegration classes + 33 tests. Collects (s,a,r,s',t) tuples from paper-trading DecisionEvents and TradeOutcomes."
+files_changed:
+  - "v7/policy_critic/shadow_collector.py"            # new: ShadowCollector, SubsamplingStrategy, ShadowIntegration
+  - "v7/policy_critic/tests/test_shadow_collector.py"  # new: 33 tests
+  - "v7/policy_critic/__init__.py"                     # updated: version 0.2.0, submodule docs
+  - "v7/docs/policy_critic/ai_summary.md"              # updated: code locations, open holds
+  - "v7/docs/roadmap.md"                               # updated: issue entry
+  - "reports/accp/issue-92.yaml"                       # this file
+decisions_locked:
+  - "ShadowCollector static method signatures (LOCKED_INITIAL_BASELINE)"
+  - "SubsamplingStrategy default target ratios LONG=0.35/SHORT=0.35/NO_TRADE=0.30 (LOCKED_INITIAL_BASELINE)"
+  - "ShadowIntegration observe/get_statistics/get_subsampled API (LOCKED_INITIAL_BASELINE)"
+  - "Default max_buffer_size=50000 (LOCKED_INITIAL_BASELINE)"
+remaining_holds:
+  - "No live paper-trading data to exercise shadow collection (HOLD -- requires runtime integration)"
+  - "Subsampling ratios uncalibrated -- no empirical observation of actual class distributions (HOLD)"
+  - "Buffer is in-memory only -- no persistence layer (DEFERRED to Phase 3+)"
+safe_next_step:
+  - "Wire shadow collector into paper-trading DecisionEvent lifecycle for live data collection"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest v7/policy_critic/tests/ -v"
+evidence:
+  - "33/33 shadow collector tests pass"
+  - "137/137 policy_critic tests pass"

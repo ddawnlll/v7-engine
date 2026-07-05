@@ -1,0 +1,30 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "V7 Phase 7: Portfolio manager + risk manager modules per v7/docs/pipeline/portfolio.md and v7/docs/pipeline/risk.md."
+files_changed:
+  - "v7/portfolio.py"
+  - "v7/risk.py"
+  - "v7/__init__.py"
+  - "v7/tests/test_portfolio.py"
+  - "v7/tests/test_risk.py"
+  - "v7/docs/roadmap.md"
+decisions_locked:
+  - "PortfolioManager: LOCKED_INITIAL_BASELINE"
+  - "RiskManager: LOCKED_INITIAL_BASELINE"
+  - "PortfolioResult frozen dataclass: LOCKED"
+  - "RiskResult frozen dataclass: LOCKED"
+  - "Default correlation groups (btc_cluster, eth_cluster, layer1, defi): LOCKED_INITIAL_BASELINE"
+  - "Config values (max_position_pct, max_drawdown_pct, etc.): LOCK_CANDIDATE"
+remaining_holds:
+  - "Mode-specific risk parameters not yet wired (HOLD)"
+  - "Cooldown guard not implemented (HOLD -- deferred)"
+  - "Stale-result TTL guard not implemented (HOLD -- deferred)"
+  - "Correlation groups may need recalibration from real data (HOLD)"
+safe_next_step: "Wire PortfolioManager + RiskManager into runtime DecisionEvent flow (Phase 7 Workstream B/C)."
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest v7/tests/test_portfolio.py v7/tests/test_risk.py -v"
+evidence:
+  - "58/58 new tests pass (25 portfolio + 33 risk)"
+  - "v7/__init__.py imports PortfolioManager, PortfolioResult, RiskManager, RiskResult"
+  - "Full V7 test suite: 658 passed, 8 pre-existing unrelated failures"

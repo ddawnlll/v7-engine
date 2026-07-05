@@ -17,7 +17,6 @@ Decision outputs follow the AnalysisResult contract schema.
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -239,43 +238,38 @@ def build_decision_event(
     status: str = "SUCCESS",
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build a DecisionEvent dict from an AnalysisResult.
+    """Build a full nested DecisionEvent from a V7 AnalysisResult.
 
-    Follows contracts/schemas/decision_event.schema.json.
+    Delegates to DecisionEventManager to produce the full contract shape
+    (contract, identity, lineage, scope, request_summary, decision_summary,
+    runtime_interpretation, execution_linkage, outcome_linkage, observability).
 
     Args:
-        analysis_result: A validated AnalysisResult dict.
-        venue: Execution venue (default 'paper_trading').
-        decision_event_id: Event ID (auto-generated if omitted).
-        order_id: Exchange/broker order ID (optional).
-        position_id: Exchange/broker position ID (optional).
+        analysis_result: V7 AnalysisResult dict (nested contract shape).
+        venue: Execution venue identifier.
+        decision_event_id: Override auto-generated event ID.
+        order_id: Optional exchange/broker order ID.
+        position_id: Optional exchange/broker position ID.
         event_type: ORDER_PLACED, ORDER_FILLED, ORDER_REJECTED,
                     POSITION_OPENED, POSITION_CLOSED, or ERROR.
         status: SUCCESS, PARTIAL, FAILED, or PENDING.
-        metadata: Optional venue-specific metadata.
+        metadata: Optional arbitrary metadata dict.
 
     Returns:
-        A contract-valid DecisionEvent dict.
+        Full nested DecisionEvent dict.
     """
-    executed_at = analysis_result.get("analysis_timestamp", _utc_now())
+    from v7.lifecycle import DecisionEventManager
 
-    event: dict[str, Any] = {
-        "event_id": decision_event_id or f"evt_{uuid.uuid4().hex[:12]}",
-        "analysis_result_id": analysis_result["analysis_result_id"],
-        "decision": analysis_result["decision"],
-        "executed_at": executed_at,
-        "venue": venue,
-        "event_type": event_type,
-        "status": status,
-    }
-
-    if order_id:
-        event["order_id"] = order_id
-    if position_id:
-        event["position_id"] = position_id
-    if metadata:
-        event["metadata"] = metadata
-
-    return event
+    manager = DecisionEventManager()
+    return manager.create(
+        analysis_result=analysis_result,
+        venue=venue,
+        decision_event_id=decision_event_id,
+        event_type=event_type,
+        status=status,
+        order_id=order_id,
+        position_id=position_id,
+        metadata=metadata,
+    )
 
 
