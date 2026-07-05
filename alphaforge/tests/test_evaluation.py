@@ -7,6 +7,7 @@ from alphaforge.evaluation.engine import (
     evaluate_trading,
     feature_psi,
     detect_drift,
+    regression_reliability,
 )
 
 
@@ -73,7 +74,28 @@ class TestFeaturePSI:
         assert psi > 0.1
 
 
-class TestDetectDrift:
+class TestRegressionReliability:
+    def test_perfect_reliability(self):
+        y_true = [0.5, 1.0, 1.5, 2.0, 2.5]
+        y_pred = [0.4, 0.9, 1.4, 1.9, 2.4]
+        result = regression_reliability(y_true, y_pred, n_buckets=3)
+        assert result["reliable"] is True
+        assert result["samples"] == 5
+        assert result["sign_accuracy"] >= 0.5
+
+    def test_empty(self):
+        result = regression_reliability([], [])
+        assert result["samples"] == 0
+        assert result["reliable"] is False
+
+    def test_sign_accuracy(self):
+        y_true = [1.0, -1.0, 0.5, -0.5]
+        y_pred = [0.8, -0.7, 0.3, 0.2]
+        result = regression_reliability(y_true, y_pred, n_buckets=2)
+        # Signs match for first 3 (1.0>0, -1.0<0, 0.5>0, -0.5<0 vs 0.8>0, -0.7<0, 0.3>0, 0.2>0)
+        # 3 out of 4 match
+        assert result["sign_accuracy"] == 0.75
+
     def test_no_drift(self):
         train = {"feature_means": {"rsi_14": 50.0}, "confidence_mean": 0.7}
         prod = {"feature_means": {"rsi_14": 51.0}, "confidence_mean": 0.71}

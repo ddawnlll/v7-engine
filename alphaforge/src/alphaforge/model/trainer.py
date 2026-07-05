@@ -304,20 +304,41 @@ class ModelTrainer:
         self,
         dataset: dict[str, Any],
         mode: str,
+        feature_keys: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Train across all folds in a dataset.
 
         Args:
             dataset: Output from dataset.builder.build_dataset.
             mode: Mode name.
+            feature_keys: Feature column names. If None, extracted from first fold.
 
         Returns:
-            List of fold model bundles.
+            List of fold model bundles (one per fold).
+
+        Raises:
+            AlphaForgeError: If dataset has no folds or rows.
         """
-        # Implementation requires the actual train/val row splits from the dataset.
-        # The current dataset builder only stores counts, not the actual split rows.
-        # This method is a placeholder for when the dataset builder provides row access.
-        raise NotImplementedError(
-            "train_from_dataset requires row-level fold access from the dataset builder. "
-            "Implement after dataset builder exposes train_rows/val_rows."
-        )
+        folds = dataset.get("folds", [])
+        if not folds:
+            raise AlphaForgeError(
+                f"No folds available in dataset (status: {dataset.get('status', 'unknown')}). "
+                f"Ensure sufficient data for {mode}."
+            )
+
+        bundles = []
+        for fold in folds:
+            train_rows = fold.get("train_rows", [])
+            val_rows = fold.get("val_rows", [])
+            fk = feature_keys or list(train_rows[0].get("features", {}).keys()) if train_rows else []
+
+            if not train_rows or not fk:
+                continue
+
+            bundle = self.train_fold(
+                train_rows, val_rows, fk,
+                mode=mode, fold_id=fold["fold_id"],
+            )
+            bundles.append(bundle)
+
+        return bundles
