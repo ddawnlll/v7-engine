@@ -13,6 +13,8 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
+import numpy as np
+
 from simulation.contracts.models import (
     ActionOutcome,
     Candle,
@@ -25,7 +27,13 @@ from simulation.contracts.models import (
     SimulationProfile,
 )
 from simulation.engine.costs import total_cost_r
-from simulation.engine.exits import ExitResult, compute_utility, simulate_path
+from simulation.engine.exits import (
+    ExitResult,
+    _extract_ohlc,
+    compute_utility,
+    simulate_path,
+    simulate_path_from_arrays,
+)
 
 
 def _build_action_outcome(
@@ -224,20 +232,30 @@ def simulate(input: SimulationInput) -> SimulationOutput:
 
     candles = input.future_path.candles
     max_bars = profile.max_holding_bars
+    available_bars = max(0, min(len(candles), max_bars))
+
+    # Pre-extract OHLC arrays once — shared by both directions
+    if available_bars > 0:
+        highs, lows = _extract_ohlc(candles, available_bars)
+        close_price = candles[available_bars - 1].close
+    else:
+        highs = np.array([], dtype=float)
+        lows = np.array([], dtype=float)
+        close_price = input.entry_price
 
     # Simulate LONG_NOW
-    long_exit = simulate_path(
+    long_exit = simulate_path_from_arrays(
         "LONG", input.entry_price, long_stop, long_target,
-        candles, max_bars, entry_risk,
+        highs, lows, max_bars, available_bars, entry_risk, close_price,
     )
     long_outcome = _build_action_outcome(
         "LONG_NOW", long_exit, notional, input.entry_price, input.atr, profile,
     )
 
     # Simulate SHORT_NOW
-    short_exit = simulate_path(
+    short_exit = simulate_path_from_arrays(
         "SHORT", input.entry_price, short_stop, short_target,
-        candles, max_bars, entry_risk,
+        highs, lows, max_bars, available_bars, entry_risk, close_price,
     )
     short_outcome = _build_action_outcome(
         "SHORT_NOW", short_exit, notional, input.entry_price, input.atr, profile,
