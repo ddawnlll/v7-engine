@@ -26,6 +26,7 @@ from alphaforge.train import load_cached_data, generate_labels, compute_features
 from alphaforge.training.xgb_trainer import XGBoostTrainer
 from alphaforge.reports.metrics import compute_oos_metrics
 from simulation.authority import get_cost_constants
+from lib.data_lake.guard import assert_real_data
 from lib.data_lake.passport import DataPassport
 from lib.data_lake.spec import DatasetSpec
 from lib.data_lake.catalog import DataCatalog
@@ -86,6 +87,7 @@ print(f"{'='*70}")
 print("\n[1/7] Loading data...")
 ohlcv = load_cached_data(SYMBOLS, INTERVAL)
 assert ohlcv is not None, "FAIL: No real data loaded"
+assert_real_data(ohlcv)
 print(f"  Bars: {len(ohlcv['close'])}")
 
 # ── 2. Generate labels ──────────────────────────────────────────────

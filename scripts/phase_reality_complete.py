@@ -29,6 +29,7 @@ for p in [str(_REPO_ROOT), str(_REPO_ROOT/"alphaforge"/"src"), str(_REPO_ROOT/"s
 
 import numpy as np
 import xgboost as xgb
+from lib.data_lake.guard import assert_real_data
 from simulation.authority import get_cost_constants
 COST = get_cost_constants()
 
@@ -127,6 +128,7 @@ def main():
     print(f"{'─'*70}")
     ohlcv = load_cached_data(SYMBOLS, INTERVAL)
     assert ohlcv is not None, "FAIL: No real data loaded"
+    assert_real_data(ohlcv)
     print(f"  {len(ohlcv['close'])} total bars, {len(set(ohlcv['symbol']))} symbols")
 
     # ── 2. Build training frame ────────────────────────────────────────

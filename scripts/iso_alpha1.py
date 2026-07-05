@@ -18,6 +18,7 @@ for p in [str(_REPO_ROOT), str(_REPO_ROOT/"alphaforge"/"src"), str(_REPO_ROOT/"s
 
 import numpy as np
 import xgboost as xgb
+from lib.data_lake.guard import assert_real_data
 from alphaforge.train import load_cached_data, build_aligned_training_frame
 from alphaforge.reports.metrics import compute_oos_metrics
 from alphaforge.training.xgb_trainer import XGBoostTrainer
@@ -151,6 +152,7 @@ def main():
     # ── Load data ──
     ohlcv = load_cached_data(SYMBOLS, INTERVAL)
     assert ohlcv is not None, "No real data"
+    assert_real_data(ohlcv)
 
     # ── Build frame ──
     tf = build_aligned_training_frame(ohlcv, MODE, feature_groups=None)
