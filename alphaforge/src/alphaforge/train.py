@@ -471,6 +471,7 @@ def build_aligned_training_frame(
     action_net_parts: list[np.ndarray] = []
     ts_parts: list[np.ndarray] = []
     sym_rank_parts: list[np.ndarray] = []
+    close_price_parts: list[np.ndarray] = []
     feat_names: list[str] | None = None
 
     cfg = MODE_CONFIG[mode]
@@ -539,6 +540,7 @@ def build_aligned_training_frame(
         )
         ts_parts.append(sym_ts[:label_len])
         sym_rank_parts.append(np.full(label_len, symbol_order[sym], dtype=np.int32))
+        close_price_parts.append(sym_close[:label_len])
 
     if not x_parts:
         return {
@@ -550,6 +552,7 @@ def build_aligned_training_frame(
             "action_net_r": np.empty((0, 3), dtype=np.float64),
             "timestamps": np.empty((0,), dtype=timestamps.dtype),
             "symbols": np.empty((0,), dtype=object),
+            "close_prices": np.empty((0,), dtype=np.float64),
             "feature_names": feat_names or [],
         }
 
@@ -561,6 +564,7 @@ def build_aligned_training_frame(
     action_net_r = np.vstack(action_net_parts)
     ts = np.concatenate(ts_parts)
     sym_rank = np.concatenate(sym_rank_parts)
+    close_prices = np.concatenate(close_price_parts) if close_price_parts else np.array([], dtype=np.float64)
     if np.issubdtype(ts.dtype, np.datetime64):
         ts_sort = ts.astype("datetime64[ns]").astype(np.int64)
     elif ts.dtype.kind in {"i", "u"}:
@@ -581,6 +585,7 @@ def build_aligned_training_frame(
         "action_net_r": action_net_r[sort_idx],
         "timestamps": ts[sort_idx],
         "symbols": symbols_arr[sort_idx],
+        "close_prices": close_prices[sort_idx] if len(close_prices) == len(ts) else close_prices,
         "feature_names": feat_names or [],
     }
 
@@ -724,6 +729,9 @@ def walk_forward_validate(
             "n_val": len(X_val),
             "purge_period": purge_bars,
             "embargo_period": embargo_bars,
+            "val_start": val_start,
+            "val_end": val_end,
+            "effective_val_start": effective_val_start,
             "train_accuracy": train_accuracy,
             "train_logloss": train_logloss,
             "val_accuracy": val_accuracy,
@@ -930,6 +938,64 @@ def collect_metrics(
 
 
 # ---------------------------------------------------------------------------
+# Discovery pipeline integration
+# ---------------------------------------------------------------------------
+
+
+def _run_discovery_after_training(
+    mode: str,
+    ohlcv: dict,
+    feature_groups: list[str] | None = None,
+    folds: int = 6,
+    confidence_threshold: float = 0.55,
+    output: str | None = None,
+) -> None:
+    """Run the discovery pipeline after training completes.
+
+    Called when ``--discovery`` flag is set in the training CLI.
+    """
+    from alphaforge.discovery import DiscoveryConfig
+    from alphaforge.discovery.pipeline import run_discovery
+
+    symbols = list(set(str(s) for s in ohlcv.get("symbol", [])))
+    feat_str = ",".join(feature_groups) if feature_groups else "all"
+
+    config = DiscoveryConfig(
+        mode=mode,
+        symbols=tuple(symbols),
+        features=feat_str,
+        folds=folds,
+        confidence_threshold=confidence_threshold,
+        use_synthetic=False,
+        output_dir=str(Path(output).parent) if output else "artifacts/discovery",
+        create_handoff=True,
+    )
+
+    result = run_discovery(config)
+
+    print(f"\n  Discovery result: {result.status}")
+    if result.rejection:
+        print(f"  Decision: {result.rejection.get('decision', '?')}")
+        print(f"  Summary: {result.rejection.get('summary', 'N/A')}")
+    print(f"  Trades: {result.trade_count} | Duration: {result.duration_seconds:.1f}s")
+
+    if output:
+        out_path = Path(output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        import json as _json
+        out_path.write_text(_json.dumps({
+            "status": result.status,
+            "rejection": result.rejection,
+            "metrics": result.metrics,
+            "trade_count": result.trade_count,
+            "signal_count": result.signal_count,
+            "duration_seconds": result.duration_seconds,
+            "handoff": result.handoff,
+        }, indent=2, default=str))
+        print(f"  Discovery report saved: {out_path.resolve()}")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -948,6 +1014,13 @@ def main():
     parser.add_argument("--threshold-sweep", default=None,
                         help="Comma-separated threshold values to sweep (e.g., '0.1,0.3,0.45,0.55,0.7'). "
                              "Reports accuracy-exposure tradeoff for each.")
+    parser.add_argument("--discovery", action="store_true",
+                        help="Run full discovery pipeline after training (signal generation, "
+                             "simulation backtest, profitability analysis, rejection evaluation)")
+    parser.add_argument("--discovery-confidence-threshold", type=float, default=0.55,
+                        help="Confidence threshold for discovery signal generation (default: 0.55)")
+    parser.add_argument("--discovery-output", default=None,
+                        help="Output path for discovery pipeline results (default: auto-generated)")
     args = parser.parse_args()
 
     global mode
@@ -1182,6 +1255,20 @@ def main():
         with open(output_path, "w") as f:
             json.dump(metrics, f, indent=2, default=str)
         print(f"  Report saved: {output_path.resolve()}")
+
+    # Run discovery pipeline if requested
+    if args.discovery:
+        print(f"\n{'='*60}")
+        print(f"  DISCOVERY PIPELINE")
+        print(f"{'='*60}")
+        _run_discovery_after_training(
+            mode=mode,
+            ohlcv=ohlcv,
+            feature_groups=feature_groups,
+            folds=args.folds,
+            confidence_threshold=args.discovery_confidence_threshold,
+            output=args.discovery_output,
+        )
 
     # Return the metrics for programmatic use
     return metrics
