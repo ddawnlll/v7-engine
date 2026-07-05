@@ -22,6 +22,7 @@ def run_worker(task: str, config: WorkerConfig, log_dir: str | os.PathLike[str],
     log_path.parent.mkdir(parents=True, exist_ok=True)
     cmd = [config.command, "-p", task, "--output-format", config.output_format]
     if config.output_format == "stream-json": cmd.append("--verbose")
+    cmd.append("--allow-dangerously-skip-permissions")
     cmd.append("--dangerously-skip-permissions")
     print(f"\n{'='*60}\n  Worker: {' '.join(shlex.quote(c) for c in cmd)[:120]}\n  Log:    {log_path}\n{'='*60}\n", file=sys.stderr)
     raw_lines, summary, error, proc = [], "", "", None
