@@ -1,4 +1,4 @@
-"""
+﻿"""
 AlphaForge Full Training Pipeline.
 
 Usage:
@@ -66,7 +66,7 @@ def generate_synthetic_ohlcv(
     """Generate synthetic multi-symbol OHLCV data."""
     rng = np.random.RandomState(random_seed)
     all_data = {
-        "open": [], "high": [], "low": [], "close": [], "volume": [], "symbol": [],
+        "open": [], "high": [], "low": [], "close": [], "volume": [], "timestamp": [], "symbol": [],
     }
     for sym in symbols:
         returns = rng.randn(n_bars) * 0.02
@@ -86,6 +86,7 @@ def generate_synthetic_ohlcv(
         all_data["low"].append(low)
         all_data["close"].append(close)
         all_data["volume"].append(volume)
+        all_data["timestamp"].extend(np.arange(n_bars, dtype=np.int64))
         all_data["symbol"].extend([sym] * n_bars)
     return {
         "open": np.concatenate(all_data["open"]),
@@ -93,6 +94,7 @@ def generate_synthetic_ohlcv(
         "low": np.concatenate(all_data["low"]),
         "close": np.concatenate(all_data["close"]),
         "volume": np.concatenate(all_data["volume"]),
+        "timestamp": np.array(all_data["timestamp"], dtype=np.int64),
         "symbol": all_data["symbol"],
     }
 
@@ -133,7 +135,7 @@ def _load_panel_data(cache_dir: str, symbols: list[str]) -> dict | None:
         df = pd.read_parquet(cache / f"{prefix}_{key}.parquet")
         df = df.loc[first_valid:last_valid, avail].ffill().bfill()
         dfs[key] = df
-    closes, highs, lows, opens, volumes, symbols_out = [], [], [], [], [], []
+    closes, highs, lows, opens, volumes, timestamps_out, symbols_out = [], [], [], [], [], [], []
     for col in avail:
         n = len(dfs["close"])
         closes.append(dfs["close"][col].values.astype(np.float64))
@@ -141,6 +143,7 @@ def _load_panel_data(cache_dir: str, symbols: list[str]) -> dict | None:
         lows.append(dfs["low"][col].values.astype(np.float64))
         opens.append(dfs["open"][col].values.astype(np.float64))
         volumes.append(dfs["volume"][col].values.astype(np.float64))
+        timestamps_out.extend(dfs["close"].index.to_numpy())
         symbols_out.extend([col] * n)
     return {
         "close": np.concatenate(closes),
@@ -148,6 +151,7 @@ def _load_panel_data(cache_dir: str, symbols: list[str]) -> dict | None:
         "low": np.concatenate(lows),
         "open": np.concatenate(opens),
         "volume": np.concatenate(volumes),
+        "timestamp": np.array(timestamps_out),
         "symbol": symbols_out,
     }
 
@@ -228,6 +232,10 @@ def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n
     Uses ambiguity_margin_r to force NO_TRADE when LONG vs SHORT is within margin.
     """
     ints_list = np.empty(n - max_hold - 1, dtype=np.int32)
+    long_gross_vals = np.empty(n - max_hold - 1, dtype=np.float64)
+    short_gross_vals = np.empty(n - max_hold - 1, dtype=np.float64)
+    long_net_vals = np.empty(n - max_hold - 1, dtype=np.float64)
+    short_net_vals = np.empty(n - max_hold - 1, dtype=np.float64)
     gross_r_vals = np.empty(n - max_hold - 1, dtype=np.float64)
     net_r_vals = np.empty(n - max_hold - 1, dtype=np.float64)
 
@@ -246,6 +254,10 @@ def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n
 
         if atr <= 0 or atr > entry_price * 0.5:
             ints_list[i] = 2
+            long_gross_vals[i] = 0.0
+            short_gross_vals[i] = 0.0
+            long_net_vals[i] = 0.0
+            short_net_vals[i] = 0.0
             gross_r_vals[i] = 0.0
             net_r_vals[i] = 0.0
             continue
@@ -283,6 +295,10 @@ def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n
 
         net_long = long_gross - round_trip_cost_r
         net_short = short_gross - round_trip_cost_r
+        long_gross_vals[i] = long_gross
+        short_gross_vals[i] = short_gross
+        long_net_vals[i] = net_long
+        short_net_vals[i] = net_short
 
         # Convert to R-multiple: net_return / risk_amount
         risk_r = stop_dist / entry_price  # fraction of entry price at risk
@@ -296,6 +312,10 @@ def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n
         # Ambiguity check: if both sides are within margin, it's NO_TRADE
         if abs(long_r_mult - short_r_mult) <= ambiguity_margin_r:
             ints_list[i] = 2
+            long_gross_vals[i] = long_gross
+            short_gross_vals[i] = short_gross
+            long_net_vals[i] = net_long
+            short_net_vals[i] = net_short
             gross_r_vals[i] = 0.0
             net_r_vals[i] = 0.0
         elif long_r_mult > short_r_mult and long_r_mult > min_edge_r:
@@ -311,7 +331,7 @@ def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n
             gross_r_vals[i] = 0.0
             net_r_vals[i] = 0.0
 
-    return ints_list, gross_r_vals, net_r_vals
+    return ints_list, gross_r_vals, net_r_vals, long_gross_vals, short_gross_vals, long_net_vals, short_net_vals
 
 
 def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
@@ -344,7 +364,7 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
         n_sym = len(sym_close)
         if n_sym <= max_hold + 1:
             continue
-        ints_s, gross_s, net_s = _generate_labels_numba(
+        ints_s, gross_s, net_s, _, _, _, _ = _generate_labels_numba(
             sym_close, sym_high, sym_low,
             max_hold, stop_mult, target_mult, n_sym,
             min_edge_r, ambiguity_margin_r,
@@ -415,6 +435,156 @@ def compute_features_selected(ohlcv: dict, mode: str, feature_groups: Optional[L
     return X, feat_names or []
 
 
+def build_aligned_training_frame(
+    ohlcv: dict,
+    mode: str,
+    feature_groups: Optional[List[str]] = None,
+) -> dict:
+    """Build a timestamp-aligned training frame.
+
+    Rows are aligned per symbol first, then merged into a timestamp-major
+    order so walk-forward validation can operate on chronological windows
+    instead of flattened symbol blocks.
+    """
+    from alphaforge.features.pipeline import compute_features
+
+    close_arr = ohlcv["close"].astype(np.float64)
+    high_arr = ohlcv["high"].astype(np.float64)
+    low_arr = ohlcv["low"].astype(np.float64)
+    open_arr = ohlcv["open"].astype(np.float64)
+    volume_arr = ohlcv["volume"].astype(np.float64)
+    symbols = np.asarray(ohlcv.get("symbol", ["" for _ in range(len(close_arr))]))
+    timestamps = np.asarray(ohlcv.get("timestamp", np.arange(len(close_arr), dtype=np.int64)))
+
+    unique_syms: list[str] = []
+    symbol_order: dict[str, int] = {}
+    for s in symbols:
+        if s not in symbol_order:
+            symbol_order[s] = len(unique_syms)
+            unique_syms.append(str(s))
+
+    x_parts: list[np.ndarray] = []
+    y_parts: list[np.ndarray] = []
+    label_gross_parts: list[np.ndarray] = []
+    label_net_parts: list[np.ndarray] = []
+    action_gross_parts: list[np.ndarray] = []
+    action_net_parts: list[np.ndarray] = []
+    ts_parts: list[np.ndarray] = []
+    sym_rank_parts: list[np.ndarray] = []
+    feat_names: list[str] | None = None
+
+    cfg = MODE_CONFIG[mode]
+    max_hold = cfg["max_hold"]
+    stop_mult = cfg["stop_mult"]
+    target_mult = cfg["target_mult"]
+    min_edge_r = cfg.get("min_edge_r", 0.15)
+    ambiguity_margin_r = cfg.get("ambiguity_margin_r", 0.10)
+
+    for sym in unique_syms:
+        mask = symbols == sym
+        sym_close = close_arr[mask]
+        sym_high = high_arr[mask]
+        sym_low = low_arr[mask]
+        sym_open = open_arr[mask]
+        sym_volume = volume_arr[mask]
+        sym_ts = timestamps[mask]
+        n_sym = len(sym_close)
+        if n_sym <= max_hold + 1:
+            continue
+
+        fm = compute_features(
+            {
+                "close": sym_close,
+                "high": sym_high,
+                "low": sym_low,
+                "open": sym_open,
+                "volume": sym_volume,
+                "symbol": sym,
+            },
+            mode=mode,
+            feature_groups=feature_groups,
+        )
+        fn = sorted(fm.features.keys())
+        if feat_names is None:
+            feat_names = fn
+        Xs = np.column_stack([fm.features[k] for k in fn]).astype(np.float64)
+
+        ints_s, gross_s, net_s, long_gross_s, short_gross_s, long_net_s, short_net_s = _generate_labels_numba(
+            sym_close, sym_high, sym_low,
+            max_hold, stop_mult, target_mult, n_sym,
+            min_edge_r, ambiguity_margin_r,
+        )
+
+        label_len = len(ints_s)
+        if label_len == 0:
+            continue
+
+        x_parts.append(Xs[:label_len])
+        y_parts.append(ints_s[:label_len])
+        label_gross_parts.append(gross_s[:label_len])
+        label_net_parts.append(net_s[:label_len])
+        action_gross_parts.append(
+            np.column_stack([
+                long_gross_s[:label_len],
+                short_gross_s[:label_len],
+                np.zeros(label_len, dtype=np.float64),
+            ])
+        )
+        action_net_parts.append(
+            np.column_stack([
+                long_net_s[:label_len],
+                short_net_s[:label_len],
+                np.zeros(label_len, dtype=np.float64),
+            ])
+        )
+        ts_parts.append(sym_ts[:label_len])
+        sym_rank_parts.append(np.full(label_len, symbol_order[sym], dtype=np.int32))
+
+    if not x_parts:
+        return {
+            "X": np.empty((0, 0), dtype=np.float64),
+            "y_int": np.empty((0,), dtype=np.int32),
+            "label_gross_r": np.empty((0,), dtype=np.float64),
+            "label_net_r": np.empty((0,), dtype=np.float64),
+            "action_gross_r": np.empty((0, 3), dtype=np.float64),
+            "action_net_r": np.empty((0, 3), dtype=np.float64),
+            "timestamps": np.empty((0,), dtype=timestamps.dtype),
+            "symbols": np.empty((0,), dtype=object),
+            "feature_names": feat_names or [],
+        }
+
+    X = np.vstack(x_parts)
+    y_int = np.concatenate(y_parts)
+    label_gross_r = np.concatenate(label_gross_parts)
+    label_net_r = np.concatenate(label_net_parts)
+    action_gross_r = np.vstack(action_gross_parts)
+    action_net_r = np.vstack(action_net_parts)
+    ts = np.concatenate(ts_parts)
+    sym_rank = np.concatenate(sym_rank_parts)
+    if np.issubdtype(ts.dtype, np.datetime64):
+        ts_sort = ts.astype("datetime64[ns]").astype(np.int64)
+    elif ts.dtype.kind in {"i", "u"}:
+        ts_sort = ts.astype(np.int64, copy=False)
+    else:
+        import pandas as pd
+        ts_sort = pd.to_datetime(ts).view("int64")
+
+    sort_idx = np.lexsort((sym_rank, ts_sort))
+    symbols_arr = np.asarray([unique_syms[int(i)] for i in sym_rank], dtype=object)
+
+    return {
+        "X": X[sort_idx],
+        "y_int": y_int[sort_idx],
+        "label_gross_r": label_gross_r[sort_idx],
+        "label_net_r": label_net_r[sort_idx],
+        "action_gross_r": action_gross_r[sort_idx],
+        "action_net_r": action_net_r[sort_idx],
+        "timestamps": ts[sort_idx],
+        "symbols": symbols_arr[sort_idx],
+        "feature_names": feat_names or [],
+    }
+
+
 # ---------------------------------------------------------------------------
 # Walk-forward validation
 # ---------------------------------------------------------------------------
@@ -439,17 +609,25 @@ def walk_forward_validate(
     min_folds: int = 6,
     dump_softmax_path: str | None = None,
     threshold: float | None = None,
+    action_net_r: np.ndarray | None = None,
     return_raw_preds: bool = False,
-) -> List[dict] | tuple[list[dict], list[np.ndarray], list[np.ndarray]]:
+) -> List[dict] | tuple[list[dict], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
     """6-fold anchored expanding walk-forward validation.
 
     Returns per-fold result dicts.
     """
     from alphaforge.training.xgb_trainer import XGBoostTrainer
+    from alphaforge.reports.metrics import compute_oos_metrics
     from collections import Counter
     import xgboost as xgb
 
     n = len(X)
+    if action_net_r is None:
+        action_net_r = np.column_stack([
+            net_r_values,
+            net_r_values,
+            np.zeros(n, dtype=np.float64),
+        ]) if n > 0 else np.empty((0, 3), dtype=np.float64)
     fold_size = n // (min_folds + 1)
     results: list[dict] = []
     purge_bars = fold_size // 4
@@ -471,23 +649,24 @@ def walk_forward_validate(
         val_start = train_end
         val_end = val_start + fold_size // 2
         if val_end >= n:
-            logger.warning("Fold %d: val_end >= n — stopping", fold + 1)
+            logger.warning("Fold %d: val_end >= n â€” stopping", fold + 1)
             break
 
         effective_train_end = train_end - purge_bars
         effective_val_start = val_start + embargo_bars
 
         if effective_train_end <= 0 or effective_val_start >= val_end:
-            logger.warning("Fold %d: boundary issue — stopping", fold + 1)
+            logger.warning("Fold %d: boundary issue â€” stopping", fold + 1)
             break
 
         X_train = X[:effective_train_end]
         y_train = y_int[:effective_train_end]
         X_val = X[effective_val_start:val_end]
         y_val = y_int[effective_val_start:val_end]
+        val_action_net = action_net_r[effective_val_start:val_end]
 
         if len(X_train) < 50 or len(X_val) < 10:
-            logger.warning("Fold %d: insufficient samples — stopping", fold + 1)
+            logger.warning("Fold %d: insufficient samples â€” stopping", fold + 1)
             break
 
         trainer = XGBoostTrainer(mode=mode)
@@ -515,6 +694,10 @@ def walk_forward_validate(
                 walk_forward_validate._softmax_bins = []
             walk_forward_validate._softmax_bins.append(y_pred_prob_max)
 
+        pred_labels = np.array(["LONG_NOW" if p == 0 else "SHORT_NOW" if p == 1 else "NO_TRADE" for p in y_pred], dtype=object)
+        pred_gross_r = val_action_net[np.arange(len(y_pred)), y_pred]
+        pred_metrics = compute_oos_metrics(pred_labels.tolist(), pred_gross_r.tolist(), fee_pct=0.04)
+
         val_accuracy = float(np.mean(y_pred == y_val))
         train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
         val_logloss = float(fold_result.val_metrics.get("logloss", 0.0))
@@ -530,8 +713,10 @@ def walk_forward_validate(
         for t, p in zip(y_val, y_pred):
             cm[t, p] += 1
 
-        val_net_r_values = net_r_values[effective_val_start:val_end]
-        net_r_expectancy_val = float(np.mean(val_net_r_values)) if len(val_net_r_values) > 0 else 0.0
+        true_labels = np.array(["LONG_NOW" if t == 0 else "SHORT_NOW" if t == 1 else "NO_TRADE" for t in y_val], dtype=object)
+        true_gross_r = val_action_net[np.arange(len(y_val)), y_val]
+        oracle_metrics = compute_oos_metrics(true_labels.tolist(), true_gross_r.tolist(), fee_pct=0.04)
+        net_r_expectancy_val = float(pred_metrics.get("avg_net_R_per_active_trade", 0.0))
 
         results.append({
             "fold": fold + 1,
@@ -555,6 +740,10 @@ def walk_forward_validate(
             "low_conf_count": low_conf_count,
             "low_conf_pct": round(low_conf_pct, 2),
             "training_duration_seconds": fold_result.training_duration_seconds,
+            "decision_labels": pred_labels.tolist(),
+            "decision_gross_r": pred_gross_r.tolist(),
+            "active_metrics": pred_metrics,
+            "oracle_metrics": oracle_metrics,
         })
 
         logger.info(
@@ -619,8 +808,15 @@ def compute_overfit_gap(wfv_results: List[dict]) -> dict:
 # ---------------------------------------------------------------------------
 
 def compute_oos_sharpe(wfv_results: List[dict]) -> float:
-    """Compute OOS Sharpe ratio from per-fold net R-expectancy values."""
-    r_exps = [r["net_r_expectancy"] for r in wfv_results if abs(r["net_r_expectancy"]) > 1e-12]
+    """Compute OOS Sharpe ratio from per-fold active-trade net R values."""
+    r_exps = []
+    for r in wfv_results:
+        active_metrics = r.get("active_metrics") or {}
+        value = active_metrics.get("avg_net_R_per_active_trade")
+        if value is None:
+            value = r.get("net_r_expectancy", 0.0)
+        if abs(float(value)) > 1e-12:
+            r_exps.append(float(value))
     if len(r_exps) < 2:
         return 0.0
     mean_r = float(np.mean(r_exps))
@@ -651,21 +847,45 @@ def collect_metrics(
 
     overfit = compute_overfit_gap(wfv_results)
     net_sharpe = compute_oos_sharpe(wfv_results)
+    round_trip_cost_r = fee_pct * 2 / 100
 
-    # R-expectancy decomposition: net is primary; gross is recovered from net + cost
-    net_r_exps = [r["net_r_expectancy"] for r in wfv_results]
-    round_trip_cost_r = fee_pct * 2 / 100  # R units (same cost every bar)
-    gross_r_exps = [nr + round_trip_cost_r for nr in net_r_exps]
-    net_expectancy_r = float(np.mean(net_r_exps)) if net_r_exps else 0.0
-    gross_expectancy_r = float(np.mean(gross_r_exps)) if gross_r_exps else 0.0
+    from alphaforge.reports.metrics import compute_oos_metrics
+
+    decision_labels: list[str] = []
+    decision_gross_r: list[float] = []
+    for r in wfv_results:
+        decision_labels.extend(r.get("decision_labels", []))
+        decision_gross_r.extend(r.get("decision_gross_r", []))
+
+    if decision_labels and len(decision_labels) == len(decision_gross_r):
+        trade_metrics = compute_oos_metrics(decision_labels, decision_gross_r, fee_pct=fee_pct)
+        total_active = trade_metrics["active_trade_count"]
+        total_long = trade_metrics["long_trade_count"]
+        total_short = trade_metrics["short_trade_count"]
+        total_no_trade = trade_metrics["no_trade_count"]
+        exposure_pct = trade_metrics["exposure_pct"]
+        net_expectancy_r = float(trade_metrics["avg_net_R_per_active_trade"])
+        gross_expectancy_r = (
+            float(trade_metrics["total_gross_R"] / total_active)
+            if total_active > 0 else 0.0
+        )
+        total_gross_r = float(trade_metrics["total_gross_R"])
+        total_net_r = float(trade_metrics["total_net_R"])
+        total_decisions = len(decision_labels)
+    else:
+        net_r_exps = [r.get("net_r_expectancy", 0.0) for r in wfv_results]
+        gross_r_exps = [nr + round_trip_cost_r for nr in net_r_exps]
+        net_expectancy_r = float(np.mean(net_r_exps)) if net_r_exps else 0.0
+        gross_expectancy_r = float(np.mean(gross_r_exps)) if gross_r_exps else 0.0
+        total_active = sum(r["active_trade_count"] for r in wfv_results)
+        total_long = sum(r["long_count"] for r in wfv_results)
+        total_short = sum(r["short_count"] for r in wfv_results)
+        total_no_trade = sum(r["no_trade_count"] for r in wfv_results)
+        total_decisions = total_active + total_no_trade
+        exposure_pct = (total_active / total_decisions * 100) if total_decisions > 0 else 0.0
+        total_gross_r = sum((r.get("active_metrics", {}) or {}).get("total_gross_R", 0.0) for r in wfv_results)
+        total_net_r = sum((r.get("active_metrics", {}) or {}).get("total_net_R", 0.0) for r in wfv_results)
     net_sharpe_ratio = net_sharpe
-
-    total_active = sum(r["active_trade_count"] for r in wfv_results)
-    total_long = sum(r["long_count"] for r in wfv_results)
-    total_short = sum(r["short_count"] for r in wfv_results)
-    total_no_trade = sum(r["no_trade_count"] for r in wfv_results)
-    total_decisions = total_active + total_no_trade
-    exposure_pct = (total_active / total_decisions * 100) if total_decisions > 0 else 0.0
 
     # Confidence threshold metrics
     low_conf_counts = [r.get("low_conf_count", 0) for r in wfv_results]
@@ -685,6 +905,8 @@ def collect_metrics(
         "net_sharpe_ratio": net_sharpe_ratio,
         "net_expectancy_r": round(net_expectancy_r, 6),
         "gross_expectancy_r": round(gross_expectancy_r, 6),
+        "total_gross_R": round(total_gross_r, 6),
+        "total_net_R": round(total_net_r, 6),
         "overfit_gap": overfit["overfit_gap"],
         "train_oos_correlation": overfit["train_oos_correlation"],
         "pbo_risk": overfit["pbo_risk"],
@@ -757,31 +979,36 @@ def main():
     n_bars_total = len(ohlcv["close"])
     print(f"  {n_bars_total} total bars, {len(symbols)} symbols")
 
-    # Step 2: Generate labels
-    print("\n[2/6] Generating triple-barrier labels...")
-    y_int, r_vals, label_metrics = generate_labels(ohlcv, mode)
-
-    # Step 3: Compute features
-    print("\n[3/6] Computing features...")
     feature_groups_arg = args.features.lower()
     if feature_groups_arg == "all":
         feature_groups = None
     else:
         feature_groups = [g.strip() for g in feature_groups_arg.split(",")]
-    X, feat_names = compute_features_selected(ohlcv, mode, feature_groups=feature_groups)
-    print(f"  {X.shape[1]} feature columns, {X.shape[0]} rows")
+    # Step 2/3: Build aligned dataset
+    print("\n[2/6] Building aligned label + feature frame...")
+    training_frame = build_aligned_training_frame(ohlcv, mode, feature_groups=feature_groups)
+    X = training_frame["X"]
+    feat_names = training_frame["feature_names"]
+    y_int = training_frame["y_int"]
+    label_gross_r = training_frame["label_gross_r"]
+    label_net_r = training_frame["label_net_r"]
+    action_gross_r = training_frame["action_gross_r"]
+    action_net_r = training_frame["action_net_r"]
+    sample_timestamps = training_frame["timestamps"]
+    sample_symbols = training_frame["symbols"]
 
-    # Align lengths (labels are shorter due to max_hold lookahead)
-    cut = min(X.shape[0], len(y_int))
-    X, y_int = X[:cut], y_int[:cut]
-    r_vals = r_vals[:cut]
-    print(f"  After label alignment: {len(X)} samples")
+    print("\n[3/6] Aligning samples and cleaning NaNs...")
+    print(f"  {X.shape[1]} feature columns, {X.shape[0]} aligned rows")
 
-    # Remove NaN rows
     nan_mask = np.isnan(X).any(axis=1)
     X_clean = X[~nan_mask]
     y_clean = y_int[~nan_mask]
-    r_clean = r_vals[~nan_mask]
+    label_gross_clean = label_gross_r[~nan_mask]
+    label_net_clean = label_net_r[~nan_mask]
+    action_gross_clean = action_gross_r[~nan_mask]
+    action_net_clean = action_net_r[~nan_mask]
+    ts_clean = sample_timestamps[~nan_mask]
+    sym_clean = sample_symbols[~nan_mask]
     print(f"  After NaN removal: {len(X_clean)} valid samples ({int(nan_mask.sum())} dropped)")
     
     # Feature dump for correlation analysis
@@ -795,25 +1022,32 @@ def main():
     # Positive control: replace labels with synthetic feature-based signal
     if args.positive_control:
         rng = np.random.RandomState(42)
-        feat_idx = 22  # log_return_1 — non-duplicate feature
+        feat_idx = 22  # log_return_1 â€” non-duplicate feature
         feat_vals = X_clean[:, feat_idx].copy()
         feat_norm = (feat_vals - np.mean(feat_vals)) / max(np.std(feat_vals), 1e-12)
-        noise_std = 5.0  # 5x normalized feature std — hard
+        noise_std = 0.35
         signal = feat_norm + rng.normal(0, noise_std, size=len(feat_norm))
         y_new = np.full(len(signal), 2, dtype=np.int32)
-        y_new[signal > 0.5] = 0   # LONG
-        y_new[signal < -0.5] = 1  # SHORT
+        y_new[signal > 0.15] = 0   # LONG
+        y_new[signal < -0.15] = 1  # SHORT
         long_c = int(np.sum(y_new == 0))
         short_c = int(np.sum(y_new == 1))
         notrade_c = int(np.sum(y_new == 2))
         print(f"\n  {'='*50}")
         print(f"  POSITIVE CONTROL TEST")
         print(f"  Feature: {feat_names[feat_idx]} (idx={feat_idx})")
-        print(f"  Noise: N(0,{noise_std}) — label = sign(feature[t] + noise)")
+        print(f"  Noise: N(0,{noise_std}) â€” label = sign(feature[t] + noise)")
         print(f"  Dist: LONG={long_c}, SHORT={short_c}, NO_TRADE={notrade_c}")
         print(f"  Baseline (NO_TRADE-guess): {max(notrade_c,long_c,short_c)/len(y_new):.3f}")
         y_clean = y_new
-        r_clean = np.where(y_new == 0, 0.02, np.where(y_new == 1, 0.02, 0.0)).astype(np.float64)
+        label_gross_clean = np.where(y_new == 0, 0.02, np.where(y_new == 1, 0.02, 0.0)).astype(np.float64)
+        label_net_clean = label_gross_clean.copy()
+        action_gross_clean = np.column_stack([
+            np.where(y_new == 0, 0.02, 0.0),
+            np.where(y_new == 1, 0.02, 0.0),
+            np.zeros(len(y_new), dtype=np.float64),
+        ])
+        action_net_clean = action_gross_clean.copy()
 
     if len(X_clean) < 100:
         print("  ERROR: Insufficient clean samples for training")
@@ -821,15 +1055,16 @@ def main():
 
     # Step 4: Walk-forward validation
     if args.threshold_sweep:
-        # ── Threshold Sweep (train once, sweep thresholds on saved preds) ──
+        # â”€â”€ Threshold Sweep (train once, sweep thresholds on saved preds) â”€â”€
         thresholds = [float(t.strip()) for t in args.threshold_sweep.split(",")]
         thresholds = sorted(set(thresholds))
         print(f"\n{'='*60}")
-        print(f"  THRESHOLD SWEEP — {len(thresholds)} thresholds")
+        print(f"  THRESHOLD SWEEP â€” {len(thresholds)} thresholds")
         print(f"{'='*60}")
 
         wfv_results, fold_preds, fold_y_class, fold_y_val = walk_forward_validate(
-            X_clean, y_clean, r_clean, mode, min_folds=args.folds,
+            X_clean, y_clean, label_net_clean, mode, min_folds=args.folds,
+            action_net_r=action_net_clean,
             return_raw_preds=True,
         )
 
@@ -837,7 +1072,9 @@ def main():
         all_y_class = np.concatenate(fold_y_class)
         all_y_val = np.concatenate(fold_y_val)
 
-        print(f"{"Threshold":10s}  {"OOS Acc":8s}  {"Trades":10s}  {"Exposure":10s}  {"No-trade":10s}")
+        print("{:<10s}  {:<8s}  {:<10s}  {:<10s}  {:<10s}".format(
+            "Threshold", "OOS Acc", "Trades", "Exposure", "No-trade"
+        ))
         print(f"{'-'*50}")
 
         sweep_results = []
@@ -875,7 +1112,8 @@ def main():
         print(f"\n[4/6] Walk-forward validation ({args.folds} folds, anchored expanding)...")
         t0 = time.time()
         wfv_results = walk_forward_validate(
-            X_clean, y_clean, r_clean, mode, min_folds=args.folds,
+            X_clean, y_clean, label_net_clean, mode, min_folds=args.folds,
+            action_net_r=action_net_clean,
             dump_softmax_path=args.dump_softmax,
         )
         wfv_duration = time.time() - t0
@@ -916,7 +1154,7 @@ def main():
     metrics = collect_metrics(wfv_results, X_clean, feat_names, fee_pct=fee_pct)
 
     print(f"\n{'='*60}")
-    print(f"  TRAINING RESULTS — {mode}")
+    print(f"  TRAINING RESULTS â€” {mode}")
     print(f"{'='*60}")
     print(f"  Accuracy (OOS):              {metrics['accuracy']:.4f}")
     print(f"  Train Accuracy:              {metrics['train_accuracy']:.4f}")
@@ -960,3 +1198,4 @@ if __name__ == "__main__":
         "overfit_gap": metrics["overfit_gap"],
         "feature_count": metrics["feature_count"],
     }, indent=2))
+

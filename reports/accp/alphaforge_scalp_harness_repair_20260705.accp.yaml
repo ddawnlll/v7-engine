@@ -1,0 +1,54 @@
+﻿accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  status: "PASS"
+  summary: "AlphaForge SCALP training harness now builds timestamp-aligned per-symbol frames, uses predicted-action economics in walk-forward metrics, and the positive-control sanity check passes."
+scope_confirmation:
+  task_type: "implementation_and_verification"
+  subsystem: "AlphaForge"
+  source_code_modified: true
+  docs_modified: true
+files_changed:
+  - "alphaforge/src/alphaforge/train.py"
+  - "alphaforge/docs/ai_summary.md"
+  - "v7/docs/roadmap.md"
+  - "reports/accp/alphaforge_scalp_harness_repair_20260705.accp.yaml"
+decisions_locked:
+  - "Do not use the old flattened symbol-block training path for SCALP validation."
+  - "Treat predicted-action economics as the canonical active-trade metric source for this harness."
+  - "Treat the positive-control passing run as the minimum harness sanity gate."
+remaining_holds:
+  - hold: "Real SCALP profitability evidence"
+    release_condition: "The repaired harness must show consistent positive or at least non-catastrophic OOS active-trade economics on real data before any promotion claim."
+  - hold: "SCALP alpha thesis"
+    release_condition: "A subsequent run on the repaired harness must produce evidence better than the current negative Sharpe / HIGH PBO baseline."
+safe_next_step: "Use the repaired harness to iterate on feature sets or label logic only after confirming the same positive-control pass and a stable, chronological walk-forward split."
+commands_run:
+  - "python -m py_compile alphaforge/src/alphaforge/train.py"
+  - "PYTHONPATH=alphaforge/src C:/Users/dresden/AppData/Local/Programs/Python/Python314/python.exe -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT --folds 3 --panel-cache cache/factor_sprint --threshold-sweep 0.3,0.45,0.55,0.7"
+  - "PYTHONPATH=alphaforge/src C:/Users/dresden/AppData/Local/Programs/Python/Python314/python.exe -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT --folds 3 --panel-cache cache/factor_sprint --positive-control"
+  - "Get-Content -Raw alphaforge/src/alphaforge/train.py"
+  - "Select-String -Path alphaforge/docs/ai_summary.md -Pattern 'SCALP Training Harness Repair'"
+  - "Select-String -Path v7/docs/roadmap.md -Pattern 'AlphaForge SCALP Training Harness Repair'"
+evidence:
+  normal_run:
+    oos_accuracy: 0.2313
+    train_accuracy: 0.6038
+    overfit_gap: 0.3725
+    pbo_risk: "HIGH"
+    exposure_pct: 21.6
+    low_confidence_rate_pct: 78.4
+    sharpe_ratio: -46.1304
+  positive_control_run:
+    oos_accuracy: 0.7244
+    train_accuracy: 0.7585
+    overfit_gap: 0.0341
+    pbo_risk: "HIGH"
+    exposure_pct: 73.8
+    low_confidence_rate_pct: 26.2
+    sharpe_ratio: -156.6651
+  key_code_changes:
+    - "Per-symbol label generation now carries action-specific gross/net arrays."
+    - "Training rows are aligned by timestamp and symbol before walk-forward slicing."
+    - "Walk-forward validation uses predicted-action gross R, not oracle label net R, for active-trade metrics."
+    - "Positive-control signal was tightened to make the sanity gate meaningfully learnable."
