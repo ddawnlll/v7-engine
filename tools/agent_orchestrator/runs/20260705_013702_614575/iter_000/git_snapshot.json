@@ -1,0 +1,5 @@
+{
+  "head": "bfbc5986ef8f3bf0c8148917bed2970c496dd80a",
+  "diff_stat": "",
+  "porcelain": "?? alphaforge/src/alphaforge/alphas/\n?? alphaforge/src/alphaforge/candidates/mean_reversion_5d.py\n?? alphaforge/src/alphaforge/candidates/test_mean_reversion_5d.py\n?? alphaforge/src/alphaforge/factors/alpha_volume_trend.py\n?? alphaforge/src/alphaforge/factors/vwap_momentum_factor.py\n?? reports/candidates/alpha_momentum_backtest.json\n?? scripts/backtest_alpha_momentum.py\n?? test_alpha_volume_trend.py\n?? tools/agent_orchestrator/runs/20260705_013702_614575/\n?? tools/momentum_factor_research/"
+}

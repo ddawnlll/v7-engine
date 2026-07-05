@@ -1,0 +1,34 @@
+Implement the requested task below.
+
+## Task
+
+Create a new alpha factor in alphaforge/src/alphaforge/candidates/ called momentum_alpha.py that implements a simple 20-day momentum factor. The factor should: 1) Take a price series as input (list or numpy array). 2) Compute the 20-day return: (price[-1] - price[-21]) / price[-21]. 3) Return the computed value. Also create a test script in alphaforge/src/alphaforge/candidates/ called test_momentum_alpha.py that: 1) Generates a synthetic price series (e.g., random walk of 100 days). 2) Imports and calls the momentum_alpha function. 3) Prints the resulting factor value. 4) Prints a report with fields: train_start='2020-01-01', train_end='2020-12-31', test_start='2021-01-01', test_end='2021-12-31', n_combinations=1, metric='IC' with value 0.0 (placeholder). Run the test script and include the report fields in the final completion summary.
+
+## Rules
+
+- Implement only what is requested. Do not over-engineer.
+- If the task asks for code changes, run relevant tests/checks afterward.
+- Do NOT modify these authority files: evaluation.py, factors.py,
+  simulation_adapter.py, fast_simulator.py, authority_map.md
+- Never claim success without evidence.
+
+## Required — Completion Summary
+
+Your final output MUST include a completion summary with these fields:
+
+```
+## Completion Summary
+- Files changed: [...]
+- Commands run: [...]
+- train_start: <date>
+- train_end: <date>
+- test_start: <date>
+- test_end: <date>
+- n_combinations: <number of trials>
+- metric: <key metric value>
+- Results: [...]
+- Status: SUCCESS | FAILURE | BLOCKED
+```
+
+The gate checks for these fields. If they are missing, the iteration FAILs
+and your work may be discarded.
