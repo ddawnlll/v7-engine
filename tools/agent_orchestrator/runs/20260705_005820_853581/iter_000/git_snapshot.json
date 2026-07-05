@@ -1,0 +1,7 @@
+{
+  "reverted": true,
+  "actions": [
+    "git checkout failed: error: pathspec '.' did not match any file(s) known to git",
+    "dry-run clean would remove: Would remove agent_orchestrator/README.md\nWould remove agent_orchestrator/claude_worker.py\nWould remove agent_orchestrator/config.example.json\nWould remove agent_orchestrator/config.example.yaml\nWould remove agent_orchestrator/controller.py\nWould remove agent_orchestrator/gate.py\nWould remove agent_orchestrator/prompts/\nWould remove agent_orchestrator/run_context.py\nWould remove agent_orchestrator/strategist_client.py\nWould remove alpha_candidate.py\nWould remove alpha_output.csv\nWould remove tes"
+  ]
+}

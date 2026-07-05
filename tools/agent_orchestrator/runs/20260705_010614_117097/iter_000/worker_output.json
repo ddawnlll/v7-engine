@@ -1,0 +1,1 @@
+{"exit_code": -1, "log_path": "C:\\Users\\dresden\\Documents\\v7-engine\\tools\\agent_orchestrator\\runs\\20260705_010614_117097\\iter_000\\claude_stream.jsonl", "summary": "", "error": "Worker error: 'charmap' codec can't decode byte 0x8f in position 198: character maps to <undefined>"}

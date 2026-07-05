@@ -1,0 +1,14 @@
+{
+  "worker_task": "Create a Python file `alphaforge/alpha_candidate.py` that implements a single deterministic alpha candidate function `alpha_001`. The function should accept a pandas DataFrame with columns ['open','high','low','close','volume'] and return a pandas Series of alpha signals (numeric values, no NaNs) computed as: (close - open) / (high - low + 1e-8). Also create a test file `tests/test_alpha_candidate.py` that uses pytest to verify the function returns the correct shape and values for a small sample DataFrame. Ensure both files are syntactically valid Python.",
+  "rationale": "This is the first iteration and the goal is to create and test one deterministic alpha candidate. A simple, well-known alpha formula is chosen to ensure correctness and ease of testing. The task is small, safe, and reversible.",
+  "expected_artifacts": [
+    "alphaforge/alpha_candidate.py",
+    "tests/test_alpha_candidate.py"
+  ],
+  "success_criteria": [
+    "alphaforge/alpha_candidate.py exists and is valid Python",
+    "tests/test_alpha_candidate.py exists and is valid Python",
+    "pytest tests/test_alpha_candidate.py passes with exit code 0"
+  ],
+  "risk_notes": "Ensure the directory `alphaforge` and `tests` exist or create them. Use a small epsilon in denominator to avoid division by zero."
+}

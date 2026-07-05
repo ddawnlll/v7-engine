@@ -1,0 +1,25 @@
+{
+  "verdict": "FAIL",
+  "check_results": {
+    "exit_code_ok": true,
+    "log_exists": true,
+    "required_files_exist": true,
+    "test_command_ok": true,
+    "metrics_file_exists": true,
+    "metrics_file_valid": true,
+    "git_head_saved": true,
+    "git_no_tracked_mods": false,
+    "git_changes_in_allowed_paths": false
+  },
+  "reasons": [
+    "Worker exited cleanly",
+    "Worker log exists (144543 bytes)",
+    "Git HEAD: 693a4c4b041f",
+    "Worker modified tracked files — only new files expected.\nDiff:\nMakefile                                           |   5 +-\n alphaforge/src/alphaforge/dashboard/app.py         | 139 +++++++++---\n .../src/alphaforge/dashboard/templates/index.html  | 199 ++++++++++-------\n alphaforge/src/alphaforge/sprint/cost_sanity.py    | 237 ++++++++++++++++++++-\n alphaforge/tests/test_dashboard.py                 |  25 ++-\n lib/tests/test_data_lake_storage.py                |   2 +-\n scripts/setup.sh                                   |  10 +-\n 7 files changed, 490 insertions(+), 127 deletions(-)",
+    "Untracked/Modified files outside allowed paths:\nM Makefile\nM alphaforge/src/alphaforge/dashboard/app.py\nM alphaforge/src/alphaforge/dashboard/templates/index.html\nM alphaforge/src/alphaforge/sprint/cost_sanity.py\nM alphaforge/tests/test_dashboard.py\nM lib/tests/test_data_lake_storage.py\nM scripts/setup.sh\n?? reports/alphaforge_4x_fark_aciklama.accp.yaml\n?? tools/"
+  ],
+  "evidence_paths": [
+    "C:\\Users\\dresden\\Documents\\v7-engine\\tools\\agent_orchestrator\\runs\\20260705_005820_853581\\iter_000\\claude_stream.jsonl",
+    "HEAD=693a4c4b041f"
+  ]
+}
