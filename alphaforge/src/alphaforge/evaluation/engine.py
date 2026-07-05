@@ -57,6 +57,76 @@ def _expectancy(realized_r: list[float]) -> float:
     return sum(realized_r) / len(realized_r)
 
 
+# ── Regression reliability ─────────────────────────────────────────
+
+def regression_reliability(
+    y_true: list[float] | np.ndarray,
+    y_pred: list[float] | np.ndarray,
+    n_buckets: int = 5,
+) -> dict[str, Any]:
+    """Evaluate regression reliability by predicted-R buckets.
+
+    Groups predictions into equal-width buckets, then compares
+    mean predicted vs mean realized R within each bucket.
+    Reliable if predicted and realized move together monotonically.
+
+    Args:
+        y_true: Ground truth R values.
+        y_pred: Predicted R values.
+        n_buckets: Number of reliability buckets.
+
+    Returns:
+        Dict with per-bucket comparison and sign accuracy.
+    """
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    n = len(y_true)
+    if n == 0:
+        return {"reliable": False, "buckets": [], "sign_accuracy": 0.0, "samples": 0}
+
+    # Bucket by predicted R
+    bin_edges = np.linspace(float(y_pred.min()), float(y_pred.max()), n_buckets + 1)
+    if bin_edges[0] == bin_edges[-1]:
+        bin_edges = np.linspace(-1, 1, n_buckets + 1)
+    indices = np.digitize(y_pred, bin_edges) - 1
+    indices = np.clip(indices, 0, n_buckets - 1)
+
+    buckets = []
+    monotonic_up = True
+    prev_realized = -float("inf")
+    for i in range(n_buckets):
+        mask = indices == i
+        if not mask.any():
+            continue
+        mean_pred = float(y_pred[mask].mean())
+        mean_real = float(y_true[mask].mean())
+        if mean_real < prev_realized - 0.01:
+            monotonic_up = False
+        prev_realized = mean_real
+        buckets.append({
+            "bucket": i,
+            "range": [round(float(bin_edges[i]), 4), round(float(bin_edges[i + 1]), 4)],
+            "count": int(mask.sum()),
+            "mean_predicted_r": round(mean_pred, 4),
+            "mean_realized_r": round(mean_real, 4),
+            "error": round(abs(mean_pred - mean_real), 4),
+        })
+
+    # Sign accuracy: does predicted sign match realized sign?
+    pred_sign = np.sign(y_pred)
+    true_sign = np.sign(y_true)
+    sign_correct = int((pred_sign == true_sign).sum())
+    sign_accuracy = sign_correct / n if n > 0 else 0.0
+
+    return {
+        "reliable": monotonic_up and sign_accuracy >= 0.5,
+        "buckets": buckets,
+        "sign_accuracy": round(sign_accuracy, 4),
+        "monotonic": monotonic_up,
+        "samples": n,
+    }
+
+
 # ── Primary evaluation ─────────────────────────────────────────────
 
 def evaluate_classification(

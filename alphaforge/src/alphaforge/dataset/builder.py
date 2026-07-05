@@ -182,6 +182,8 @@ def build_dataset(
             "val_end": str(fold.val_end),
             "num_train": len(train_rows),
             "num_val": len(val_rows),
+            "train_rows": train_rows,
+            "val_rows": val_rows,
         })
 
     return {
