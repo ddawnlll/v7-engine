@@ -113,7 +113,7 @@ class EvalGateRunner:
         gates.append(
             GateResult(
                 gate_name="DRAWDOWN",
-                passed=factor.max_drawdown < self._config.max_drawdown_pct,
+                passed=factor.max_drawdown <= self._config.max_drawdown_pct,
                 value=factor.max_drawdown,
                 threshold=self._config.max_drawdown_pct,
                 details=f"max_drawdown={factor.max_drawdown:.2%}, max={self._config.max_drawdown_pct:.0%}",

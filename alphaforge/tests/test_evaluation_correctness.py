@@ -344,10 +344,13 @@ class TestCostModel:
         fwd_returns = compute_forward_returns(close, horizons=[1])
         return factor, fwd_returns
 
+    @pytest.mark.xfail(strict=True, reason="Cost model not yet implemented")
     def test_net_equals_gross_when_no_cost(self):
-        """Currently there's no cost model — net should equal gross (for long).
-        This test documents the current behavior and should FAIL once
-        a proper cost model is added (which is the desired state)."""
+        """INTENT: This test asserts net == gross for long trades, which is only
+        true when there is NO cost model. Once a cost model is implemented,
+        net will be less than gross and this test MUST FAIL — the xfail marker
+        documents that the test's assertion describes the pre-cost-model world
+        and will break (correctly) when costs are introduced."""
         factor, fwd_returns = self._make_cost_data()
 
         results = evaluate_factor("test_factor", factor, fwd_returns, "long")

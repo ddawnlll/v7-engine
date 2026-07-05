@@ -97,28 +97,40 @@ def test_benjamini_hochberg_maintains_original_order():
 
 
 def test_deflated_sharpe_standard():
-    """Deflated Sharpe: 1.0 * sqrt((1 - 0.5*10/1000) / 0.5) ~ 1.41."""
+    """Deflated Sharpe: 1.0 / sqrt(1 + 10/1000) ~ 0.995."""
     result = deflated_sharpe(sharpe=1.0, n_trials=10, n_samples=1000, gamma=0.5)
-    # ratio = 0.5 * 10 / 1000 = 0.005
-    # result = 1.0 * sqrt((1 - 0.005) / (1 - 0.5))
-    #        = sqrt(0.995 / 0.5) = sqrt(1.99) ~ 1.41067
-    expected = 1.0 * math.sqrt(
-        (1 - 0.5 * 10 / 1000) / (1 - 0.5),
-    )
+    # deflated = 1.0 / sqrt(1.0 + 10/1000) = 1.0 / sqrt(1.01) ~ 0.995037
+    expected = 1.0 / math.sqrt(1.0 + 10 / 1000)
     assert result == pytest.approx(expected, abs=1e-10)
+    # Deflated value should be LOWER than the input Sharpe
+    assert result < 1.0
 
 
-def test_deflated_sharpe_extreme_n_trials():
-    """Deflated Sharpe: gamma * n_trials / n_samples >= 1.0 -> 0.0."""
+def test_deflated_sharpe_many_trials():
+    """Deflated Sharpe: many trials produce a smaller but nonzero value.
+
+    With n_trials=1000, n_samples=100, the deflated Sharpe is
+    1.0 / sqrt(1 + 1000/100) = 1.0 / sqrt(11) ~ 0.3015.
+    The value is deflated (lower than input) but not zero — even
+    extreme trial burdens leave some signal if the Sharpe is high.
+    """
     result = deflated_sharpe(sharpe=1.0, n_trials=1000, n_samples=100, gamma=0.5)
-    # 0.5 * 1000 / 100 = 5.0 >= 1.0
-    assert result == 0.0
+    expected = 1.0 / math.sqrt(1.0 + 1000 / 100)
+    assert result == pytest.approx(expected, abs=1e-10)
+    assert result < 1.0  # still deflated
 
 
-def test_deflated_sharpe_zero_denominator():
-    """Deflated Sharpe: gamma=1.0 -> denominator = 0 -> returns 0.0."""
+def test_deflated_sharpe_large_gamma():
+    """Deflated Sharpe: gamma is now ignored — formula uses only trial ratio.
+
+    Previously gamma=1.0 caused a zero-denominator issue. With the
+    simple approximation, gamma is ignored and the formula works for
+    any value.
+    """
     result = deflated_sharpe(sharpe=1.0, n_trials=10, n_samples=1000, gamma=1.0)
-    assert result == 0.0
+    expected = 1.0 / math.sqrt(1.0 + 10 / 1000)
+    assert result == pytest.approx(expected, abs=1e-10)
+    assert result < 1.0  # deflated
 
 
 def test_deflated_sharpe_no_adjustment():

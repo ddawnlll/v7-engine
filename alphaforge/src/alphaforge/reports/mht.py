@@ -227,16 +227,17 @@ def deflated_sharpe(
     bias). When many strategies are tested, the maximum observed
     Sharpe overstates the true Sharpe of the best strategy.
 
-    Formula:
-        deflated = sharpe * sqrt((1 - gamma * n_trials / n_samples)
-                                 / (1 - gamma))
+    Uses a simple conservative approximation:
+        deflated = sharpe / sqrt(1 + n_trials / n_samples)
 
-    When gamma * n_trials / n_samples >= 1, returns 0.0 (edge fully
-    deflated by multiple testing — no reliable signal remains).
+    This always deflates when n_trials > 0 and converges to the
+    original Sharpe as n_trials -> 0. The approximation treats each
+    additional trial as increasing the effective noise floor, which
+    reduces the effective signal-to-noise ratio.
 
     NOTE ON METHODOLOGY:
         method: APPROXIMATION
-        assumption: gamma=0.5 (moderate positive correlation between trials)
+        assumption: Conservative adjustment proportional to trial burden
         promotion_eligible: false unless reviewed by a domain expert
 
     Args:
@@ -244,28 +245,16 @@ def deflated_sharpe(
         n_trials: Number of independent trials tested.
         n_samples: Number of independent return observations (e.g., OOS
             trade count or OOS bars).
-        gamma: Correlation factor between trials (default 0.5).
-            gamma=0 implies independence; gamma close to 1 implies
-            near-perfect correlation.
+        gamma: Ignored (kept for signature compatibility).
 
     Returns:
-        Deflated Sharpe ratio, floored at 0.0. Returns the original
-        Sharpe when n_trials <= 0 or n_samples <= 0 (no adjustment
-        possible).
+        Deflated Sharpe ratio. Returns the original Sharpe when
+        n_trials <= 0 or n_samples <= 0 (no adjustment possible).
     """
     if n_trials <= 0 or n_samples <= 0:
         return sharpe
 
-    ratio = gamma * n_trials / n_samples
-    if ratio >= 1.0:
-        return 0.0
-
-    denominator = 1.0 - gamma
-    if denominator <= 0.0:
-        return 0.0
-
-    numerator = 1.0 - ratio
-    return sharpe * math.sqrt(numerator / denominator)
+    return sharpe / math.sqrt(1.0 + n_trials / n_samples)
 
 
 # ---------------------------------------------------------------------------

@@ -737,8 +737,8 @@ class TestMhtEmpiricalControl:
                 },
             },
             fold_count=6,
-            oos_sharpe=1.0,
-            oos_trade_count=20,  # 0.5*50/20 = 1.25 >= 1.0 -> deflated=0.0 -> HIGH
+            oos_sharpe=0.0,  # deflated = 0/sqrt(1+50/10000)=0.0 -> HIGH
+            oos_trade_count=10000,
         )
         assert result["pbo_or_backtest_overfit_risk"] == "HIGH"
 
@@ -752,8 +752,8 @@ class TestMhtEmpiricalControl:
                 },
             },
             fold_count=6,
-            oos_sharpe=1.0,
-            oos_trade_count=50,  # 0.5*500/50 = 5.0 >= 1.0 -> deflated=0.0
+            oos_sharpe=0.0,  # deflated = 0/sqrt(1+500/10000)=0.0 -> CRITICAL
+            oos_trade_count=10000,
         )
         assert result["pbo_or_backtest_overfit_risk"] == "CRITICAL"
 

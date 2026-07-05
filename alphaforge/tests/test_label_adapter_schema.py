@@ -486,7 +486,7 @@ class TestLineagePropagation:
         assert label["simulation_profile_id"] == "swing_profile-1.0.0"
 
     def test_simulation_engine_version_from_lineage(self):
-        """simulation_engine_version comes from lineage.simulation_family_version."""
+        """simulation_engine_version comes from lineage.simulation_engine_version."""
         sim = _load_sim_fixture()
         label = adapt_simulation_output(sim)
         assert label["simulation_engine_version"] == "simfam-1.0.0"

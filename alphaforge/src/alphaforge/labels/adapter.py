@@ -174,7 +174,7 @@ class LabelAdapter:
         # --- Lineage propagation ---
         simulation_family_version: str = lineage.get("simulation_family_version", "unknown")
         simulation_profile_id: str = lineage.get("simulation_profile_version", "unknown")
-        simulation_engine_version: str = lineage.get("simulation_family_version", "unknown")
+        simulation_engine_version: str = lineage.get("simulation_engine_version", "unknown")
         cost_model_version: str = lineage.get("cost_model_version", "unknown")
 
         # --- Cost-consumed-edge detection ---

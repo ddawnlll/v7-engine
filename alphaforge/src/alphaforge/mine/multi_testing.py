@@ -122,17 +122,19 @@ class MultiTestingCorrector:
         Harvey, Liu & Zhu (2016) multiple testing adjustment framework.
 
         Formula:
-            DSR = Sharpe * sqrt((N-1) / N) * norm.ppf(1 - 0.5/m)
+            DSR = Sharpe * sqrt((N-1)/N) - norm.ppf(1 - 0.5/m) / sqrt(N)
 
         Where:
             Sharpe: original Sharpe ratio(s)
             N: number of independent return observations
             m: number of trials / hypotheses tested
 
-        A larger m produces a larger multiple-testing correction factor
-        (more trials tested means the best observed Sharpe is more likely
-        inflated by chance). The small-sample correction sqrt((N-1)/N)
-        adjusts for bias in the Sharpe estimator.
+        The component ``norm.ppf(1 - 0.5/m) / sqrt(N)`` represents the
+        multiple-testing threshold: the expected maximum Sharpe due to
+        chance alone when testing m hypotheses over N observations.
+        Subtracting this threshold from the small-sample-corrected Sharpe
+        yields the deflated (snooping-adjusted) Sharpe, which is always
+        lower than the input when m > 1.
 
         Args:
             sharpe_values: Array of observed Sharpe ratios to correct.
@@ -148,9 +150,11 @@ class MultiTestingCorrector:
             return np.full_like(sharpe_values, np.nan, dtype=float)
 
         small_sample_correction = math.sqrt((N - 1) / N)
-        multiple_testing_factor = norm.ppf(1 - 0.5 / m)
+        # Harvey-Liu-Zhu (2016): subtract the multiple-testing threshold
+        # from the small-sample-corrected Sharpe, rather than multiplying.
+        threshold = norm.ppf(1 - 0.5 / m) / math.sqrt(N)
 
-        return sharpe_values * small_sample_correction * multiple_testing_factor
+        return sharpe_values * small_sample_correction - threshold
 
     # ------------------------------------------------------------------
     # High-level correct() — enriches rule dicts

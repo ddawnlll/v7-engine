@@ -758,18 +758,40 @@ def test_two_samples_per_bin():
 
 
 def test_all_empty_bins():
-    """All predictions in a single bin produce non-empty remaining bins."""
-    n = 50
-    n_classes = 3
+    """Predictions spread across multiple bins report correct per-bin counts.
+
+    Uses enough classes so the target confidence is always the maximum
+    probability even for the lowest bin (confidence = 0.05).
+    """
+    n_bins = 10
+    n_per_bin = 5
+    n = n_bins * n_per_bin
+    # Need enough classes so min confidence (0.05) is still the argmax.
+    # With k classes the max is at least 1/k; 20 classes gives min max = 0.05.
+    n_classes = 20
     y_true = np.zeros(n, dtype=int)
     y_prob = np.zeros((n, n_classes), dtype=np.float64)
-    y_prob[:, 0] = 0.99
-    y_prob[:, 1] = 0.01
-    y_prob[:, 2] = 0.0
 
-    bins = compute_confidence_bins(y_true, y_prob, n_bins=10)
+    # Place n_per_bin samples at the centre of each bin
+    for i in range(n_bins):
+        conf = (i + 0.5) / n_bins  # 0.05, 0.15, ..., 0.95
+        remaining = 1.0 - conf
+        rest_per_class = remaining / (n_classes - 1)
+        start = i * n_per_bin
+        end = start + n_per_bin
+        y_prob[start:end, 0] = conf
+        y_prob[start:end, 1:] = rest_per_class
+
+    bins = compute_confidence_bins(y_true, y_prob, n_bins=n_bins)
     non_empty = [b for b in bins if b.sample_count > 0]
-    assert len(non_empty) >= 1
+    assert len(non_empty) == n_bins, (
+        f"Expected {n_bins} non-empty bins, got {len(non_empty)}"
+    )
+    for i, b in enumerate(bins):
+        assert b.sample_count == n_per_bin, (
+            f"Bin {i} ([{b.bin_lower}, {b.bin_upper})): "
+            f"expected {n_per_bin} samples, got {b.sample_count}"
+        )
 
 
 def test_confidence_out_of_range():

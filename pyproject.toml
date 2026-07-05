@@ -9,7 +9,11 @@ description = "V7 Engine — Anomaly-driven trading engine"
 requires-python = ">=3.12"
 authors = [{name = "Erfolg", email = "mail@erfolg.tech"}]
 license = {text = "Proprietary"}
-dependencies = []
+dependencies = [
+    "scikit-learn",
+    "optuna",
+    "fastapi",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
