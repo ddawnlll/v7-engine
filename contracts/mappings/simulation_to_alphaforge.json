@@ -1,28 +1,133 @@
 {
   "$schema": "https://v7-engine/contracts/mappings/mapping.schema.json",
   "schema_version": "1.0.0",
-  "description": "Field-level mapping from SimulationOutput to AlphaForgeLabel. Derived from simulation/docs/contracts.md 'Relationship to AlphaForge Label Schemas' table.",
+  "description": "Field-level mapping from SimulationOutput to AlphaForgeLabel. Derived from simulation/docs/contracts.md 'Relationship to AlphaForge Label Schemas' table. P0.8E: gross R, cost component, exit/reason, no_trade_quality, and lineage fields added.",
   "source_contract": "SimulationOutput",
   "target_contract": "AlphaForgeLabel",
   "source_authority": "simulation/docs/contracts.md",
   "mappings": [
     {
+      "source": "long_outcome.realized_r_gross",
+      "target": "long_R_gross",
+      "meaning": "Gross R for LONG_NOW before costs",
+      "required": true,
+      "p0_8e_added": true
+    },
+    {
       "source": "long_outcome.realized_r_net",
       "target": "long_R_net",
-      "meaning": "Net R for LONG_NOW action",
+      "meaning": "Net R for LONG_NOW action after costs",
       "required": true
+    },
+    {
+      "source": "short_outcome.realized_r_gross",
+      "target": "short_R_gross",
+      "meaning": "Gross R for SHORT_NOW before costs",
+      "required": true,
+      "p0_8e_added": true
     },
     {
       "source": "short_outcome.realized_r_net",
       "target": "short_R_net",
-      "meaning": "Net R for SHORT_NOW action",
+      "meaning": "Net R for SHORT_NOW action after costs",
       "required": true
+    },
+    {
+      "source": "long_outcome.fee_cost_r",
+      "target": "fee_cost_r_long",
+      "meaning": "Fee cost in R terms for LONG_NOW",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "short_outcome.fee_cost_r",
+      "target": "fee_cost_r_short",
+      "meaning": "Fee cost in R terms for SHORT_NOW",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "long_outcome.slippage_cost_r",
+      "target": "slippage_cost_r_long",
+      "meaning": "Slippage cost in R terms for LONG_NOW",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "short_outcome.slippage_cost_r",
+      "target": "slippage_cost_r_short",
+      "meaning": "Slippage cost in R terms for SHORT_NOW",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "long_outcome.total_cost_r",
+      "target": "total_cost_r_long",
+      "meaning": "Total cost (fee+slippage+spread) in R terms for LONG_NOW",
+      "required": true,
+      "p0_8e_added": true
+    },
+    {
+      "source": "short_outcome.total_cost_r",
+      "target": "total_cost_r_short",
+      "meaning": "Total cost (fee+slippage+spread) in R terms for SHORT_NOW",
+      "required": true,
+      "p0_8e_added": true
     },
     {
       "source": "best_action",
       "target": "best_action_label",
       "meaning": "Best comparative action classification label",
       "required": true
+    },
+    {
+      "source": "lineage.simulation_profile_version",
+      "target": "simulation_profile_id",
+      "meaning": "Simulation profile version for lineage tracking",
+      "required": true,
+      "p0_8e_added": true
+    },
+    {
+      "source": "lineage.simulation_family_version",
+      "target": "simulation_engine_version",
+      "meaning": "Simulation engine family version at label generation time",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "lineage.cost_model_version",
+      "target": "cost_model_version",
+      "meaning": "Cost model version reference",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "no_trade_outcome.no_trade_quality",
+      "target": "no_trade_quality",
+      "meaning": "NO_TRADE quality classification: CORRECT_NO_TRADE, SAVED_LOSS, MISSED_OPPORTUNITY, AMBIGUOUS_NO_TRADE",
+      "required": true,
+      "p0_8e_added": true
+    },
+    {
+      "source": "no_trade_outcome.was_correct_skip",
+      "target": "was_correct_skip",
+      "meaning": "Whether skipping the trade was the correct decision",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "no_trade_outcome.saved_loss_r",
+      "target": "saved_loss_r",
+      "meaning": "Loss saved by not trading, in R terms",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "no_trade_outcome.missed_opportunity_r",
+      "target": "missed_opportunity_r",
+      "meaning": "Opportunity missed by not trading, in R terms",
+      "required": false,
+      "p0_8e_added": true
     },
     {
       "source": "no_trade_outcome.saved_loss_score",
@@ -43,10 +148,46 @@
       "required": true
     },
     {
-      "source": "long_outcome.path_metrics.path_quality_score",
-      "target": "path_quality_score",
-      "meaning": "Path quality score for best action (uses long_outcome if LONG_NOW is best; otherwise short_outcome)",
-      "required": true
+      "source": "is_ambiguous",
+      "target": "is_ambiguous",
+      "meaning": "Whether the best action is ambiguous (gap below threshold)",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "resolution_status",
+      "target": "resolution_status",
+      "meaning": "How simulation resolved (TARGET_HIT, STOP_HIT, TIME_EXIT, UNRESOLVED)",
+      "required": true,
+      "p0_8e_added": true
+    },
+    {
+      "source": "long_outcome.exit_reason",
+      "target": "exit_reason",
+      "meaning": "Reason for trade exit from simulation engine (LONG side reference)",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "lineage.simulation_profile_version",
+      "target": "simulation_profile_id",
+      "meaning": "Simulation profile version for lineage tracking, mapped from lineage",
+      "required": true,
+      "p0_8e_added": true
+    },
+    {
+      "source": "lineage.simulation_family_version",
+      "target": "simulation_engine_version",
+      "meaning": "Simulation engine family version, mapped from lineage.simulation_family_version",
+      "required": false,
+      "p0_8e_added": true
+    },
+    {
+      "source": "lineage.cost_model_version",
+      "target": "cost_model_version",
+      "meaning": "Cost model version reference, mapped from lineage.cost_model_version",
+      "required": false,
+      "p0_8e_added": true
     },
     {
       "source": "long_outcome.path_metrics.mfe_r",
@@ -71,6 +212,12 @@
       "target": "short_mae_R",
       "meaning": "Maximum adverse excursion in R terms for SHORT_NOW",
       "required": false
+    },
+    {
+      "source": "long_outcome.path_metrics.path_quality_score",
+      "target": "path_quality_score",
+      "meaning": "Path quality score for best action (uses long_outcome if LONG_NOW is best; otherwise short_outcome)",
+      "required": true
     },
     {
       "source": "regret_r",

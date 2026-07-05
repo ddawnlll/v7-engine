@@ -1,0 +1,426 @@
+planSpecVersion: "0.1.0"
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: TR-01-MARKET-DATA-BACKFILL-STORAGE
+  title: "Training-Ready Plan 01 — Market Data Backfill + Storage"
+  description: >
+    Implement Binance backfill orchestrator with raw/normalized kline
+    and funding data persistence. Add pagination with resume/checkpoint,
+    storage writer, and data catalog/manifest. Add `make backfill`
+    command. All tests must be offline-mockable — no real network
+    required. Domain: lib. Does NOT own labels or training.
+  createdAt: "2026-06-25T00:00:00Z"
+  humanId: TrainingReady
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+    - lib/market_data/binance/backfill.py
+    - lib/market_data/binance/checkpoint.py
+    - lib/market_data/binance/rate_limiter.py
+    - lib/market_data/storage.py
+    - lib/market_data/catalog.py
+    - lib/tests/test_market_data_backfill.py
+    - lib/tests/test_market_data_storage.py
+    - lib/tests/test_market_data_catalog.py
+    - lib/tests/test_rate_limiter.py
+    - lib/docs/market_data.md
+    - data/raw/**
+    - data/processed/**
+    - Makefile
+  forbiddenFiles:
+    - simulation/**
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - v7/**
+    - runtime/**
+    - interface/**
+    - models/**
+    - artifacts/**
+    - contracts/fixtures/**
+    - reports/accp/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+  - id: WS-TR01-01-BACKFILL
+    title: Implement Binance Backfill Orchestrator
+    objective: >
+      Build a backfill orchestrator that iterates over symbols and
+      intervals, uses existing KlinesService/FundingService with
+      pagination, and supports resume from checkpoint. No real network
+      in tests — use mock BinanceClient responses.
+    implementation:
+      instructions:
+        - "[must] [action] Create lib/market_data/binance/backfill.py with BackfillOrchestrator class."
+        - "[must] [action] Accept symbol list, interval list, start/end timestamps, checkpoint path."
+        - "[must] [action] Use existing KlinesService and FundingService — do NOT duplicate pagination."
+        - "[must] [action] Checkpoint after each symbol/interval completion — write progress markers."
+        - "[must] [action] Support --symbols, --intervals, --start, --end, --checkpoint-dir parameters."
+        - "[must] [action] Emit structured logging with symbol/interval/progress/counts."
+        - "[must] [action] Handle BinanceClientError gracefully — log and continue to next symbol."
+        - "[must] [action] No network in tests — test with mock client returning fixture klines."
+      allowedFiles:
+        - lib/market_data/binance/backfill.py
+        - lib/market_data/binance/checkpoint.py
+      forbiddenFiles:
+        - simulation/**
+        - alphaforge/**
+        - v7/**
+      expectedOutputs:
+        - lib/market_data/binance/backfill.py
+        - lib/market_data/binance/checkpoint.py
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Consumed by CLI and Makefile. Exports BackfillOrchestrator."
+      exportSurfaces:
+        - id: EXP-TR01-backfill
+          path: lib/market_data/binance/backfill.py
+          requiredExports: [BackfillOrchestrator]
+      entrypoints:
+        - id: ENTRY-TR01-backfill
+          path: lib/market_data/binance/backfill.py
+          kind: library_module
+    acceptanceCriteria:
+      - id: AC-TR01-01
+        description: "BackfillOrchestrator exists and is importable"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_exists
+          path: lib/market_data/binance/backfill.py
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+      - id: AC-TR01-02
+        description: "BackfillOrchestrator handles mock symbols/intervals without network"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-test-backfill
+        requiredEvidence: [command, test_output]
+      - id: AC-TR01-03
+        description: "Checkpoint saves and resumes correctly across mock runs"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-test-checkpoint
+        requiredEvidence: [command, test_output]
+  - id: WS-TR01-02-STORAGE
+    title: Implement Raw/Normalized Storage Writer
+    objective: >
+      Implement storage.py with Parquet (or CSV as fallback) writers for
+      raw klines, normalized klines, and funding data. Include SHA-256
+      checksums per file. Data lands under data/raw/ and data/processed/.
+    implementation:
+      instructions:
+        - "[must] [action] Create lib/market_data/storage.py with StorageWriter class."
+        - "[must] [action] Support write_raw_klines(), write_normalized_klines(), write_funding()."
+        - "[must] [action] Use pandas to_parquet or to_csv — deterministic output format."
+        - "[must] [action] Write SHA-256 checksum sidecar file alongside each data file."
+        - "[must] [action] File naming: {symbol}_{interval}_{start_ts}_{end_ts}.parquet."
+        - "[must] [action] Directory structure: data/raw/{symbol}/ and data/processed/{symbol}/."
+        - "[must] [action] Read path from config — do not hardcode."
+        - "[must] [action] Tests write to temp dirs — never pollute data/ during test."
+      allowedFiles:
+        - lib/market_data/storage.py
+        - lib/tests/test_market_data_storage.py
+      expectedOutputs:
+        - lib/market_data/storage.py
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Consumed by BackfillOrchestrator and CLI."
+      exportSurfaces:
+        - id: EXP-TR01-storage
+          path: lib/market_data/storage.py
+          requiredExports: [StorageWriter]
+    acceptanceCriteria:
+      - id: AC-TR01-04
+        description: "StorageWriter exists with raw and normalized write methods"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_exists
+          path: lib/market_data/storage.py
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+      - id: AC-TR01-05
+        description: "StorageWriter produces deterministic output with checksum sidecar"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-test-storage
+        requiredEvidence: [command, test_output]
+      - id: AC-TR01-06
+        description: "Storage path configurable — no hardcoded absolute paths"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_contains
+          path: lib/market_data/storage.py
+          patterns: ["base_dir", "storage_dir", "config", "Path"]
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+  - id: WS-TR01-03-CATALOG
+    title: Implement Data Catalog
+    objective: >
+      Implement data catalog that records what data was ingested when,
+      with checksums and metadata. Enables reproducibility.
+    implementation:
+      instructions:
+        - "[must] [action] Create lib/market_data/catalog.py with DataCatalog class."
+        - "[must] [action] Record symbol, interval, start_ts, end_ts, row_count, checksum, ingested_at."
+        - "[must] [action] Use JSON on disk — one catalog per data/ directory."
+        - "[must] [action] Support query by symbol, interval, date range."
+      allowedFiles:
+        - lib/market_data/catalog.py
+        - lib/tests/test_market_data_catalog.py
+      expectedOutputs:
+        - lib/market_data/catalog.py
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR01-07
+        description: "DataCatalog records entries with checksums and supports query"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-test-catalog
+        requiredEvidence: [command, test_output]
+  - id: WS-TR01-04-RATELIMIT
+    title: Implement Binance Weight-Aware Rate Limiter
+    objective: >
+      Implement a rate limiter that respects Binance API weight limits.
+      Deterministic and testable without network.
+    implementation:
+      instructions:
+        - "[must] [action] Create lib/market_data/binance/rate_limiter.py."
+        - "[must] [action] Token-bucket or simple delay-based limiter."
+        - "[must] [action] Weight-aware: klines use weight 1-10, funding uses weight 1."
+        - "[must] [action] Configurable max_weight_per_minute (default 1200 for Binance)."
+        - "[must] [action] Tests verify rate limiting with mock clock."
+      allowedFiles:
+        - lib/market_data/binance/rate_limiter.py
+        - lib/tests/test_rate_limiter.py
+      expectedOutputs:
+        - lib/market_data/binance/rate_limiter.py
+    artifactPolicy:
+      class: library_code
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR01-08
+        description: "Rate limiter enforces weight limits with mock clock"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-test-rate-limiter
+        requiredEvidence: [command, test_output]
+commands:
+  exactAllowedCommands:
+    - id: CMD-test-backfill
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_market_data_backfill.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-checkpoint
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_market_data_backfill.py -q -k checkpoint"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-storage
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_market_data_storage.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-catalog
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_market_data_catalog.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-rate-limiter
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_rate_limiter.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-lib-all
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-git-status
+      kind: discovery
+      command: "git status --porcelain"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 30
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: curl
+      pattern: "^curl\\s"
+      reason: "No external network — all tests use mock clients."
+    - command: wget
+      pattern: "^wget\\s"
+      reason: "No external downloads."
+    - command: xgboost
+      pattern: "xgboost|XGBClassifier|XGBRegressor|\\.fit\\(|import xgboost"
+      reason: "No model training in backfill plan."
+    - command: live trading
+      pattern: "create_order|market_order|live_order|binance.*api_key"
+      reason: "No live trading. Backfill is offline-tested."
+    - command: cross-domain
+      pattern: "Write.*simulation/|Write.*alphaforge/"
+      reason: "Domain boundary — lib does not own simulation or alphaforge."
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: [diff, source, wiring, command, test_output, report]
+  hashWhenAvailable: true
+gates:
+  sequence: [SchemaGate, LockGate, EvidenceGate, WiringGate, ExecGate, FinalGate]
+  verdicts: [PASS, HOLD, FAIL]
+  reasonCodes:
+    SchemaGate: [PLAN_SCHEMA_INVALID]
+    LockGate: [PLAN_NOT_LOCKED]
+    EvidenceGate: [REQUIRED_EVIDENCE_MISSING]
+    WiringGate: [ORPHAN_MODULE, EXPORT_SURFACE_MISSING, FORBIDDEN_IMPORT_BOUNDARY]
+    ExecGate: [TEST_COMMAND_FAILED, NO_TESTS_FOUND, NETWORK_USED_WHEN_FORBIDDEN]
+    FinalGate: [FINAL_VALIDATION_FAILED, REPORT_MISSING]
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_market_data_backfill.py lib/tests/test_market_data_storage.py lib/tests/test_market_data_catalog.py lib/tests/test_rate_limiter.py -q"
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/training_ready/01_market_data_backfill_storage.lock.json
+  hashes: [planHash, acceptanceCriteriaHash, artifactPolicyHash, commandPolicyHash, allowedFilesHash, forbiddenFilesHash]
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

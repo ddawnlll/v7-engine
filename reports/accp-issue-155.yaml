@@ -1,0 +1,33 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Implements issue #155: 20 symbol data download from data.binance.vision"
+files_changed:
+  - "alphaforge/src/alphaforge/data/backfill.py"
+  - "alphaforge/src/alphaforge/data/__init__.py"
+  - "alphaforge/tests/test_data_backfill.py"
+decisions_locked:
+  - name: "SYMBOLS_20 constant"
+    status: "LOCKABLE_WITH_HOLDS"
+    detail: "20 USDT-M perpetual symbols for Binance Vision download"
+  - name: "download_from_binance_vision"
+    status: "LOCKABLE_WITH_HOLDS"
+    detail: "Downloads monthly klines ZIPs from data.binance.vision, verifies CHECKSUM, converts to Parquet+Zstd"
+  - name: "BinanceVisionConfig"
+    status: "LOCKABLE_WITH_HOLDS"
+    detail: "Frozen configuration for vision download with validation"
+  - name: "BackfillPipeline.download_vision"
+    status: "LOCKABLE_WITH_HOLDS"
+    detail: "Optional pre-backfill download step wired into BackfillPipeline"
+remaining_holds:
+  - "No real download testing against data.binance.vision — tests use mocked HTTP"
+  - "Symbol list locked but may need reordering by liquidity if used as primary universe"
+  - "5m and 1m intervals untested at scale; 1m files ~600MB/month compressed"
+  - "No retry logic for transient network errors"
+safe_next_step: "Integration test with real data.binance.vision download for one symbol/interval/month pair"
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_data_backfill.py -v"
+evidence:
+  - "All 54 tests pass (24 existing + 30 new)"
+  - "New coverage: SYMBOLS_20 (6 tests), BinanceVisionConfig (9 tests), helpers (6 tests), download mocked (5 tests), pipeline integration (1 test)"
+  - "commit 095fd35 on worktree-agent-a7c57518dee467a6b"

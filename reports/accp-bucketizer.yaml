@@ -1,0 +1,45 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+task_id: "impl-bucketizer"
+result: "PASS"
+
+scope_confirmation:
+  created:
+    - alphaforge/src/alphaforge/mine/__init__.py
+    - alphaforge/src/alphaforge/mine/bucketizer.py
+    - alphaforge/tests/test_bucketizer.py
+  modified: []
+  deleted: []
+
+files_changed:
+  - alphaforge/src/alphaforge/mine/__init__.py
+  - alphaforge/src/alphaforge/mine/bucketizer.py
+  - alphaforge/tests/test_bucketizer.py
+
+decisions_locked:
+  - key: "bucketizer.decile_thresholds"
+    status: "LOCKED_INITIAL_BASELINE"
+    detail: "FeatureBucketizer uses np.nanpercentile at [10, 20, ..., 90] for decile boundaries. Nine thresholds per feature produce ten decile masks."
+  - key: "bucketizer.domain_bucket_schemas"
+    status: "LOCKED_INITIAL_BASELINE"
+    detail: "Volatility: 5 buckets via quartile-approximated decile grouping (very_low/very_high = edge deciles, low/high = deciles 2-3/8-9, mid = deciles 4-7). Regime: ternary (down/range/up) at 30/70 splits. Momentum: 5-way symmetric from decile pairs."
+  - key: "bucketizer.feature_name_domain_detection"
+    status: "LOCKED_INITIAL_BASELINE"
+    detail: "Keyword-based: volatility via 'volatility'/'atr'; regime via 'regime'; momentum via 'momentum'/'return'/'rsi'/'roc'/'strength'. Excluded 'vol' to avoid false match with volume-based features."
+
+remaining_holds: []
+
+safe_next_step: "Wire FeatureBucketizer into the mining engine pipeline. Integrate masks as bitset conditions for association-rule or decision-tree style pattern discovery."
+
+commands_run:
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_bucketizer.py -v --rootdir=. -c /dev/null"
+  - "PYTHONPATH=alphaforge/src python3 -c 'from alphaforge.mine import FeatureBucketizer, ConditionRecord; ...'"
+
+evidence:
+  - "21/21 tests passed"
+  - "All subpackage exports resolve correctly (FeatureBucketizer, ConditionRecord)"
+  - "45 masks generated for 3 features × (10 decile + domain schema) — correct cardinality"
+  - "NaN positions masked as False across all buckets"
+  - "Empty tables produce zero-length masks"
+  - "min_support correctly filters low-frequency conditions from registry"

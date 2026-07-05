@@ -1,0 +1,112 @@
+{
+  "report_id": "XSMOM_BASELINE_DAILY_V01",
+  "generated_at": "2026-07-02T17:15:14.115454+00:00",
+  "data_source": "real (data_lake/raw/binance/um/klines, resampled 1h->daily)",
+  "data_range": {
+    "start": "2023-05-03T00:00:00Z",
+    "end": "2024-09-11T00:00:00Z",
+    "n_bars": 440,
+    "frequency": "daily"
+  },
+  "strategy_config": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT",
+      "XRPUSDT",
+      "ADAUSDT",
+      "AVAXUSDT",
+      "DOGEUSDT",
+      "DOTUSDT",
+      "LINKUSDT",
+      "MATICUSDT",
+      "NEARUSDT",
+      "ATOMUSDT",
+      "FILUSDT",
+      "APTUSDT",
+      "SUIUSDT",
+      "OPUSDT",
+      "ARBUSDT",
+      "INJUSDT",
+      "RUNEUSDT"
+    ],
+    "symbols_loaded": 20,
+    "intervals": [
+      "1h"
+    ],
+    "data_frequency": "daily",
+    "momentum_windows": [
+      1,
+      5,
+      21,
+      63
+    ],
+    "long_pct": 0.2,
+    "short_pct": 0.2,
+    "max_exposure_pct": 0.4,
+    "max_symbols_per_side": 4,
+    "rebalance_bars": 5,
+    "fees": {
+      "taker": 0.0004,
+      "maker": 0.00018,
+      "slippage": 0.0001,
+      "uncertainty_buffer": 0.001
+    }
+  },
+  "strategy_performance": {
+    "net_return": 0.210281,
+    "gross_return": 0.210281,
+    "total_cost": 0.1865,
+    "sharpe": 1.4773,
+    "profit_factor": 1.6825,
+    "max_drawdown": -0.0605,
+    "n_trades": 373,
+    "n_long": 162,
+    "n_short": 211,
+    "n_rebalances": 88,
+    "n_signals_generated": 1520,
+    "n_trades_gated": 6,
+    "n_trades_executed": 602,
+    "exposure_pct": 6.8,
+    "beat_no_trade": true
+  },
+  "cost_analysis": {
+    "n_rebalance_periods": 75,
+    "per_rebalance_cost": 0.0005,
+    "cost_drag_factor_naive": 0.963185,
+    "cost_only_impact_pct": 3.68,
+    "note": "Daily resampling reduces bars and rebalance frequency. Per-rebalance cost of 0.0005 charged 75 times compounds to 3.7% erosion in a zero-alpha scenario."
+  },
+  "baselines": {
+    "buy_and_hold_btc": {
+      "net_return": 0.95221,
+      "sharpe": 1.1787,
+      "profit_factor": 1.2488,
+      "max_drawdown": -0.262553
+    },
+    "equal_weight_all": {
+      "net_return": 0.32069,
+      "sharpe": 0.6791,
+      "profit_factor": 1.1038,
+      "max_drawdown": -0.565653
+    },
+    "random_ranking": {
+      "net_return_mean": -0.057156,
+      "net_return_std": 0.062219,
+      "sharpe_mean": -0.6357,
+      "sharpe_std": 0.7447,
+      "profit_factor_mean": 0.8335,
+      "max_drawdown_mean": -0.113766,
+      "n_runs": 50
+    }
+  },
+  "comparisons": {
+    "outperforms_no_trade": true,
+    "outperforms_buy_and_hold_btc": false,
+    "outperforms_equal_weight": false,
+    "outperforms_random_ranking": true
+  },
+  "verdict": "PASS",
+  "verdict_reason": "Daily-resampled XSMOM generates positive net return."
+}

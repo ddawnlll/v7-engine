@@ -1,0 +1,1330 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-04-DATASET-ASSEMBLER
+  title: AlphaForge P0.9B — Dataset Assembler + Deterministic Writer
+  description: 'Implement alphaforge/src/alphaforge/dataset/assembler.py (DatasetAssembler: join manifest + labels + features
+    on timestamp/symbol, label_validity filter, purge-window awareness, lineage tracking) and writer.py (deterministic Parquet/CSV
+    serialization, SHA-256 checksum, roundtrip verification). All work is fixture-only and deterministic. No model training.
+    No profitability claims. Six workspaces with at least 35 acceptance criteria.
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: completed
+  completedAt: '2026-06-25T00:00:00Z'
+  completionEvidence:
+    result: PASS
+    targetedTestsPassed: 53
+    implementationVerified: true
+    accpReport: reports/accp/alphaforge_dataset_assembler.accp.yaml
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - alphaforge/docs/data_contract.md
+  - alphaforge/docs/feature_contract.md
+  - alphaforge/docs/label_contract.md
+  - alphaforge/docs/storage_policy.md
+  - alphaforge/src/alphaforge/dataset/**
+  - alphaforge/src/alphaforge/dataset/__init__.py
+  - alphaforge/src/alphaforge/dataset/assembler.py
+  - alphaforge/src/alphaforge/dataset/contracts.py
+  - alphaforge/src/alphaforge/dataset/lineage.py
+  - alphaforge/src/alphaforge/dataset/writer.py
+  - alphaforge/tests/conftest.py
+  - alphaforge/tests/test_dataset_*.py
+  - alphaforge/tests/test_dataset_assembler.py
+  - alphaforge/tests/test_dataset_lineage.py
+  - alphaforge/tests/test_dataset_writer.py
+  - contracts/mappings/simulation_to_alphaforge.md
+  - contracts/schemas/alphaforge_label.schema.json
+  - integration/tests/test_alphaforge_dataset.py
+  - plans/alphaforge/04_dataset_assembler.plan.yaml
+  - reports/accp/**
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/src/alphaforge/dataset/assembler.py
+  - alphaforge/src/alphaforge/dataset/lineage.py
+  - alphaforge/src/alphaforge/dataset/writer.py
+  - alphaforge/tests/**
+  - artifacts/**
+  - data/**
+  - datasets/**
+  - integration/tests/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/contracts/**
+  - simulation/engine/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+- id: WS-04-CONTRACT
+  title: Design LabeledDataset dataclass — align with data_contract.md Layers 4-5, design join semantics
+  objective: Design LabeledDataset dataclass — align with data_contract.md Layers 4-5, design join semantics
+  implementation:
+    instructions:
+    - '[must] [action] Read alphaforge/docs/data_contract.md Layer 4 (Label Dataset) and Layer 5 (Research Run Manifest).
+      Extract all required fields for LabeledDataset.'
+    - '[must] [action] Read alphaforge/docs/label_contract.md — confirm label fields (long_R_net, short_R_net, best_action_label,
+      label_validity, no_trade_quality, cost fields) are represented.'
+    - '[must] [action] Read alphaforge/docs/feature_contract.md — confirm FeatureSetSpec fields (feature_set_id, mode, timeframe_stack,
+      leakage_policy) are referenced in join metadata.'
+    - '[must] [action] Read alphaforge/docs/storage_policy.md — confirm lineage requirements (source manifest id, checksum
+      chain) are encoded in the contract.'
+    - '[must] [action] Define LabeledDataset dataclass in contracts.py with: row_id, symbol, feature_timestamp (ISO 8601),
+      label_timestamp (ISO 8601), mode, features (Dict[str, float]), labels (LabelFields named tuple with long_R_net, short_R_net,
+      best_action_label, label_validity, no_trade_quality, cost fields), lineage (LineageProvenance), quality_flags (List[str]).'
+    - '[must] [action] Define LineageProvenance dataclass (frozen): source_manifest_id, label_checksum, feature_spec_version,
+      feature_set_id, label_dataset_id, simulation_profile_id, assembled_at (Optional[str]).'
+    - '[must] [action] Define JoinAuditTrail dataclass: total_feature_rows, total_label_rows, joined_rows, unmatched_feature_rows,
+      unmatched_label_rows, invalid_label_rows_dropped, purge_violation_rows_dropped (all int).'
+    - '[must] [action] Define DatasetAssembler protocol: assemble(feature_df, label_df, feature_spec, label_spec) -> Tuple[List[LabeledDataset],
+      JoinAuditTrail].'
+    - '[must] [action] Define DatasetWriter protocol: write(dataset: List[LabeledDataset], path: str) -> str (checksum hex),
+      read(path: str) -> List[LabeledDataset], verify_roundtrip(path: str, original: List[LabeledDataset]) -> bool.'
+    - '[must] [action] Verify contracts.py imports nothing from assembler.py, writer.py, lineage.py, xgboost, sklearn, or
+      any ML library.'
+    allowedFiles:
+    - alphaforge/docs/data_contract.md
+    - alphaforge/docs/label_contract.md
+    - alphaforge/docs/feature_contract.md
+    - alphaforge/docs/storage_policy.md
+    - contracts/schemas/alphaforge_label.schema.json
+    - contracts/mappings/simulation_to_alphaforge.md
+    - plans/alphaforge/04_dataset_assembler.plan.yaml
+    - alphaforge/src/alphaforge/dataset/__init__.py
+    - alphaforge/src/alphaforge/dataset/contracts.py
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/dataset/assembler.py
+    - alphaforge/src/alphaforge/dataset/writer.py
+    - alphaforge/src/alphaforge/dataset/lineage.py
+    - alphaforge/tests/**
+    - integration/tests/**
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-04-001
+    description: LabeledDataset dataclass defined in contracts.py with all Layer 4-5 fields from data_contract.md
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - schema_validation
+    requiredEvidence:
+    - source
+    - schema_validation
+  - id: AC-04-002
+    description: LineageProvenance dataclass (frozen) carries all 7 required fields
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-04-003
+    description: JoinAuditTrail dataclass carries all 7 count fields (int)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: schema_validation
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-04-004
+    description: 'DatasetAssembler protocol: assemble() signature matches (feature_df, label_df, feature_spec, label_spec)
+      -> Tuple[List[LabeledDataset], JoinAuditTrail]'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-04-005
+    description: 'DatasetWriter protocol: write() -> str, read() -> List[LabeledDataset], verify_roundtrip() -> bool'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-04-006
+    description: contracts.py has zero imports from assembler.py, writer.py, lineage.py, xgboost, sklearn, or any ML library
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-04-CONTRACT'
+    usageProofs:
+    - id: USE-WS-04-CONTRACT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-04-CONTRACT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-04-JOIN
+  title: Implement DatasetAssembler.assemble() — join manifest + labels + features on timestamp/symbol
+  objective: Implement DatasetAssembler.assemble() — join manifest + labels + features on timestamp/symbol
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/src/alphaforge/dataset/assembler.py with DatasetAssembler class satisfying the contracts.py
+      protocol.'
+    - '[must] [action] Implement assemble(feature_df, label_df, feature_spec, label_spec). feature_df columns: [symbol, timestamp,
+      feature_set_id, <feature columns>]. label_df columns: [symbol, timestamp, label_dataset_id, label_checksum, best_action_label,
+      label_validity, long_R_net, short_R_net, ...].'
+    - '[must] [action] Join logic: (1) filter label_df to label_validity == ''VALID'', record dropped count. (2) inner join
+      on (symbol, timestamp). (3) after join, enforce feature_timestamp < label_timestamp (strict); drop purge violations
+      and count. (4) populate JoinAuditTrail fully. (5) construct LabeledDataset for each joined row.'
+    - '[must] [action] Purge-window enforcement: feature timestamp MUST be strictly before label timestamp. If feature_timestamp
+      >= label_timestamp, drop row and increment purge_violation_rows_dropped. Log a warning for each violation.'
+    - '[must] [action] Populate JoinAuditTrail: total_feature_rows, total_label_rows, joined_rows, unmatched_feature_rows,
+      unmatched_label_rows, invalid_label_rows_dropped, purge_violation_rows_dropped.'
+    - '[must] [action] Construct LabeledDataset per joined row. Mode taken from feature_spec[''mode'']; must match label_spec[''mode'']
+      — raise ValueError on mismatch naming both modes.'
+    - '[must] [action] Return (list_of_labeled_datasets, audit_trail). Empty list is valid (no overlapping data) — not an
+      error.'
+    - '[must] [action] Do NOT import xgboost, sklearn, tensorflow, torch, or call fit().'
+    allowedFiles:
+    - alphaforge/src/alphaforge/dataset/__init__.py
+    - alphaforge/src/alphaforge/dataset/contracts.py
+    - alphaforge/src/alphaforge/dataset/assembler.py
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/dataset/writer.py
+    - alphaforge/src/alphaforge/dataset/lineage.py
+    - alphaforge/tests/**
+    - integration/tests/**
+    dependencies:
+    - WS-04-CONTRACT
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-04-007
+    description: DatasetAssembler.assemble() inner-joins feature_df and label_df on (symbol, timestamp)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-008
+    description: 'label_validity filtering: VALID rows join; INVALID/AMBIGUOUS rows excluded; count in audit trail'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-009
+    description: 'Purge-window: feature_timestamp >= label_timestamp drops row and increments purge_violation_rows_dropped'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-010
+    description: JoinAuditTrail fully populated with all 7 count fields after every assemble() call
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-011
+    description: Mode mismatch (feature_spec.mode != label_spec.mode) raises ValueError with both mode names
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-012
+    description: Empty join (zero overlapping timestamp/symbol pairs) returns empty list + populated audit trail, not an exception
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-013
+    description: Each assembled LabeledDataset row has correct symbol, feature_timestamp, label_timestamp, mode, features
+      dict, and label fields
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-04-JOIN'
+    usageProofs:
+    - id: USE-WS-04-JOIN
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-04-JOIN
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-04-LINEAGE
+  title: Implement lineage tracking — provenance refs on every row, checksum chain verification
+  objective: Implement lineage tracking — provenance refs on every row, checksum chain verification
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/src/alphaforge/dataset/lineage.py with LineageTracker class.'
+    - '[must] [action] Implement build_provenance(label_row, feature_spec, label_spec, manifest_id) -> LineageProvenance.
+      Extract: source_manifest_id from manifest_id param, label_checksum from label_row (or compute SHA-256 over canonical
+      JSON of label fields if not present), feature_spec_version from feature_spec[''feature_set_id''], feature_set_id, label_dataset_id,
+      simulation_profile_id, assembled_at (ISO 8601 UTC now).'
+    - '[must] [action] Integrate into DatasetAssembler.assemble(): after constructing each LabeledDataset row, call LineageTracker.build_provenance()
+      and attach result to row.lineage.'
+    - '[must] [action] label_checksum computation: if label_row carries pre-computed checksum use it; otherwise SHA-256 over
+      canonical JSON of label fields (sorted keys, deterministic float formatting).'
+    - '[must] [action] If any required lineage field cannot be populated (missing manifest_id, missing feature_set_id), raise
+      LineageError with explicit field name — never use placeholder values.'
+    - '[must] [action] LineageProvenance must be frozen (immutable after construction). Use frozen=True on dataclass.'
+    - '[must] [action] Do NOT import xgboost, sklearn, or any model-training library.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/dataset/__init__.py
+    - alphaforge/src/alphaforge/dataset/contracts.py
+    - alphaforge/src/alphaforge/dataset/assembler.py
+    - alphaforge/src/alphaforge/dataset/lineage.py
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/dataset/writer.py
+    - alphaforge/tests/**
+    - integration/tests/**
+    dependencies:
+    - WS-04-CONTRACT
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-04-014
+    description: LineageTracker.build_provenance() returns LineageProvenance with all 7 required fields populated
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-015
+    description: Every LabeledDataset row from assemble() has non-None lineage field with valid LineageProvenance
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-016
+    description: LineageProvenance.source_manifest_id matches DataManifest id passed to assemble()
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-017
+    description: label_checksum is computed or extracted from label row; missing checksum raises LineageError
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-018
+    description: Missing required lineage field (manifest_id, feature_set_id) raises LineageError with explicit field name
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-019
+    description: LineageProvenance is frozen — attempting to set field after construction raises FrozenInstanceError
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-04-020
+    description: lineage.py has zero imports from xgboost, sklearn, tensorflow, or torch
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-04-LINEAGE'
+    usageProofs:
+    - id: USE-WS-04-LINEAGE
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-04-LINEAGE
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-04-WRITER
+  title: Implement DatasetWriter — deterministic Parquet/CSV serialization with SHA-256 checksum and roundtrip verification
+  objective: Implement DatasetWriter — deterministic Parquet/CSV serialization with SHA-256 checksum and roundtrip verification
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/src/alphaforge/dataset/writer.py with DatasetWriter class satisfying contracts.py
+      protocol.'
+    - '[must] [action] Implement write(dataset: List[LabeledDataset], path: str) -> str. Serialize to path. Preferred: Parquet
+      (pyarrow). Fallback: CSV. Deterministic rules: (a) rows sorted by (symbol, feature_timestamp); (b) columns in fixed
+      order (row_id, symbol, feature_timestamp, label_timestamp, mode, feature columns sorted alphabetically, label columns
+      sorted alphabetically, lineage columns); (c) Parquet: disable implementation-varying statistics; (d) CSV: consistent
+      float formatting (''%.10g'').'
+    - '[must] [action] SHA-256 checksum: compute over exact bytes written to disk using hashlib.sha256(). Return hex digest
+      string.'
+    - '[must] [action] Implement read(path: str) -> List[LabeledDataset]. Auto-detect format by extension (.parquet or .csv).
+      Reconstruct LabeledDataset instances.'
+    - '[must] [action] Implement verify_roundtrip(path: str, original_dataset: List[LabeledDataset]) -> bool. Read file, compare
+      field-by-field with original. Return True if identical. On mismatch, provide diff summary (which rows differ, which
+      fields).'
+    - '[must] [action] Degrade gracefully if pyarrow unavailable: CSV fallback with logged warning ''Parquet not available;
+      using CSV fallback. Install pyarrow for preferred format.'''
+    - '[must] [action] Do NOT import xgboost, sklearn, or any model-training library.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/dataset/__init__.py
+    - alphaforge/src/alphaforge/dataset/contracts.py
+    - alphaforge/src/alphaforge/dataset/writer.py
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/dataset/assembler.py
+    - alphaforge/src/alphaforge/dataset/lineage.py
+    - alphaforge/tests/**
+    - integration/tests/**
+    dependencies:
+    - WS-04-CONTRACT
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-04-021
+    description: DatasetWriter.write() serializes dataset and returns SHA-256 hex digest string
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-022
+    description: Same input dataset written twice produces byte-identical files (deterministic sorting, fixed column order,
+      consistent formatting)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-023
+    description: Two writes of the same dataset produce identical SHA-256 checksums
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-024
+    description: verify_roundtrip() returns True for write-then-read of identical dataset
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-025
+    description: verify_roundtrip() returns False with diff summary when written data is modified
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-026
+    description: DatasetWriter.read() correctly reconstructs LabeledDataset instances from Parquet or CSV
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-027
+    description: Missing pyarrow falls back to CSV with logged warning; write and read still function correctly
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-028
+    description: writer.py has zero imports from xgboost, sklearn, tensorflow, or torch
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-04-WRITER'
+    usageProofs:
+    - id: USE-WS-04-WRITER
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-04-WRITER
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-04-NEGATIVE-TESTS
+  title: Negative tests — invalid joins, missing timestamps/symbols, label_validity filtering, data leakage, lineage integrity,
+    checksum stability, roundtrip determinism
+  objective: Negative tests — invalid joins, missing timestamps/symbols, label_validity filtering, data leakage, lineage integrity,
+    checksum stability, roundtrip determinism
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/tests/conftest.py with shared fixtures: sample_feature_df (20 rows, 3 symbols, SWING
+      mode), sample_label_df (20 rows with mixed label_validity: VALID, INVALID, AMBIGUOUS), sample_feature_spec dict, sample_label_spec
+      dict.'
+    - '[must] [action] Create alphaforge/tests/test_dataset_assembler.py. Positive: valid join produces correct row count.
+      Negative: label_validity INVALID rows excluded. Negative: label_validity AMBIGUOUS rows excluded. Negative: feature_timestamp
+      == label_timestamp triggers purge drop. Negative: feature_timestamp > label_timestamp triggers purge drop. Negative:
+      mode mismatch raises ValueError. Negative: empty join (non-overlapping symbols) returns empty list + audit. Negative:
+      empty join (non-overlapping timestamps) returns empty list + audit.'
+    - '[must] [action] Negative join scenarios: (a) mismatched timestamp: feature T1, label T2, different symbols — zero joined;
+      (b) missing symbol: feature has BTCUSDT, label has ETHUSDT — unmatched counts; (c) feature timestamp after label timestamp
+      — purge violation; (d) all labels INVALID — zero joined rows with full audit trail.'
+    - '[must] [action] Create alphaforge/tests/test_dataset_lineage.py. Test: every assembled row has non-None lineage. Test:
+      lineage fields match input specs. Test: missing manifest_id raises LineageError. Test: missing feature_set_id raises
+      LineageError. Test: LineageProvenance frozen (setting field raises error). Test: label_checksum computed when missing
+      from label row.'
+    - '[must] [action] Create alphaforge/tests/test_dataset_writer.py. Test: write produces file. Test: same dataset twice
+      produces byte-identical files and identical checksums. Test: roundtrip (write->read->compare) returns True. Test: modified
+      dataset roundtrip returns False with diff. Test: empty dataset roundtrip. Test: CSV fallback when Parquet unavailable
+      (mock import). Test: column ordering deterministic. Test: float formatting deterministic.'
+    - '[must] [action] Create integration/tests/test_alphaforge_dataset.py. Integration: full pipeline (fixtures -> assemble
+      -> write -> read -> verify roundtrip). Test with 50 rows, 5 symbols.'
+    - '[must] [action] Data leakage test: feature_timestamp and label_timestamp identical. Confirm assembler drops all rows
+      (purge_violation_rows_dropped == total). Zero output.'
+    - '[must] [action] Run CMD-04-test-assembler and CMD-04-test-writer. All tests must pass exit 0. No skips. No xgboost
+      import.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/tests/test_dataset_assembler.py
+    - alphaforge/tests/test_dataset_writer.py
+    - alphaforge/tests/test_dataset_lineage.py
+    - alphaforge/tests/conftest.py
+    - integration/tests/test_alphaforge_dataset.py
+    forbiddenFiles:
+    - lib/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    dependencies:
+    - WS-04-JOIN
+    - WS-04-LINEAGE
+    - WS-04-WRITER
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-04-029
+    description: label_validity INVALID rows excluded from join; count in audit trail
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-04-test-assembler
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-030
+    description: Mismatched timestamps (feature T1, label T2, different symbols) produce zero joined with correct unmatched
+      counts
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-04-test-assembler
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-031
+    description: Missing symbol in one dataframe produces unmatched counts in audit trail, not crash
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-04-test-assembler
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-032
+    description: Feature timestamp >= label timestamp triggers purge violation; row dropped and counted
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-04-test-assembler
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-033
+    description: 'Data leakage scenario: all feature timestamps >= label timestamps -> all rows dropped, zero assembled output'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-04-test-assembler
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-034
+    description: All labels INVALID -> zero joined rows, full audit trail populated, no exception
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-04-test-assembler
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-035
+    description: 'Deterministic write: same dataset twice produces byte-identical files with identical SHA-256 checksums'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-04-test-writer
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-036
+    description: Roundtrip (write -> read -> compare) returns True for unmodified dataset
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-04-test-writer
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-037
+    description: Modified dataset roundtrip returns False with diff summary
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-04-test-writer
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-038
+    description: 'LineageProvenance frozen: modifying field after construction raises error'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+      commandRef: CMD-04-test-assembler
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-039
+    description: CMD-04-test-assembler exits 0 with all unit tests passing, no skips
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-04-test-assembler
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-04-040
+    description: CMD-04-test-writer exits 0 with all writer tests passing, no skips
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-04-test-writer
+    requiredEvidence:
+    - command
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-04-NEGATIVE-TESTS'
+    usageProofs:
+    - id: USE-WS-04-NEGATIVE-TESTS
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-04-NEGATIVE-TESTS
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-04-REPORT
+  title: Run all tests, emit ACCP report, validate constraints
+  objective: Run all tests, emit ACCP report, validate constraints
+  implementation:
+    instructions:
+    - '[must] [action] Run CMD-04-final-sweep (pytest lib + integration + simulation + alphaforge). Confirm exit 0.'
+    - '[must] [action] Run CMD-04-discover-git-status. Confirm only allowed files modified.'
+    - '[must] [action] Forbidden file scan: zero changes to lib/, simulation/engine/, runtime/, interface/, data/, datasets/,
+      models/, artifacts/, .github/.'
+    - '[must] [action] No-xgboost scan: grep for xgboost, XGBClassifier, XGBRegressor, fit( across all new/modified .py files.
+      Confirm zero matches.'
+    - '[must] [action] No-profitability scan: grep for profitability, profit, edge confirmed, alpha works across all new/modified
+      .py files. Confirm zero matches.'
+    - '[must] [action] Import boundary check: confirm alphaforge/src/alphaforge/dataset/ does not import from v7/, simulation/engine/,
+      runtime/, or interface/.'
+    - '[must] [action] Lineage integrity check: every assembled row in test fixtures has complete provenance (source_manifest_id,
+      label_checksum, feature_spec_version all non-None).'
+    - '[must] [action] Write ACCP-YAML 2.0.0 report to reports/accp/alphaforge_dataset_assembler.accp.yaml with keys: result,
+      scope_confirmation, files_changed, decisions_locked, remaining_holds, safe_next_step, commands_run, evidence.'
+    allowedFiles:
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/tests/test_dataset_*.py
+    - integration/tests/test_alphaforge_dataset.py
+    - reports/accp/**
+    forbiddenFiles:
+    - lib/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    dependencies:
+    - WS-04-NEGATIVE-TESTS
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-04-041
+    description: CMD-04-test-assembler exits 0 with all dataset assembler tests passing -- targeted validation for this subplan only
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-04-test-assembler
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-04-042
+    description: CMD-04-discover-git-status shows only allowed files modified
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-04-discover-git-status
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-04-043
+    description: 'Forbidden file scan: zero modifications to lib/, simulation/engine/, runtime/, interface/, data/, datasets/,
+      models/, artifacts/, .github/'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-04-discover-git-status
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-04-044
+    description: Zero xgboost/XGBClassifier/XGBRegressor/fit() in any new or modified Python file
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-04-045
+    description: Zero profitability claims in any new or modified Python file
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-04-046
+    description: 'Import boundaries: alphaforge/src/alphaforge/dataset/ imports nothing from v7/, simulation/engine/, runtime/,
+      interface/'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-04-047
+    description: 'Lineage integrity: all assembled rows in test fixtures carry complete provenance'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-04-048
+    description: ACCP report written to reports/accp/alphaforge_dataset_assembler.accp.yaml with all required keys
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-04-REPORT'
+    usageProofs:
+    - id: USE-WS-04-REPORT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-04-REPORT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+commands:
+  exactAllowedCommands:
+  - id: CMD-04-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-04-test-assembler
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_dataset_assembler.py alphaforge/tests/test_dataset_lineage.py
+      -q -v
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-04-test-writer
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_dataset_writer.py -q -v
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-04-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network calls during deterministic dataset assembler implementation.
+  - id: DCMD-04-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-04-no-exchange
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior.
+  - id: DCMD-04-no-xgboost
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|fit\(|import xgboost
+    reason: No model training in dataset assembler scope.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - diff
+  - source
+  - wiring
+  - command
+  - test_output
+  - schema_validation
+  - report
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-04-dataset-assembler.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

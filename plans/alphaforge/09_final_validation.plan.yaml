@@ -1,0 +1,1319 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-09-FINAL-VALIDATION
+  title: AlphaForge Final Comprehensive Validation — All-Gate Pass/Fail
+  description: 'Final comprehensive validation subplan for the AlphaForge deterministic pipeline. Read-only. Runs the full
+    test suite (7 commands), performs forbidden-file diff scan against protected paths, scans all source files for profitability
+    claims, scans all source files for model training patterns, and emits the canonical final ACCP report with composite PASS/FAIL
+    verdict. No model training. No profitability claims. No code modifications. Five sequential workspaces with 38 deterministic
+    acceptance criteria.
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: completed
+  completedAt: '2026-06-25T00:00:00Z'
+  completionEvidence:
+    result: PASS
+    commandsRun: 7
+    commandsPassed: 7
+    totalTestsPassed: 818
+    totalTestsFailed: 0
+    totalTestsSkipped: 1
+    scansRun: 4
+    scansPassed: 4
+    accpReport: reports/accp/alphaforge_final_validation.accp.yaml
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - plans/alphaforge/09_final_validation.plan.yaml
+  - reports/accp/**
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/src/**
+  - alphaforge/tests/**
+  - artifacts/**
+  - contracts/**
+  - data/**
+  - datasets/**
+  - integration/tests/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/**
+  - simulation/contracts/**
+  - simulation/engine/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: analysis_only
+  canModifyCode: false
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 0
+tasks:
+- id: WS-09-TEST-SUITE
+  title: Full Test Suite Execution — All 7 Commands Exit 0
+  objective: Full Test Suite Execution — All 7 Commands Exit 0
+  implementation:
+    instructions:
+    - '[must] [test] Run CMD-test-alphaforge to confirm all AlphaForge unit tests pass with exit code 0. Expected: ~60+ scaffold,
+      data-manifest, label-adapter, feature-pipeline, dataset-assembler, and P0.9B module tests. If no tests found, this is
+      a FAILURE (noTestsFoundIsFailure: true). Zero failures, zero errors required.
+
+      '
+    - '[must] [test] Run CMD-test-integration-alphaforge to confirm all AlphaForge integration tests pass with exit code 0.
+      Expected: fixture_validation, contract_semantics, scaffold_imports, contract_loader, report_builders, handoff_builder,
+      schema_strictness from P0.8E and P0.9A/B. Zero failures, zero errors required.
+
+      '
+    - '[must] [test] Run CMD-test-contract-registry-schema to confirm contract registry integrity and schema parity across
+      all domains. Expected: registry validation and all schema parity checks pass.
+
+      '
+    - '[must] [test] Run CMD-test-import-boundaries to confirm no cross-domain import violations. Expected: lib boundary,
+      cross-domain boundary, and simulation boundary tests all pass. Pre-existing skips acceptable provided no failures or
+      errors.
+
+      '
+    - '[must] [test] Run CMD-test-simulation to confirm simulation truth stable. Expected: all simulation MVP tests pass (cost
+      model, exits, profiles). Zero failures, zero errors.
+
+      '
+    - '[must] [test] Run CMD-final-validation for comprehensive full-suite coverage. Expected: all lib + integration + simulation
+      + alphaforge tests pass (excluding Binance tests). Zero failures, zero errors. This is the definitive green-suite gate.
+
+      '
+    - '[must] [discovery] Run CMD-discover-git-status to confirm clean working tree. Expected: no uncommitted source changes.
+      ACCP report artifacts may appear as untracked — this is acceptable. Any modified tracked source file is a FAILURE.
+
+      '
+    - '[must] [evidence] Collect all 7 command outputs into evidence ledger. Hash each output. Record exit codes. If ALL 7
+      commands exit 0 with zero failures and zero errors, this workspace passes. If ANY command exits non-zero, this workspace
+      FAILS and the final validation is blocked.
+
+      '
+    allowedFiles:
+    - reports/accp/**
+    - plans/alphaforge/09_final_validation.plan.yaml
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+    - integration/tests/**
+    - contracts/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    - .github/**
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-09-001
+    description: CMD-test-alphaforge exits 0 with all AlphaForge unit tests passing — no failures, no errors
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-09-002
+    description: CMD-test-integration-alphaforge exits 0 with all AlphaForge integration tests passing
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-integration-alphaforge
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-09-003
+    description: CMD-test-contract-registry-schema exits 0 — registry and schema parity intact across all domains
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-contract-registry-schema
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-09-004
+    description: CMD-test-import-boundaries exits 0 — no cross-domain import violations detected
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-import-boundaries
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-09-005
+    description: CMD-test-simulation exits 0 — simulation truth stable with all cost-model and profile tests passing
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-simulation
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-09-006
+    description: CMD-final-validation exits 0 — full non-Binance local suite green across all domains
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-final-validation
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-09-007
+    description: CMD-discover-git-status returns clean output — no uncommitted source changes in tracked files
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-09-008
+    description: All 7 test suite commands collectively exit 0 — composite test-suite gate satisfied, no command was skipped
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      - report
+    requiredEvidence:
+    - command
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-09-TEST-SUITE'
+    usageProofs:
+    - id: USE-WS-09-TEST-SUITE
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-09-TEST-SUITE
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-09-FORBIDDEN-DIFF
+  title: Forbidden File Modification Scan — Verify No Protected Path Changes
+  objective: Forbidden File Modification Scan — Verify No Protected Path Changes
+  implementation:
+    instructions:
+    - '[must] [scan] Run CMD-scan-forbidden-diff to detect any modifications (modified, added, deleted, renamed) to forbidden
+      paths: lib/, simulation/engine/, runtime/, interface/, data/, datasets/, models/, artifacts/, .github/. The command
+      scans both staged and unstaged changes against HEAD. Expected result: CLEAN:FORBIDDEN_DIFF.
+
+      '
+    - '[must] [discovery] Run CMD-discover-git-status as a secondary cross-reference check. Parse the porcelain output for
+      any entry matching the forbidden path list. Expected: zero forbidden-path entries.
+
+      '
+    - '[must] [analysis] For each flagged path (if any), determine: (a) whether the modification is from a prior allowed AlphaForge
+      subplan, (b) whether it has been explicitly authorized by the master plan, (c) whether it is a false positive (e.g.,
+      generated ACCP artifact). Any true modification of a forbidden file that is NOT explicitly authorized is a HARD FAIL.
+
+      '
+    - '[must] [audit] Verify specifically that no file under lib/ was modified. lib/ is the shared primitives layer and must
+      remain stable from the P0.9A baseline. Expected: zero lib/ matches.
+
+      '
+    - '[must] [audit] Verify specifically that simulation/engine/ was not modified. The simulation engine is the economic
+      truth authority and must be unchanged during AlphaForge implementation phases.
+
+      '
+    - '[must] [audit] Verify that runtime/, interface/, and .github/ were not modified. These domains are outside AlphaForge
+      implementation authority.
+
+      '
+    - '[must] [audit] Verify that data/, datasets/, models/, and artifacts/ directories contain no new files from this implementation
+      phase. These directories must remain pristine.
+
+      '
+    - '[must] [evidence] Produce a structured audit result: either CLEAN (zero forbidden modifications detected) or VIOLATION
+      (specific paths flagged with status and command source). Include the result in the evidence ledger for the final report.
+
+      '
+    allowedFiles:
+    - reports/accp/**
+    - plans/alphaforge/09_final_validation.plan.yaml
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+    - integration/tests/**
+    - contracts/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    dependencies:
+    - WS-09-TEST-SUITE
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-09-009
+    description: CMD-scan-forbidden-diff produces CLEAN:FORBIDDEN_DIFF — zero modifications to any protected path
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-scan-forbidden-diff
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-09-010
+    description: No modifications to lib/ directory — shared primitives layer intact
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-scan-forbidden-diff
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-09-011
+    description: No modifications to simulation/engine/ — economic truth authority intact
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-scan-forbidden-diff
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-09-012
+    description: No modifications to runtime/ — execution lifecycle domain protected
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-scan-forbidden-diff
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-09-013
+    description: No modifications to interface/ — operator UI domain protected
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-scan-forbidden-diff
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-09-014
+    description: No modifications to data/, datasets/, models/, artifacts/ — asset domains protected
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-scan-forbidden-diff
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-09-015
+    description: No modifications to .github/ — CI/CD pipeline integrity intact
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      commandRef: CMD-scan-forbidden-diff
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-09-016
+    description: 'Composite forbidden-diff audit: all 7 protected domain checks pass with zero violations across both staged
+      and unstaged changes'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - diff
+      - report
+    requiredEvidence:
+    - command
+    - diff
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-09-FORBIDDEN-DIFF'
+    usageProofs:
+    - id: USE-WS-09-FORBIDDEN-DIFF
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-09-FORBIDDEN-DIFF
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-09-NO-PROFIT
+  title: Profitability Claim Scan — Verify Zero Profit Claims in Source
+  objective: Profitability Claim Scan — Verify Zero Profit Claims in Source
+  implementation:
+    instructions:
+    - '[must] [scan] Run CMD-scan-profit-claims to scan the full source tree (alphaforge/, v7/, simulation/, runtime/, lib/,
+      integration/, contracts/) for profitability-related language. Target patterns: "profitable", "profit", "expectancy >",
+      "sharpe > 1", "win rate", "positive edge". Expected result: CLEAN:PROFIT_SCAN.
+
+      '
+    - '[must] [analysis] Review all matches (if any). Distinguish between: (a) real profitability claims asserting positive
+      expectancy or sharpe > 1, (b) documentation referencing profitability thresholds as requirements or gates, (c) anti-pattern
+      documentation stating "do not claim profitability". Category (a) is a HARD FAIL. Categories (b) and (c) are acceptable
+      with annotation.
+
+      '
+    - '[must] [audit] Verify that all prior subplan ACCP reports (00 through 08) contain INCONCLUSIVE verdicts for profitability.
+      No prior report may assert profitability, positive expectancy, sharpe > 1, or win rate as a concluded finding. Reports
+      referencing profitability only in the context of "do not claim" or "blocked until evidence" are acceptable.
+
+      '
+    - '[must] [audit] Scan all reports/accp/*.accp.yaml files for profitability language. Explicitly check the result and
+      conclusions fields. Any report with a profitability-affirming PASS in a profitability-adjacent context is a HARD FAIL.
+
+      '
+    - '[must] [audit] Scan alphaforge/src/ for profitability computation logic. Statistical metrics computed for label engineering
+      are acceptable if explicitly scoped as research-only. Any code computing sharpe ratio, win rate, or PnL and presenting
+      them as evidence of real profitability is a violation.
+
+      '
+    - '[must] [evidence] Produce a structured audit result: either CLEAN (zero profitability claims) or FLAGGED (specific
+      matches with classification). All matches must be annotated and adjudicated. The default verdict for any ambiguous match
+      is INCONCLUSIVE. Include the result in the evidence ledger.
+
+      '
+    allowedFiles:
+    - reports/accp/**
+    - plans/alphaforge/09_final_validation.plan.yaml
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    dependencies:
+    - WS-09-TEST-SUITE
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-09-017
+    description: CMD-scan-profit-claims produces CLEAN:PROFIT_SCAN — zero matches for 'profitable' in source tree
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - command
+      commandRef: CMD-scan-profit-claims
+    requiredEvidence:
+    - command
+    - command
+  - id: AC-09-018
+    description: CMD-scan-profit-claims produces zero matches for profit-claim language ('profit', 'expectancy >', 'sharpe
+      > 1') in source tree
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - command
+      commandRef: CMD-scan-profit-claims
+    requiredEvidence:
+    - command
+    - command
+  - id: AC-09-019
+    description: CMD-scan-profit-claims produces zero matches for 'win rate' or 'positive edge' claims
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - command
+      commandRef: CMD-scan-profit-claims
+    requiredEvidence:
+    - command
+    - command
+  - id: AC-09-020
+    description: All prior subplan ACCP reports (00-08) have INCONCLUSIVE profitability verdicts — no report asserts profitability
+      as concluded fact
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+      - command
+    requiredEvidence:
+    - report
+    - command
+  - id: AC-09-021
+    description: No alphaforge/src/ module computes real profitability metrics (sharpe, win rate, PnL) presented as live evidence
+      — computation for labels/research only is acceptable
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - command
+  - id: AC-09-022
+    description: 'Composite profit-scan audit: all 5 profitability checks pass, all verdicts are INCONCLUSIVE, zero real profit
+      claims'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - command
+      - report
+      - report
+    requiredEvidence:
+    - command
+    - command
+    - report
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-09-NO-PROFIT'
+    usageProofs:
+    - id: USE-WS-09-NO-PROFIT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-09-NO-PROFIT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-09-NO-TRAINING
+  title: Model Training Artifact Scan — Verify Zero Training Patterns
+  objective: Model Training Artifact Scan — Verify Zero Training Patterns
+  implementation:
+    instructions:
+    - '[must] [scan] Run CMD-scan-training to scan the full source tree for ML model training evidence. Target patterns: "xgboost",
+      "XGBClassifier", "XGBRegressor", ".fit(", ".train(", "from xgboost", "import xgboost". Expected result: CLEAN:TRAINING_SCAN.
+
+      '
+    - '[must] [analysis] Review all matches (if any). Distinguish between: (a) actual XGBoost imports, model instantiation,
+      or fit() calls indicating real training, (b) references to XGBoost in documentation, roadmaps, or anti-patterns stating
+      "do not train", (c) .fit() calls on non-ML objects (e.g., curve fitting, data fitting utilities). Category (a) is a
+      HARD FAIL. Categories (b) and (c) are acceptable with annotation.
+
+      '
+    - '[must] [scan] Run CMD-list-model-artifacts to enumerate files in models/ and artifacts/ directories. Expected: CLEAN:NO_MODEL_ARTIFACTS
+      (no .pkl, .joblib, .xgb, .ubj, .bin, .h5, .pb, .pt, .onnx, or similar serialized model files). Any model artifact file
+      is a HARD FAIL.
+
+      '
+    - '[must] [audit] Verify that no subplan (00-08) introduced model training code. Check alphaforge/src/ for any module
+      that imports xgboost or sklearn.ensemble in a manner that could enable training. XGBoost references in the ML pilot
+      gate subplan (08) are acceptable ONLY if they define the gate design without actually importing or invoking training.
+
+      '
+    - '[must] [audit] Verify that alphaforge/src/ contains no serialized model loading code targeting models/ or artifacts/.
+      Model loading for evaluation violates the "no training" guard unless the model is a fixture-only stub.
+
+      '
+    - '[must] [evidence] Produce a structured audit result: either CLEAN (zero training artifacts) or FLAGGED (specific matches
+      with classification). All matches must be annotated and adjudicated. Any true training artifact is a blocking violation.
+      Include results in evidence ledger.
+
+      '
+    allowedFiles:
+    - reports/accp/**
+    - plans/alphaforge/09_final_validation.plan.yaml
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    dependencies:
+    - WS-09-TEST-SUITE
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-09-023
+    description: CMD-scan-training produces CLEAN:TRAINING_SCAN — zero matches for 'xgboost', 'XGBClassifier', or 'XGBRegressor'
+      in source tree
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - command
+      commandRef: CMD-scan-training
+    requiredEvidence:
+    - command
+    - command
+  - id: AC-09-024
+    description: CMD-scan-training produces zero matches for 'from xgboost' or 'import xgboost' — no XGBoost library imports
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - command
+      commandRef: CMD-scan-training
+    requiredEvidence:
+    - command
+    - command
+  - id: AC-09-025
+    description: CMD-scan-training produces zero matches for '.fit(' — no model fitting calls in source tree
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - command
+      commandRef: CMD-scan-training
+    requiredEvidence:
+    - command
+    - command
+  - id: AC-09-026
+    description: CMD-scan-training produces zero matches for '.train(' — no training method calls in source tree
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - command
+      commandRef: CMD-scan-training
+    requiredEvidence:
+    - command
+    - command
+  - id: AC-09-027
+    description: CMD-list-model-artifacts produces CLEAN:NO_MODEL_ARTIFACTS — zero serialized model files in models/ or artifacts/
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - command
+      commandRef: CMD-list-model-artifacts
+    requiredEvidence:
+    - command
+    - command
+  - id: AC-09-028
+    description: No alphaforge/src/ module contains xgboost or sklearn.ensemble imports that enable real training — documentation-only
+      references acceptable
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+    requiredEvidence:
+    - command
+  - id: AC-09-029
+    description: 'Composite training-artifact audit: all 6 training checks pass with zero violations'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - command
+      - report
+    requiredEvidence:
+    - command
+    - command
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-09-NO-TRAINING'
+    usageProofs:
+    - id: USE-WS-09-NO-TRAINING
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-09-NO-TRAINING
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-09-FINAL-REPORT
+  title: Final ACCP Evidence Report — Aggregate All Validation Results
+  objective: Final ACCP Evidence Report — Aggregate All Validation Results
+  implementation:
+    instructions:
+    - '[must] [aggregate] Aggregate all evidence from the 4 preceding workspaces: test suite outputs (7 commands), forbidden-diff
+      scan results, profit-claim scan results, and training-artifact scan results. All 11 command outputs must be included
+      in the evidence ledger.
+
+      '
+    - '[must] [verdict] Compute the composite PASS/FAIL verdict. Composite PASS requires: (a) all 7 test suite commands exit
+      0, (b) CMD-discover-git-status shows clean source tree, (c) CMD-scan-forbidden-diff produces CLEAN, (d) CMD-scan-profit-claims
+      produces CLEAN, (e) CMD-scan-training produces CLEAN, (f) CMD-list-model-artifacts produces CLEAN, (g) all prior subplan
+      ACCP reports have INCONCLUSIVE profitability verdicts. Any single violation is a composite FAIL.
+
+      '
+    - '[must] [integrity] Hash all evidence items. Compute planHash, acceptanceCriteriaHash, commandPolicyHash, allowedFilesHash,
+      and forbiddenFilesHash. Include all hashes in the ACCP report. The report must be independently verifiable from its
+      hash chain.
+
+      '
+    - '[must] [report] Emit the final ACCP report to reports/accp/alphaforge_final_validation.accp.yaml following ACCP-YAML
+      v2.0.0 format with all required keys: result (PASS or FAIL), scope_confirmation, files_changed, decisions_locked, remaining_holds,
+      safe_next_step, commands_run (all 11 command executions with exit codes), evidence (aggregated from all 4 prior workspaces).
+      The overall result must be PASS or FAIL — never INCONCLUSIVE for the composite gate.
+
+      '
+    - '[must] [evidence] Include per-workspace verdicts: workspace ID, title, PASS/FAIL status, acceptance criteria count
+      passed/failed, and failure details with specific file paths, line numbers, and patterns matched. All evidence must trace
+      to deterministic command outputs.
+
+      '
+    - '[must] [guidance] If composite PASS, safe_next_step is: "Proceed to bundle promotion review. All validation gates satisfied.
+      All scans clean. All tests green. No profitability claims. No training artifacts. Bundle ready for V7 Policy Critic
+      integration review." If composite FAIL, safe_next_step is: "BLOCKED. Do not promote. Fix violations and re-run final
+      validation. See remaining_holds for blocking issues."
+
+      '
+    - '[must] [verify] Verify the emitted ACCP report file exists, is valid YAML, and contains all required sections. Hash
+      the final report file and include the hash in the evidence ledger for self-verification.
+
+      '
+    allowedFiles:
+    - reports/accp/**
+    - plans/alphaforge/09_final_validation.plan.yaml
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - lib/**
+    - simulation/**
+    - runtime/**
+    - interface/**
+    - integration/tests/**
+    - contracts/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    dependencies:
+    - WS-09-FORBIDDEN-DIFF
+    - WS-09-NO-PROFIT
+    - WS-09-NO-TRAINING
+  artifactPolicy:
+    class: generated_report
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-09-030
+    description: 'ACCP final validation report emitted to correct path: reports/accp/alphaforge_final_validation.accp.yaml'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+  - id: AC-09-031
+    description: Report includes complete evidence ledger with all 11 command outputs (7 test + 4 scan), each with exit code,
+      stdout, and hash
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+      - command
+    requiredEvidence:
+    - report
+    - command
+  - id: AC-09-032
+    description: 'Report includes all 7 test suite results: CMD-test-alphaforge, CMD-test-integration-alphaforge, CMD-test-contract-registry-schema,
+      CMD-test-import-boundaries, CMD-test-simulation, CMD-final-validation, CMD-discover-git-status'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+      - test_output
+    requiredEvidence:
+    - report
+    - test_output
+  - id: AC-09-033
+    description: 'Report includes all 4 scan results with adjudication: CMD-scan-forbidden-diff, CMD-scan-profit-claims, CMD-scan-training,
+      CMD-list-model-artifacts'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+      - command
+    requiredEvidence:
+    - report
+    - command
+  - id: AC-09-034
+    description: Report includes per-workspace verdicts with acceptance criteria counts, failure details, and deterministic
+      evidence traces
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+      - report
+    requiredEvidence:
+    - report
+    - report
+  - id: AC-09-035
+    description: Report has valid composite PASS/FAIL verdict — PASS requires all 5 workspaces independently pass, all scans
+      CLEAN, all tests green
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+      - report
+    requiredEvidence:
+    - report
+    - report
+  - id: AC-09-036
+    description: Report includes verifiable hash chain — planHash, acceptanceCriteriaHash, commandPolicyHash, allowedFilesHash,
+      forbiddenFilesHash all present and consistent
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+      - source
+    requiredEvidence:
+    - report
+    - source
+  - id: AC-09-037
+    description: Report follows accp_version '2.0.0' and source_format 'ACCP-YAML' with all required keys present and valid
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+  - id: AC-09-038
+    description: 'Composite final validation gate: all 38 acceptance criteria across all 5 workspaces satisfied — bundle ready
+      for promotion review'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+      - report
+    requiredEvidence:
+    - report
+    - report
+commands:
+  exactAllowedCommands:
+  - id: CMD-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-integration-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_*.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-contract-registry-schema
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py
+      -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-import-boundaries
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py
+      simulation/tests/test_import_boundary.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-simulation
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-final-validation
+    kind: final_validation
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/
+      -q --ignore=lib/tests/test_market_data_binance.py
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 300
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-scan-forbidden-diff
+    kind: discovery
+    command: 'bash -c ''changes=$( (git diff --name-only HEAD 2>/dev/null; git diff --cached --name-only 2>/dev/null) | sort
+      -u); echo "$changes" | grep -E "^(lib/|simulation/engine/|runtime/|interface/|data/|datasets/|models/|artifacts/|\.github/)"
+      || echo "CLEAN:FORBIDDEN_DIFF"''
+
+      '
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-scan-profit-claims
+    kind: discovery
+    command: 'bash -c ''grep -rIn --include="*.py" --include="*.yaml" --include="*.yml" --include="*.md" --include="*.json"
+      -E "(profitable|profit|expectancy\s*[>]|sharpe\s*[>]\s*1|win.rate|positive.edge)" alphaforge/ v7/ simulation/ runtime/
+      lib/ integration/ contracts/ 2>/dev/null || echo "CLEAN:PROFIT_SCAN"''
+
+      '
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 60
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-scan-training
+    kind: discovery
+    command: 'bash -c ''grep -rIn --include="*.py" --include="*.yaml" --include="*.yml" --include="*.md" -E "(xgboost|XGBClassifier|XGBRegressor|\.fit\(|\.train\(|from
+      xgboost|import xgboost)" alphaforge/ v7/ simulation/ runtime/ lib/ integration/ contracts/ 2>/dev/null || echo "CLEAN:TRAINING_SCAN"''
+
+      '
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 60
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-list-model-artifacts
+    kind: discovery
+    command: 'bash -c ''artifacts=$(find models/ artifacts/ -type f 2>/dev/null); if [ -z "$artifacts" ]; then echo "CLEAN:NO_MODEL_ARTIFACTS";
+      else echo "$artifacts"; fi''
+
+      '
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network or market data during validation.
+  - id: DCMD-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-no-binance
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior allowed.
+  - id: DCMD-no-xgboost-training
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|fit\(|import xgboost
+    reason: No model training in validation plan.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - command
+  - test_output
+  - diff
+  - source
+  - report
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: false
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 0
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-09-final-validation.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: false

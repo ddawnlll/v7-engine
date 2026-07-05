@@ -216,6 +216,28 @@ class TestImprovementAnalytics:
         assert ImprovementAnalyticsService._safety_notes({"provisional": False}) == []
 
 
+# ── calibration_service ────────────────────────────────────────────
+
+class TestCalibrationStatusService:
+    def test_new_bucket(self):
+        from runtime.services.calibration_service import CalibrationStatusService
+        bucket = CalibrationStatusService._new_bucket()
+        assert bucket["total"] == 0
+        assert bucket["regime"] == "UNKNOWN"
+
+    def test_average(self):
+        from runtime.services.calibration_service import CalibrationStatusService
+        assert CalibrationStatusService._average(10.0, 5) == 2.0
+        assert CalibrationStatusService._average(10.0, 0) is None
+
+    def test_to_float(self):
+        from runtime.services.calibration_service import CalibrationStatusService
+        assert CalibrationStatusService._to_float("3.14") == 3.14
+        assert CalibrationStatusService._to_float(None) is None
+        assert CalibrationStatusService._to_float("") is None
+        assert CalibrationStatusService._to_float("abc") is None
+
+
 # ── trace_service ──────────────────────────────────────────────────
 
 class TestTraceService:

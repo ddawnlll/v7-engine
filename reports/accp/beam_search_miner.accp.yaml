@@ -1,0 +1,57 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+result: "PASS"
+
+scope_confirmation: |
+  Implement BeamSearchMiner for Level 3 triple condition scan via beam search.
+
+  Requirements:
+    1. BeamSearchMiner class with search() and expand_rule() methods
+       in alphaforge/src/alphaforge/mine/beam_search.py -- already implemented.
+    2. Exports in alphaforge/src/alphaforge/mine/__init__.py -- already done.
+    3. Tests in alphaforge/tests/test_beam_search.py -- created.
+
+  Existing implementation covers:
+    - search(): beam search from seed rules, iterative expansion with pruning
+    - expand_rule(): add compatible conditions, skip existing/redundant
+    - max_depth=3 support (triple condition discovery)
+    - Beam pruning: no-score-improvement branches discarded
+    - Redundant condition detection via Pearson correlation > 0.95
+    - Support-fraction filtering via min_support
+
+  Test coverage (35 tests):
+    - TestMinedRule (3): construction, defaults, to_dict conversion
+    - TestBeamSearchMinerInit (2): default and custom min_support
+    - TestBeamSearchMinerSearch (10): basic search, sorted results, max_depth,
+      beam_width, input validation, seed filtering, determinism, seed score
+    - TestBeamSearchMinerExpandRule (4): existing/redundant/support filtering,
+      no-target mode
+    - TestBeamSearchMinerPruning (7): score improvement, dedup, pearson corr,
+      is_redundant, prune_no_improvement_static
+    - TestBeamSearchMinerIntegration (3): triple discovery, support pruning,
+      multiple seeds
+    - TestBeamSearchMinerConstants (4): DEFAULT_BEAM_WIDTH, DEFAULT_MAX_DEPTH,
+      DEFAULT_MIN_SUPPORT, CORRELATION_THRESHOLD
+
+files_changed:
+  - alphaforge/tests/test_beam_search.py (created, 725 lines)
+
+decisions_locked:
+  - BeamSearchMiner: LOCKED_INITIAL_BASELINE
+    Evidence: 35 tests passing, deterministic numpy-only computation,
+    correlation-based redundancy detection, beam pruning with score improvement gate.
+
+remaining_holds: []
+
+safe_next_step: |
+  Wire BeamSearchMiner into the alpha discovery pipeline as the condition
+  mining step after FeatureBucketizer produces masks.
+
+commands_run:
+  - PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_beam_search.py -v -c /dev/null
+
+evidence:
+  - "35 tests passed, 0 failed"
+  - "Commit: f546778 (worktree) / 611817c (main)"
+  - "Test summary: all edge cases covered (empty inputs, shape mismatch, support filtering, redundancy detection, determinism)"

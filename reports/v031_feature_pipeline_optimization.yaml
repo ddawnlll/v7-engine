@@ -1,0 +1,68 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "v031_feature_pipeline_optimization"
+date: "2026-07-05"
+
+result: COMPLETED
+scope_confirmation:
+  - "Ordered profiling → detected 30s bottleneck in orderbook+regime feature computation"
+  - "Implemented cumsum-based O(n) rolling helpers replacing O(n·window) Python+NumPy loops"
+  - "Fixed performance cliff and off-by-one in regime _vectorized_vol_regime"
+  - "All bottleneck functions optimized; 0 new test regressions"
+  - "Target of 30s → 3s met: actual result is 30s → 0.3s (100× speedup)"
+
+files_changed:
+  - path: "alphaforge/src/alphaforge/features/orderbook.py"
+    summary: >
+      Added _rolling_cov, _rolling_var helpers. Rewrote compute_microprice,
+      compute_depth_ratio, compute_micro_price, compute_ofi, compute_vamp,
+      compute_quoted_spread, compute_vwap_to_mid_deviation, compute_trade_count,
+      compute_volume_concentration_hhi to use O(n) cumsum-based rolling helpers
+      instead of O(n·window) Python loops with np.mean/np.std/np.sum.
+      Refactored _rolling_mean_nan_safe to delegate to cumsum _rolling_mean.
+    old_bottleneck: "20.8s (3× calls) — 83× speedup"
+    operations: "8 function rewrites + 2 new helpers"
+  - path: "alphaforge/src/alphaforge/features/pipeline.py"
+    summary: >
+      Rewrote _rolling_mean and _rolling_std from Python-loop+np.mean/std
+      to O(n) cumsum-based implementations. Added _rolling_sum and _rolling_var
+      helpers. Rewrote compute_return_zscore, compute_realized_volatility,
+      compute_high_low_range, compute_garman_klass_vol, compute_parkinson_vol,
+      compute_volume_trend to use O(n) cumsum approach.
+    old_bottleneck: "~14s aggregate from mean/std across all groups"
+    operations: "4 new/rewritten helpers + 6 function rewrites"
+  - path: "alphaforge/src/alphaforge/features/regime.py"
+    summary: >
+      Fixed off-by-one error in _vectorized_vol_regime: log_ret[0] is always NaN,
+      so sliding_window_view must start at position 1 (offset from window-1 to window).
+      This was causing spurious classifications at the first window position.
+      Added nan_csum back after it was inadvertently removed.
+    operations: "Bug fix + window alignment correction"
+
+decisions_locked:
+  - id: "ROLLING_STATS_CUMSUM"
+    status: LOCKED
+    details: "All rolling mean/std/sum/var/cov operations use O(n) cumsum, never O(n·window) loops"
+  - id: "VOL_REGIME_WINDOW_ALIGNMENT"
+    status: LOCKED
+    details: "First volatility regime classification starts at position `window`, not `window-1`, because log_ret[0] is always NaN"
+
+remaining_holds:
+  - id: "PREEXISTING_TEST_FAILURES"
+    status: HOLD
+    details: "9 test failures are pre-existing (same failures on clean main). Not caused by this patch."
+
+safe_next_step: "Run alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT --folds 3 --panel-cache cache/factor_sprint to validate end-to-end pipeline speed"
+
+commands_run:
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_orderbook_features.py -q --tb=short"
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_feature_pipeline.py alphaforge/tests/test_regime.py -q --tb=short"
+  - "git stash && run tests to identify pre-existing failures"
+  - "benchmark: compute_features(3000 bars) = 0.3s vs 30s baseline"
+  - "benchmark: compute_features(30000 bars) = 1.6s for all 54 features"
+
+evidence:
+  - "All bottleneck functions optimized: orderbook 20.8s→0.25s (83×), regime 8.6s→0.01s (860×)"
+  - "0 new test regressions (235 pass, 9 pre-existing failures unchanged)"
+  - "Full pipeline (54 features, 30000 bars): 1.59s"
+  - "Ablated pipeline (31 features, no ob/reg/cp): 1.61s (overhead dominates)"

@@ -1,0 +1,26 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "v0.25 diagnostics repair — MHT Correction Module — NOT alpha found"
+files_changed:
+  - "alphaforge/src/alphaforge/reports/mht.py"
+  - "alphaforge/tests/test_mht.py"
+  - "alphaforge/src/alphaforge/reports/empirical.py"
+  - "cli/real_training.py"
+decisions_locked:
+  mht_correction_module: LOCKED_INITIAL_BASELINE
+  trial_count_computation: LOCKED
+remaining_holds:
+  - "MHT correction real thresholds — requires empirical baseline"
+  - "Cost Stress Matrix"
+  - "NO_TRADE Collapse"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -k mht 2>&1 | tail -3"
+evidence:
+  - "mht.py: compute_trial_count, bonferroni_correction, benjamini_hochberg, deflated_sharpe, compute_data_snooping_risk"
+  - "trial_count = max(1, grid_search_combinations) x max(1, thesis_count) x max(1, feature_set_count)"
+  - "Bonferroni correction: alpha / n_trials, capped at 1.0 for degenerate cases"
+  - "Benjamini-Hochberg: FDR control with sorted p-values and threshold calculation"
+  - "Deflated Sharpe ratio: approximate correction for multiple testing"
+  - "empirical.py _build_empirical_mht_control uses MHT data from WFV results"
+  - "real_training.py: 124 MHT hypotheses per fold baked into walk_forward_validate"

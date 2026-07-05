@@ -1,0 +1,420 @@
+planSpecVersion: "0.1.0"
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: TR-MASTER-TRAINING-READY
+  title: "Training-Ready Pipeline — Master Orchestration Plan"
+  description: >
+    Orchestrate all Training-Ready subplans in dependency order. Gate
+    training behind data/simulation/adapter prerequisites. Final audit
+    verifies readiness without false claims. No live trading. No
+    profitability claims. Evidence-gated at every step.
+  createdAt: "2026-06-25T00:00:00Z"
+  humanId: TrainingReady
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+    - plans/training_ready/00_reality_gap_baseline.plan.yaml
+    - plans/training_ready/01_market_data_backfill_storage.plan.yaml
+    - plans/training_ready/02_simulation_market_data_adapter.plan.yaml
+    - plans/training_ready/03_pipeline_cli_makefile_runbook.plan.yaml
+    - plans/training_ready/04_funding_pagination_rate_limit.plan.yaml
+    - plans/training_ready/05_training_runner_xgboost_gate.plan.yaml
+    - plans/training_ready/06_empirical_wfv_metrics.plan.yaml
+    - plans/training_ready/07_v7_policy_acceptance_impl.plan.yaml
+    - plans/training_ready/08_final_training_readiness_audit.plan.yaml
+    - reports/accp/**
+    - lib/**
+    - simulation/**
+    - alphaforge/**
+    - v7/**
+    - cli/**
+    - Makefile
+    - .env.example
+    - configs/**
+    - docs/**
+  forbiddenFiles:
+    - .github/**
+    - interface/**
+    - runtime/**
+    - data/raw/**
+    - data/processed/**
+    - data/models/**
+    - artifacts/**
+    - models/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+  - id: WS-MASTER-00
+    title: Execute Baseline Verification (Plan 00)
+    objective: "Verify Reality Gap Audit present. Confirm 24.5% baseline. Verify AlphaForge scaffold."
+    implementation:
+      instructions:
+        - "[must] Load and validate plans/training_ready/00_reality_gap_baseline.plan.yaml."
+        - "[must] Execute all workspaces in order. Emit ACCP report."
+        - "[must] If HOLD or FAIL, STOP. Do not proceed."
+      allowedFiles: [reports/accp/**]
+      forbiddenFiles: [plans/training_ready/**]
+    artifactPolicy:
+      class: documentation
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-MASTER-00
+        description: "Plan 00 completes with PASS"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: manual_review
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [report]
+        requiredEvidence: [report]
+  - id: WS-MASTER-01
+    title: Execute Market Data Backfill (Plan 01)
+    objective: "Implement Binance backfill orchestrator + storage + catalog + rate limiter."
+    implementation:
+      instructions:
+        - "[must] Load and validate 01_market_data_backfill_storage.plan.yaml."
+        - "[must] Execute all workspaces. Emit ACCP report. Run CMD-test-lib-all."
+        - "[must] Verify no files outside lib/ were modified."
+      allowedFiles: [lib/**, reports/accp/**]
+      dependencies: [WS-MASTER-00]
+    artifactPolicy:
+      class: cli_command
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Backfill module consumed by CLI and simulation adapter."
+      entrypoints:
+        - id: ENTRY-MASTER-01
+          path: lib/market_data/binance/backfill.py
+          kind: library_module
+    acceptanceCriteria:
+      - id: AC-MASTER-01
+        description: "Plan 01 completes with PASS. Backfill tests pass."
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output, report]
+        requiredEvidence: [command, test_output, report]
+  - id: WS-MASTER-02
+    title: Execute Simulation Adapter (Plan 02)
+    objective: "Implement OHLCV adapter + batch runner + simulation output persistence + bridge test."
+    implementation:
+      instructions:
+        - "[must] Load and validate 02_simulation_market_data_adapter.plan.yaml."
+        - "[must] Execute all workspaces. Emit ACCP report."
+        - "[must] Verify bridge integration test passes."
+      allowedFiles: [simulation/**, reports/accp/**]
+      dependencies: [WS-MASTER-01]
+    artifactPolicy:
+      class: cli_command
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-MASTER-02
+        description: "Plan 02 completes with PASS. Bridge test passes."
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output, report]
+        requiredEvidence: [command, test_output, report]
+  - id: WS-MASTER-03
+    title: Execute Pipeline CLI + Makefile + Runbook (Plan 03)
+    objective: "Implement CLI, Makefile targets, .env.example, runbook."
+    implementation:
+      instructions:
+        - "[must] Load and validate 03_pipeline_cli_makefile_runbook.plan.yaml."
+        - "[must] Execute all workspaces. Emit ACCP report."
+        - "[must] Verify make help shows all pipeline targets."
+      allowedFiles: [cli/**, Makefile, .env.example, configs/**, docs/**, reports/accp/**]
+      dependencies: [WS-MASTER-01]
+    artifactPolicy:
+      class: cli_command
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-MASTER-03
+        description: "Plan 03 completes with PASS. CLI + Makefile targets work."
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: command_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, report]
+        requiredEvidence: [command, report]
+  - id: WS-MASTER-04
+    title: Execute Funding + Rate Limit (Plan 04)
+    objective: "Add funding pagination, rate limiter, funding cost model path."
+    implementation:
+      instructions:
+        - "[must] Load and validate 04_funding_pagination_rate_limit.plan.yaml."
+        - "[must] Execute all workspaces. Emit ACCP report."
+      allowedFiles: [lib/market_data/binance/funding_service.py, lib/market_data/binance/rate_limiter.py, simulation/engine/funding.py, lib/tests/**, simulation/tests/**, reports/accp/**]
+      dependencies: [WS-MASTER-02]
+    artifactPolicy:
+      class: cli_command
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-MASTER-04
+        description: "Plan 04 completes with PASS or HOLD (funding may remain HOLD)."
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output, report]
+        requiredEvidence: [command, test_output, report]
+  - id: WS-MASTER-05
+    title: Execute XGBoost Training (Plan 05) — HARD GATE
+    objective: "Implement training runner ONLY if TR-01..04 all PASS. Otherwise HOLD."
+    implementation:
+      instructions:
+        - "[must] Verify TR-01..04 ACCP reports all PASS."
+        - "[must] If any FAIL/HOLD, STOP master and emit HOLD. Training is gated."
+        - "[must] If all PASS: load and validate 05_training_runner_xgboost_gate.plan.yaml."
+        - "[must] Execute workspaces. No profitability claims. No live trading."
+      allowedFiles: [alphaforge/src/alphaforge/training/**, alphaforge/tests/test_training_*.py, data/models/**, reports/accp/**]
+      dependencies: [WS-MASTER-01, WS-MASTER-02, WS-MASTER-03, WS-MASTER-04]
+    artifactPolicy:
+      class: cli_command
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Training module consumed by WFV evaluator."
+      entrypoints:
+        - id: ENTRY-MASTER-05
+          path: alphaforge/src/alphaforge/training/train_xgb.py
+          kind: library_module
+    acceptanceCriteria:
+      - id: AC-MASTER-05
+        description: "Plan 05 either HOLD (prerequisites not met) or PASS (training implemented)."
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output, report]
+        requiredEvidence: [command, test_output, report]
+  - id: WS-MASTER-06
+    title: Execute Empirical WFV (Plan 06) — HARD GATE
+    objective: "Run empirical WFV ONLY if TR-05 PASS. Otherwise HOLD."
+    implementation:
+      instructions:
+        - "[must] Verify TR-05 ACCP report PASS."
+        - "[must] If FAIL/HOLD, STOP. WFV gated."
+        - "[must] If PASS: load and validate 06_empirical_wfv_metrics.plan.yaml and execute."
+      allowedFiles: [alphaforge/src/alphaforge/validation/**, alphaforge/tests/test_empirical_wfv.py, alphaforge/tests/test_cost_stress.py, alphaforge/tests/test_no_trade_baseline.py, alphaforge/tests/test_mht_controls.py, reports/accp/**]
+      dependencies: [WS-MASTER-05]
+    artifactPolicy:
+      class: cli_command
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-MASTER-06
+        description: "Plan 06 either HOLD or PASS with real empirical metrics."
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output, report]
+        requiredEvidence: [command, test_output, report]
+  - id: WS-MASTER-07
+    title: Execute V7 Policy (Plan 07) — HARD GATE
+    objective: "Implement V7 policy acceptance ONLY if TR-05 and TR-06 PASS."
+    implementation:
+      instructions:
+        - "[must] Verify TR-05 and TR-06 PASS."
+        - "[must] If gated, HOLD. V7 needs evidence."
+        - "[must] If passed: execute 07_v7_policy_acceptance_impl.plan.yaml."
+      allowedFiles: [v7/src/**, v7/tests/**, integration/tests/test_v7_accepts_alphaforge_handoff.py, reports/accp/**]
+      dependencies: [WS-MASTER-06]
+    artifactPolicy:
+      class: cli_command
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-MASTER-07
+        description: "Plan 07 either HOLD or PASS with V7 source code."
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command, test_output, report]
+        requiredEvidence: [command, test_output, report]
+  - id: WS-MASTER-08
+    title: Execute Final Audit (Plan 08)
+    objective: "Run final validation. Compute updated readiness. Emit final ACCP."
+    implementation:
+      instructions:
+        - "[must] Load and validate 08_final_training_readiness_audit.plan.yaml."
+        - "[must] Execute. Run full test suite. Compute readiness percentages."
+        - "[must] No false claims. No profitability claims."
+        - "[must] Emit reports/accp/training_ready_final_audit.accp.yaml."
+      allowedFiles: [reports/accp/**]
+      dependencies: [WS-MASTER-07]
+    artifactPolicy:
+      class: generated_report
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-MASTER-08
+        description: "Final audit PASS. Readiness report generated."
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_exists
+          path: reports/accp/training_ready_final_audit.accp.yaml
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [source, report]
+        requiredEvidence: [source, report]
+commands:
+  exactAllowedCommands:
+    - id: CMD-master-test
+      kind: final_validation
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 300
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-git-status
+      kind: discovery
+      command: "git status --porcelain"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 30
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: curl
+      pattern: "^curl\\s"
+      reason: "No network."
+    - command: wget
+      pattern: "^wget\\s"
+      reason: "No external downloads."
+    - id: DCMD-master-no-uncontrolled-training
+      command: uncontrolled xgboost training outside plan 05
+      pattern: "xgboost|XGBClassifier|XGBRegressor|\\.fit\\("
+      reason: "UNCONTROLLED training is DENIED everywhere. Plan 05 (gated behind TR-01..04) is the ONLY authorized training entrypoint. Training commands appearing outside plan-05-scoped execution are forbidden. Profitability claims remain DENIED globally."
+    - command: live trading
+      pattern: "create_order|market_order|live_order|api_key.*=.*[A-Za-z0-9]"
+      reason: "No live trading."
+    - command: profitability
+      pattern: "profitable|edge confirmed|alpha works|live_ready|guaranteed profit"
+      reason: "No profitability claims."
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: [diff, source, wiring, command, test_output, schema_validation, report]
+  hashWhenAvailable: true
+gates:
+  sequence: [SchemaGate, LockGate, EvidenceGate, WiringGate, ExecGate, FinalGate]
+  verdicts: [PASS, HOLD, FAIL]
+  reasonCodes:
+    SchemaGate: [PLAN_SCHEMA_INVALID]
+    LockGate: [PLAN_NOT_LOCKED]
+    EvidenceGate: [REQUIRED_EVIDENCE_MISSING, PREREQUISITE_FAILED]
+    WiringGate: [ORPHAN_MODULE, FORBIDDEN_IMPORT_BOUNDARY]
+    ExecGate: [TEST_COMMAND_FAILED, NO_TESTS_FOUND, FORBIDDEN_COMMAND_USED]
+    FinalGate: [FINAL_VALIDATION_FAILED, REMAINING_REQUIRED_CRITERIA, REPORT_MISSING, HOLD_REQUIRES_REPAIR_PACKET]
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/training_ready/master.lock.json
+  hashes: [planHash, acceptanceCriteriaHash, artifactPolicyHash, commandPolicyHash, allowedFilesHash, forbiddenFilesHash]
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

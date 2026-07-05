@@ -134,6 +134,22 @@ AlphaForge is the **anomaly discovery and alpha research authority** within V7 E
 
 ---
 
+## Metric Philosophy
+
+Metrics live at the layer closest to their source data. No downstream layer recomputes what an upstream layer already computed.
+
+### Layer Metric Ownership
+
+| Layer | Owns | Key Metrics | Passes To |
+|-------|------|-------------|-----------|
+| Simulation | Economic truth | gross_return_r, total_cost_r, funding_cost_r, slippage_cost_r | AlphaForge label layer |
+| AlphaForge (Label) | Label-time economics | gross_return_r, net_return_r, funding_cost_r, total_cost_r, no_trade_quality | Training pipeline |
+| AlphaForge (Validation) | Walk-forward statistics | OOS expectancy_r, OOS Sharpe, fold stability, cost stress survival, regime breakdown | Research reports |
+| AlphaForge (Report) | Report-level aggregates | active_trade_count, total_gross_R, total_net_R, exposure_pct, avg_net_R_per_active_trade | V7HandoffPackage |
+| V7 | Policy metrics | Promotion readiness, confidence calibration, risk-adjusted thresholds | Runtime |
+
+---
+
 ## Related Docs
 
 - [ai_summary.md](ai_summary.md) — thin hub

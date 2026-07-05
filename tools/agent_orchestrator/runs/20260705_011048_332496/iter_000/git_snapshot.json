@@ -1,0 +1,5 @@
+{
+  "head": "964e4a050de47b80edc2d83bec97c0c7b8e7bfb8",
+  "diff_stat": "",
+  "porcelain": "?? alphaforge/src/alphaforge/alpha_candidate.py\n?? alphaforge/tests/test_alpha_candidate.py\n?? tools/agent_orchestrator/runs/20260705_011048_332496/"
+}

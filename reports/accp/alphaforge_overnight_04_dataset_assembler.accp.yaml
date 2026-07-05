@@ -1,0 +1,18 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-OVERNIGHT-04-DATASET-ASSEMBLER
+  report_type: SUBPLAN_EXECUTION
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-OVERNIGHT-AUTOPILOT-ALPHAFORGE-SEQUENTIAL-EXECUTION
+  plan_id: ALPHAFORGE-04-DATASET-ASSEMBLER
+  priority: P1
+result: PASS
+scope_confirmation: "Plan 04 dataset assembler verified — 53/53 tests pass, DatasetAssembler imports clean, guards clean"
+targeted_tests:
+  - {command: "pytest alphaforge/tests/test_dataset_assembler.py test_dataset_lineage.py test_dataset_writer.py", result: "53 passed", exit: 0}
+guard_scan: [{scan: "forbidden patterns", result: "CLEAN"}]
+files_changed: []
+failed_ACs: []
+remaining_holds: [funding_deferred, no_real_market_data, no_model_training]
+safe_next_step: "Proceed to plan 05"

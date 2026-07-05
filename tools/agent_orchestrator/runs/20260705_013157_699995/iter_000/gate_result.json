@@ -1,0 +1,30 @@
+{
+  "verdict": "FAIL",
+  "check_results": {
+    "exit_code_ok": false,
+    "log_exists": true,
+    "required_files_exist": true,
+    "test_command_ok": true,
+    "metrics_file_exists": true,
+    "metrics_file_valid": true,
+    "git_head_saved": true,
+    "git_no_tracked_mods": true,
+    "git_changes_in_allowed_paths": false,
+    "git_no_denied_touches": true,
+    "report_fields_ok": false,
+    "synthetic_test_passed": true
+  },
+  "reasons": [
+    "Worker exited with code -1",
+    "Worker log exists (257164 bytes)",
+    "Git HEAD: c0449a845319",
+    "No tracked files modified",
+    "Changes outside allowed paths:\n?? alphaforge/src/alphaforge/alphas/\n?? alphaforge/src/alphaforge/factors/alpha_volume_trend.py\n?? scripts/backtest_alpha_momentum.py\n?? test_alpha_volume_trend.py\n?? tools/momentum_factor_research/",
+    "No authority files touched",
+    "Report missing required fields: train_start, train_end, test_start, test_end, n_combinations, metric"
+  ],
+  "evidence_paths": [
+    "C:\\Users\\dresden\\Documents\\v7-engine\\tools\\agent_orchestrator\\runs\\20260705_013157_699995\\iter_000\\claude_stream.jsonl",
+    "HEAD=c0449a845319"
+  ]
+}

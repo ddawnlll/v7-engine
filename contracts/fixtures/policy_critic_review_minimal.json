@@ -1,0 +1,10 @@
+{
+  "review_id": "pc-review-minimal-v0.1",
+  "decision_event_id": "de-minimal-v0.1",
+  "regret_r": 0.42,
+  "expected_r": 0.35,
+  "critic_verdict": "CORRECT",
+  "iql_expectile_tau": 0.7,
+  "conformal_coverage": 0.0,
+  "timestamp": "2026-06-26T00:00:00Z"
+}

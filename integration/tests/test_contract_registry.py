@@ -15,7 +15,7 @@ import pytest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CONTRACTS_DIR = os.path.join(REPO_ROOT, "contracts")
-KNOWN_DOMAINS = {"lib", "simulation", "alphaforge", "v7"}
+KNOWN_DOMAINS = {"lib", "simulation", "alphaforge", "v7", "runtime"}
 
 
 def _load_json(path: str) -> dict:

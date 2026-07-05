@@ -1,0 +1,252 @@
+planSpecVersion: "0.1.0"
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: TR-08-FINAL-TRAINING-READINESS-AUDIT
+  title: "Plan 08 — Final Training Readiness Audit"
+  description: "Run final validation. Compute updated readiness percentages. Verify training readiness if applicable. No false claims. Emit final ACCP report."
+  createdAt: "2026-06-25T00:00:00Z"
+  humanId: TrainingReady
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+    - reports/accp/**
+    - plans/training_ready/08_final_training_readiness_audit.plan.yaml
+  forbiddenFiles:
+    - lib/**
+    - simulation/**
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - v7/src/**
+    - v7/tests/**
+    - runtime/**
+    - data/**
+    - models/**
+    - artifacts/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: analysis_only
+  canModifyCode: false
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 1
+tasks:
+  - id: WS-TR08-01
+    title: Run Full Validation Suite
+    objective: "Execute full non-Binance test suite across all domains. Record pass/fail/skip counts."
+    implementation:
+      instructions:
+        - "[must] Run CMD-full-tests — confirm exit 0 and zero failures."
+        - "[must] Run CMD-contract-tests — confirm exit 0."
+        - "[must] Run CMD-boundary-tests — confirm exit 0."
+        - "[must] If any command fails, mark domain as FAIL in report."
+      expectedOutputs: ["Test output with exact pass/fail/skip counts"]
+    artifactPolicy:
+      class: generated_report
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR08-01
+        description: "Full non-Binance test suite passes (0 failures)"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-full-tests
+        requiredEvidence: [command, test_output]
+      - id: AC-TR08-02
+        description: "Contract registry and schema parity tests pass"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-contract-tests
+        requiredEvidence: [command, test_output]
+      - id: AC-TR08-03
+        description: "Import boundary tests pass across all domains"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-boundary-tests
+        requiredEvidence: [command, test_output]
+  - id: WS-TR08-02
+    title: Compute Updated Readiness and Emit Final Report
+    objective: "Read all prior ACCP reports. Compute updated readiness. Compare against 24.5% baseline. Emit final ACCP report honestly."
+    implementation:
+      instructions:
+        - "[must] Read all ACCP reports from TR-00 through TR-07."
+        - "[must] Compute each readiness dimension. Use same weights as original audit."
+        - "[must] training_ready: false unless TR-05 and TR-06 both PASS with real empirical metrics."
+        - "[must] Do NOT claim training-ready without real model + WFV evidence."
+        - "[must] Emit reports/accp/training_ready_final_audit.accp.yaml."
+        - "[must] If any domain still MISSING or SKELETON_ONLY, report honestly."
+      expectedOutputs: ["reports/accp/training_ready_final_audit.accp.yaml"]
+    artifactPolicy:
+      class: generated_report
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR08-04
+        description: "Final ACCP report generated"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_exists
+          path: reports/accp/training_ready_final_audit.accp.yaml
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+      - id: AC-TR08-05
+        description: "Final report honestly reflects readiness — no false PASS"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_contains
+          path: reports/accp/training_ready_final_audit.accp.yaml
+          patterns: ["training_ready: false", "training_ready: true"]
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+      - id: AC-TR08-06
+        description: "No profitability or live-readiness claims"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_contains
+          path: reports/accp/training_ready_final_audit.accp.yaml
+          patterns: ["profitable", "live_ready", "guaranteed"]
+          deterministic: false
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [source, manual_review]
+        requiredEvidence: [source, manual_review]
+commands:
+  exactAllowedCommands:
+    - id: CMD-full-tests
+      kind: final_validation
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 300
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-contract-tests
+      kind: final_validation
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-boundary-tests
+      kind: final_validation
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-forbidden-scan
+      kind: discovery
+      command: "grep -RInE 'xgboost|XGBClassifier|XGBRegressor|\\.fit\\(|create_order|market_order|profitable.*PASS|live_ready' lib/ simulation/ alphaforge/src/ v7/src/ 2>/dev/null | grep -v 'EXPLICIT_GBM_BLOCK' | grep -v 'DCMD-no' | grep -v 'def test' | head -20 || echo 'FORBIDDEN_SCAN_CLEAN'"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 30
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: curl
+      pattern: "^curl\\s"
+      reason: "No network in final audit."
+    - command: code modification
+      pattern: "Edit|Write"
+      reason: "Read-only audit — no code changes."
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: [command, test_output, source, report]
+  hashWhenAvailable: true
+gates:
+  sequence: [SchemaGate, LockGate, EvidenceGate, WiringGate, ExecGate, FinalGate]
+  verdicts: [PASS, HOLD, FAIL]
+  reasonCodes:
+    SchemaGate: [PLAN_SCHEMA_INVALID]
+    LockGate: [PLAN_NOT_LOCKED]
+    EvidenceGate: [REQUIRED_EVIDENCE_MISSING, REPORT_MISSING]
+    WiringGate: [FORBIDDEN_IMPORT_BOUNDARY]
+    ExecGate: [TEST_COMMAND_FAILED, NO_TESTS_FOUND]
+    FinalGate: [FINAL_VALIDATION_FAILED, REMAINING_REQUIRED_CRITERIA]
+repair:
+  enabled: false
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 0
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/training_ready/08_final_training_readiness_audit.lock.json
+  hashes: [planHash, acceptanceCriteriaHash, artifactPolicyHash, commandPolicyHash, allowedFilesHash, forbiddenFilesHash]
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

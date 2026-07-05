@@ -1,0 +1,86 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+plan_id: ALPHAFORGE-05
+plan_file: plans/alphaforge/05_non_ml_research_report.plan.yaml
+timestamp: "2026-06-24T00:00:00Z"
+
+result: PASS
+scope_confirmation:
+  - "WS-05-SCHEMA: Schema-contract audit completed. 18 ModeResearchReport required keys (plan references 17 — schema_version is the 18th). 10 AlphaForgeResearchReport required keys (plan references 9 — multiple_hypothesis_control is the P0.8E addition). All P0.8E nested required fields confirmed in both schema and contract docs. Verdict enum coupling gaps documented (schema more permissive than contract docs). Complete mapping comment block in research.py."
+  - "WS-05-LABEL-DISTRIBUTION: analyze_label_distribution() implemented. Returns label distribution percentages (long/short/no_trade/ambiguous), best_action_counts, and label_validity_distribution. Empty input handling verified. All AC acceptance criteria met."
+  - "WS-05-NO-TRADE: analyze_no_trade_quality() implemented. Returns 4 subcategories (NO_EDGE, COST_DOMINATED, AMBIGUOUS, EXCLUDED) with name/count/pct. Dominance logic tested at threshold 0.5. Scaffold fallback assigns all to NO_EDGE with documented limitation."
+  - "WS-05-COST-MHT: cost_impact_summary() implemented with gross_r/net_r extraction and cost drag computation. mht_hold_summary() implemented with blocking hold for NONE_APPLIED. assemble_non_ml_research_context() aggregates all four analyses into JSON-serializable context dict."
+  - "WS-05-VALIDATION: 43 unit tests created and passing in alphaforge/tests/test_research_report.py. Covers all 5 analysis functions, edge cases, empty inputs, and no-xgboost verification."
+  - "WS-05-REPORT: 10 integration tests created and passing in integration/tests/test_alphaforge_research_report.py. All 3 mode reports validate against P0.8E schema. Aggregate report gap documented (builders.py missing aggregate multiple_hypothesis_control). No profitability claims. No training scan clean."
+
+files_changed:
+  - path: "alphaforge/src/alphaforge/reports/research.py"
+    change: "CREATED"
+    description: "Non-ML research report analysis module with schema audit comment block and 5 analysis functions (analyze_label_distribution, analyze_no_trade_quality, cost_impact_summary, mht_hold_summary, assemble_non_ml_research_context). All functions deterministic, no XGBoost, no model training, no profitability claims."
+  - path: "alphaforge/src/alphaforge/reports/__init__.py"
+    change: "MODIFIED"
+    description: "Added exports for all 5 research analysis functions from research.py."
+  - path: "alphaforge/tests/test_research_report.py"
+    change: "CREATED"
+    description: "43 unit tests covering all 5 analysis functions, edge cases, empty inputs, label fixtures, no-xgboost verification."
+  - path: "integration/tests/test_alphaforge_research_report.py"
+    change: "CREATED"
+    description: "10 integration tests: schema validation for all 3 modes, aggregate report checks, verdict inconclusiveness, no profitability claims, fixture validation, MHT hold prevention."
+
+decisions_locked:
+  - "Label distribution output shape: {total_count, long_pct, short_pct, no_trade_pct, ambiguous_pct, best_action_counts, label_validity_distribution} — LOCKED_INITIAL_BASELINE"
+  - "NO_TRADE subcategories (4): NO_EDGE, COST_DOMINATED, AMBIGUOUS, EXCLUDED — LOCKED_INITIAL_BASELINE"
+  - "MHT hold semantics: NONE_APPLIED → hold_active=true, requires_model_training=true — LOCKED"
+  - "Non-ML research context aggregation: {label_distribution, no_trade_quality, cost_impact, mht_hold} — LOCKED_INITIAL_BASELINE"
+  - "All reports verdict INCONCLUSIVE, no CANDIDATE_FOR_V7_GATES — LOCKED (design requirement)"
+
+remaining_holds:
+  - id: "HOLD-05-MHT-BUILDERS-GAP"
+    description: "builders.py does not wire aggregate multiple_hypothesis_control into the AlphaForgeResearchReport payload. The P0.8E schema update now requires this field. build_alphaforge_research_report() currently raises ReportBuildError because the internal validation rejects the incomplete payload."
+    severity: "BLOCKING"
+    release_condition: "Update builders.py to include aggregate MHT control in build_alphaforge_research_report()."
+    affected_files: ["alphaforge/src/alphaforge/reports/builders.py"]
+  - id: "HOLD-05-AGGREGATE-FIXTURE-GAP"
+    description: "alphaforge_research_report_minimal.json fixture authored before P0.8E added multiple_hypothesis_control to the aggregate schema's required array. Fixture does not validate against current schema."
+    severity: "MEDIUM"
+    release_condition: "Update aggregate fixture to include multiple_hypothesis_control block."
+    affected_files: ["contracts/fixtures/alphaforge/alphaforge_research_report_minimal.json"]
+  - id: "HOLD-05-SCHEMA-COUNT-DISCREPANCY"
+    description: "Plan references 17 ModeResearchReport required keys and 9 AlphaForgeResearchReport required keys. Actual schema has 18 and 10 respectively. Discrepancy due to P0.8E additions (schema_version counted separately, multiple_hypothesis_control added)."
+    severity: "LOW"
+    release_condition: "Update plan spec to match actual schema counts, or confirm which counting convention is canonical."
+  - id: "HOLD-05-VERDICT-COUPLING-GAP"
+    description: "Schema verdict enum is more permissive than contract docs. Schema allows BASELINE verdicts for PRIMARY modes and CONTINUE_RESEARCH for BASELINE modes. Contract docs are stricter."
+    severity: "MEDIUM"
+    release_condition: "Reconcile schema enum with contract doc verdict tables, or document the intentional divergence."
+  - id: "HOLD-05-EMPIRICAL-EVIDENCE"
+    description: "All analysis functions operate on scaffold/dummy label data. No real market data, no real model training. All reports remain non-promotional until empirical evidence is available."
+    severity: "BLOCKING"
+    release_condition: "Obtain real market data, run simulations, train models with MHT correction."
+
+safe_next_step: "Resolve HOLD-05-MHT-BUILDERS-GAP by adding aggregate multiple_hypothesis_control to build_alphaforge_research_report() in builders.py. Then update the aggregate fixture to match. These are the P0.8E wiring gaps that block the aggregate report from building correctly."
+
+commands_run:
+  - id: CMD-test-alphaforge-unit
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_research_report.py -q"
+    exit_code: 0
+    result: "43 passed"
+  - id: CMD-test-integration-alphaforge
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_research_report.py -q --rootdir=integration/tests"
+    exit_code: 0
+    result: "10 passed"
+  - id: CMD-no-training-scan
+    command: "grep -rn 'xgboost\\|XGBClassifier\\|XGBRegressor\\|\\.fit(' alphaforge/src/alphaforge/reports/ --include='*.py'"
+    exit_code: 1
+    result: "No matches — clean. No xgboost, XGBClassifier, XGBRegressor, or fit() in reports source."
+
+evidence:
+  unit_tests: "53 total (43 unit + 10 integration), all passing, exit code 0"
+  no_training_scan: "Clean — exit code 1 (grep found no matches)"
+  files_created: 3 (research.py, test_research_report.py, test_alphaforge_research_report.py)
+  files_modified: 1 (__init__.py added exports)
+  xgboost_found: false
+  profitability_claims_found: false
+  model_training_found: false
+  deterministic: true
+  p0_8e_gaps: ["HOLD-05-MHT-BUILDERS-GAP", "HOLD-05-AGGREGATE-FIXTURE-GAP"]

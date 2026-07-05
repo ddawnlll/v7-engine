@@ -1,0 +1,15 @@
+{
+  "event_id": "evt_001",
+  "analysis_result_id": "ar_001",
+  "decision": "ENTER_LONG",
+  "order_id": "ord_binance_abc123",
+  "executed_at": "2026-06-01T12:00:10Z",
+  "venue": "binance_futures",
+  "event_type": "ORDER_FILLED",
+  "status": "SUCCESS",
+  "metadata": {
+    "filled_qty": 0.05,
+    "fill_price": 64300.50,
+    "commission": 0.0032
+  }
+}

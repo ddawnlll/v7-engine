@@ -1,0 +1,62 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-P0-DETERMINISTIC-PIPELINE-CLOSURE
+  report_type: PHASE_CLOSURE
+  generated_at: "2026-06-24T21:00:00Z"
+  task_id: ACCP-CLOSE-ALPHAFORGE-P0-DETERMINISTIC-PIPELINE
+  priority: P0
+  commits: [{hash: "5f25575", desc: "PlanSpec bundle execution"}, {hash: "98782d3", desc: "Repair — all failures fixed"}]
+
+summary:
+  final_status: PASS_WITH_HOLDS
+  p0_complete: true
+  final_validation_passed: true
+  known_failures_remaining: 0
+  total_tests_passing: 817
+  total_tests_failing: 0
+  forbidden_scans_clean: true
+
+implemented_capabilities:
+  - data_manifest
+  - label_adapter
+  - feature_pipeline
+  - dataset_assembler
+  - non_ml_research_report
+  - walk_forward_validation_skeleton
+  - v7_handoff_dry_run
+  - ml_pilot_gate
+
+validation_evidence:
+  commands:
+    - {id: VERIFY-final-non-binance, exit_code: 0, result: "817 passed, 0 failed, 2 skipped"}
+    - {id: VERIFY-alphaforge-tests, exit_code: 0, result: "487 passed"}
+    - {id: VERIFY-integration-alphaforge, exit_code: 0, result: "124 passed"}
+    - {id: VERIFY-contracts, exit_code: 0, result: "20 passed"}
+    - {id: VERIFY-import-boundaries, result: "7 passed, 2 skipped"}
+    - {id: VERIFY-simulation, result: "5 passed"}
+    - {id: VERIFY-forbidden-scans, result: "ALL CLEAN (8 guardrail-only hits)"}
+
+forbidden_action_scan:
+  xgboost_training: CLEAN
+  live_trading: CLEAN
+  profitability_claims: CLEAN
+  network_api_usage: CLEAN
+
+remaining_holds:
+  - {id: no_real_profitability_evidence, release_condition: "Real market data + empirical backtest"}
+  - {id: no_real_market_data, release_condition: "Real data pipeline wired"}
+  - {id: no_model_training, release_condition: "ML training after real data"}
+  - {id: no_xgboost_training, release_condition: "ML pilot gate with real data prerequisites"}
+  - {id: funding_deferred, release_condition: "Funding model in simulation"}
+  - {id: scalp_thresholds_hold, release_condition: "SCALP WFV with real data"}
+  - {id: aggressive_scalp_thresholds_hold, release_condition: "AGGRESSIVE_SCALP WFV with real data"}
+  - {id: g7_to_g10_runtime_infrastructure_not_built, release_condition: "Runtime G7-G10 infrastructure"}
+
+next_phase_recommendation:
+  phase: P1
+  title: "Real Data / ML Pilot Unlock Plan"
+
+final_status: PASS_WITH_HOLDS
+ready_for_next_phase_planning: true
+ready_for_live_or_profit_claims: false

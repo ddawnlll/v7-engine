@@ -1,0 +1,64 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: TRAINING-READY-PLAN-BUNDLE-GENERATION
+  report_type: PLANSPEC_BUNDLE_GENERATION
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-GENERATE-TRAINING-READY-PLAN-BUNDLE
+  priority: P0
+source_audit:
+  - reports/accp/v7_engine_reality_gap_audit.accp.yaml
+generated_files:
+  - plans/training_ready/master.plan.yaml
+  - plans/training_ready/00_reality_gap_baseline.plan.yaml
+  - plans/training_ready/01_market_data_backfill_storage.plan.yaml
+  - plans/training_ready/02_simulation_market_data_adapter.plan.yaml
+  - plans/training_ready/03_pipeline_cli_makefile_runbook.plan.yaml
+  - plans/training_ready/04_funding_pagination_rate_limit.plan.yaml
+  - plans/training_ready/05_training_runner_xgboost_gate.plan.yaml
+  - plans/training_ready/06_empirical_wfv_metrics.plan.yaml
+  - plans/training_ready/07_v7_policy_acceptance_impl.plan.yaml
+  - plans/training_ready/08_final_training_readiness_audit.plan.yaml
+  - plans/training_ready/README.md
+  - plans/training_ready/manifest.json
+schema_validation:
+  - command: "python3 -c 'import yaml, pathlib; from jsonschema import Draft202012Validator; schema = yaml.safe_load(pathlib.Path(\"template.yaml\").read_text()); v = Draft202012Validator(schema); results = [(p.name, list(v.iter_errors(yaml.safe_load(p.read_text())))) for p in sorted(pathlib.Path(\"plans/training_ready\").glob(\"*.plan.yaml\"))]; failed = [(n, e) for n, e in results if e]; print(f\"PASS: {len(results)-len(failed)} plans pass\") if not failed else [print(f\"FAIL {n}\") for n, _ in failed]'"
+  exit_code: 0
+  result: "ALL 10 PLANS VALIDATE"
+bundle_summary:
+  plan_count: 10
+  domains_covered:
+    - audit (2 plans: 00, 08)
+    - lib (2 plans: 01, 04)
+    - simulation (1 plan: 02)
+    - ops (1 plan: 03)
+    - alphaforge (2 plans: 05, 06)
+    - v7 (1 plan: 07)
+    - orchestration (1 plan: master)
+  dependency_order:
+    - "00 → 01+03 (parallel) → 02 → 04 → 05 (gated) → 06 (gated) → 07 (gated) → 08"
+  execution_gates:
+    - "Plan 05: GATED — requires TR-01,02,03,04 PASS"
+    - "Plan 06: GATED — requires TR-05 PASS"
+    - "Plan 07: GATED — requires TR-05,06 PASS"
+readiness_targets:
+  current_overall: 24.5
+  expected_after_01_04: "45-55"
+  expected_after_05_08: "training-ready only if evidence passes"
+safety_preserved:
+  - no_live_trading: true
+  - no_profitability_claims: true
+  - no_template_modification: true
+  - no_plan_execution: true
+  - all_hard_denied_commands: true
+  - domain_boundaries_preserved: true
+zip:
+  path: plans/training_ready_plan_bundle.zip
+  command: "cd plans && zip -r ../training_ready_plan_bundle.zip training_ready"
+  exit_code: 0
+  file_count: 12
+final_status:
+  status: PASS
+  ready_for_review: true
+  ready_for_execution: false
+  note: "Plans generated. Await human review before execution. Training gated."

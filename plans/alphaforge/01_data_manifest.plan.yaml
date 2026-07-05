@@ -1,0 +1,1100 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-01-DATA-MANIFEST
+  title: AlphaForge P0.9B — Data Manifest (TASK-01 of Master Execution Plan)
+  description: 'Implement the DataManifest dataclass and builder in alphaforge/src/alphaforge/data/. DataManifest is a deterministic,
+    checksummed, fixture-based metadata record that describes which simulation output fixtures comprise an AlphaForge research
+    run. It is the data-layer root object for reproducibility — every AlphaForge run must produce a DataManifest before any
+    label, feature, or dataset work proceeds. Design is verified against data_contract.md Layers 1-2. All inputs are local
+    JSON fixtures under contracts/fixtures/. No real market data, no network calls, no Binance API. Part of the master AlphaForge
+    implementation pipeline. Predecessor: TASK-00-BASELINE-VERIFY. Successor: TASK-02-SIMULATION-DERIVED-LABEL-ADAPTER.
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: completed
+  completedAt: '2026-06-25T00:00:00Z'
+  completionEvidence:
+    result: PASS
+    targetedTestsPassed: 33
+    implementationVerified: true
+    accpReport: reports/accp/alphaforge_data_manifest.accp.yaml
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - alphaforge/docs/ai_summary__v7_alphaforge_xgb.md
+  - alphaforge/docs/data_contract.md
+  - alphaforge/src/alphaforge/__init__.py
+  - alphaforge/src/alphaforge/contracts/loader.py
+  - alphaforge/src/alphaforge/data/__init__.py
+  - alphaforge/src/alphaforge/data/manifest.py
+  - alphaforge/src/alphaforge/errors.py
+  - alphaforge/src/alphaforge/paths.py
+  - alphaforge/tests/__init__.py
+  - alphaforge/tests/conftest.py
+  - alphaforge/tests/test_data_manifest.py
+  - contracts/fixtures/simulation_output_minimal.json
+  - contracts/fixtures/simulation_profile_minimal.json
+  - contracts/registry.json
+  - integration/tests/test_alphaforge_*.py
+  - plans/alphaforge/01_data_manifest.plan.yaml
+  - reports/accp/alphaforge_data_manifest.accp.yaml
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/src/**
+  - alphaforge/src/alphaforge/contracts/**
+  - alphaforge/src/alphaforge/dataset/**
+  - alphaforge/src/alphaforge/features/**
+  - alphaforge/src/alphaforge/gates/**
+  - alphaforge/src/alphaforge/handoff/**
+  - alphaforge/src/alphaforge/labels/**
+  - alphaforge/src/alphaforge/modes/**
+  - alphaforge/src/alphaforge/reports/**
+  - alphaforge/src/alphaforge/validation/**
+  - alphaforge/tests/**
+  - artifacts/**
+  - data/**
+  - datasets/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/contracts/**
+  - simulation/engine/**
+  - simulation/src/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+- id: WS-01-DESIGN
+  title: Design DataManifest Dataclass — Field Planning and Contract Verification
+  objective: Design DataManifest Dataclass — Field Planning and Contract Verification
+  implementation:
+    instructions:
+    - '[must] [analysis] Read alphaforge/docs/data_contract.md fully. Document every field in Layers 1-2 (raw market data,
+      normalized market data) that the DataManifest must reference. Cross-reference against contracts/fixtures/simulation_output_minimal.json
+      to confirm which fields are available from the fixture source.
+
+      '
+    - '[must] [design] Design the DataManifest dataclass signature. Fields must include at minimum: manifest_id (str), created_at
+      (str ISO 8601), git_commit (str), source_fixtures (list of fixture references with path+checksum), mode (enum SCALP/AGGRESSIVE_SCALP/SWING),
+      primary_interval (str), symbol (str), data_layer_refs (dict mapping layer names to fixture paths), config_hash (str),
+      limitations (list[str]). All fields must have type annotations. The dataclass must be frozen=True.
+
+      '
+    - '[must] [design] Define the deterministic checksum approach: use hashlib.sha256 on a canonical JSON representation of
+      manifest fields (sorted keys, no trailing whitespace, UTF-8 encoding, indent=2, trailing newline). The canonical form
+      must be documented clearly so any re-implementation can reproduce the identical checksum.
+
+      '
+    - '[must] [review] Verify that the design does not require network access, exchange API keys, Binance imports, or real
+      market data. Explicitly enumerate which Python stdlib modules the implementation will use (dataclasses, hashlib, json,
+      pathlib, datetime, typing, enum) and confirm no external dependencies.
+
+      '
+    - '[must] [review] Verify the design against contracts/registry.json: confirm that SimulationOutput (v1.0.0) is the consumed
+      contract and DataManifest is a new producer contract consumed by downstream label adapter (TASK-02). Document the integration
+      contract surface.
+
+      '
+    - '[must] [review] Confirm domain boundary: alphaforge.data must not import from simulation/, v7/, runtime/, or interface/.
+      It may import from alphaforge.contracts.loader and alphaforge.paths only.
+
+      '
+    - '[should] [design] Design the error handling model: ManifestValidationError extending alphaforge.errors. AlphaForgeError
+      with specific field-level error messages. Document which validation rules apply to each field.
+
+      '
+    allowedFiles:
+    - alphaforge/docs/data_contract.md
+    - alphaforge/docs/ai_summary__v7_alphaforge_xgb.md
+    - plans/alphaforge/01_data_manifest.plan.yaml
+    - contracts/fixtures/simulation_output_minimal.json
+    - contracts/registry.json
+    forbiddenFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - lib/**
+  artifactPolicy:
+    class: documentation
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: false
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-01-001
+    description: data_contract.md Layers 1-2 field definitions are fully documented and cross-referenced against simulation_output_minimal.json
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-002
+    description: DataManifest dataclass field list declared with Python type annotations covering manifest_id, created_at,
+      git_commit, source_fixtures, mode, primary_interval, symbol, data_layer_refs, config_hash, limitations
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-003
+    description: 'Deterministic checksum algorithm specified: hashlib.sha256 on sorted-key canonical JSON with indent=2, UTF-8,
+      trailing newline'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-004
+    description: Design explicitly confirms no network access, no exchange API, no Binance import, no real market data
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-005
+    description: 'Design confirms allowed stdlib imports only: dataclasses, hashlib, json, pathlib, datetime, typing, enum
+      — no external pip dependencies'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-006
+    description: 'Design verifies integration contract: SimulationOutput (v1.0.0) is consumed contract from registry.json;
+      DataManifest is new producer consumed by TASK-02 label adapter'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-007
+    description: 'Design confirms domain boundary: alphaforge.data does not import from simulation/, v7/, runtime/, or interface/'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-008
+    description: No source files in alphaforge/src/ are created or modified during design phase — git status confirms clean
+      working tree
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - diff
+      - command
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - diff
+    - command
+- id: WS-01-IMPLEMENT
+  title: Implement DataManifest Dataclass and Builder Functions
+  objective: Implement DataManifest Dataclass and Builder Functions
+  implementation:
+    instructions:
+    - '[must] [implementation] Create alphaforge/src/alphaforge/data/__init__.py. Export DataManifest, build_manifest, validate_manifest,
+      ManifestValidationError, and MANIFEST_VERSION. Follow existing alphaforge __init__.py conventions (docstring with authority
+      boundary, __version__, __authority__).
+
+      '
+    - '[must] [implementation] Create alphaforge/src/alphaforge/data/manifest.py. Implement: (a) DataManifest dataclass with
+      frozen=True and all fields from design, (b) MANIFEST_VERSION = "1.0.0", (c) ManifestValidationError extending alphaforge.errors.AlphaForgeError,
+      (d) build_manifest(fixture_paths: list[Path]) -> DataManifest reading simulation output fixtures and computing per-fixture
+      checksums, (e) validate_manifest(manifest: DataManifest) -> None raising ManifestValidationError on invalid fields,
+      (f) _compute_checksum(data: dict) -> str using hashlib.sha256 on canonical JSON, (g) _canonical_json(data: dict) ->
+      bytes producing deterministic serialized form.
+
+      '
+    - '[must] [implementation] _canonical_json() must use: json.dumps(data, sort_keys=True, indent=2, ensure_ascii=False).encode(''utf-8'')
+      with trailing newline. No random elements, no timestamps, no process IDs. This is the foundation of checksum stability.
+
+      '
+    - '[must] [implementation] build_manifest() must: (a) accept list of Path objects pointing to fixture JSON files, (b)
+      load each fixture via json.load, (c) compute per-fixture sha256 checksum, (d) extract mode/symbol/interval from each
+      fixture, (e) generate deterministic manifest_id as sha256 of concatenated fixture checksums truncated to 16 hex chars,
+      (f) set created_at to a FIXED constant (NEVER datetime.now()), (g) set git_commit to "NOT_AVAILABLE" placeholder, (h)
+      populate data_layer_refs with layer-to-fixture-path mappings, (i) compute config_hash as sha256 of canonical form of
+      config-relevant fields.
+
+      '
+    - '[must] [implementation] validate_manifest() must check: (a) manifest_id non-empty string, (b) created_at valid ISO
+      8601, (c) mode in (SCALP, AGGRESSIVE_SCALP, SWING), (d) primary_interval in (15m, 1h, 4h, 1d), (e) symbol non-empty
+      string, (f) source_fixtures non-empty list, (g) each fixture ref has valid path+checksum, (h) config_hash is 64-char
+      hex string, (i) all required metadata per data_contract.md present. Raise ManifestValidationError with field-specific
+      message.
+
+      '
+    - '[must] [constraint] Do NOT import: binance, ccxt, requests, urllib (external), xgboost, numpy, pandas, or any ML library.
+      Do NOT call any network API. Do NOT read from data/ or datasets/. All imports must be stdlib or from existing alphaforge
+      modules only.
+
+      '
+    - '[must] [verification] Verify import works: python3 -c "from alphaforge.data import DataManifest, build_manifest, validate_manifest"
+      must exit 0 without error.
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/data/__init__.py
+    - alphaforge/src/alphaforge/data/manifest.py
+    - alphaforge/src/alphaforge/__init__.py
+    - alphaforge/src/alphaforge/errors.py
+    - alphaforge/src/alphaforge/paths.py
+    - alphaforge/src/alphaforge/contracts/loader.py
+    - contracts/fixtures/simulation_output_minimal.json
+    - contracts/fixtures/simulation_profile_minimal.json
+    - contracts/registry.json
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/labels/**
+    - alphaforge/src/alphaforge/features/**
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/src/alphaforge/gates/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/reports/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/tests/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - simulation/src/**
+    - runtime/**
+    - interface/**
+    - lib/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    dependencies:
+    - WS-01-DESIGN
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-01-009
+    description: alphaforge/src/alphaforge/data/__init__.py exists and exports DataManifest, build_manifest, validate_manifest,
+      ManifestValidationError, MANIFEST_VERSION
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-010
+    description: alphaforge/src/alphaforge/data/manifest.py exists with DataManifest as frozen dataclass with all required
+      fields from design
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-011
+    description: build_manifest() reads simulation_output_minimal.json and returns valid DataManifest instance with correct
+      mode, symbol, interval
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      - command
+    requiredEvidence:
+    - test_output
+    - command
+  - id: AC-01-012
+    description: build_manifest() produces identical checksum when called twice with same fixture inputs — checksum stability
+      verified
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-01-013
+    description: validate_manifest() raises ManifestValidationError for missing manifest_id with field-identifying message
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-01-014
+    description: validate_manifest() raises ManifestValidationError for invalid mode not in (SCALP, AGGRESSIVE_SCALP, SWING)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-01-015
+    description: Implementation uses only stdlib modules (dataclasses, hashlib, json, pathlib, datetime, typing, enum) — no
+      external pip packages
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-016
+    description: Implementation does NOT import binance, ccxt, requests, urllib (external), xgboost, numpy, pandas — verified
+      by source scan
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-017
+    description: alphaforge.data module passes import boundary check — no imports from simulation/, v7/, runtime/, or interface/
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-import-boundaries
+    requiredEvidence:
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-01-IMPLEMENT'
+    usageProofs:
+    - id: USE-WS-01-IMPLEMENT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-01-IMPLEMENT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-01-TESTS
+  title: Create and Run DataManifest Test Suite
+  objective: Create and Run DataManifest Test Suite
+  implementation:
+    instructions:
+    - '[must] [implementation] Create alphaforge/tests/test_data_manifest.py using pytest. Organize tests by category: (a)
+      dataclass construction, (b) build_manifest with fixtures, (c) checksum stability, (d) validate_manifest positive cases,
+      (e) validate_manifest negative cases, (f) import boundary tests, (g) integration tests with contract fixtures.
+
+      '
+    - '[must] [test] Test deterministic output: call build_manifest() twice with same fixture list, assert checksum, config_hash,
+      and manifest_id are identical. Checksum drift is a hard failure — this is the most critical test.
+
+      '
+    - '[must] [test] Test fixture validation: call build_manifest() with canonical contracts/fixtures/simulation_output_minimal.json.
+      Assert correct mode (SWING), symbol (BTCUSDT), and primary_interval (4h) extracted from fixture.
+
+      '
+    - '[must] [test] Test validate_manifest() negative cases: (a) empty manifest_id, (b) invalid mode "DAY_TRADE", (c) invalid
+      primary_interval "5m", (d) empty symbol, (e) empty source_fixtures list, (f) invalid config_hash length, (g) missing
+      created_at, (h) created_at not ISO 8601. Each must raise ManifestValidationError with field-identifying message.
+
+      '
+    - '[must] [test] Test validate_manifest() positive cases: (a) valid SWING manifest, (b) valid SCALP manifest with 1h interval,
+      (c) valid AGGRESSIVE_SCALP manifest with 15m interval. All must return None (no error raised).
+
+      '
+    - '[must] [test] Test import boundary: programmatically verify alphaforge.data does not import from simulation, v7, runtime,
+      or interface. Use sys.modules inspection or static import scan in a dedicated test function.
+
+      '
+    - '[must] [verification] Run CMD-test-alphaforge and confirm exit code 0 with all tests passing. Then run CMD-test-integration-alphaforge,
+      CMD-test-contract-registry-schema, CMD-test-import-boundaries, and CMD-test-simulation. All must exit 0.
+
+      '
+    - '[must] [constraint] Do NOT use real market data. All test data from contracts/fixtures/ JSON files or inline Python
+      dicts. Do NOT call any network API. Do NOT import binance, ccxt, or any exchange library. Do NOT use random seeds.
+
+      '
+    allowedFiles:
+    - alphaforge/tests/test_data_manifest.py
+    - alphaforge/tests/__init__.py
+    - alphaforge/tests/conftest.py
+    - integration/tests/test_alphaforge_*.py
+    - alphaforge/src/alphaforge/data/__init__.py
+    - alphaforge/src/alphaforge/data/manifest.py
+    - contracts/fixtures/simulation_output_minimal.json
+    - contracts/fixtures/simulation_profile_minimal.json
+    - contracts/registry.json
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/labels/**
+    - alphaforge/src/alphaforge/features/**
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/src/alphaforge/gates/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/reports/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/src/alphaforge/contracts/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - lib/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    dependencies:
+    - WS-01-IMPLEMENT
+  artifactPolicy:
+    class: test_only
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-01-018
+    description: alphaforge/tests/test_data_manifest.py exists with at least 15 test functions covering all categories
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-01-019
+    description: 'Deterministic checksum test: build_manifest() called twice with same inputs produces identical checksum,
+      config_hash, and manifest_id'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      - command
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - test_output
+    - command
+  - id: AC-01-020
+    description: 'Fixture validation test: build_manifest() with simulation_output_minimal.json returns DataManifest with
+      mode=SWING, symbol=BTCUSDT, primary_interval=4h'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - test_output
+  - id: AC-01-021
+    description: validate_manifest() raises ManifestValidationError for empty manifest_id with field name in error message
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-01-022
+    description: validate_manifest() raises ManifestValidationError for invalid mode 'DAY_TRADE' not in allowed enum
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-01-023
+    description: validate_manifest() raises ManifestValidationError for invalid interval '5m' not matching locked profiles
+      (15m, 1h, 4h, 1d)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-01-024
+    description: validate_manifest() raises ManifestValidationError for empty symbol string
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-01-025
+    description: validate_manifest() raises ManifestValidationError for empty source_fixtures list
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-01-026
+    description: validate_manifest() raises ManifestValidationError for missing created_at or non-ISO-8601 format
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-01-027
+    description: validate_manifest() returns None (no error) for valid SWING manifest with all fields correctly populated
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-01-028
+    description: 'Import boundary test passes: alphaforge.data has no imports from simulation, v7, runtime, or interface'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      commandRef: CMD-test-import-boundaries
+    requiredEvidence:
+    - test_output
+  - id: AC-01-029
+    description: CMD-test-alphaforge exits 0 with all tests passing — no existing tests broken by new data module
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-01-030
+    description: CMD-test-import-boundaries, CMD-test-contract-registry-schema, and CMD-test-simulation all exit 0
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-import-boundaries
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-01-031
+    description: No real market data, no network calls, no exchange API references anywhere in test file — verified by source
+      scan
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+- id: WS-01-REPORT
+  title: Run Final Validation and Emit ACCP Implementation Report
+  objective: Run Final Validation and Emit ACCP Implementation Report
+  implementation:
+    instructions:
+    - '[must] [verification] Run CMD-test-data-manifest (targeted data manifest tests) and confirm exit code 0. All DataManifest
+      tests must pass. Then run CMD-import-data-manifest to verify module imports cleanly.
+
+      '
+    - '[must] [verification] Run CMD-scan-data-manifest-guards to scan for forbidden patterns (xgboost, binance, ccxt, requests,
+      api_key, live_order, market_order, profitability) in alphaforge/data/ and test file. Confirm zero matches or only guardrail-only
+      hits.
+
+      '
+    - '[must] [discovery] Run CMD-discover-git-status and confirm no forbidden files were modified. Allowed modifications:
+      alphaforge/src/alphaforge/data/, alphaforge/tests/test_data_manifest.py, reports/accp/**, and this plan file.
+
+      '
+    - '[must] [reporting] Emit COMPACT ACCP report to reports/accp/alphaforge_data_manifest.accp.yaml following accp_version
+      "2.0.0" and source_format "ACCP-YAML". Required sections: result, scope_confirmation, files_changed, targeted_tests (pass/fail),
+      guard_scan_result, AC_summary (counts), failed_ACs (detail only for failures), remaining_holds, safe_next_step. Full
+      detailed evidence deferred to 09_final_validation.
+
+      '
+    - '[must] [verification] Perform deterministic checksum verification: call build_manifest() with canonical fixture, compute
+      checksum, store in ACCP report as evidence. This becomes the canonical reference for all future DataManifest regression
+      tests.
+
+      '
+    - '[must] [review] Confirm workspace complete. The ACCP report is evidence only — it does not authorize the next task.
+      The master orchestrator (or human operator) gates the transition to TASK-02-LABEL-ADAPTER.
+
+      '
+    allowedFiles:
+    - reports/accp/alphaforge_data_manifest.accp.yaml
+    - alphaforge/tests/test_data_manifest.py
+    - alphaforge/src/alphaforge/data/__init__.py
+    - alphaforge/src/alphaforge/data/manifest.py
+    - plans/alphaforge/01_data_manifest.plan.yaml
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/labels/**
+    - alphaforge/src/alphaforge/features/**
+    - alphaforge/src/alphaforge/dataset/**
+    - alphaforge/src/alphaforge/validation/**
+    - alphaforge/src/alphaforge/gates/**
+    - alphaforge/src/alphaforge/handoff/**
+    - alphaforge/src/alphaforge/reports/**
+    - alphaforge/src/alphaforge/modes/**
+    - alphaforge/src/alphaforge/contracts/**
+    - data/**
+    - datasets/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - lib/**
+    - models/**
+    - artifacts/**
+    - .github/**
+    dependencies:
+    - WS-01-TESTS
+  artifactPolicy:
+    class: generated_report
+    wiringRequired: false
+    reachabilityRequired: false
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-01-032
+    description: CMD-test-data-manifest exits 0 with all DataManifest tests passing — targeted validation for this subplan only
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-data-manifest
+    requiredEvidence:
+    - command
+    - test_output
+  - id: AC-01-033
+    description: 'CMD-discover-git-status shows only allowed files modified: alphaforge/src/alphaforge/data/**, alphaforge/tests/test_data_manifest.py,
+      reports/accp/**, plans/alphaforge/01_data_manifest.plan.yaml'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - diff
+      - command
+      commandRef: CMD-discover-git-status
+    requiredEvidence:
+    - command
+    - diff
+  - id: AC-01-034
+    description: ACCP report exists at reports/accp/alphaforge_data_manifest.accp.yaml with accp_version 2.0.0 and all acceptance
+      criteria results tracked with pass/fail and evidence refs
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_exists
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+  - id: AC-01-035
+    description: CMD-scan-data-manifest-guards returns zero matches — targeted guard scan of data manifest module and tests only
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+      commandRef: CMD-scan-data-manifest-guards
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-01-036
+    description: Canonical checksum stored in ACCP report — build_manifest() with simulation_output_minimal.json produces
+      stable reference checksum for regression testing
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+      - report
+    requiredEvidence:
+    - test_output
+    - report
+  - id: AC-01-037
+    description: Plan status updated to completed; all workspace rollback strategies confirmed valid; predecessor task TASK-00
+      complete; successor TASK-02 unblocked
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: manual_review
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - report
+    requiredEvidence:
+    - report
+commands:
+  exactAllowedCommands:
+  - id: CMD-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-data-manifest
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_data_manifest.py -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 60
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-import-data-manifest
+    kind: runtime_probe
+    command: PYTHONPATH=alphaforge/src:. python3 -c "from alphaforge.data import DataManifest, build_manifest, validate_manifest, ManifestValidationError, MANIFEST_VERSION; print('PASS alphaforge.data imports')"
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-scan-data-manifest-guards
+    kind: targeted_test
+    command: grep -RInE "xgboost|binance|ccxt|requests|api_key|live_order|create_order|market_order|profitability.*PASS" alphaforge/src/alphaforge/data alphaforge/tests/test_data_manifest.py || true
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network or market data during deterministic AlphaForge implementation.
+  - id: DCMD-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-no-binance
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior allowed.
+  - id: DCMD-no-xgboost-training
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|fit\(|import xgboost
+    reason: No model training in deterministic scaffold plan.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - diff
+  - source
+  - wiring
+  - command
+  - test_output
+  - schema_validation
+  - report
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-01-data-manifest.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

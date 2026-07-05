@@ -1,0 +1,75 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report:
+  id: "gap_analysis__github_issues_2025-06-25"
+  timestamp: "2026-06-25T00:00:00Z"
+  task: "GitHub issue/milestone gap analysis — scan all docs/plans vs 28 issues + 4 milestones"
+  result: "IDENTIFIED_GAPS"
+  scope_confirmation:
+    - "15 subsystem docs scanned via parallel agents"
+    - "Code TODO/FIXME/HACK/HOLD grep across all source dirs"
+    - "Test coverage analysis per subsystem"
+    - "Operational infrastructure audit"
+    - "Cross-domain contract registry audit"
+  summary:
+    current_issues: 28
+    recommended_issues: "70+"
+    current_milestones: 4
+    recommended_milestones: 6
+    p0_blockers_found: 6
+    p1_missing_features: 12
+    p1_ops_gaps: 12
+    p1_test_gaps: 7
+    p2_doc_contract_gaps: 6
+    p2_tech_debt: 6
+    p1_research_gaps: 7
+    p1_integration_gaps: 5
+  recommendations:
+    immediate:
+      - "Open 6 P0 issues for HOLD resolution"
+      - "Start runtime test infrastructure (138 files, 0 tests)"
+      - "Add Dockerfile + docker-compose.yml"
+      - "Complete contract registry (AnalysisRequest, AnalysisResult, DecisionEvent)"
+      - "Run secret scan before any live deployment"
+    milestones:
+      - id: "M1"
+        name: "P0 Blok Çözümü"
+        target: "2026-08-01"
+        issue_count: 9
+      - id: "M2"
+        name: "V7 Runtime Entegrasyonu"
+        target: "2026-09-01"
+        issue_count: 11
+      - id: "M3"
+        name: "AlphaForge Pipeline Tamamlanması"
+        target: "2026-10-01"
+        issue_count: 8
+      - id: "M4"
+        name: "Test ve Kalite Sertifikasyonu"
+        target: "2026-09-15"
+        issue_count: 7
+      - id: "M5"
+        name: "Operasyonel Hazır Olma"
+        target: "2026-10-15"
+        issue_count: 12
+      - id: "M6"
+        name: "Doküman ve Contract Authority Lock"
+        target: "2026-08-15"
+        issue_count: 8
+  evidence:
+    tool: "20-agent workflow"
+    agents_used: 20
+    tool_calls: 180
+    tokens: 1501158
+    duration_ms: 647693
+  files_changed: []
+  decisions_locked: []
+  remaining_holds:
+    - "P0-1: SCALP thresholds need empirical evidence"
+    - "P0-2: AGGRESSIVE_SCALP thresholds need empirical evidence"
+    - "P0-4: Funding cost model DEFERRED"
+    - "P0-5: Policy Critic RL HOLDs (replay buffer, regret_r, conformal)"
+    - "P0-6: CI first green run HOLD"
+  safe_next_step: "Open 6 P0 GitHub issues immediately; create M1 milestone"
+  commands_run:
+    - "workflow: gap-analysis-issues (20 agents, parallel doc+code+test+ops scan)"

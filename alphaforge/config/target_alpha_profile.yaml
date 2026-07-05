@@ -1,0 +1,71 @@
+target_name: V7_RESEARCH_ALPHA_CANDIDATE
+
+levels:
+  RESEARCH_CANDIDATE:
+    must_have:
+      net_profit_factor:
+        min: 1.05
+      net_sharpe:
+        min: 0.0
+      max_drawdown:
+        max: -0.30
+      fold_pass_ratio:
+        min: 0.50
+      pbo_risk:
+        not: HIGH
+      active_trade_count:
+        min: 50
+      exposure_pct:
+        min: 5
+        max: 60
+      active_beats_no_trade:
+        value: true
+      cost_stress_survives:
+        value: true
+    nice_to_have:
+      net_profit_factor:
+        min: 1.20
+      net_sharpe:
+        min: 0.75
+      fold_pass_ratio:
+        min: 0.70
+
+  V7_SHADOW_CANDIDATE:
+    must_have:
+      net_profit_factor:
+        min: 1.10
+      net_sharpe:
+        min: 0.50
+      fold_pass_ratio:
+        min: 0.60
+      cost_stress_survives:
+        value: true
+      active_beats_no_trade:
+        value: true
+      pbo_risk:
+        not: HIGH
+    nice_to_have:
+      symbol_stability:
+        value: pass
+      regime_stability:
+        value: pass
+
+  V7_PROMOTION_CANDIDATE:
+    must_have:
+      net_profit_factor:
+        min: 1.20
+      net_sharpe:
+        min: 1.00
+      fold_pass_ratio:
+        min: 0.70
+      pbo_risk:
+        not: HIGH
+      cost_stress_survives:
+        value: true
+    nice_to_have:
+      dsr_positive:
+        value: true
+      mht_pass:
+        value: true
+      real_data_multi_symbol_pass:
+        value: true

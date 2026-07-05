@@ -1,0 +1,1628 @@
+# PRAXIS PlanSpec v0.1 — AlphaForge Master Execution Plan
+# Generated: 2026-06-23
+# Plan ID: ALPHAFORGE-MASTER-EXECUTION-001
+# This file is a PLANNING ARTIFACT. It does not execute anything.
+# Execution requires a separate PRAXIS Truth Kernel execution prompt.
+
+planSpecVersion: "0.1.0"
+kind: ImplementationPlan
+profile: praxis-v0.1
+
+metadata:
+  planId: ALPHAFORGE-MASTER-EXECUTION-001
+  title: AlphaForge P0.9B/P0.9C/P1.0 Deterministic Implementation Pipeline
+  description: >
+    Master execution plan for the next AlphaForge stage: deterministic data manifest,
+    simulation-derived label adapter, minimal feature pipeline, dataset assembler,
+    non-ML research report path, walk-forward validation skeleton, V7 handoff dry run,
+    ML pilot gate design, and final comprehensive validation.
+    This plan COVERS implementation of the deterministic data/label/feature pipeline
+    scaffold and the non-ML research report path. It does NOT authorize XGBoost
+    training, live trading, or profitability claims.
+  generatedAt: "2026-06-23T00:00:00Z"
+  generatedBy: ClaudeCode
+  model: DeepSeek-V4-Pro
+  parentTaskId: ACCP-GENERATE-ALPHAFORGE-PLANSPEC-MASTER
+  priorReports:
+    - reports/p0_8e_alphaforge_contract_patch_reaudit.accp.yaml
+    - reports/p0_9a_alphaforge_implementation_scaffold.accp.yaml
+    - reports/accp/alphaforge_final_design_profitability_audit.accp.yaml
+  prerequisiteGates:
+    - P0_8E_PASS
+    - P0_9A_PASS
+
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+  planOwner: AlphaForge
+  finalDecisionAuthority: V7
+
+workspace:
+  root: "."
+  allowedFiles:
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - integration/tests/test_alphaforge_*.py
+    - contracts/fixtures/alphaforge/**
+    - contracts/fixtures/alphaforge_label_minimal.json
+    - reports/alphaforge/**
+    - reports/accp/**
+    - reports/p0_9b_*.accp.yaml
+    - reports/p0_9c_*.accp.yaml
+    - reports/p1_0_*.accp.yaml
+    - plans/alphaforge_implementation_master_plan.yaml
+    - plans/alphaforge_master_execution_plan.yaml
+    - alphaforge/docs/ai_summary.md
+    - alphaforge/docs/phase_plan.md
+    - v7/docs/ai_summary.md
+    - v7/docs/roadmap.md
+  forbiddenFiles:
+    - lib/**
+    - simulation/engine/**
+    - simulation/contracts/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    - artifacts/**
+    - .github/**
+
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+  requiresManualApprovalFor:
+    - model_training
+    - live_api_calls
+    - market_data_download
+    - xgboost_import
+
+# =============================================================================
+# TASKS
+# =============================================================================
+
+tasks:
+
+  # ---------------------------------------------------------------------------
+  # TASK-00
+  # ---------------------------------------------------------------------------
+  - id: TASK-00-BASELINE-VERIFY
+    title: Baseline Verify
+    objective: >
+      Verify that P0.8E (contract/docs patch) and P0.9A (implementation scaffold)
+      are clean, all tests pass, and the project is in a known-good state before
+      beginning any P0.9B implementation. This is a read-only verification gate.
+    dependsOn: []
+    blocks: [TASK-01-DETERMINISTIC-DATA-MANIFEST]
+    estimatedEffort: low
+    implementation:
+      instructions: >
+        Run the full non-Binance test suite to confirm all existing tests pass.
+        Verify git status is clean. Confirm no regressions from prior phases.
+        If any test fails, do NOT proceed to TASK-01 — emit a HIR/blocker report.
+        This task performs NO code changes, NO file creation, NO mutation.
+      allowedFiles: []
+      forbiddenFiles: []
+      suggestedSteps:
+        - "Run CMD-test-alphaforge to confirm P0.9A scaffold tests pass"
+        - "Run CMD-test-integration-alphaforge to confirm P0.8E fixture/contract tests pass"
+        - "Run CMD-test-contract-registry-schema to confirm registry integrity"
+        - "Run CMD-test-import-boundaries to confirm domain boundaries intact"
+        - "Run CMD-test-simulation to confirm simulation stability"
+        - "Run CMD-final-validation to confirm full local suite green"
+        - "Run CMD-discover-git-status to confirm clean working tree"
+      antiPatterns:
+        - "Do NOT modify any source file"
+        - "Do NOT skip tests that previously passed"
+        - "Do NOT proceed with failures"
+        - "Do NOT claim PASS if any command exits non-zero"
+      expectedOutputs:
+        - "All 6 validation commands exit 0"
+        - "Git status shows clean working tree"
+        - "Evidence ledger populated with command outputs"
+    artifactPolicy:
+      producesArtifacts: false
+      modifiesRepo: false
+    acceptanceCriteria:
+      - id: AC-00-01
+        criterion: "CMD-test-alphaforge exits 0 with all tests passing"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-alphaforge
+      - id: AC-00-02
+        criterion: "CMD-test-integration-alphaforge exits 0 with all tests passing"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-integration-alphaforge
+      - id: AC-00-03
+        criterion: "CMD-test-contract-registry-schema exits 0"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-contract-registry-schema
+      - id: AC-00-04
+        criterion: "CMD-test-import-boundaries exits 0"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-import-boundaries
+      - id: AC-00-05
+        criterion: "CMD-test-simulation exits 0"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-simulation
+      - id: AC-00-06
+        criterion: "CMD-final-validation exits 0 with all tests passing"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-final-validation
+      - id: AC-00-07
+        criterion: "CMD-discover-git-status shows clean working tree (no uncommitted changes)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-discover-git-status
+    integrationContract:
+      mode: none
+      reason: "Read-only verification task; no module created or exported."
+
+  # ---------------------------------------------------------------------------
+  # TASK-01
+  # ---------------------------------------------------------------------------
+  - id: TASK-01-DETERMINISTIC-DATA-MANIFEST
+    title: Deterministic Data Manifest
+    objective: >
+      Implement `alphaforge/src/alphaforge/data/manifest.py` — a fixture-only
+      deterministic data manifest builder. It reads AlphaForge fixture data
+      references, validates them against data_contract.md Layer 1-2 requirements,
+      and produces a deterministic DataManifest record consumable by downstream
+      label and feature modules. No real market data, no downloads, no API calls.
+    dependsOn: [TASK-00-BASELINE-VERIFY]
+    blocks: [TASK-02-SIMULATION-DERIVED-LABEL-ADAPTER]
+    estimatedEffort: medium
+    implementation:
+      instructions: >
+        Create the `alphaforge/src/alphaforge/data/` package with __init__.py
+        and manifest.py. The manifest module reads fixture simulation outputs
+        from contracts/fixtures/alphaforge/ and constructs a DataManifest
+        record that documents source data identity, checksums, timeframes,
+        and symbols. The manifest is purely deterministic — given the same
+        fixtures, it always produces the same output. No real market data
+        ingestion. No API calls. No downloads. No Binance. Purely fixture-driven.
+      allowedFiles:
+        - alphaforge/src/alphaforge/data/**
+        - alphaforge/tests/test_data_manifest.py
+        - integration/tests/test_alphaforge_data_manifest.py
+        - contracts/fixtures/alphaforge/**
+      forbiddenFiles:
+        - data/**
+        - datasets/**
+        - simulation/engine/**
+        - lib/**
+        - runtime/**
+      suggestedSteps:
+        - "Create alphaforge/src/alphaforge/data/__init__.py"
+        - "Create alphaforge/src/alphaforge/data/manifest.py with DataManifest dataclass"
+        - "Implement deterministic fixture reader for simulation output fixtures"
+        - "Implement manifest validation against data_contract.md Layer 1-2"
+        - "Add deterministic checksum computation"
+        - "Create alphaforge/tests/test_data_manifest.py with deterministic tests"
+        - "Run CMD-test-alphaforge to verify no regressions"
+      antiPatterns:
+        - "Do NOT download market data"
+        - "Do NOT connect to Binance or any exchange API"
+        - "Do NOT use random seeds — manifest must be deterministic"
+        - "Do NOT read from data/ or datasets/ directories"
+        - "Do NOT import from simulation engine internals"
+        - "Do NOT create label or feature modules in this task"
+      expectedOutputs:
+        - "alphaforge/src/alphaforge/data/__init__.py"
+        - "alphaforge/src/alphaforge/data/manifest.py"
+        - "alphaforge/tests/test_data_manifest.py"
+        - "DataManifest dataclass with fixture-derived fields"
+    artifactPolicy:
+      producesArtifacts: true
+      artifactPaths:
+        - alphaforge/src/alphaforge/data/
+      modifiesRepo: true
+    acceptanceCriteria:
+      - id: AC-01-01
+        criterion: "DataManifest module imports cleanly from alphaforge.data.manifest"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-01-02
+        criterion: "Given fixture simulation outputs, manifest produces deterministic output (same fixture → same manifest)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-01-03
+        criterion: "Manifest validates fixture data against data_contract.md Layer 1-2 requirements"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-01-04
+        criterion: "Manifest includes checksum, source references, timeframe, and symbol metadata"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-01-05
+        criterion: "No real market data download, no API calls, no Binance imports"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-01-06
+        criterion: "CMD-test-alphaforge exits 0 (no regressions)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-alphaforge
+      - id: AC-01-07
+        criterion: "All new data manifest tests pass deterministically (no flaky tests)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Module must be importable, exported, and covered by deterministic tests."
+      declaredUnits:
+        - "alphaforge.data.manifest"
+      exportSurfaces:
+        - "DataManifest (dataclass)"
+        - "build_manifest() → DataManifest"
+        - "validate_manifest(manifest: DataManifest) → bool"
+      usageProofs:
+        - "Imported and exercised in alphaforge/tests/test_data_manifest.py"
+
+  # ---------------------------------------------------------------------------
+  # TASK-02
+  # ---------------------------------------------------------------------------
+  - id: TASK-02-SIMULATION-DERIVED-LABEL-ADAPTER
+    title: Simulation-Derived Label Adapter
+    objective: >
+      Implement `alphaforge/src/alphaforge/labels/adapter.py` — a fixture-only
+      adapter that transforms SimulationOutput-shaped records into AlphaForgeLabel
+      records per label_contract.md and simulation_to_alphaforge.md mapping.
+      Purely deterministic: given the same SimulationOutput fixture, always
+      produces the same AlphaForgeLabel row.
+    dependsOn: [TASK-01-DETERMINISTIC-DATA-MANIFEST]
+    blocks: [TASK-03-MINIMAL-DETERMINISTIC-FEATURE-PIPELINE]
+    estimatedEffort: medium
+    implementation:
+      instructions: >
+        Create the `alphaforge/src/alphaforge/labels/` package with __init__.py
+        and adapter.py. The adapter reads SimulationOutput fixture records
+        (from contracts/fixtures/), applies the field-level mapping defined
+        in contracts/mappings/simulation_to_alphaforge.md, and produces
+        AlphaForgeLabel rows. It must handle all four best_action labels,
+        NO_TRADE quality classification, cost-aware fields (gross/net),
+        and label_validity filtering. Purely fixture-driven, purely deterministic.
+      allowedFiles:
+        - alphaforge/src/alphaforge/labels/**
+        - alphaforge/tests/test_label_adapter.py
+        - integration/tests/test_alphaforge_label_adapter.py
+        - contracts/fixtures/alphaforge/**
+        - contracts/fixtures/alphaforge_label_minimal.json
+      forbiddenFiles:
+        - simulation/engine/**
+        - lib/**
+        - runtime/**
+      suggestedSteps:
+        - "Create alphaforge/src/alphaforge/labels/__init__.py"
+        - "Create alphaforge/src/alphaforge/labels/adapter.py with LabelAdapter class"
+        - "Implement field-level mapping per simulation_to_alphaforge.md"
+        - "Implement NO_TRADE quality classification (CORRECT_NO_TRADE, SAVED_LOSS, MISSED_OPPORTUNITY, AMBIGUOUS_NO_TRADE)"
+        - "Implement cost-aware label computation (gross/net R, cost impact)"
+        - "Implement label_validity filtering"
+        - "Create alphaforge/tests/test_label_adapter.py with deterministic tests"
+        - "Validate output against alphaforge_label.schema.json"
+      antiPatterns:
+        - "Do NOT invent labels from price data — consume SimulationOutput only"
+        - "Do NOT modify SimulationOutput semantics"
+        - "Do NOT use random label generation"
+        - "Do NOT skip NO_TRADE quality classification"
+        - "Do NOT claim label correctness without fixture validation"
+      expectedOutputs:
+        - "alphaforge/src/alphaforge/labels/__init__.py"
+        - "alphaforge/src/alphaforge/labels/adapter.py"
+        - "alphaforge/tests/test_label_adapter.py"
+        - "Integration test verifying fixture SimulationOutput → valid AlphaForgeLabel"
+    artifactPolicy:
+      producesArtifacts: true
+      artifactPaths:
+        - alphaforge/src/alphaforge/labels/
+      modifiesRepo: true
+    acceptanceCriteria:
+      - id: AC-02-01
+        criterion: "LabelAdapter imports cleanly from alphaforge.labels.adapter"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-02-02
+        criterion: "Given fixture SimulationOutput, adapter produces valid AlphaForgeLabel records (deterministic)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-02-03
+        criterion: "Output validates against alphaforge_label.schema.json"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-02-04
+        criterion: "All four best_action labels handled: LONG_NOW, SHORT_NOW, NO_TRADE, AMBIGUOUS_STATE"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-02-05
+        criterion: "NO_TRADE quality correctly classified (4 categories) per label_contract.md"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-02-06
+        criterion: "Cost-aware fields populated (gross R, net R, cost impact) per simulation_to_alphaforge mapping"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-02-07
+        criterion: "label_validity correctly filters invalid/unresolved rows"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-02-08
+        criterion: "CMD-test-alphaforge exits 0 (no regressions)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-alphaforge
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Module consumes SimulationOutput fixtures and produces AlphaForgeLabel rows."
+      declaredUnits:
+        - "alphaforge.labels.adapter"
+      exportSurfaces:
+        - "LabelAdapter (class)"
+        - "adapt_simulation_output(sim_output: dict) → AlphaForgeLabel"
+        - "classify_no_trade_quality(no_trade: dict) → NoTradeQuality"
+      usageProofs:
+        - "Imported and exercised in alphaforge/tests/test_label_adapter.py"
+
+  # ---------------------------------------------------------------------------
+  # TASK-03
+  # ---------------------------------------------------------------------------
+  - id: TASK-03-MINIMAL-DETERMINISTIC-FEATURE-PIPELINE
+    title: Minimal Deterministic Feature Pipeline
+    objective: >
+      Implement `alphaforge/src/alphaforge/features/pipeline.py` — a fixture-only
+      causal feature row builder. It reads fixture OHLCV data (or simulation
+      context data), computes deterministic features per feature_contract.md
+      feature groups (returns, volatility, ATR, momentum, volume, breakout),
+      and produces a feature matrix consumable by the dataset assembler.
+      Purely deterministic, fixture-driven, no leakage.
+    dependsOn: [TASK-02-SIMULATION-DERIVED-LABEL-ADAPTER]
+    blocks: [TASK-04-DATASET-ASSEMBLER-AND-WRITER]
+    estimatedEffort: large
+    implementation:
+      instructions: >
+        Create the `alphaforge/src/alphaforge/features/` package with __init__.py
+        and pipeline.py. The pipeline reads normalized fixture OHLCV data
+        (or simulation context bars from fixtures), applies the feature groups
+        defined in feature_contract.md, and produces a deterministic feature
+        matrix. Features must be causal (no future leakage). Feature groups:
+        returns (log_return, volatility, zscore), volatility (realized, HL range,
+        Garman-Klass, Parkinson), ATR (ATR, ATR%, ATR expansion), momentum
+        (momentum, ROC, RSI, MACD), volume (volume ratio, trend, VWAP deviation,
+        OBV), breakout (BB position/width, highest/lowest, range breakout).
+        Lead-lag group is DEFERRED (requires cross-sectional data from P0.9B+).
+      allowedFiles:
+        - alphaforge/src/alphaforge/features/**
+        - alphaforge/tests/test_feature_pipeline.py
+        - integration/tests/test_alphaforge_feature_pipeline.py
+        - contracts/fixtures/alphaforge/**
+      forbiddenFiles:
+        - simulation/engine/**
+        - lib/**
+        - runtime/**
+        - data/**
+      suggestedSteps:
+        - "Create alphaforge/src/alphaforge/features/__init__.py"
+        - "Create alphaforge/src/alphaforge/features/pipeline.py with FeaturePipeline class"
+        - "Implement deterministic OHLCV fixture reader"
+        - "Implement returns group features (log_return_1, log_return_N, volatility, zscore)"
+        - "Implement volatility group features (realized_vol, HL range, Garman-Klass, Parkinson)"
+        - "Implement ATR group features (ATR, ATR%, ATR expansion)"
+        - "Implement momentum group features (momentum, ROC, RSI, MACD, MACD signal, MACD histogram)"
+        - "Implement volume group features (volume ratio, volume trend, VWAP deviation, OBV)"
+        - "Implement breakout group features (BB position/width, highest/lowest, range breakout)"
+        - "Implement leakage prevention: causal-only computation, purge window awareness"
+        - "Mark lead-lag group as DEFERRED_PENDING_CROSS_SECTIONAL"
+        - "Create alphaforge/tests/test_feature_pipeline.py with deterministic + leakage tests"
+      antiPatterns:
+        - "Do NOT compute features with future-looking data (leakage)"
+        - "Do NOT use random feature generation"
+        - "Do NOT download market data"
+        - "Do NOT implement lead-lag group (requires cross-sectional data)"
+        - "Do NOT train models on features"
+        - "Do NOT claim feature predictive power without validation"
+      expectedOutputs:
+        - "alphaforge/src/alphaforge/features/__init__.py"
+        - "alphaforge/src/alphaforge/features/pipeline.py"
+        - "alphaforge/tests/test_feature_pipeline.py"
+        - "Deterministic feature matrix from fixture data"
+    artifactPolicy:
+      producesArtifacts: true
+      artifactPaths:
+        - alphaforge/src/alphaforge/features/
+      modifiesRepo: true
+    acceptanceCriteria:
+      - id: AC-03-01
+        criterion: "FeaturePipeline imports cleanly from alphaforge.features.pipeline"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-03-02
+        criterion: "Given fixture OHLCV data, pipeline produces deterministic feature matrix"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-03-03
+        criterion: "All 6 primary feature groups implemented (returns, volatility, ATR, momentum, volume, breakout)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-03-04
+        criterion: "Causal leakage prevention: no future data used in feature computation"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-03-05
+        criterion: "Lead-lag group explicitly DEFERRED with documented reason (cross-sectional data not yet available)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-03-06
+        criterion: "Feature matrix shape matches expected dimensions from fixture data"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-03-07
+        criterion: "CMD-test-alphaforge exits 0 (no regressions)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-alphaforge
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Module consumes fixture OHLCV data and produces feature matrices."
+      declaredUnits:
+        - "alphaforge.features.pipeline"
+      exportSurfaces:
+        - "FeaturePipeline (class)"
+        - "compute_features(ohlcv: list, spec: FeatureSetSpec) → ndarray"
+        - "FeatureGroup enum (returns, volatility, atr, momentum, volume, breakout)"
+        - "LeakagePolicy (dataclass)"
+      usageProofs:
+        - "Imported and exercised in alphaforge/tests/test_feature_pipeline.py"
+
+  # ---------------------------------------------------------------------------
+  # TASK-04
+  # ---------------------------------------------------------------------------
+  - id: TASK-04-DATASET-ASSEMBLER-AND-WRITER
+    title: Dataset Assembler and Writer
+    objective: >
+      Implement `alphaforge/src/alphaforge/dataset/assembler.py` — a deterministic
+      dataset assembler that joins the data manifest, AlphaForgeLabel records,
+      and feature matrix into a labeled dataset consumable by research reports
+      and (future) model training. Also implement a dataset writer that serializes
+      the assembled dataset to a deterministic format for reproducibility.
+    dependsOn:
+      - TASK-01-DETERMINISTIC-DATA-MANIFEST
+      - TASK-02-SIMULATION-DERIVED-LABEL-ADAPTER
+      - TASK-03-MINIMAL-DETERMINISTIC-FEATURE-PIPELINE
+    blocks: [TASK-05-NON-ML-RESEARCH-REPORT-PATH]
+    estimatedEffort: medium
+    implementation:
+      instructions: >
+        Create the `alphaforge/src/alphaforge/dataset/` package with __init__.py,
+        assembler.py, and writer.py. The assembler consumes DataManifest,
+        AlphaForgeLabel rows, and the feature matrix; aligns them on timestamp
+        and symbol; applies label_validity filtering; and produces a joined
+        LabeledDataset. The writer serializes the dataset to a deterministic
+        format (Parquet preferred, CSV fallback) with checksums. The assembled
+        dataset must be reproducible: same inputs → same outputs.
+      allowedFiles:
+        - alphaforge/src/alphaforge/dataset/**
+        - alphaforge/tests/test_dataset_assembler.py
+        - integration/tests/test_alphaforge_dataset_assembler.py
+      forbiddenFiles:
+        - data/**
+        - datasets/**
+        - models/**
+        - simulation/engine/**
+      suggestedSteps:
+        - "Create alphaforge/src/alphaforge/dataset/__init__.py"
+        - "Create alphaforge/src/alphaforge/dataset/assembler.py with DatasetAssembler class"
+        - "Implement timestamp+symbol alignment of labels and features"
+        - "Implement label_validity filtering"
+        - "Implement feature-label join with purge window awareness"
+        - "Create alphaforge/src/alphaforge/dataset/writer.py with DatasetWriter class"
+        - "Implement deterministic serialization with checksums"
+        - "Create alphaforge/tests/test_dataset_assembler.py with deterministic join tests"
+      antiPatterns:
+        - "Do NOT shuffle data across time boundaries"
+        - "Do NOT leak labels into feature computation"
+        - "Do NOT write to data/ or datasets/ directories (use fixture paths)"
+        - "Do NOT train models on assembled dataset in this task"
+      expectedOutputs:
+        - "alphaforge/src/alphaforge/dataset/__init__.py"
+        - "alphaforge/src/alphaforge/dataset/assembler.py"
+        - "alphaforge/src/alphaforge/dataset/writer.py"
+        - "alphaforge/tests/test_dataset_assembler.py"
+        - "Deterministic LabeledDataset from fixture manifest + labels + features"
+    artifactPolicy:
+      producesArtifacts: true
+      artifactPaths:
+        - alphaforge/src/alphaforge/dataset/
+      modifiesRepo: true
+    acceptanceCriteria:
+      - id: AC-04-01
+        criterion: "DatasetAssembler imports cleanly from alphaforge.dataset.assembler"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-04-02
+        criterion: "Assembled dataset joins manifest + labels + features deterministically"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-04-03
+        criterion: "label_validity filtering correctly excludes invalid rows"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-04-04
+        criterion: "DatasetWriter produces deterministic output with checksums"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-04-05
+        criterion: "No data leakage: features computed before label timestamps"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-04-06
+        criterion: "CMD-test-alphaforge exits 0 (no regressions)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-alphaforge
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Module consumes manifest, labels, and features; produces LabeledDataset. Must be importable and test-covered."
+      declaredUnits:
+        - "alphaforge.dataset.assembler"
+        - "alphaforge.dataset.writer"
+      exportSurfaces:
+        - "DatasetAssembler (class)"
+        - "assemble(manifest, labels, features) → LabeledDataset"
+        - "DatasetWriter (class)"
+        - "write(dataset, path) → checksum"
+      usageProofs:
+        - "Imported and exercised in alphaforge/tests/test_dataset_assembler.py"
+
+  # ---------------------------------------------------------------------------
+  # TASK-05
+  # ---------------------------------------------------------------------------
+  - id: TASK-05-NON-ML-RESEARCH-REPORT-PATH
+    title: Non-ML Research Report Path
+    objective: >
+      Implement `alphaforge/src/alphaforge/reports/research.py` — a deterministic
+      non-ML AlphaForge research report generator. It consumes the assembled
+      LabeledDataset from TASK-04 and produces a ModeResearchReport (per mode)
+      and an AlphaForgeResearchReport (aggregate) with label distributions,
+      NO_TRADE quality breakdown, cost impact summaries, and basic statistical
+      profiles. No model training. No XGBoost. Purely descriptive statistics.
+    dependsOn: [TASK-04-DATASET-ASSEMBLER-AND-WRITER]
+    blocks: [TASK-06-WALK-FORWARD-VALIDATION-SKELETON]
+    estimatedEffort: medium
+    implementation:
+      instructions: >
+        Extend `alphaforge/src/alphaforge/reports/` with research.py. The module
+        consumes a LabeledDataset and produces schema-valid ModeResearchReport
+        and AlphaForgeResearchReport records using the existing report builders
+        from P0.9A. It computes label distributions, NO_TRADE quality breakdowns,
+        cost impact summaries, basic statistical profiles (mean, std, skew,
+        kurtosis of R distributions), and populates the report verdict as
+        INCONCLUSIVE (since no model training has occurred). Reports must be
+        serialized via the existing report writer.
+      allowedFiles:
+        - alphaforge/src/alphaforge/reports/**
+        - alphaforge/tests/test_research_report.py
+        - integration/tests/test_alphaforge_research_report.py
+      forbiddenFiles:
+        - models/**
+        - simulation/engine/**
+        - lib/**
+      suggestedSteps:
+        - "Create alphaforge/src/alphaforge/reports/research.py"
+        - "Implement label distribution analysis per mode"
+        - "Implement NO_TRADE quality breakdown (4 categories with percentages)"
+        - "Implement cost impact summaries (gross vs net R, cost drag)"
+        - "Implement basic statistical profile (mean, std, skew, kurtosis of R)"
+        - "Populate ModeResearchReport for all 3 modes (SCALP, AGGRESSIVE_SCALP, SWING)"
+        - "Populate AlphaForgeResearchReport aggregate (requires all 3 modes)"
+        - "Populate verdict as INCONCLUSIVE (no model training yet)"
+        - "Create alphaforge/tests/test_research_report.py"
+      antiPatterns:
+        - "Do NOT train XGBoost or any ML model"
+        - "Do NOT claim alpha works or is profitable"
+        - "Do NOT set report verdict to PASS or CANDIDATE_FOR_V7_GATES"
+        - "Do NOT skip NO_TRADE quality breakdown"
+        - "Do NOT use random statistical tests — compute deterministically"
+      expectedOutputs:
+        - "alphaforge/src/alphaforge/reports/research.py"
+        - "alphaforge/tests/test_research_report.py"
+        - "Deterministic ModeResearchReport fixtures for all 3 modes"
+        - "Deterministic AlphaForgeResearchReport aggregate"
+    artifactPolicy:
+      producesArtifacts: true
+      artifactPaths:
+        - alphaforge/src/alphaforge/reports/research.py
+      modifiesRepo: true
+    acceptanceCriteria:
+      - id: AC-05-01
+        criterion: "Research report module imports cleanly"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-05-02
+        criterion: "Produces schema-valid ModeResearchReport for all 3 modes"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-05-03
+        criterion: "Produces schema-valid AlphaForgeResearchReport aggregate"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-05-04
+        criterion: "NO_TRADE quality breakdown includes all 4 categories with percentages"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-05-05
+        criterion: "Report verdict is INCONCLUSIVE (no model training)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-05-06
+        criterion: "No XGBoost import, no model training, no fit() call"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-05-07
+        criterion: "CMD-test-alphaforge exits 0 (no regressions)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-alphaforge
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Module consumes LabeledDataset and produces research reports. Must integrate with P0.9A report builders and writer."
+      declaredUnits:
+        - "alphaforge.reports.research"
+      exportSurfaces:
+        - "generate_mode_report(dataset, mode) → ModeResearchReport"
+        - "generate_aggregate_report(mode_reports) → AlphaForgeResearchReport"
+        - "analyze_label_distribution(labels) → LabelDistribution"
+        - "analyze_no_trade_quality(labels) → NoTradeBreakdown"
+      usageProofs:
+        - "Imported and exercised in alphaforge/tests/test_research_report.py"
+
+  # ---------------------------------------------------------------------------
+  # TASK-06
+  # ---------------------------------------------------------------------------
+  - id: TASK-06-WALK-FORWARD-VALIDATION-SKELETON
+    title: Walk-Forward Validation Skeleton
+    objective: >
+      Implement `alphaforge/src/alphaforge/validation/walk_forward.py` — a
+      walk-forward validation skeleton that splits the LabeledDataset into
+      chronological folds per validation_contract.md, produces per-fold metrics,
+      and generates a ValidationReport. The skeleton is structural: it defines
+      the split policy, fold iteration, and report structure but does NOT train
+      models inside folds. Folds are populated with placeholder metrics
+      (NOT_EVALUATED) until model training is available.
+    dependsOn: [TASK-05-NON-ML-RESEARCH-REPORT-PATH]
+    blocks: [TASK-07-V7-HANDOFF-DRY-RUN]
+    estimatedEffort: medium
+    implementation:
+      instructions: >
+        Create the `alphaforge/src/alphaforge/validation/` package with
+        __init__.py and walk_forward.py. Implement chronological train/val/OOS
+        split policy per validation_contract.md (no shuffling across time).
+        Implement 6-fold minimum for all modes. Implement purge window logic
+        per mode (SCALP 100 bars, AGGRESSIVE_SCALP 200 bars, SWING 20 bars).
+        Implement per-fold metric computation structure. Implement OOS summary,
+        cost stress structure, regime breakdown structure, and symbol stability
+        structure. Since no model training exists yet, folds produce placeholder
+        metrics. The skeleton validates that split logic, fold iteration, and
+        report assembly are correct.
+      allowedFiles:
+        - alphaforge/src/alphaforge/validation/**
+        - alphaforge/tests/test_walk_forward.py
+        - integration/tests/test_alphaforge_walk_forward.py
+      forbiddenFiles:
+        - models/**
+        - simulation/engine/**
+      suggestedSteps:
+        - "Create alphaforge/src/alphaforge/validation/__init__.py"
+        - "Create alphaforge/src/alphaforge/validation/walk_forward.py"
+        - "Implement chronological split policy (train 60% / val 20% / OOS 20%)"
+        - "Implement 6-fold minimum for all modes"
+        - "Implement purge window logic per mode"
+        - "Implement per-fold metric structure (placeholder until model training)"
+        - "Implement OOS summary structure"
+        - "Implement cost stress structure (fee×multiplier, slippage, funding DEFERRED block)"
+        - "Implement regime breakdown structure (TREND_UP/DOWN/RANGE/TRANSITION)"
+        - "Implement symbol stability structure (40%/60% concentration limits)"
+        - "Create alphaforge/tests/test_walk_forward.py with split policy tests"
+      antiPatterns:
+        - "Do NOT train models inside folds"
+        - "Do NOT shuffle across time boundaries"
+        - "Do NOT produce fake empirical metrics"
+        - "Do NOT claim validation PASS without model training"
+        - "Do NOT skip purge window implementation"
+      expectedOutputs:
+        - "alphaforge/src/alphaforge/validation/__init__.py"
+        - "alphaforge/src/alphaforge/validation/walk_forward.py"
+        - "alphaforge/tests/test_walk_forward.py"
+        - "Chronological fold structure validated against fixture dataset"
+    artifactPolicy:
+      producesArtifacts: true
+      artifactPaths:
+        - alphaforge/src/alphaforge/validation/
+      modifiesRepo: true
+    acceptanceCriteria:
+      - id: AC-06-01
+        criterion: "WalkForward module imports cleanly from alphaforge.validation.walk_forward"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-06-02
+        criterion: "Chronological split policy correct: no shuffling, train/val/OOS ordered by time"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-06-03
+        criterion: "6-fold minimum enforced for all modes (per P0.8E validation contract)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-06-04
+        criterion: "Purge windows correct per mode (SCALP 100, AGGRESSIVE_SCALP 200, SWING 20)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-06-05
+        criterion: "ValidationReport structure matches schema (OOS summary, cost stress, regime breakdown, symbol stability)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-06-06
+        criterion: "No model training, no XGBoost, no fit() call"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-06-07
+        criterion: "CMD-test-alphaforge exits 0 (no regressions)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-alphaforge
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Module consumes LabeledDataset and produces ValidationReport structure. Must be independently testable without model training."
+      declaredUnits:
+        - "alphaforge.validation.walk_forward"
+      exportSurfaces:
+        - "WalkForwardValidator (class)"
+        - "create_folds(dataset, n_folds=6, mode) → List[Fold]"
+        - "compute_purge_window(mode) → int"
+        - "assemble_validation_report(folds) → ValidationReport"
+      usageProofs:
+        - "Imported and exercised in alphaforge/tests/test_walk_forward.py"
+
+  # ---------------------------------------------------------------------------
+  # TASK-07
+  # ---------------------------------------------------------------------------
+  - id: TASK-07-V7-HANDOFF-DRY-RUN
+    title: V7 Handoff Dry Run
+    objective: >
+      Implement `alphaforge/src/alphaforge/handoff/dry_run.py` — a V7 handoff
+      dry-run module that consumes the non-ML research report (TASK-05) and the
+      walk-forward validation skeleton (TASK-06), assembles a V7HandoffPackage
+      using the P0.9A handoff builder, validates it against the canonical V7
+      gate mapping (G0-G10), and produces a handoff readiness report. All gates
+      are NOT_EVALUATED or INCONCLUSIVE. No promotion claim.
+    dependsOn:
+      - TASK-05-NON-ML-RESEARCH-REPORT-PATH
+      - TASK-06-WALK-FORWARD-VALIDATION-SKELETON
+    blocks: [TASK-08-ML-PILOT-GATE-DESIGN]
+    estimatedEffort: medium
+    implementation:
+      instructions: >
+        Extend `alphaforge/src/alphaforge/handoff/` with dry_run.py. The module
+        consumes ModeResearchReport (from TASK-05) and ValidationReport skeleton
+        (from TASK-06), assembles a V7HandoffPackage via the P0.9A handoff
+        builder, validates it against the canonical V7 G0-G10 gate mapping,
+        and produces a handoff readiness report. All gates are NOT_EVALUATED
+        or INCONCLUSIVE per the evidence available. The recommended_status is
+        REVIEW_REQUIRED. The module also validates the handoff package against
+        v7_handoff_package.schema.json.
+      allowedFiles:
+        - alphaforge/src/alphaforge/handoff/**
+        - alphaforge/tests/test_handoff_dry_run.py
+        - integration/tests/test_alphaforge_handoff_dry_run.py
+      forbiddenFiles:
+        - v7/src/**
+        - runtime/**
+        - simulation/engine/**
+      suggestedSteps:
+        - "Create alphaforge/src/alphaforge/handoff/dry_run.py"
+        - "Implement handoff package assembly from research report + validation skeleton"
+        - "Implement canonical V7 G0-G10 gate mapping validation"
+        - "Populate all gate statuses as NOT_EVALUATED (no model training)"
+        - "Set recommended_status to REVIEW_REQUIRED"
+        - "Validate assembled package against v7_handoff_package.schema.json"
+        - "Generate handoff readiness report"
+        - "Create alphaforge/tests/test_handoff_dry_run.py"
+      antiPatterns:
+        - "Do NOT claim any gate as PASS without model training evidence"
+        - "Do NOT set recommended_status to PROMOTION_CANDIDATE"
+        - "Do NOT claim V7 acceptance readiness"
+        - "Do NOT modify V7 source or runtime code"
+        - "Do NOT use wrong gate names — use canonical G0_doc_ready…G10_live"
+      expectedOutputs:
+        - "alphaforge/src/alphaforge/handoff/dry_run.py"
+        - "alphaforge/tests/test_handoff_dry_run.py"
+        - "Deterministic V7HandoffPackage with all gates NOT_EVALUATED"
+        - "Handoff readiness report"
+    artifactPolicy:
+      producesArtifacts: true
+      artifactPaths:
+        - alphaforge/src/alphaforge/handoff/dry_run.py
+      modifiesRepo: true
+    acceptanceCriteria:
+      - id: AC-07-01
+        criterion: "Handoff dry-run module imports cleanly"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-07-02
+        criterion: "Produces schema-valid V7HandoffPackage with canonical G0-G10 gate mapping"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-07-03
+        criterion: "All gate statuses are NOT_EVALUATED (no model training evidence available)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-07-04
+        criterion: "Recommended status is REVIEW_REQUIRED"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-07-05
+        criterion: "Gate names match V7 canonical IDs exactly (per handoff_to_v7.md)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-07-06
+        criterion: "Handoff package validates against v7_handoff_package.schema.json"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-07-07
+        criterion: "CMD-test-alphaforge exits 0 (no regressions)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-alphaforge
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Module consumes research reports and validation skeleton, produces V7HandoffPackage. Must integrate with P0.9A handoff builder."
+      declaredUnits:
+        - "alphaforge.handoff.dry_run"
+      exportSurfaces:
+        - "run_handoff_dry_run(research_report, validation_report) → V7HandoffPackage"
+        - "validate_gate_mapping(package) → GateMappingValidation"
+        - "generate_readiness_report(package) → HandoffReadinessReport"
+      usageProofs:
+        - "Imported and exercised in alphaforge/tests/test_handoff_dry_run.py"
+
+  # ---------------------------------------------------------------------------
+  # TASK-08
+  # ---------------------------------------------------------------------------
+  - id: TASK-08-ML-PILOT-GATE-DESIGN
+    title: ML Pilot Gate Design
+    objective: >
+      Design and implement `alphaforge/src/alphaforge/gates/ml_pilot.py` — an
+      ML pilot gate that blocks XGBoost training until all prerequisites are
+      satisfied. This gate enforces: (1) all 7 prior tasks PASS, (2) data manifest
+      complete, (3) label adapter validated, (4) feature pipeline causal-validated,
+      (5) dataset assembled and checksummed, (6) non-ML research report produced,
+      (7) walk-forward skeleton validated, (8) V7 handoff dry run complete.
+      The gate is a hard blocker — no training can proceed without it.
+    dependsOn: [TASK-07-V7-HANDOFF-DRY-RUN]
+    blocks: []  # Terminal planning task — nothing blocked within this plan
+    estimatedEffort: low
+    implementation:
+      instructions: >
+        Create `alphaforge/src/alphaforge/gates/` package with __init__.py
+        and ml_pilot.py. Implement a PilotGate class that checks all 8
+        prerequisites, emits a PASS/HOLD/FAIL verdict, and if HOLD or FAIL,
+        produces a detailed blocking report with exact release conditions.
+        The gate must be importable and independently testable. This is a
+        governance module — it gates future work, not current work.
+      allowedFiles:
+        - alphaforge/src/alphaforge/gates/**
+        - alphaforge/tests/test_ml_pilot_gate.py
+        - integration/tests/test_alphaforge_ml_pilot_gate.py
+      forbiddenFiles:
+        - models/**
+        - lib/**
+        - runtime/**
+      suggestedSteps:
+        - "Create alphaforge/src/alphaforge/gates/__init__.py"
+        - "Create alphaforge/src/alphaforge/gates/ml_pilot.py"
+        - "Define PilotGate class with prerequisite check list"
+        - "Implement prerequisite verification logic"
+        - "Implement verdict: PASS (all 8 satisfied), HOLD (some missing), FAIL (critical missing)"
+        - "Implement blocking report with exact release conditions"
+        - "Create alphaforge/tests/test_ml_pilot_gate.py"
+      antiPatterns:
+        - "Do NOT train models in this task"
+        - "Do NOT import XGBoost"
+        - "Do NOT claim ML readiness"
+        - "Do NOT make the gate bypass-able"
+      expectedOutputs:
+        - "alphaforge/src/alphaforge/gates/__init__.py"
+        - "alphaforge/src/alphaforge/gates/ml_pilot.py"
+        - "alphaforge/tests/test_ml_pilot_gate.py"
+        - "PilotGate that blocks XGBoost training until prerequisites met"
+    artifactPolicy:
+      producesArtifacts: true
+      artifactPaths:
+        - alphaforge/src/alphaforge/gates/
+      modifiesRepo: true
+    acceptanceCriteria:
+      - id: AC-08-01
+        criterion: "PilotGate imports cleanly from alphaforge.gates.ml_pilot"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-08-02
+        criterion: "All 8 prerequisite checks defined and individually testable"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-08-03
+        criterion: "Gate blocks with HOLD when prerequisites missing, PASS when all satisfied"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-08-04
+        criterion: "Blocking report includes exact release conditions for each failed prerequisite"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-08-05
+        criterion: "No XGBoost import, no model training, no fit() call"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-08-06
+        criterion: "CMD-test-alphaforge exits 0 (no regressions)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: false
+          commandRef: CMD-test-alphaforge
+    integrationContract:
+      mode: consumer_or_export
+      reason: "Governance module; gates future ML training. Must be importable and independently testable."
+      declaredUnits:
+        - "alphaforge.gates.ml_pilot"
+      exportSurfaces:
+        - "PilotGate (class)"
+        - "check_all_prerequisites() → GateVerdict"
+        - "generate_blocking_report(verdict) → BlockingReport"
+        - "PREREQUISITES (list of Prerequisite)"
+      usageProofs:
+        - "Imported and exercised in alphaforge/tests/test_ml_pilot_gate.py"
+
+  # ---------------------------------------------------------------------------
+  # TASK-09
+  # ---------------------------------------------------------------------------
+  - id: TASK-09-FINAL-COMPREHENSIVE-VALIDATION
+    title: Final Comprehensive Validation
+    objective: >
+      Run the full comprehensive validation across AlphaForge, integration,
+      import boundaries, simulation tests, and the non-Binance full local suite.
+      Confirm all 9 tasks are complete, all tests pass, all boundaries intact,
+      no regressions, no forbidden file modifications, no profitability claims,
+      no model training. Emit the final evidence ledger.
+    dependsOn:
+      - TASK-01-DETERMINISTIC-DATA-MANIFEST
+      - TASK-02-SIMULATION-DERIVED-LABEL-ADAPTER
+      - TASK-03-MINIMAL-DETERMINISTIC-FEATURE-PIPELINE
+      - TASK-04-DATASET-ASSEMBLER-AND-WRITER
+      - TASK-05-NON-ML-RESEARCH-REPORT-PATH
+      - TASK-06-WALK-FORWARD-VALIDATION-SKELETON
+      - TASK-07-V7-HANDOFF-DRY-RUN
+      - TASK-08-ML-PILOT-GATE-DESIGN
+    blocks: []  # Terminal task — nothing follows within this plan
+    estimatedEffort: low
+    implementation:
+      instructions: >
+        Run all validation commands in sequence. Confirm every command exits 0.
+        Verify no forbidden files were modified. Verify no profitability claims
+        were made. Verify no model training occurred. Emit final ACCP evidence
+        report. This task performs NO code changes.
+      allowedFiles: []
+      forbiddenFiles: []
+      suggestedSteps:
+        - "Run CMD-discover-git-status to confirm which files changed"
+        - "Run CMD-test-alphaforge to confirm all AlphaForge tests pass"
+        - "Run CMD-test-integration-alphaforge to confirm integration tests pass"
+        - "Run CMD-test-contract-registry-schema to confirm registry integrity"
+        - "Run CMD-test-import-boundaries to confirm domain boundaries intact"
+        - "Run CMD-test-simulation to confirm simulation stability"
+        - "Run CMD-final-validation to confirm full local suite green"
+        - "Verify no forbidden files in git diff"
+        - "Verify no model training artifacts"
+        - "Verify no profitability claims in new code"
+        - "Emit final ACCP completion report"
+      antiPatterns:
+        - "Do NOT skip any validation command"
+        - "Do NOT claim PASS if any command exits non-zero"
+        - "Do NOT modify source files in this task"
+        - "Do NOT claim profitability"
+        - "Do NOT claim live trading readiness"
+      expectedOutputs:
+        - "All 7 validation commands exit 0"
+        - "Final evidence ledger complete"
+        - "ACCP completion report"
+    artifactPolicy:
+      producesArtifacts: false
+      modifiesRepo: false
+    acceptanceCriteria:
+      - id: AC-09-01
+        criterion: "CMD-test-alphaforge exits 0 with all tests passing"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+          commandRef: CMD-test-alphaforge
+      - id: AC-09-02
+        criterion: "CMD-test-integration-alphaforge exits 0"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+          commandRef: CMD-test-integration-alphaforge
+      - id: AC-09-03
+        criterion: "CMD-test-contract-registry-schema exits 0"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+          commandRef: CMD-test-contract-registry-schema
+      - id: AC-09-04
+        criterion: "CMD-test-import-boundaries exits 0"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+          commandRef: CMD-test-import-boundaries
+      - id: AC-09-05
+        criterion: "CMD-test-simulation exits 0"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+          commandRef: CMD-test-simulation
+      - id: AC-09-06
+        criterion: "CMD-final-validation exits 0 with all tests passing"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+          commandRef: CMD-final-validation
+      - id: AC-09-07
+        criterion: "No forbidden files modified (verified via git diff)"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-09-08
+        criterion: "No profitability claims in new code"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+      - id: AC-09-09
+        criterion: "No model training artifacts present"
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          deterministic: true
+          advisoryOnly: false
+          canSatisfyFinalGate: true
+    integrationContract:
+      mode: none
+      reason: "Read-only validation task; no module created or exported."
+
+# =============================================================================
+# COMMANDS
+# =============================================================================
+
+commands:
+  allowed:
+    - id: CMD-discover-git-status
+      kind: discovery
+      command: git status --porcelain
+      evidenceRequired: true
+      timeoutSeconds: 30
+      networkAllowed: false
+      shellAllowed: true
+
+    - id: CMD-test-alphaforge
+      kind: targeted_test
+      command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+
+    - id: CMD-test-integration-alphaforge
+      kind: targeted_test
+      command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_*.py -q
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+
+    - id: CMD-test-contract-registry-schema
+      kind: targeted_test
+      command: PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+
+    - id: CMD-test-import-boundaries
+      kind: targeted_test
+      command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+
+    - id: CMD-test-simulation
+      kind: targeted_test
+      command: PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+
+    - id: CMD-final-validation
+      kind: final_validation
+      command: PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py
+      evidenceRequired: true
+      timeoutSeconds: 300
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+
+  denied:
+    - id: DCMD-no-curl
+      command: curl
+      reason: "No external network or market data during deterministic AlphaForge implementation."
+
+    - id: DCMD-no-wget
+      command: wget
+      reason: "No external downloads."
+
+    - id: DCMD-no-binance
+      command: "exchange/live trading pattern"
+      pattern: "binance|exchange|api_key|live_order|create_order|market_order"
+      reason: "No exchange/live trading behavior allowed."
+
+    - id: DCMD-no-xgboost-training
+      command: "model training pattern"
+      pattern: "xgboost|XGBClassifier|XGBRegressor|fit\\(|import xgboost"
+      reason: "No model training in deterministic scaffold plan."
+
+# =============================================================================
+# EVIDENCE
+# =============================================================================
+
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+    - diff
+    - source
+    - wiring
+    - command
+    - test_output
+    - schema_validation
+    - report
+  hashWhenAvailable: true
+  forbiddenEvidence:
+    - phantom_evidence
+    - invented_command_results
+    - invented_hashes
+    - profitability_claim_without_evidence
+
+# =============================================================================
+# GATES
+# =============================================================================
+
+gates:
+  sequence:
+    - SchemaGate
+    - LockGate
+    - EvidenceGate
+    - WiringGate
+    - ExecGate
+    - FinalGate
+
+  verdicts:
+    - PASS
+    - HOLD
+    - FAIL
+
+  reasonCodes:
+    SchemaGate:
+      - PLAN_SCHEMA_INVALID
+      - UNKNOWN_TOP_LEVEL_KEY
+      - TASK_SCHEMA_INVALID
+    LockGate:
+      - PLAN_NOT_LOCKED
+      - ACCEPTANCE_CRITERIA_HASH_MISSING
+      - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+      - REQUIRED_EVIDENCE_MISSING
+      - COMMAND_OUTPUT_MISSING
+      - PHANTOM_EVIDENCE_DETECTED
+      - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+      - ORPHAN_MODULE
+      - EXPORT_SURFACE_MISSING
+      - USAGE_PROOF_MISSING
+      - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+      - TEST_COMMAND_FAILED
+      - NO_TESTS_FOUND
+      - FORBIDDEN_COMMAND_USED
+      - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+      - FINAL_VALIDATION_FAILED
+      - REMAINING_REQUIRED_CRITERIA
+      - REPORT_MISSING
+      - HOLD_REQUIRES_REPAIR_PACKET
+
+# =============================================================================
+# REPAIR
+# =============================================================================
+
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+
+# =============================================================================
+# LOCKING
+# =============================================================================
+
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge_master_execution_plan.lock.json
+  hashes:
+    planHash: "TO_BE_COMPUTED_AFTER_PLAN_LOCK"
+    acceptanceCriteriaHash: "TO_BE_COMPUTED_AFTER_PLAN_LOCK"
+    artifactPolicyHash: "TO_BE_COMPUTED_AFTER_PLAN_LOCK"
+    integrationContractHash: "TO_BE_COMPUTED_AFTER_PLAN_LOCK"
+    commandPolicyHash: "TO_BE_COMPUTED_AFTER_PLAN_LOCK"
+    allowedFilesHash: "TO_BE_COMPUTED_AFTER_PLAN_LOCK"
+    forbiddenFilesHash: "TO_BE_COMPUTED_AFTER_PLAN_LOCK"
+
+# =============================================================================
+# REPORTS
+# =============================================================================
+
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true
+  expectedReports:
+    - id: ACCP-BASELINE-VERIFY
+      taskId: TASK-00-BASELINE-VERIFY
+      reportType: TVR
+      description: "Baseline verification test results"
+    - id: ACCP-DATA-MANIFEST
+      taskId: TASK-01-DETERMINISTIC-DATA-MANIFEST
+      reportType: IPR
+      description: "Data manifest implementation report"
+    - id: ACCP-LABEL-ADAPTER
+      taskId: TASK-02-SIMULATION-DERIVED-LABEL-ADAPTER
+      reportType: IPR
+      description: "Label adapter implementation report"
+    - id: ACCP-FEATURE-PIPELINE
+      taskId: TASK-03-MINIMAL-DETERMINISTIC-FEATURE-PIPELINE
+      reportType: IPR
+      description: "Feature pipeline implementation report"
+    - id: ACCP-DATASET-ASSEMBLER
+      taskId: TASK-04-DATASET-ASSEMBLER-AND-WRITER
+      reportType: IPR
+      description: "Dataset assembler implementation report"
+    - id: ACCP-RESEARCH-REPORT
+      taskId: TASK-05-NON-ML-RESEARCH-REPORT-PATH
+      reportType: IPR
+      description: "Non-ML research report implementation report"
+    - id: ACCP-WALK-FORWARD
+      taskId: TASK-06-WALK-FORWARD-VALIDATION-SKELETON
+      reportType: IPR
+      description: "Walk-forward validation skeleton implementation report"
+    - id: ACCP-HANDOFF-DRY-RUN
+      taskId: TASK-07-V7-HANDOFF-DRY-RUN
+      reportType: IPR
+      description: "V7 handoff dry run implementation report"
+    - id: ACCP-ML-PILOT-GATE
+      taskId: TASK-08-ML-PILOT-GATE-DESIGN
+      reportType: IPR
+      description: "ML pilot gate implementation report"
+    - id: ACCP-FINAL-VALIDATION
+      taskId: TASK-09-FINAL-COMPREHENSIVE-VALIDATION
+      reportType: TVR
+      description: "Final comprehensive validation report"

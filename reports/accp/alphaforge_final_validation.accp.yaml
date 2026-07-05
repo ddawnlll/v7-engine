@@ -1,0 +1,334 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report_id: "ALPHAFORGE-FINAL-VALIDATION-ACCP"
+plan_id: "ALPHAFORGE-09-FINAL-VALIDATION"
+plan_file: "plans/alphaforge/09_final_validation.plan.yaml"
+created_at: "2026-06-25T00:00:00Z"
+executor: "ClaudeCode"
+
+# ── Composite Verdict ────────────────────────────────────────────────────────
+result: "PASS"
+verdict_detail: >
+  COMPOSITE PASS — All 7 test suite commands exit 0. Full suite: 818 passed,
+  0 failed, 1 skipped (binance excluded). All 10 subplans complete with
+  targeted test evidence. All 4 scans CLEAN. Zero forbidden-diff violations.
+  Zero real profitability claims. Zero training artifacts.
+  Zero model artifacts. All prior ACCP reports INCONCLUSIVE on profitability.
+
+# ── Scope Confirmation ───────────────────────────────────────────────────────
+scope_confirmation:
+  plan_scope: "READ-ONLY final comprehensive validation — no code changes"
+  actual_scope: "READ-ONLY — no code modified, only this ACCP report updated"
+  scope_violations: []
+
+# ── Files Changed ────────────────────────────────────────────────────────────
+files_changed:
+  modified: []
+  created:
+  - "reports/accp/alphaforge_final_validation.accp.yaml (updated to PASS)"
+  deleted: []
+  notes: "No source files modified. This ACCP report is the only changed file."
+
+# ── Decisions Locked ─────────────────────────────────────────────────────────
+decisions_locked:
+- "DataManifest sha256 canonical JSON checksum algorithm"
+- "LabelAdapter 15-field SimulationOutput → AlphaForgeLabel mapping"
+- "Feature pipeline 6 active groups (Returns, Volatility, ATR, Momentum, Volume, Breakout)"
+- "Lead-Lag feature group explicitly DEFERRED (P0.9B cross-sectional data dependency)"
+- "Dataset assembler inner-join on (symbol, timestamp), purge-window enforcement"
+- "Dataset writer deterministic Parquet/CSV serialization with SHA-256 checksums"
+- "Research report verdict: INCONCLUSIVE (non-ML phase)"
+- "Walk-forward 6-fold minimum + chronological ordering + no-shuffle"
+- "V7 handoff 10 canonical gate IDs (G0_doc_ready through G10_live)"
+- "V7 handoff 12 rejection rules enforced"
+- "ML pilot gate 8 prerequisite conditions verified"
+- "SWING mode: LOCKED_INITIAL_BASELINE implementation baseline"
+- "SCALP/AGGRESSIVE_SCALP: HOLD (require empirical tuning)"
+
+# ── Remaining Holds ──────────────────────────────────────────────────────────
+remaining_holds:
+- id: "HOLD-LEAD-LAG"
+  scope: "feature_pipeline"
+  description: >
+    Lead-Lag feature group deferred — requires cross-sectional data for
+    tf_alignment, correlation_N, lead_lag_score computation.
+  release_condition: "Cross-sectional data pipeline available + correlation computation validated."
+  blocking: false
+
+- id: "HOLD-SCALP-FEATURES"
+  scope: "feature_pipeline"
+  description: >
+    SCALP and AGGRESSIVE_SCALP feature window parameters require empirical
+    tuning with real microstructure data. Current defaults are SWING-mode
+    conservative baselines.
+  release_condition: "Empirical volatility and microstructure data collected for 15m/1h timeframes."
+  blocking: false
+
+- id: "HOLD-FUNDING"
+  scope: "label_adapter"
+  description: "Funding status propagated as DEFERRED in all labels."
+  release_condition: "Funding cost model finalized by simulation domain."
+  blocking: false
+
+- id: "HOLD-XGBOOST"
+  scope: "ml_pilot_gate"
+  description: "XGBoost training not yet performed — this is deterministic scaffold."
+  release_condition: "All 8 ML pilot gate prerequisites remain satisfied; then XGBoost training authorized."
+  blocking: false
+
+- id: "HOLD-LIVE-PROMOTION"
+  scope: "v7_handoff"
+  description: "No live trading or shadow deployment authorized from dry-run phase."
+  release_condition: "G0-G10 promotion gates satisfied per v7/docs/pipeline/evaluation.md."
+  blocking: false
+
+# ── Safe Next Step ───────────────────────────────────────────────────────────
+safe_next_step: >
+  All 10 subplans complete with passing tests. AlphaForge deterministic pipeline
+  scaffold fully verified. Next: human operator review of remaining holds, then
+  empirical data collection for SCALP/AGGRESSIVE_SCALP feature tuning and
+  Lead-Lag cross-sectional data. Then XGBoost model training (plan 08 gate
+  satisfied) under G0-G10 promotion framework.
+
+# ── Subplan Evidence ─────────────────────────────────────────────────────────
+subplan_evidence:
+  plan_00_baseline_verify:
+    status: "PASS"
+    description: "Read-only baseline verification — all infrastructure tests pass"
+    test_count: 0
+    notes: "Verification-only plan. All 7 CMD-final-validation commands passed in this run."
+
+  plan_01_data_manifest:
+    status: "PASS"
+    test_count: 33
+    module: "alphaforge/src/alphaforge/data/manifest.py"
+    tests: "alphaforge/tests/test_data_manifest.py"
+    accp_report: "reports/accp/alphaforge_data_manifest.accp.yaml"
+    evidence: "CMD-test-data-manifest: 33 passed, exit 0"
+
+  plan_02_label_adapter:
+    status: "PASS"
+    test_count: 85
+    module: "alphaforge/src/alphaforge/labels/adapter.py"
+    tests: "alphaforge/tests/test_label_adapter_no_trade.py + test_label_adapter_schema.py"
+    accp_report: "reports/accp/alphaforge_label_adapter.accp.yaml"
+    evidence: "CMD-test-label-adapter: 85 passed, exit 0"
+
+  plan_03_feature_pipeline:
+    status: "PASS"
+    test_count: 103
+    module: "alphaforge/src/alphaforge/features/pipeline.py"
+    tests: "alphaforge/tests/test_feature_pipeline.py"
+    accp_report: "reports/accp/alphaforge_feature_pipeline.accp.yaml"
+    evidence: "CMD-test-feature-pipeline: 103 passed, exit 0"
+
+  plan_04_dataset_assembler:
+    status: "PASS"
+    test_count: 53
+    module: "alphaforge/src/alphaforge/dataset/assembler.py + writer.py + lineage.py + contracts.py"
+    tests: "alphaforge/tests/test_dataset_assembler.py + test_dataset_lineage.py + test_dataset_writer.py"
+    accp_report: "reports/accp/alphaforge_dataset_assembler.accp.yaml"
+    evidence: "CMD-04-test-assembler + CMD-04-test-writer: 53 passed, exit 0"
+
+  plan_05_non_ml_research_report:
+    status: "PASS"
+    test_count: 43
+    module: "alphaforge/src/alphaforge/reports/research.py"
+    tests: "alphaforge/tests/test_research_report.py"
+    accp_report: "reports/accp/alphaforge_research_report.accp.yaml"
+    evidence: "All research report tests: 43 passed, exit 0"
+
+  plan_06_walk_forward_validation:
+    status: "PASS"
+    test_count: 39
+    module: "alphaforge/src/alphaforge/validation/walk_forward.py"
+    tests: "alphaforge/tests/test_walk_forward_validator.py"
+    accp_report: "reports/accp/alphaforge_walk_forward_validation.accp.yaml"
+    evidence: "All walk-forward tests: 39 passed, exit 0"
+
+  plan_07_v7_handoff_dry_run:
+    status: "PASS"
+    test_count: 52
+    module: "alphaforge/src/alphaforge/handoff/dry_run.py"
+    tests: "alphaforge/tests/test_dry_run.py + test_handoff_builder.py"
+    accp_report: "reports/accp/alphaforge_v7_handoff_dry_run.accp.yaml"
+    evidence: "All dry run tests: 52 passed, exit 0"
+
+  plan_08_ml_pilot_gate:
+    status: "PASS"
+    test_count: 42
+    module: "alphaforge/src/alphaforge/gates/ml_pilot.py"
+    tests: "alphaforge/tests/test_ml_pilot_gate.py"
+    accp_report: "reports/accp/alphaforge_ml_pilot_gate.accp.yaml"
+    evidence: "All ML pilot gate tests: 42 passed, exit 0"
+
+  plan_09_final_validation:
+    status: "PASS"
+    is_read_only: true
+    evidence: "All 7 commands exit 0. 818 passed, 0 failed, 1 skipped. All 4 scans CLEAN."
+
+# ── Commands Run ─────────────────────────────────────────────────────────────
+commands_run:
+
+- id: "CMD-discover-git-status"
+  kind: "discovery"
+  command: "git status --porcelain"
+  exit_code: 0
+  verdict: "PASS"
+  evidence:
+    summary: "CLEAN — zero forbidden-path modifications"
+    forbidden_path_modifications: []
+
+- id: "CMD-test-alphaforge"
+  kind: "targeted_test"
+  command: "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q"
+  exit_code: 0
+  verdict: "PASS"
+  evidence:
+    tests_passed: 487
+    tests_failed: 0
+    tests_errors: 0
+    subplan_breakdown:
+      data_manifest: 33
+      label_adapter: 85
+      feature_pipeline: 103
+      dataset_assembler: 53
+      research_report: 43
+      walk_forward: 39
+      v7_handoff: 52
+      ml_pilot_gate: 42
+      cross_cutting: 37
+
+- id: "CMD-test-integration-alphaforge"
+  kind: "targeted_test"
+  command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_*.py -q"
+  exit_code: 0
+  verdict: "PASS"
+  evidence:
+    tests_passed: 124
+    tests_failed: 0
+    tests_errors: 0
+
+- id: "CMD-test-contract-registry-schema"
+  kind: "targeted_test"
+  command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+  exit_code: 0
+  verdict: "PASS"
+  evidence:
+    tests_passed: 20
+    tests_failed: 0
+
+- id: "CMD-test-import-boundaries"
+  kind: "targeted_test"
+  command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+  exit_code: 0
+  verdict: "PASS"
+  evidence:
+    tests_passed: 8
+    tests_failed: 0
+    tests_skipped: 1
+
+- id: "CMD-test-simulation"
+  kind: "targeted_test"
+  command: "PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q"
+  exit_code: 0
+  verdict: "PASS"
+  evidence:
+    tests_passed: 5
+    tests_failed: 0
+
+- id: "CMD-final-validation"
+  kind: "final_validation"
+  command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+  exit_code: 0
+  verdict: "PASS"
+  evidence:
+    tests_passed: 818
+    tests_failed: 0
+    tests_skipped: 1
+
+# ── Scan Results ─────────────────────────────────────────────────────────────
+scan_results:
+  forbidden_diff:
+    verdict: "PASS"
+    result: "CLEAN"
+    details: "Zero modifications to lib/, simulation/engine/, runtime/, interface/, data/, datasets/, models/, artifacts/, .github/"
+
+  xgboost_training:
+    verdict: "PASS"
+    result: "CLEAN"
+    details: "Zero actual xgboost imports. All matches are guardrail comments or test assertions verifying absence."
+
+  profitability_claims:
+    verdict: "PASS"
+    result: "CLEAN"
+    details: "Zero actual profitability claims. One match in reports/research.py is a template string."
+
+  exchange_api:
+    verdict: "PASS"
+    result: "CLEAN"
+    details: "Zero exchange/API usage. All matches are test assertions verifying forbidden modules absent."
+
+  model_artifacts:
+    verdict: "PASS"
+    result: "CLEAN"
+
+  prior_accp_reports:
+    verdict: "PASS"
+    result: "ALL_INCONCLUSIVE"
+    reports_checked: 10
+
+# ── Per-Workspace Verdicts ───────────────────────────────────────────────────
+workspace_verdicts:
+- workspace_id: "WS-09-TEST-SUITE"
+  verdict: "PASS"
+  ac_total: 8
+  ac_passed: 8
+- workspace_id: "WS-09-FORBIDDEN-DIFF"
+  verdict: "PASS"
+  ac_total: 8
+  ac_passed: 8
+- workspace_id: "WS-09-NO-PROFIT"
+  verdict: "PASS"
+  ac_total: 6
+  ac_passed: 6
+- workspace_id: "WS-09-NO-TRAINING"
+  verdict: "PASS"
+  ac_total: 7
+  ac_passed: 7
+- workspace_id: "WS-09-FINAL-REPORT"
+  verdict: "PASS"
+  ac_total: 9
+  ac_passed: 9
+
+# ── Overall AC Summary ───────────────────────────────────────────────────────
+acceptance_criteria_summary:
+  total: 38
+  passed: 38
+  failed: 0
+
+# ── Gates ────────────────────────────────────────────────────────────────────
+gates:
+- gate: "SchemaGate"
+  verdict: "PASS"
+- gate: "LockGate"
+  verdict: "PASS"
+- gate: "EvidenceGate"
+  verdict: "PASS"
+- gate: "WiringGate"
+  verdict: "PASS"
+- gate: "ExecGate"
+  verdict: "PASS"
+- gate: "FinalGate"
+  verdict: "PASS"
+
+# ── Evidence Ledger ──────────────────────────────────────────────────────────
+evidence:
+  total_tests_passed: 818
+  total_tests_failed: 0
+  total_tests_skipped: 1
+  commands_run: 7
+  commands_passed: 7
+  scans_run: 4
+  scans_passed: 4
+  all_deterministic: true

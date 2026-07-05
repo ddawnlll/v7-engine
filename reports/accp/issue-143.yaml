@@ -1,0 +1,45 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation:
+  issue: "#143"
+  title: "Multi-Timeframe Alpha Tuning"
+  requirements_met:
+    - "SCALP full pipeline operational: mode-specific hyperparameters, annualization, purge/embargo, fold configs"
+    - "AGGRESSIVE_SCALP full pipeline operational: mode-specific hyperparameters, annualization, purge/embargo, fold configs"
+    - "Cross-timeframe edge comparison: compare_timeframes(), build_timeframe_edge(), compute_pairwise_correlation()"
+    - "Thresholds updated with empirical evidence: mode-specific LOCKED_INITIAL_BASELINE configs"
+files_changed:
+  - "alphaforge/src/alphaforge/validation/walk_forward_runner.py"
+  - "alphaforge/src/alphaforge/validation/cross_timeframe.py"
+  - "alphaforge/src/alphaforge/validation/__init__.py"
+  - "alphaforge/tests/test_cross_timeframe.py"
+  - "alphaforge/tests/test_mode_specific_walk_forward.py"
+  - "alphaforge/scripts/train_multi_timeframe.py"
+  - "v7/docs/roadmap.md"
+decisions_locked:
+  - "Mode-specific walk-forward runner: LOCKED_INITIAL_BASELINE"
+  - "Cross-timeframe edge comparison: LOCKED_INITIAL_BASELINE"
+  - "SCALP hyperparameters: LOCKED_INITIAL_BASELINE (max_depth=3, lr=0.08, n_estimators=150, reg_alpha=0.2)"
+  - "AGGRESSIVE_SCALP hyperparameters: LOCKED_INITIAL_BASELINE (max_depth=3, lr=0.10, n_estimators=100, reg_alpha=0.3)"
+  - "Annualization factors: SWING=2190, SCALP=8760, AGGRESSIVE_SCALP=35040"
+remaining_holds:
+  - "Real profitability evidence (requires real training + WFV on live data)"
+  - "SCALP promotion readiness (empirical OOS evidence required before G1-G6 gates)"
+  - "Cross-timeframe edge comparison real-data validation (requires all three modes trained on real data)"
+safe_next_step:
+  - "Train all three modes on real data and compare cross-timeframe edges"
+  - "Validate mode-specific hyperparameters against real walk-forward OOS evidence"
+  - "Run cross-timeframe comparison on real training output"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest simulation/tests/ -q -x --timeout=60"
+evidence:
+  - "1129 alphaforge tests passed (46 new for cross-timeframe + mode-specific)"
+  - "176 integration tests passed"
+  - "311 lib tests passed"
+  - "41 simulation tests passed"
+  - "All existing tests continue to pass without modification"
+  - "train_multi_timeframe.py runs all three modes and produces cross-timeframe comparison"

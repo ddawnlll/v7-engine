@@ -1,0 +1,96 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  status: "HOLD"
+  summary: "AlphaForge SCALP training results are not trustworthy alpha evidence because the current training harness has feature/label alignment, chronological WFV, and active-trade metric defects."
+scope_confirmation:
+  task_type: "diagnostic_audit"
+  subsystem: "AlphaForge"
+  source_code_modified: false
+  docs_modified: true
+files_changed:
+  - "v7/docs/roadmap.md"
+  - "reports/accp/alphaforge_scalp_training_diagnostic_20260705.accp.yaml"
+decisions_locked:
+  - "Do not treat the inspected alphaforge.train SCALP output as evidence that no profitable alpha exists."
+  - "Block SCALP profitability/threshold claims from this training harness until alignment, chronological WFV, and active-trade metrics are repaired."
+remaining_holds:
+  - hold: "Feature/label alignment across symbol boundaries"
+    release_condition: "Trim or assemble features per symbol to the same label horizon before concatenation, or build timestamp-keyed rows with tests proving symbol-boundary alignment."
+  - hold: "Chronological panel walk-forward validation"
+    release_condition: "Use timestamp-major panel folds with purge/embargo by time and symbol-aware validation slices."
+  - hold: "Model-selected active-trade economics"
+    release_condition: "Compute OOS expectancy/Sharpe from predicted LONG/SHORT actions only; account for NO_TRADE separately."
+  - hold: "Positive-control gate"
+    release_condition: "A deterministic feature-derived label positive-control must beat baseline OOS before real alpha runs are accepted."
+safe_next_step: "Repair the dataset assembly and WFV harness first, then rerun the same 3-symbol SCALP command plus positive-control before changing features or model complexity."
+commands_run:
+  - "Get-Content -Path ai_summary.md"
+  - "Get-Content -Path alphaforge/docs/ai_summary__v7_alphaforge_xgb.md"
+  - "Get-Content -Path alphaforge/docs/ai_summary.md"
+  - "git status --short"
+  - "Get-Content -Path alphaforge/src/alphaforge/train.py"
+  - "Get-Content -Path alphaforge/src/alphaforge/features/pipeline.py"
+  - "Get-Content -Path alphaforge/src/alphaforge/factors/evaluation.py"
+  - "Get-Content -Path reports/alphaforge/factor_sprint/ALPHA_LEADERBOARD.csv"
+  - "PYTHONPATH=alphaforge/src C:/Users/dresden/AppData/Local/Programs/Python/Python314/python.exe -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT --folds 3 --panel-cache cache/factor_sprint --threshold-sweep 0.3,0.45,0.55,0.7"
+  - "Python diagnostic script loading panel data, labels, features, and symbol boundary counts"
+  - "Python diagnostic script printing fold actual/predicted distributions and confusion matrices"
+  - "PYTHONPATH=alphaforge/src C:/Users/dresden/AppData/Local/Programs/Python/Python314/python.exe -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT --folds 3 --panel-cache cache/factor_sprint --positive-control"
+  - "Get-Content -Path v7/docs/ai_summary.md"
+  - "Get-Content -Path v7/docs/roadmap.md"
+evidence:
+  training_run:
+    mode: "SCALP"
+    symbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    panel_rows_total: 72288
+    rows_per_symbol: 24096
+    labels_total: 72249
+    feature_rows_total: 72288
+    clean_samples: 70701
+    oos_accuracy_at_0_55: 0.2507
+    train_accuracy: 0.5981
+    overfit_gap: 0.3474
+    pbo_risk: "HIGH"
+    exposure_pct_at_0_55: 31.4
+    low_confidence_rate_pct: 68.6
+  threshold_sweep:
+    - threshold: 0.30
+      oos_accuracy: 0.4201
+      exposure_pct: 99.96
+    - threshold: 0.45
+      oos_accuracy: 0.3301
+      exposure_pct: 64.40
+    - threshold: 0.55
+      oos_accuracy: 0.2507
+      exposure_pct: 31.42
+    - threshold: 0.70
+      oos_accuracy: 0.1993
+      exposure_pct: 11.83
+  fold_diagnostics:
+    - fold: 1
+      actual_long_short_no_trade: [2793, 2686, 1149]
+      predicted_long_short_no_trade: [5684, 6, 938]
+      accuracy: 0.3988
+      majority_class_baseline: 0.4214
+    - fold: 2
+      actual_long_short_no_trade: [2693, 2796, 1139]
+      predicted_long_short_no_trade: [121, 73, 6434]
+      accuracy: 0.1818
+      majority_class_baseline: 0.4218
+    - fold: 3
+      actual_long_short_no_trade: [2829, 2768, 1031]
+      predicted_long_short_no_trade: [2, 361, 6265]
+      accuracy: 0.1715
+      majority_class_baseline: 0.4268
+  positive_control:
+    oos_accuracy: 0.1600
+    train_accuracy: 0.5497
+    overfit_gap: 0.3897
+    pbo_risk: "HIGH"
+  root_causes:
+    - "train.py lines 338-358 generate per-symbol shortened labels."
+    - "train.py lines 393-414 concatenate full-length per-symbol feature matrices."
+    - "train.py main globally truncates X/y after concatenation, shifting features against labels across symbol boundaries."
+    - "train.py lines 477-480 slice WFV by flattened row index rather than timestamp-major panel time."
+    - "train.py lines 520-521 compute net_r_expectancy from all validation labels, not predicted active trades."

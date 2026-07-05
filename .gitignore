@@ -39,6 +39,7 @@ Thumbs.db
 
 # --- Data (large, generated, or sensitive) ---
 data/raw/*
+data/normalized/*
 data/processed/*
 data/cache/*
 data/results/*
@@ -74,3 +75,11 @@ config.local.json
 
 # --- Monitoring / dashboard local state ---
 .grafana/
+.claude/worktrees/
+
+# --- Large generated report artifacts ---
+reports/**/FACTOR_SIGNAL_EVENTS.csv
+reports/**/candidate_dataset.parquet
+
+# --- Data lake ---
+data_lake/

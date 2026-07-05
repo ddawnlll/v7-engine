@@ -1,0 +1,45 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: |
+  Implemented formal state machine for the alpha thesis lifecycle with all
+  9 states per the LOCKED alpha_thesis_lifecycle.md document:
+
+  1. AlphaThesisState enum (PROPOSED, DATA_READY, FEATURED, SIMULATED,
+     TRAINED, VALIDATED, PROMOTION_CANDIDATE, REJECTED, SUPERSEDED)
+  2. ThesisStateMachine with immutable transitions, RejectionRecord
+     for rejection criteria tracking, entry/exit condition docs
+  3. WFV pipeline integration via from_thesis_verdict()
+  4. AlphaThesis.status changed from str to AlphaThesisState (str enum)
+  5. AlphaThesis gains optional state_machine field
+  6. ThesisValidator.validate() uses ThesisStateMachine for state
+     transitions based on verdict: SUPPORTED advances pipeline,
+     REFUTED transitions to REJECTED, INCONCLUSIVE continues research
+files_changed:
+  - "alphaforge/src/alphaforge/lifecycle/__init__.py"
+  - "alphaforge/src/alphaforge/lifecycle/state_machine.py"
+  - "alphaforge/src/alphaforge/validation/thesis_validator.py"
+  - "alphaforge/tests/test_thesis_lifecycle.py"
+  - "alphaforge/tests/test_thesis_validator.py"
+decisions_locked:
+  - "Alpha thesis state machine: LOCKED_INITIAL_BASELINE"
+  - "9 alpha thesis states (PROPOSED through SUPERSEDED): LOCKED"
+  - "Verdict->state transition mapping: LOCKED"
+  - "RejectionRecord with rejection criteria tracking: LOCKED"
+  - "WFV pipeline integration via from_thesis_verdict(): LOCKED_INITIAL_BASELINE"
+remaining_holds:
+  - "State machine not yet wired into real training pipeline (HOLD — requires P0.9B integration)"
+  - "Real alpha thesis data not yet available to drive state transitions (HOLD)"
+  - "SUPERSEDED transition conditions not yet triggered by any pipeline (HOLD — manual for now)"
+safe_next_step: "Wire ThesisStateMachine into real_training.py WFV pipeline — produce thesis state alongside report"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ simulation/tests/ -q -x --timeout=60"
+evidence:
+  - "alphaforge/tests/: 1140 passed, 1 skipped"
+  - "integration/tests/: 176 passed, 2 skipped"
+  - "lib/tests/ + simulation/tests/: 352 passed (311 lib + 41 simulation)"
+  - "Total: 1651 passed, 3 skipped, 0 failures"
+  - "57 new thesis lifecycle tests covering all states, transitions, rejection tracking, pipeline integration, immutability, edge cases, and transition symmetry"
+  - "Commit: dc35698"

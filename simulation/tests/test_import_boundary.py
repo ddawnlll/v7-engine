@@ -88,6 +88,10 @@ def test_simulation_modules_importable():
         "simulation.engine.costs",
         "simulation.engine.exits",
         "simulation.engine.engine",
+        "simulation.engine.batch",
+        "simulation.engine.writer",
+        "simulation.adapters",
+        "simulation.adapters.market_data_adapter",
     ]
     for mod_name in modules:
         importlib.import_module(mod_name)

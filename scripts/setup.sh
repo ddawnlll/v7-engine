@@ -116,6 +116,19 @@ if $DO_SETUP; then
     step "Installing dependencies..."
     pip install --quiet -U pip setuptools wheel 2>/dev/null
     pip install --quiet pytest requests mypy ruff 2>/dev/null
+
+    # Editable install so imports resolve without PYTHONPATH hacks
+    step "Installing project in editable mode..."
+    pip install -e "$PROJECT_DIR" 2>/dev/null
+    ok "Project installed in editable mode"
+
+    # Add alphaforge/src to path so `import alphaforge` works
+    SITE_PKG="$("$PYTHON" -c "import site; print(site.getsitepackages()[0])" 2>/dev/null || true)"
+    if [ -n "$SITE_PKG" ]; then
+        echo "$PROJECT_DIR/alphaforge/src" > "$SITE_PKG/v7_engine_alphaforge.pth"
+        ok "alphaforge/src added to Python path"
+    fi
+
     ok "Dependencies ready"
 fi
 

@@ -1,0 +1,60 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Executed all 8 issues under milestone #12 (v0.34B). Contracts remain locked. No schema changes. Import boundary intact."
+
+files_changed:
+  - config/__init__.py
+  - config/profiles/__init__.py
+  - config/profiles/aggressive_scalp.py
+  - config/profiles/scalp.py
+  - config/profiles/swing.py
+  - simulation/adapters/evaluation_adapter.py
+  - simulation/adapters/paper_driver.py
+  - simulation/adapters/replay_driver.py
+  - simulation/adapters/training_adapter.py
+  - simulation/engine/engine.py (refactored - 118 lines)
+  - simulation/engine/resolvers/__init__.py
+  - simulation/engine/resolvers/action_selector.py
+  - simulation/engine/resolvers/horizon_resolver.py
+  - simulation/engine/resolvers/profile_resolver.py
+  - simulation/lineage/__init__.py
+  - simulation/lineage/lineage.py
+  - simulation/lineage/version_registry.py
+  - simulation/tests/golden/test_scalp_aggressive_cross.py
+  - simulation/tests/integration/test_config_validation.py
+  - simulation/tests/integration/test_edge_cases.py
+  - simulation/tests/integration/test_full_pipeline.py
+  - simulation/tests/integration/test_profile_validation.py
+  - simulation/tests/test_cost_stress.py
+  - simulation/tests/test_lineage.py
+  - simulation/tests/test_simulation_adapters.py
+  - simulation/tests/unit/test_action_selection.py
+  - simulation/tests/unit/test_costs.py
+  - simulation/tests/unit/test_engine.py
+  - simulation/tests/unit/test_no_trade.py
+  - simulation/tests/unit/test_path_metrics.py
+  - simulation/tests/unit/test_resolution_status.py
+  - simulation/validation/cost_stress.py
+
+decisions_locked:
+  - simulation contracts remain LOCKED (SimulationInput/Output/ActionOutcome/NoTradeOutcome unchanged)
+  - simulation engine behavior preserved (byte-identical for identical inputs)
+  - import boundary enforced (simulation does not import alphaforge/v7)
+  - cost model parameters remain LOCKED_INITIAL_BASELINE
+
+remaining_holds:
+  - Monte Carlo block-bootstrap enhancement (tracked in #101)
+  - Hidden simulator audit (tracked in #102)
+  - Replay parity tests across 5 adapters (tracked in #102)
+
+evidence:
+  - 152 tests passing (baseline: 41)
+  - 0 deprecation warnings (baseline: 12,054)
+  - contracts/schemas/ unchanged
+  - import boundary tests pass
+  - commit: ef87654
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest simulation/tests/ -v --tb=short -W error::DeprecationWarning"
+  - "bash .claude/skills/sync-worktrees.sh"

@@ -1,0 +1,17 @@
+{
+  "iteration": 1,
+  "goal": "Create and test one deterministic AlphaForge alpha candidate",
+  "strategist_task": "Implement and test a simple momentum-based alpha factor in the AlphaForge framework. 1. Create a new file `alphas/alpha_momentum.py` that defines a class `AlphaMomentum` inheriting from `AlphaBase`. The alpha should compute the 21-day (1-month) lagged return: `close.shift(21) / close - 1`. 2. Register this alpha in the alpha registry (likely `alphas/__init__.py`) with a unique name. 3. Run a backtest using the existing backtesting infrastructure for the period 2020-01-01 to 2024-12-31, with a training period of 2020-01-01 to 2022-12-31 and a test period of 2023-01-01 to 2024-12-31, using a single combination (no hyperparameter search). 4. In your completion summary, report the fields: train_start='2020-01-01', train_end='2022-12-31', test_start='2023-01-01', test_end='2024-12-31', n_combinations=1, and the metric (e.g., IC or Sharpe) value that results from the backtest. Do NOT modify evaluation.py, factors.py, simulation_adapter.py, fast_simulator.py, or authority_map.md.",
+  "worker_exit_code": -1,
+  "gate_verdict": "FAIL",
+  "gate_reasons": [
+    "Worker exited with code -1",
+    "Worker log exists (93696 bytes)",
+    "Git HEAD: d6cdfa0a517a",
+    "No tracked files modified",
+    "All changes in allowed paths",
+    "No authority files touched",
+    "Report missing required fields: train_start, train_end, test_start, test_end, n_combinations, metric"
+  ],
+  "overall_status": "FAIL"
+}

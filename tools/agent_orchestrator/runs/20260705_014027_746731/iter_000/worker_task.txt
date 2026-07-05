@@ -1,0 +1,34 @@
+Implement the requested task below.
+
+## Task
+
+Write a new Python file `alphaforge/src/alphaforge/candidates/alpha_momentum_mean_reversion.py` that implements a deterministic alpha candidate combining momentum and mean-reversion signals. The alpha should: 1) Use a 20-day rolling mean of daily returns as a momentum factor, 2) Use a 5-day rolling z-score of price relative to its 20-day mean as a mean-reversion factor, 3) Combine them as `alpha = 0.5 * momentum_signal - 0.5 * mean_reversion_signal` (the minus sign encodes mean reversion). 4) The candidate class should have a `generate_signals(data)` method that takes a DataFrame with columns `['close', 'returns']` and returns a Series of alpha signals aligned to the index. 5) Also write a companion test file `alphaforge/src/alphaforge/candidates/test_alpha_momentum_mean_reversion.py` that tests the alpha on synthetic data: create 100 days of random walk price data, compute signals, and assert that the output Series has the same length as the input, contains no NaNs after the warm-up period (first 20 days can be NaN), and that the correlation between momentum and mean-reversion components is negative (since they are opposites by construction). 6) In your completion summary, include: train_start='2020-01-01', train_end='2020-12-31', test_start='2021-01-01', test_end='2021-12-31', n_combinations=1, metric='IC' with a placeholder value of 0.0 (since we are not running a full backtest yet).
+
+## Rules
+
+- Implement only what is requested. Do not over-engineer.
+- If the task asks for code changes, run relevant tests/checks afterward.
+- Do NOT modify these authority files: evaluation.py, factors.py,
+  simulation_adapter.py, fast_simulator.py, authority_map.md
+- Never claim success without evidence.
+
+## Required — Completion Summary
+
+Your final output MUST include a completion summary with these fields:
+
+```
+## Completion Summary
+- Files changed: [...]
+- Commands run: [...]
+- train_start: <date>
+- train_end: <date>
+- test_start: <date>
+- test_end: <date>
+- n_combinations: <number of trials>
+- metric: <key metric value>
+- Results: [...]
+- Status: SUCCESS | FAILURE | BLOCKED
+```
+
+The gate checks for these fields. If they are missing, the iteration FAILs
+and your work may be discarded.

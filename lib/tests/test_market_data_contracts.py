@@ -3,15 +3,17 @@ Tests for lib/market_data/contracts.py
 """
 
 import math
+from typing import Any
+
 from lib.market_data.contracts import KlineRecord, MarketDataResult, DataQualityReport
 
 
 def _make_kline(
     symbol: str = "BTCUSDT",
     timestamp: int = 1_000_000_000_000,
-    **overrides,
+    **overrides: Any,
 ) -> KlineRecord:
-    params = dict(
+    params: dict[str, Any] = dict(
         symbol=symbol,
         timestamp=timestamp,
         open=50000.0,

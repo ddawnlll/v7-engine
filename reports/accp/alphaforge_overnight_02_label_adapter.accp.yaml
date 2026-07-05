@@ -1,0 +1,28 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-OVERNIGHT-02-LABEL-ADAPTER
+  report_type: SUBPLAN_EXECUTION
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-OVERNIGHT-AUTOPILOT-ALPHAFORGE-SEQUENTIAL-EXECUTION
+  plan_id: ALPHAFORGE-02-LABEL-ADAPTER
+  priority: P1
+
+result: PASS
+scope_confirmation: "Plan 02 label adapter verified — 85/85 tests pass, imports clean, guards clean"
+
+targeted_tests:
+  - {command: "CMD-test-label-adapter", result: "85 passed", exit: 0}
+  - {command: "CMD-import-label-adapter", result: "PASS", exit: 0}
+  - {command: "CMD-scan-label-adapter-guards", result: "CLEAN"}
+
+files_changed: []
+
+failed_ACs: []
+
+remaining_holds:
+  - funding_deferred
+  - no_real_market_data
+  - no_model_training
+
+safe_next_step: "Proceed to plan 03 (feature pipeline)"

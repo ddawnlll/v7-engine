@@ -1,14 +1,21 @@
-# AlphaForge — AI Summary
+﻿# AlphaForge â€” AI Summary
 
-**Thin hub.** Read this first (1–2 minutes) to understand AlphaForge.
+**Thin hub.** Read this first (1â€“2 minutes) to understand AlphaForge.
 
-**P0.8E updated.** Gate mapping corrected to V7 canonical IDs. Timeframe stacks aligned to locked simulation profiles. Nested schema requirements strengthened. Fixture validation tests added.
+**P0.8E complete.** Gate mapping corrected to V7 canonical IDs. Timeframe stacks aligned to locked simulation profiles. Label schema completed (gross/net cost, NO_TRADE quality). Validation contract aligned to V7 gates (6-fold, canonical regimes). MHT/data-snooping controls added. Nested schema requirements strengthened. Fixture validation and schema strictness tests pass. P0.9A gated on P0.8E PASS.
+
+**v0.25 Diagnostics Repair (2026-06-27):** Active trade metric system added â€” `compute_oos_metrics()` tracks LONG_NOW/SHORT_NOW/NO_TRADE counts, cost decomposition, net-R, exposure pct with NaN guards. `mode_research_report.schema.json` updated with 8 new active metric fields (3 required). MHT correction module (`mht.py`) provides Bonferroni step-down, Benjamini-Hochberg FDR, deflated Sharpe ratio, and data-snooping risk assessment. 6-fold walk-forward validation with anchored expanding windows in `cli/real_training.py`. SOLUSDT stop/target optimized. 1578 tests pass.
+
+- **P0.x â€” Research Artifact Registry (2026-07-01):** `ResearchRunIndex` class creates/maintains `alphaforge_report/research_run_index.json` â€” a single index tracking every research run with canonical/superseded distinction, duplicate detection, and artifact paths. Integrated into CLI report generation. 29 tests, 1640 total pass.
+- **Issue #146 â€” XGBoost Search Space Design (2026-07-01):** New `alphaforge/src/alphaforge/tuning/` package with mode-specific XGBoost hyperparameter search spaces (SWING, SCALP, AGGRESSIVE_SCALP). Log-uniform regularization sampling. Optuna integration via `suggest_params()` and `build_objective()`. 78 tests.
+- **Make/Menu + Pipeline CLI Repair (2026-07-03):** Scaffold and empirical ModeResearchReport builders now include required primary AlphaForge metrics `oos_ic` and `oos_rank_ic`; CandidateOutcomeBuilder consumes simulation-output-shaped objects without importing `simulation`, restoring AlphaForge boundary compliance. `make backfill` delegates to the maintained Binance Vision downloader and `make report MODE=...` validates. Relevant AlphaForge/integration boundary tests pass.
+- **SCALP Training Harness Repair (2026-07-05):** `alphaforge.train` now builds timestamp-aligned per-symbol training frames instead of truncating concatenated symbol blocks, computes active-trade economics from predicted decisions, and exposes a deterministic positive-control path that passes when the harness is healthy. Profitability evidence remains HOLD until real alpha clears the new harness.
 
 ---
 
 ## Mission
 
-AlphaForge is the **anomaly discovery and alpha research authority** within V7 Engine. It discovers alpha candidates, tests them against simulation-derived economic truth, validates them through walk-forward analysis, and packages evidence for V7 acceptance gates. AlphaForge does NOT make trade decisions — V7 retains final policy authority.
+AlphaForge is the **anomaly discovery and alpha research authority** within V7 Engine. It discovers alpha candidates, tests them against simulation-derived economic truth, validates them through walk-forward analysis, and packages evidence for V7 acceptance gates. AlphaForge does NOT make trade decisions â€” V7 retains final policy authority.
 
 ---
 
@@ -23,8 +30,8 @@ AlphaForge is the **anomaly discovery and alpha research authority** within V7 E
 | Simulation label consumption | Exchange connectivity |
 | Model training experiment definition | Simulation economic truth |
 | Walk-forward validation reporting | V7 promotion gate authority |
-| Mode-level research reports | — |
-| V7 handoff packages | — |
+| Mode-level research reports | â€” |
+| V7 handoff packages | â€” |
 
 **Upstream:** [lib](../../lib/) (primitives), [simulation](../../simulation/docs/) (economic truth)
 **Downstream:** [V7](../../v7/docs/) (policy acceptance)
@@ -49,9 +56,9 @@ Timeframes are LOCKED from `simulation/docs/profiles.md`. P0.8E corrected previo
 |-----|---------|
 | [discovery_authority.md](discovery_authority.md) | What AlphaForge owns, consumes, produces, and is forbidden from doing |
 | [alpha_thesis_lifecycle.md](alpha_thesis_lifecycle.md) | Alpha thesis states from PROPOSED to V7_CANDIDATE |
-| [data_contract.md](data_contract.md) | Data layers: raw → normalized → feature → label → manifest. P0.8E: timeframes corrected |
+| [data_contract.md](data_contract.md) | Data layers: raw â†’ normalized â†’ feature â†’ label â†’ manifest. P0.8E: timeframes corrected |
 | [feature_contract.md](feature_contract.md) | FeatureSetSpec, feature groups, leakage rules. P0.8E: timeframes corrected |
-| [label_contract.md](label_contract.md) | SimulationOutput → AlphaForge label transformation |
+| [label_contract.md](label_contract.md) | SimulationOutput â†’ AlphaForge label transformation |
 | [report_contracts.md](report_contracts.md) | ModeResearchReport, AlphaForgeResearchReport format and verdicts |
 | [validation_contract.md](validation_contract.md) | Walk-forward, OOS, cost stress, overfit detection, MHT control |
 | [model_artifact_contract.md](model_artifact_contract.md) | ModelArtifact and CalibrationCandidate formats |
@@ -59,10 +66,11 @@ Timeframes are LOCKED from `simulation/docs/profiles.md`. P0.8E corrected previo
 | [storage_policy.md](storage_policy.md) | What stays in repo vs. external storage |
 | [phase_plan.md](phase_plan.md) | Implementation phases P0.8B through P1.0 |
 | [decision_log.md](decision_log.md) | Locked AlphaForge decisions |
+| `alphaforge/src/alphaforge/tuning/search_space.py` | XGBoost search space definitions per mode + Optuna integration (Issue #146) |
 
 **Legacy docs (historical reference only):**
-- `ai_summary__v7_alphaforge_xgb.md` (625KB) — pre-authority-lock combined doc. SUPERSEDED by the 12 canonical docs above.
-- `phase_plans_combined.md` (578KB) — pre-P0.8B combined plans. SUPERSEDED by `phase_plan.md`.
+- `ai_summary__v7_alphaforge_xgb.md` (625KB) â€” pre-authority-lock combined doc. SUPERSEDED by the 12 canonical docs above.
+- `phase_plans_combined.md` (578KB) â€” pre-P0.8B combined plans. SUPERSEDED by `phase_plan.md`.
 
 ---
 
@@ -75,7 +83,7 @@ AlphaForge evidence maps to V7 canonical gates as defined in `v7/docs/pipeline/e
 | G0 | DOC_READY | Data scope, flags, lineage, all authority docs |
 | G1 | RESEARCH_BACKTEST | Initial backtest metrics with cost-honest labels |
 | G2 | WALK_FORWARD_OOS | ValidationReport OOS summary, 6-fold walk-forward |
-| G3 | COST_STRESS | ValidationReport cost stress: fee × multiplier, slippage |
+| G3 | COST_STRESS | ValidationReport cost stress: fee Ã— multiplier, slippage |
 | G4 | REGIME_BREAKDOWN | ValidationReport regime breakdown: TREND_UP/DOWN/RANGE/TRANSITION |
 | G5 | SYMBOL_STABILITY | ValidationReport symbol stability: per-symbol contribution |
 | G6 | CALIBRATION_RELIABILITY | CalibrationCandidate metrics: ECE, confidence bins |
@@ -84,7 +92,7 @@ AlphaForge evidence maps to V7 canonical gates as defined in `v7/docs/pipeline/e
 | G9 | TINY_LIVE | Not yet built (far future) |
 | G10 | LIVE | Not yet built (far future) |
 
-**⚠️ Previous incorrect gate names (G0: Data Quality, G1: Feature Validity, etc.) were NOT the V7 canonical gate IDs. Corrected in P0.8E.**
+**âš ï¸ Previous incorrect gate names (G0: Data Quality, G1: Feature Validity, etc.) were NOT the V7 canonical gate IDs. Corrected in P0.8E.**
 
 ---
 
@@ -100,7 +108,7 @@ AlphaForge evidence maps to V7 canonical gates as defined in `v7/docs/pipeline/e
 - [validation_report.schema.json](../../contracts/schemas/alphaforge/validation_report.schema.json)
 - [model_artifact.schema.json](../../contracts/schemas/alphaforge/model_artifact.schema.json)
 - [calibration_candidate.schema.json](../../contracts/schemas/alphaforge/calibration_candidate.schema.json)
-- [v7_handoff_package.schema.json](../../contracts/schemas/alphaforge/v7_handoff_package.schema.json) — P0.8E: gate mapping corrected
+- [v7_handoff_package.schema.json](../../contracts/schemas/alphaforge/v7_handoff_package.schema.json) â€” P0.8E: gate mapping corrected
 
 ### Fixtures (`../../contracts/fixtures/alphaforge/`)
 - All 5 fixtures updated P0.8E: timeframes corrected, nested fields strengthened, MHT control added
@@ -109,7 +117,7 @@ AlphaForge evidence maps to V7 canonical gates as defined in `v7/docs/pipeline/e
 
 ### Mappings (`../../contracts/mappings/`)
 - [simulation_to_alphaforge.md](../../contracts/mappings/simulation_to_alphaforge.md)
-- [alphaforge_to_v7.md](../../contracts/mappings/alphaforge_to_v7.md) — P0.8E: gate mapping corrected
+- [alphaforge_to_v7.md](../../contracts/mappings/alphaforge_to_v7.md) â€” P0.8E: gate mapping corrected
 
 ---
 
@@ -117,57 +125,67 @@ AlphaForge evidence maps to V7 canonical gates as defined in `v7/docs/pipeline/e
 
 ```
 Raw Market Data (external)
-    │
-    ▼
+    â”‚
+    â–¼
 Normalized Market Data (OHLCV, events)
-    │
-    ├──► FeatureDataset (mode/timeframe-aware feature matrix)
-    │
-    ▼
-Simulation Engine (economic truth) — locked profiles: SCALP 1h, AGGRESSIVE 15m, SWING 4h
-    │
-    ▼
-SimulationOutput ──► LabelDataset (cost-aware, NO_TRADE-aware labels)
-    │
-    ▼
-AlphaForge Training Run (feature + label → model)
-    │
-    ▼
+    â”‚
+    â”œâ”€â”€â–º FeatureDataset (mode/timeframe-aware feature matrix)
+    â”‚
+    â–¼
+Simulation Engine (economic truth) â€” locked profiles: SCALP 1h, AGGRESSIVE 15m, SWING 4h
+    â”‚
+    â–¼
+SimulationOutput â”€â”€â–º LabelDataset (cost-aware, NO_TRADE-aware labels)
+    â”‚
+    â–¼
+AlphaForge Training Run (feature + label â†’ model)
+    â”‚
+    â–¼
 Validation (walk-forward 6-fold, OOS, cost stress, no-trade, MHT control)
-    │
-    ▼
+    â”‚
+    â–¼
 ModeResearchReport (per-mode verdict)
-    │
-    ▼
+    â”‚
+    â–¼
 AlphaForgeResearchReport (aggregate: all 3 modes required)
-    │
-    ▼
-V7HandoffPackage (canonical G0-G10 gate mapping) ──► V7 Acceptance Gates
+    â”‚
+    â–¼
+V7HandoffPackage (canonical G0-G10 gate mapping) â”€â”€â–º V7 Acceptance Gates
 ```
 
 ---
 
 ## Safe Next Implementation Order
 
-1. **P0.8B:** Authority lock, docs, contracts — DONE
-2. **P0.8C:** Re-audit after authority lock — DONE
-3. **P0.8D:** Profitability/efficiency squeeze audit — DONE (READY_FOR_P0_9A_AFTER_TARGETED_PATCH)
-4. **P0.8E:** Contract/docs patch (this task) — fix gate mapping, timeframes, strengthen schemas, add fixture tests — IN PROGRESS
-5. **P0.9A:** AlphaForge implementation scaffold (package structure, contract readers, report writer interfaces)
-6. **P0.9B:** Data/label/feature pipeline
-7. **P0.9C:** All-mode research reports
-8. **P1.0:** V7 handoff candidate
+1. **P0.8B:** Authority lock, docs, contracts â€” DONE
+2. **P0.8C:** Re-audit after authority lock â€” DONE
+3. **P0.8D:** Profitability/efficiency squeeze audit â€” DONE
+4. **P0.8E:** Contract/docs patch â€” fix gate mapping, timeframes, strengthen schemas, add fixture tests â€” DONE
+5. **P0.9A-FREEZE:** Freeze + Metric Ownership Redesign â€” IN PROGRESS
+6. **P0.9A:** AlphaForge implementation scaffold â€” REDESIGN_IN_PROGRESS (blocked by P0.9A-FREEZE)
+7. **XSMOM:** Cross-Sectional Momentum Baseline â€” DONE
+8. **P0.9B:** Data/label/feature pipeline
+9. **P0.9C:** All-mode research reports
+10. **P1.0:** V7 handoff candidate
+
+---
+
+## Do First (For Agents)
+
+- **XSMOM baseline:** Cross-sectional momentum ranking and scoring for all 16 symbols. See [phase_plan.md](phase_plan.md).
+- **Metric Philosophy compliance:** When implementing metric computation, verify the owning layer from discovery_authority.md. Do not recompute upstream-layer metrics downstream.
+- **P0.9A metric ownership refactor:** Redesign scaffold to respect layer metric boundaries.
 
 ---
 
 ## Do Not Do (For Agents)
 
-- Do NOT implement AlphaForge source code until P0.9A
-- Do NOT add training scripts, dataset builders, or model code
+- Do NOT implement AlphaForge source code until P0.9A (exceptions: tuning/search_space.py â€” Issue #146)
+- Do NOT add training scripts, dataset builders, or model code (exceptions: training/xgb_trainer.py, tuning/search_space.py)
 - Do NOT modify lib/, simulation/, v7/, runtime/, or interface/ source files
 - Do NOT change SimulationOutput semantics
-- Do NOT use wrong V7 gate names — canonical names are in `v7/docs/pipeline/evaluation.md`
-- Do NOT use wrong timeframes — locked profiles: SCALP 1h, AGGRESSIVE_SCALP 15m, SWING 4h
+- Do NOT use wrong V7 gate names â€” canonical names are in `v7/docs/pipeline/evaluation.md`
+- Do NOT use wrong timeframes â€” locked profiles: SCALP 1h, AGGRESSIVE_SCALP 15m, SWING 4h
 - Do NOT lock SCALP or AGGRESSIVE_SCALP thresholds without empirical evidence
 - Do NOT mark SCALP/AGGRESSIVE_SCALP as promotion-ready
 - Do NOT remove funding DEFERRED hold
@@ -180,8 +198,11 @@ V7HandoffPackage (canonical G0-G10 gate mapping) ──► V7 Acceptance Gates
 
 ## Linked Domains
 
-- [lib/](../../lib/) — shared primitives
-- [simulation/](../../simulation/docs/) — economic truth authority
-- [v7/](../../v7/docs/) — policy acceptance authority (G0-G10 canonical gates)
-- [contracts/](../../contracts/) — cross-domain schemas
-- [runtime/](../../runtime/docs/) — execution lifecycle
+- [lib/](../../lib/) â€” shared primitives
+- [simulation/](../../simulation/docs/) â€” economic truth authority
+- [v7/](../../v7/docs/) â€” policy acceptance authority (G0-G10 canonical gates)
+- [contracts/](../../contracts/) â€” cross-domain schemas
+- [runtime/](../../runtime/docs/) â€” execution lifecycle
+
+
+

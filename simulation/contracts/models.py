@@ -92,6 +92,7 @@ class SimulationProfile:
     mae_penalty_weight: float = 1.0
     cost_penalty_weight: float = 1.0
     time_penalty_weight: float = 0.3
+    funding_rate: float = 0.0
 
 
 @dataclass
@@ -141,6 +142,7 @@ class ActionOutcome:
     realized_r_net: float = 0.0
     fee_cost_r: float = 0.0
     slippage_cost_r: float = 0.0
+    funding_cost_r: float = 0.0
     total_cost_r: float = 0.0
     exit_reason: str = ""
     exit_price: float = 0.0
@@ -148,6 +150,7 @@ class ActionOutcome:
     hold_duration_bars: int = 0
     action_utility: float = 0.0
     path_metrics: PathMetrics = field(default_factory=PathMetrics)
+    same_candle_ambiguity: bool = False
 
 
 @dataclass
@@ -169,6 +172,7 @@ class SimulationLineage:
     cost_model_version: str = ""
     fee_model_version: str = ""
     slippage_model_version: str = ""
+    funding_model_version: str = ""
     horizon_family: str = ""
     stop_family: str = ""
     target_family: str = ""

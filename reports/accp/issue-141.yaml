@@ -1,0 +1,43 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: |
+  Funding Rate Feature Integration: Created 4 funding rate features and wired them into the
+  AlphaForge feature pipeline as the 8th active feature group. Features support both OHLCV-derived
+  proxies (when no real funding_rate data is available) and real funding_rate passthrough.
+  Ablation framework updated to include funding group for OOS expectancy validation.
+files_changed:
+  - "alphaforge/src/alphaforge/features/funding.py"  # NEW — 4 funding rate features
+  - "alphaforge/src/alphaforge/features/__init__.py"  # Funding exports and version bump
+  - "alphaforge/src/alphaforge/features/pipeline.py"  # FUNDING group enum, map, compute wiring
+  - "alphaforge/src/alphaforge/features/mode_windows.py"  # funding_window param in per-mode configs
+  - "alphaforge/src/alphaforge/validation/ablation.py"  # funding group in feature mapping
+  - "alphaforge/tests/test_feature_pipeline.py"  # 28 new funding feature tests + 30->34 updates
+  - "alphaforge/tests/test_ablation.py"  # 26->30 features, 6->7 groups, fixture updates
+  - "alphaforge/tests/test_mode_windows.py"  # funding_window in keys, 30->34 feature count
+decisions_locked:
+  - "Funding feature semantics: 4 features (funding_rate, funding_rate_ma_N, funding_rate_vol_N, funding_rate_zscore_N) — LOCKED_INITIAL_BASELINE"
+  - "OHLCV proxy formula: -(close/vwap - 1) * 100 — LOCKED_INITIAL_BASELINE"
+  - "Real funding_rate passthrough via ohlcv_data['funding_rate'] key — LOCKED_INITIAL_BASELINE"
+  - "PIPELINE_VERSION: 0.1.0 -> 0.2.0"
+  - "Active feature groups: 7 -> 8"
+  - "Total features: 30 -> 34"
+  - "Funding window defaults: SWING=10, SCALP=12, AGGRESSIVE_SCALP=16 — LOCKED_INITIAL_BASELINE"
+remaining_holds:
+  - "Empirical validation that funding features improve OOS expectancy (HOLD — requires real training + WFV)"
+  - "Funding window parameters may need recalibration after first empirical evidence (HOLD)"
+  - "Real funding_rate data integration from backfill pipeline to feature pipeline not yet wired (DEFERRED)"
+  - "OHLCV proxy quality vs real funding rates not yet validated (HOLD)"
+safe_next_step: |
+  Run real training pipeline with funding features enabled to measure OOS expectancy improvement
+  via ablation (funding group ablation should show positive OOS impact when funding features
+  contribute signal).
+commands_run:
+  - "PYTHONPATH=alphaforge/src:$PYTHONPATH python3 -m pytest alphaforge/tests/ -q --timeout=60"
+  - "PYTHONPATH=alphaforge/src:$PYTHONPATH python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ -q --timeout=60 --ignore=lib/tests/test_market_data_binance.py"
+evidence:
+  - "1613 tests passed, 3 skipped, 0 failures"
+  - "28 new funding feature tests (unit, group, determinism, real funding_rate passthrough, no-revision causality)"
+  - "8 existing test files updated for new feature count (30 -> 34)"
+  - "All boundary tests pass"
+  - "Funding feature count: 4 (funding_rate, funding_rate_ma_N, funding_rate_vol_N, funding_rate_zscore_N)"

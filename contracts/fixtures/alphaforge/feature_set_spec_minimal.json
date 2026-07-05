@@ -1,0 +1,62 @@
+{
+  "feature_set_id": "minimal-fixture-v0.1",
+  "mode": "SWING",
+  "schema_version": "1.0.0",
+  "feature_groups": [
+    "returns",
+    "volatility",
+    "atr",
+    "momentum",
+    "volume",
+    "breakout"
+  ],
+  "features": [
+    {
+      "name": "log_return_1",
+      "group": "returns",
+      "interval": "4h",
+      "window": 1,
+      "dtype": "float64"
+    },
+    {
+      "name": "parkinson_vol_20",
+      "group": "volatility",
+      "interval": "4h",
+      "window": 20,
+      "dtype": "float64"
+    },
+    {
+      "name": "atr_14",
+      "group": "atr",
+      "interval": "4h",
+      "window": 14,
+      "dtype": "float64"
+    },
+    {
+      "name": "roc_10",
+      "group": "momentum",
+      "interval": "4h",
+      "window": 10,
+      "dtype": "float64"
+    },
+    {
+      "name": "volume_ratio_20",
+      "group": "volume",
+      "interval": "4h",
+      "window": 20,
+      "dtype": "float64"
+    },
+    {
+      "name": "bb_width_20",
+      "group": "breakout",
+      "interval": "4h",
+      "window": 20,
+      "dtype": "float64"
+    }
+  ],
+  "leakage_rules": {
+    "no_future_data": true,
+    "purge_window": "4h",
+    "embargo": "4h"
+  }
+}

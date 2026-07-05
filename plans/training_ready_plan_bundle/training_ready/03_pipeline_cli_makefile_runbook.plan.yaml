@@ -1,0 +1,305 @@
+planSpecVersion: "0.1.0"
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: TR-03-PIPELINE-CLI-MAKEFILE-RUNBOOK
+  title: "Plan 03 — Pipeline CLI, Makefile, Runbook"
+  description: "Reproducible command surface: Makefile pipeline targets, CLI entrypoint, .env.example, runbook. Domain: ops."
+  createdAt: "2026-06-25T00:00:00Z"
+  humanId: TrainingReady
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+    - Makefile
+    - cli/__main__.py
+    - cli/v7_engine.py
+    - cli/__init__.py
+    - docs/runbook.md
+    - docs/commands.md
+    - .env.example
+    - configs/data.example.yaml
+    - configs/training.example.yaml
+    - tests/test_cli_commands.py
+  forbiddenFiles:
+    - lib/market_data/binance/**
+    - simulation/engine/**
+    - alphaforge/src/**
+    - v7/src/**
+    - runtime/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+  - id: WS-TR03-01-MAKEFILE
+    title: Add Pipeline Makefile Targets
+    objective: "Extend Makefile with backfill, simulate, build-dataset, train, wfv, report, pipeline, validate targets."
+    implementation:
+      instructions:
+        - "[must] Edit Makefile — add pipeline targets after existing ones. Keep all existing targets."
+        - "[must] make backfill, simulate, build-dataset, train, wfv, report, pipeline targets."
+        - "[must] make pipeline runs end-to-end: backfill→simulate→build→train→wfv→report."
+        - "[must] Each target prints step description and mapped plan ID."
+      allowedFiles: [Makefile]
+    artifactPolicy:
+      class: cli_command
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    integrationContract:
+      mode: runner_discovery
+      reason: "Makefile targets discover and invoke CLI."
+      runnerDiscovery:
+        - id: RD-TR03
+          commandRef: CMD-make-help
+    acceptanceCriteria:
+      - id: AC-TR03-01
+        description: "make help lists all new pipeline targets"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: command_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command]
+          commandRef: CMD-make-help
+        requiredEvidence: [command]
+      - id: AC-TR03-02
+        description: "All pipeline targets present in Makefile"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_contains
+          path: Makefile
+          patterns: ["backfill:", "simulate:", "build-dataset:", "train:", "wfv:", "report:", "pipeline:"]
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+  - id: WS-TR03-02-CLI
+    title: Implement CLI Entrypoint
+    objective: "Create cli/ package with argparse-based CLI. Subcommands: backfill, simulate, build, train, wfv, report, pipeline."
+    implementation:
+      instructions:
+        - "[must] Create cli/__init__.py, cli/__main__.py, cli/v7_engine.py."
+        - "[must] argparse-based. --dry-run mode. --config flag. python -m cli --help."
+        - "[must] Each subcommand maps to corresponding module."
+        - "[must] Network off by default."
+        - "[must] Tests in tests/test_cli_commands.py verify help and dry-run."
+      allowedFiles: [cli/__main__.py, cli/v7_engine.py, cli/__init__.py, tests/test_cli_commands.py]
+      expectedOutputs: [cli/__main__.py, cli/v7_engine.py]
+    artifactPolicy:
+      class: cli_command
+      wiringRequired: true
+      reachabilityRequired: true
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    integrationContract:
+      mode: runner_discovery
+      reason: "CLI is primary operator entrypoint."
+      entrypoints:
+        - id: ENTRY-TR03
+          path: cli/__main__.py
+          kind: cli_module
+      runnerDiscovery:
+        - id: RD-TR03-CLI
+          commandRef: CMD-cli-help
+    acceptanceCriteria:
+      - id: AC-TR03-03
+        description: "python -m cli --help prints usage and subcommands"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: command_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command]
+          commandRef: CMD-cli-help
+        requiredEvidence: [command]
+      - id: AC-TR03-04
+        description: "CLI dry-run exits 0 without network"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: command_output
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [command]
+          commandRef: CMD-cli-dry-run
+        requiredEvidence: [command]
+  - id: WS-TR03-03-CONFIG
+    title: Create Config Files
+    objective: ".env.example, configs/data.example.yaml, configs/training.example.yaml with safe placeholders."
+    implementation:
+      instructions:
+        - "[must] Create .env.example with BINANCE_API_KEY=, BINANCE_SECRET= placeholders."
+        - "[must] Create configs/data.example.yaml with data paths, symbols, intervals."
+        - "[must] Create configs/training.example.yaml with model params, gate settings."
+        - "[must] No real credentials. All example values only."
+      allowedFiles: [.env.example, configs/data.example.yaml, configs/training.example.yaml]
+      expectedOutputs: [.env.example, configs/data.example.yaml, configs/training.example.yaml]
+    artifactPolicy:
+      class: config
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+  - id: WS-TR03-04-RUNBOOK
+    title: Write Runbook
+    objective: "docs/runbook.md and docs/commands.md for new developer onboarding."
+    implementation:
+      instructions:
+        - "[must] Create docs/runbook.md: getting started, step-by-step pipeline guide."
+        - "[must] Create docs/commands.md: every make/CLI command documented."
+        - "[must] Distinguish offline (fixture) and online (real data) modes."
+      allowedFiles: [docs/runbook.md, docs/commands.md]
+      expectedOutputs: [docs/runbook.md, docs/commands.md]
+    artifactPolicy:
+      class: documentation
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR03-05
+        description: "runbook.md exists with step-by-step guide"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_exists
+          path: docs/runbook.md
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+      - id: AC-TR03-06
+        description: "runbook references all pipeline steps"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_contains
+          path: docs/runbook.md
+          patterns: ["backfill", "simulate", "build", "train", "wfv"]
+          deterministic: true
+          canSatisfyFinalGate: false
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+commands:
+  exactAllowedCommands:
+    - id: CMD-make-help
+      kind: discovery
+      command: "make help"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 30
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-cli-help
+      kind: discovery
+      command: "PYTHONPATH=alphaforge/src:. python3 -m cli --help"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 30
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-cli-dry-run
+      kind: discovery
+      command: "PYTHONPATH=alphaforge/src:. python3 -m cli backfill --dry-run --symbols BTCUSDT --intervals 4h --start 2024-01-01 --end 2024-01-02"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 30
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-test-cli
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest tests/test_cli_commands.py -q"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: curl
+      pattern: "^curl\\s"
+      reason: "No network. CLI uses offline/dry-run by default."
+    - command: real keys
+      pattern: "BINANCE_API_KEY=[A-Za-z0-9]|api_key=[A-Za-z0-9]"
+      reason: "No real credentials in config templates."
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: [diff, source, command, test_output, report]
+  hashWhenAvailable: true
+gates:
+  sequence: [SchemaGate, LockGate, EvidenceGate, WiringGate, ExecGate, FinalGate]
+  verdicts: [PASS, HOLD, FAIL]
+  reasonCodes:
+    SchemaGate: [PLAN_SCHEMA_INVALID]
+    LockGate: [PLAN_NOT_LOCKED]
+    EvidenceGate: [REQUIRED_EVIDENCE_MISSING]
+    WiringGate: [ORPHAN_MODULE]
+    ExecGate: [TEST_COMMAND_FAILED]
+    FinalGate: [FINAL_VALIDATION_FAILED]
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python3 -m pytest tests/test_cli_commands.py -q"
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/training_ready/03_pipeline_cli_makefile_runbook.lock.json
+  hashes: [planHash, acceptanceCriteriaHash, artifactPolicyHash, commandPolicyHash, allowedFilesHash, forbiddenFilesHash]
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

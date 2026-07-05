@@ -1,0 +1,37 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: >
+  Issue #103 — V7 Phase 3: Mode-specific label semantics document.
+  Created LabelSpec dataclass with per-mode defaults for SWING, SCALP, and
+  AGGRESSIVE_SCALP, including primary_interval, label_window, min_edge_r,
+  and success/ambiguity thresholds. Updated v7/__init__.py to expose labels
+  module. All 23 tests pass.
+files_changed:
+  - v7/labels/__init__.py
+  - v7/labels/contracts.py
+  - v7/tests/test_labels.py
+  - v7/__init__.py
+  - v7/docs/roadmap.md
+decisions_locked:
+  - label: "LabelSpec per-mode values"
+    status: "LOCKED_INITIAL_BASELINE"
+    evidence: "LabelSpec frozen dataclass with SWING (4h, 24, 0.25), SCALP (1h, 48, 0.15), AGGRESSIVE_SCALP (15m, 96, 0.10)"
+  - label: "Label module scaffold"
+    status: "LOCKED_INITIAL_BASELINE"
+    evidence: "v7/labels/__init__.py + contracts.py, exposed via v7/__init__.py"
+remaining_holds:
+  - "Label generation pipeline (HOLD — requires label gen implementation consuming SimulationOutput)"
+  - "Label-to-feature wiring (HOLD — requires feature pipeline)"
+  - "SCALP/AGGRESSIVE_SCALP thresholds (HOLD — empirical evidence required)"
+safe_next_step: >
+  Implement label generator v7/labels/generator.py that consumes
+  SimulationOutput and produces classification/regression targets per LabelSpec.
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest v7/tests/test_labels.py -v"
+evidence:
+  - "23/23 tests passed"
+  - "All mode-specific values verified (SWING: 4h/24/0.25, SCALP: 1h/48/0.15, AGGRESSIVE_SCALP: 15m/96/0.10)"
+  - "Edge threshold validation: all min_edge_r > 0, all max_mae_r_for_success < 0"
+  - "Immutability test: FrozenInstanceError raised on mutation attempt"
+  - "SimulationOutput mode coverage: every TradingMode has a corresponding LabelSpec"

@@ -1,0 +1,43 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Implement Research Artifact Registry + Canonical Run Index (#127). Single index file at alphaforge_report/research_run_index.json with fields: run_id, mode, timestamp, canonical_report_path, candidate_count, trial_count, verdict, artifact_paths, superseded_reports, duplicate_reports. Clear canonical vs superseded distinction. Update on every run via ResearchRunIndex class."
+files_changed:
+  - alphaforge/src/alphaforge/reports/run_index.py              # NEW: ResearchRunIndex class
+  - alphaforge/src/alphaforge/reports/__init__.py               # MODIFIED: export ResearchRunIndex
+  - alphaforge/tests/test_run_index.py                          # NEW: 29 tests
+  - cli/real_training.py                                        # MODIFIED: hook run index after report generation
+  - cli/v7_engine.py                                            # MODIFIED: hook run index in cmd_report
+decisions_locked:
+  - subject: "ResearchRunIndex index schema"
+    status: "LOCKED_INITIAL_BASELINE"
+    detail: "Index version 1.0.0. Fields: run_id, mode, timestamp, canonical_report_path, candidate_count, trial_count, verdict, artifact_paths, superseded_reports, duplicate_reports, status. Canonical map tracks mode->run_id."
+  - subject: "Canonical vs superseded lifecycle"
+    status: "LOCKED"
+    detail: "When a new run is added for a mode, the previous canonical is marked superseded. Duplicate detection via run_id collision. Status values: canonical, superseded, duplicate."
+  - subject: "Index file location"
+    status: "LOCKED_INITIAL_BASELINE"
+    detail: "alphaforge_report/research_run_index.json relative to repo root. Configurable via constructor parameter."
+  - subject: "CLI integration points"
+    status: "LOCKED_INITIAL_BASELINE"
+    detail: "cli/real_training.py and cli/v7_engine.py cmd_report both call ResearchRunIndex.add_run() + write() after generating reports."
+remaining_holds:
+  - "No real profitability evidence (HOLD — requires real training + WFV)"
+  - "SCALP/AGGRESSIVE_SCALP thresholds (HOLD — empirical backtest evidence required)"
+  - "Run index auto-cleanup of stale entries (DEFERRED — not required for initial implementation)"
+safe_next_step: "P0.9B: Data/label/feature pipeline or next issue on roadmap"
+commands_run:
+  - "PYTHONPATH=.:alphaforge/src python3 -m pytest alphaforge/tests/test_run_index.py -v (29/29 passed)"
+  - "PYTHONPATH=.:alphaforge/src python3 -m pytest alphaforge/tests/ -q -x --timeout=60 (1112/1112 passed)"
+  - "PYTHONPATH=.:alphaforge/src python3 -m pytest integration/tests/ -q -x --timeout=60 (176/176 passed)"
+  - "PYTHONPATH=.:alphaforge/src python3 -m pytest lib/tests/ simulation/tests/ -q -x --timeout=60 (352/352 passed)"
+  - "make check-contracts (20/20 passed)"
+  - "make check-boundaries (6/6 passed)"
+evidence:
+  - "AlphaForge tests: 1112 passed, 1 skipped"
+  - "Integration tests: 176 passed, 2 skipped"
+  - "Lib + simulation tests: 352 passed"
+  - "Contract checks: 20/20 passed"
+  - "Boundary checks: 6/6 passed (5 passed, 1 skipped)"
+  - "Run index tests: 29/29 passed"
+  - "Commit hash: b9a5b47"

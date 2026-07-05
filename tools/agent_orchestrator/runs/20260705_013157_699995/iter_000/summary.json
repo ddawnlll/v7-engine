@@ -1,0 +1,17 @@
+{
+  "iteration": 1,
+  "goal": "Create and test one deterministic AlphaForge alpha candidate",
+  "strategist_task": "Create a new alpha candidate file at alphaforge/src/alphaforge/candidates/mean_reversion_5d.py that implements a simple 5-day mean reversion factor. The factor should compute the z-score of the latest close relative to the rolling 5-day mean and standard deviation, then return -zscore (so high zscore -> sell signal). Include a function `generate_signals(data: pd.DataFrame) -> pd.Series` that takes a DataFrame with columns ['date','close'] and returns a Series of signals aligned by date. Also create a companion test script at alphaforge/src/alphaforge/candidates/test_mean_reversion_5d.py that tests the factor on synthetic data (e.g., a sine wave with noise) and prints the following report fields in its output: train_start, train_end, test_start, test_end, n_combinations, metric (use IC between signals and forward 1-day returns as the metric). In the completion summary, explicitly include these fields with their values.",
+  "worker_exit_code": -1,
+  "gate_verdict": "FAIL",
+  "gate_reasons": [
+    "Worker exited with code -1",
+    "Worker log exists (257164 bytes)",
+    "Git HEAD: c0449a845319",
+    "No tracked files modified",
+    "Changes outside allowed paths:\n?? alphaforge/src/alphaforge/alphas/\n?? alphaforge/src/alphaforge/factors/alpha_volume_trend.py\n?? scripts/backtest_alpha_momentum.py\n?? test_alpha_volume_trend.py\n?? tools/momentum_factor_research/",
+    "No authority files touched",
+    "Report missing required fields: train_start, train_end, test_start, test_end, n_combinations, metric"
+  ],
+  "overall_status": "FAIL"
+}

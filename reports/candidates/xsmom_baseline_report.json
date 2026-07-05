@@ -1,0 +1,110 @@
+{
+  "report_id": "XSMOM_BASELINE_V01",
+  "generated_at": "2026-07-02T16:58:14.371890+00:00",
+  "data_source": "real (data_lake/raw/binance/um/klines)",
+  "data_range": {
+    "start": "2023-05-03T16:00:00Z",
+    "end": "2024-09-11T09:00:00Z",
+    "n_bars": 10484
+  },
+  "strategy_config": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT",
+      "XRPUSDT",
+      "ADAUSDT",
+      "AVAXUSDT",
+      "DOGEUSDT",
+      "DOTUSDT",
+      "LINKUSDT",
+      "MATICUSDT",
+      "NEARUSDT",
+      "ATOMUSDT",
+      "FILUSDT",
+      "APTUSDT",
+      "SUIUSDT",
+      "OPUSDT",
+      "ARBUSDT",
+      "INJUSDT",
+      "RUNEUSDT"
+    ],
+    "symbols_loaded": 20,
+    "intervals": [
+      "1h"
+    ],
+    "momentum_windows_hours": [
+      1,
+      4,
+      12,
+      24
+    ],
+    "long_pct": 0.2,
+    "short_pct": 0.2,
+    "max_exposure_pct": 0.4,
+    "max_symbols_per_side": 4,
+    "rebalance_hours": 4,
+    "fees": {
+      "taker": 0.0004,
+      "maker": 0.00018,
+      "slippage": 0.0001,
+      "uncertainty_buffer": 0.001
+    }
+  },
+  "strategy_performance": {
+    "net_return": -0.723042,
+    "gross_return": -0.723042,
+    "total_cost": 7.954,
+    "sharpe": -7.1421,
+    "profit_factor": 0.6171,
+    "max_drawdown": -0.7335,
+    "n_trades": 15908,
+    "n_long": 7579,
+    "n_short": 8329,
+    "n_rebalances": 2621,
+    "n_signals_generated": 52300,
+    "n_trades_gated": 1533,
+    "n_trades_executed": 19387,
+    "exposure_pct": 9.2,
+    "beat_no_trade": false
+  },
+  "cost_analysis": {
+    "n_rebalance_periods": 2615,
+    "per_rebalance_cost": 0.0005,
+    "cost_drag_factor_naive": 0.270407,
+    "cost_only_impact_pct": 72.96,
+    "note": "The per-rebalance cost of 0.0005 charged 2615 times compounds to a 73.0% erosion even with zero-alpha signals. Sharpe ratios are inflated in magnitude because 3/4 of return entries are zero (flat non-rebalance bars), deflating the denominator."
+  },
+  "baselines": {
+    "buy_and_hold_btc": {
+      "net_return": 0.990184,
+      "sharpe": 1.2324,
+      "profit_factor": 1.0563,
+      "max_drawdown": -0.323915
+    },
+    "equal_weight_all": {
+      "net_return": 0.341383,
+      "sharpe": 0.7012,
+      "profit_factor": 1.0243,
+      "max_drawdown": -0.615284
+    },
+    "random_ranking": {
+      "net_return_mean": -0.601454,
+      "net_return_std": 0.00315,
+      "sharpe_mean": -18.3579,
+      "sharpe_std": 0.882,
+      "profit_factor_mean": 0.2401,
+      "max_drawdown_mean": -0.601608,
+      "n_runs": 50
+    }
+  },
+  "comparisons": {
+    "outperforms_no_trade": false,
+    "outperforms_buy_and_hold_btc": false,
+    "outperforms_equal_weight": false,
+    "outperforms_random_ranking": false
+  },
+  "verdict": "FAIL",
+  "verdict_reason": "Strategy does NOT generate positive net return. The dominant factor is cost erosion: 73.0% of portfolio value is consumed by per-rebalance fees and slippage over 2615 periods. Baselines without trading costs (BTC buy-hold, equal-weight) show strong positive returns, suggesting the momentum signal may have positive expectancy masked by the cost model."
+}

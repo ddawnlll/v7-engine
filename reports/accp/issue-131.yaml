@@ -1,0 +1,28 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: >
+  Fixed per-fold field name mismatch between cli/real_training.py and
+  alphaforge/src/alphaforge/reports/empirical.py. real_training.py now writes
+  per-fold metrics with keys sharpe, expectancy_r, win_rate, trade_count,
+  sum_gross_r, sum_net_r, sum_cost_r matching empirical.py's expectations.
+  Also fills oos_summary with computed (not zero) values.
+files_changed:
+  - "cli/real_training.py"
+decisions_locked:
+  - key: "per_fold_metrics_keys"
+    decision: "Use empirical.py's expected keys (sharpe, expectancy_r, win_rate, trade_count, sum_gross_r, sum_net_r, sum_cost_r) in per-fold metrics"
+    status: "LOCKED"
+  - key: "oos_metric_computation"
+    decision: "Compute OOS sharpe/expectancy from aggregated per-fold returns using walk_forward_runner canonical approach (classification-based return attribution with annualization factor 2190)"
+    status: "LOCKED"
+remaining_holds: []
+safe_next_step: "Run real_training.py pipeline and verify report verdict reflects actual model performance"
+commands_run:
+  - "PYTHONPATH=alphaforge/src python3 -c '...'  # Verified 47 existing empirical report tests pass"
+  - "PYTHONPATH=.:alphaforge/src python3 -c '...'  # Verified key alignment fix works"
+evidence:
+  - "47/47 empirical report tests pass"
+  - "_fold_metrics_present() returns True with correct per-fold keys (trade_count)"
+  - "_fold_stability_score() returns >0 with correct sharpe values"
+  - "build_empirical_mode_research_report produces valid CANDIDATE_FOR_V7_GATES verdict with real metrics"

@@ -1,0 +1,7 @@
+accp_version: "2.0.0"
+report_id: "ISSUE-89-CLOSURE"
+issue_ref: "#89"
+title: "v0.1 closure — deferred to v0.2"
+result: "PASS"
+evidence: ["Policy Critic PR #37 merged (7492cdf)", "v0.2 execution plan established 2026-06-26"]
+safe_next_step: "Revisit in v0.2 with empirical evidence"

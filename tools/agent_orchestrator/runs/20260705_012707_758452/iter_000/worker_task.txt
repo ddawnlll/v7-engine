@@ -1,0 +1,34 @@
+Implement the requested task below.
+
+## Task
+
+Create a deterministic alpha factor script that implements a simple momentum-based signal using rolling 5-day and 20-day returns on stock data. 1. Write the factor script (e.g., 'momentum_factor.py') that loads price data from a CSV (assumed to have columns: 'date', 'ticker', 'close'), computes the 5-day and 20-day rolling returns, and outputs a combined signal (difference of normalized returns). 2. Run a backtest over the period 2020-01-01 to 2022-12-31, with training from 2020-01-01 to 2021-12-31 and testing from 2022-01-01 to 2022-12-31. 3. Evaluate the factor's performance using information coefficient (IC) and Sharpe ratio. 4. Report the following in your completion summary: train_start='2020-01-01', train_end='2021-12-31', test_start='2022-01-01', test_end='2022-12-31', n_combinations=1, metric='IC' with its value.
+
+## Rules
+
+- Implement only what is requested. Do not over-engineer.
+- If the task asks for code changes, run relevant tests/checks afterward.
+- Do NOT modify these authority files: evaluation.py, factors.py,
+  simulation_adapter.py, fast_simulator.py, authority_map.md
+- Never claim success without evidence.
+
+## Required — Completion Summary
+
+Your final output MUST include a completion summary with these fields:
+
+```
+## Completion Summary
+- Files changed: [...]
+- Commands run: [...]
+- train_start: <date>
+- train_end: <date>
+- test_start: <date>
+- test_end: <date>
+- n_combinations: <number of trials>
+- metric: <key metric value>
+- Results: [...]
+- Status: SUCCESS | FAILURE | BLOCKED
+```
+
+The gate checks for these fields. If they are missing, the iteration FAILs
+and your work may be discarded.

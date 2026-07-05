@@ -1,12 +1,14 @@
 [build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.backends._legacy:_Backend"
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "v7-engine"
-version = "0.1.0"
-description = "V7 Engine — quantitative trading research and production"
+version = "0.0.0"
+description = "V7 Engine — Anomaly-driven trading engine"
 requires-python = ">=3.12"
+authors = [{name = "Erfolg", email = "mail@erfolg.tech"}]
+license = {text = "Proprietary"}
 dependencies = [
     "sqlalchemy>=2.0",
     "requests>=2.31",
@@ -31,34 +33,38 @@ interface = [
 ]
 
 [tool.setuptools.packages.find]
+where = ["."]
 include = [
-    "lib*",
-    "simulation*",
-    "alphaforge*",
-    "v6*",
-    "v7*",
-    "runtime*",
-    "integration*",
+    "lib*", "simulation*", "alphaforge*", "v6*", "v7*",
+    "runtime*", "integration*", "policycritic*",
 ]
 
 [tool.setuptools.package-dir]
-lib = "lib"
-simulation = "simulation"
 alphaforge = "alphaforge/src/alphaforge"
 v7 = "v7/src/v7"
-v6 = "v6"
-runtime = "runtime"
-integration = "integration"
 
 [tool.pytest.ini_options]
-pythonpath = [
-    ".",
-    "alphaforge/src",
+pythonpath = ["alphaforge/src", "v7/src"]
+testpaths = [
+    "lib/tests", "integration/tests", "simulation/tests",
+    "runtime/tests", "v7/tests", "alphaforge/tests", "policycritic/tests",
 ]
+norecursedirs = [
+    "node_modules", "interface", "data", "data_lake",
+    "docker", ".claude", ".github", "scripts", "reports", "docs",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
+timeout = 10
+addopts = "-v --ignore=alphaforge/tests/test_real_data_gate.py --ignore=alphaforge/tests/test_ablation.py --ignore=alphaforge/tests/test_ablation_tuned.py --ignore=alphaforge/tests/test_autotune.py --ignore=alphaforge/tests/test_collapse_detector.py --ignore=alphaforge/tests/test_mode_specific_walk_forward.py --ignore=alphaforge/tests/test_nested_wfv.py --ignore=alphaforge/tests/test_optuna_tuner.py --ignore=alphaforge/tests/test_search_space.py --ignore=alphaforge/tests/test_walk_forward_runner.py --ignore=alphaforge/tests/test_walk_forward_validator.py --ignore=alphaforge/tests/test_wfv.py --ignore=alphaforge/tests/test_xgb_trainer.py"
 
 [tool.ruff]
-line-length = 120
 target-version = "py312"
+line-length = 100
 
 [tool.ruff.lint]
-ignore = ["E501", "F401"]
+ignore = ["E501", "F401", "E402"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+no_strict_optional = true

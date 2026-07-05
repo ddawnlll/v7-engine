@@ -1,0 +1,18 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-OVERNIGHT-07-HANDOFF-DRY-RUN
+  report_type: SUBPLAN_EXECUTION
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-OVERNIGHT-AUTOPILOT-ALPHAFORGE-SEQUENTIAL-EXECUTION
+  plan_id: ALPHAFORGE-07-V7-HANDOFF-DRY-RUN
+  priority: P1
+result: PASS
+scope_confirmation: "Plan 07 V7 handoff dry run verified — 63/63 tests pass (52 dry_run + 11 handoff_builder), guards clean"
+targeted_tests:
+  - {command: "pytest alphaforge/tests/test_dry_run.py test_handoff_builder.py", result: "63 passed (52+11)", exit: 0}
+guard_scan: [{scan: "forbidden patterns", result: "CLEAN"}]
+files_changed: []
+failed_ACs: []
+remaining_holds: [funding_deferred, no_real_market_data, no_model_training, no_live_promotion]
+safe_next_step: "Proceed to plan 08"

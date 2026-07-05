@@ -1,0 +1,15 @@
+{
+  "worker_task": "Create a Python script `alpha_candidate.py` that implements a simple momentum-based alpha factor: for each stock, compute the 5-day rolling average of daily returns. Use a synthetic price DataFrame (10 stocks, 252 days) from `numpy.random.randn` cumulated to prices. Output the alpha series as a DataFrame with columns as stock tickers and index as dates. Save the alpha to `alpha_output.csv`. Also create a minimal test script `test_alpha.py` that asserts the output file exists and has the expected shape (252 rows, 10 columns).",
+  "rationale": "This is a single, self-contained, deterministic alpha candidate that can be verified by file existence and shape checks. It uses only standard libraries (pandas, numpy) and produces a CSV artifact for the gate to inspect.",
+  "expected_artifacts": [
+    "alpha_candidate.py",
+    "alpha_output.csv",
+    "test_alpha.py"
+  ],
+  "success_criteria": [
+    "alpha_output.csv exists",
+    "alpha_output.csv has 252 rows and 10 columns",
+    "test_alpha.py runs without errors and exits with code 0"
+  ],
+  "risk_notes": "Ensure synthetic data uses a fixed seed (e.g., np.random.seed(42)) for reproducibility. Keep the alpha formula simple to avoid logic errors."
+}

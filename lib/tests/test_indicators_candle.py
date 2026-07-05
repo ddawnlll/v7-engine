@@ -45,10 +45,10 @@ class TestCandleRatios:
         """Flat candle (high==low) returns NaN for all three ratios."""
         o = body_ratio([10], [10], [10], [10])
         u = upper_wick_ratio([10], [10], [10], [10])
-        l = lower_wick_ratio([10], [10], [10], [10])
+        lw = lower_wick_ratio([10], [10], [10], [10])
         assert math.isnan(o[0])
         assert math.isnan(u[0])
-        assert math.isnan(l[0])
+        assert math.isnan(lw[0])
 
     def test_ratios_sum_to_one(self):
         """For a single candle, body + upper wick + lower wick = 1.0."""
@@ -58,8 +58,8 @@ class TestCandleRatios:
         closes = [15]
         b = body_ratio(opens, highs, lows, closes)[0]
         u = upper_wick_ratio(opens, highs, lows, closes)[0]
-        l = lower_wick_ratio(opens, highs, lows, closes)[0]
-        assert b + u + l == pytest.approx(1.0)
+        lw = lower_wick_ratio(opens, highs, lows, closes)[0]
+        assert b + u + lw == pytest.approx(1.0)
 
     def test_ratios_in_0_1(self):
         """All ratios are in [0, 1] for valid non-flat candles."""

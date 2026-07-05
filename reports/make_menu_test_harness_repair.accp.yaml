@@ -1,0 +1,79 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  status: PASS
+  summary: "Repaired make/menu test execution on systems without python binary, removed Makefile candidate warnings, and restored local test suite pass."
+scope_confirmation:
+  requested_scope: "Fix make menu/test failure caused by missing python and test all."
+  completed_scope:
+    - "Makefile now uses configurable PYTHON with .venv/bin/python3 preference and python3 fallback."
+    - "make install bootstraps pip via ensurepip when absent."
+    - "make menu passes active interpreter to sub-make and uses sys.executable for Python modules."
+    - "Duplicate candidate target and malformed PHONY continuation removed."
+    - "make test-all runs lib, integration, and simulation local tests."
+    - "Fixed follow-on blockers revealed by test-all: symlink-stable DataGateway paths, required AlphaForge IC metrics, and AlphaForge boundary import violation."
+  out_of_scope:
+    - "No trading mode thresholds changed."
+    - "No runtime execution or policy logic changed."
+files_changed:
+  - path: "Makefile"
+    change: "Added PYTHON selection, pip bootstrap, converted test/check targets to PYTHON, expanded test-all, removed duplicate candidate target."
+  - path: "cli/menu.py"
+    change: "Uses sys.executable and exports PYTHON to sub-make."
+  - path: "lib/data_lake/gateway.py"
+    change: "Preserves data_dir path instead of resolving symlinked temp directories."
+  - path: "alphaforge/src/alphaforge/reports/builders.py"
+    change: "Adds required oos_ic and oos_rank_ic scaffold metrics."
+  - path: "alphaforge/src/alphaforge/mine/candidate_dataset.py"
+    change: "Removes direct simulation import and uses structural typing via Any."
+  - path: "alphaforge/docs/ai_summary.md"
+    change: "Documents AlphaForge boundary/schema repair."
+  - path: "v7/docs/roadmap.md"
+    change: "Adds Make/Menu Test Harness Repair ledger entry."
+  - path: "reports/make_menu_test_harness_repair.accp.yaml"
+    change: "Completion report."
+decisions_locked:
+  - decision: "Local make/menu test targets must not require a python binary; python3 or the repository venv is the supported default."
+    status: LOCKED
+  - decision: "AlphaForge source must not directly import simulation; adapters consume contract-shaped payloads/objects across the boundary."
+    status: LOCKED
+  - decision: "ModeResearchReport scaffold payloads must include schema-required primary metrics oos_ic and oos_rank_ic."
+    status: LOCKED
+remaining_holds:
+  - hold: "Pytest warning: unknown config option timeout."
+    status: HOLD_NON_BLOCKING
+    release_condition: "Install/register pytest-timeout or remove timeout config assumption."
+  - hold: "Pytest warning: unknown mark integration."
+    status: HOLD_NON_BLOCKING
+    release_condition: "Register integration marker in pytest config."
+safe_next_step:
+  - "Optionally clean up pytest warnings by adding marker registration and pytest-timeout dependency/config alignment."
+commands_run:
+  - command: "which python3"
+    result: "PASS — /opt/homebrew/bin/python3"
+  - command: "make install"
+    result: "PASS after ensurepip bootstrap was added/run for .venv."
+  - command: "make test"
+    result: "PASS — lib test target succeeds via .venv/bin/python3."
+  - command: "make test-all"
+    result: "PASS — local lib/integration/simulation suite succeeds."
+  - command: "make check-boundaries && make check-contracts"
+    result: "PASS — boundaries/contracts pass."
+  - command: ".venv/bin/python3 -m pytest alphaforge/tests/test_candidate_dataset.py integration/tests/test_alphaforge_report_builders.py integration/tests/test_alphaforge_research_report.py integration/tests/test_cross_domain_boundaries.py -q"
+    result: "PASS — 60 passed, 1 skipped, 1 warning."
+  - command: "PYTHONPATH=. .venv/bin/python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+    result: "PASS — 792 passed, 2 skipped, 2 warnings."
+  - command: "printf 'test\\n1\\n\\n0\\n' | make menu"
+    result: "PASS — menu make test choice returns OK."
+  - command: "printf 'test\\n3\\n\\n0\\n' | make menu"
+    result: "PASS — menu make test-all choice returns OK."
+evidence:
+  tests:
+    - "make test: exit 0"
+    - "make test-all: exit 0"
+    - "Full local pytest command: 792 passed, 2 skipped, 2 warnings"
+    - "Focused AlphaForge/boundary command: 60 passed, 1 skipped, 1 warning"
+    - "Non-interactive menu choice 1 and choice 3 both printed ✓ OK"
+  warnings:
+    - "PytestConfigWarning: Unknown config option timeout"
+    - "PytestUnknownMarkWarning: Unknown pytest.mark.integration"

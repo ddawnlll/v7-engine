@@ -10,7 +10,7 @@ Pure math — no state, no adapters, no business logic.
 Calls existing lib.costs.fees and lib.costs.slippage primitives.
 """
 
-from lib.costs.fees import estimate_fee
+from lib.costs.fees import FeeTier, estimate_fee
 from lib.costs.slippage import get_slippage
 
 
@@ -19,7 +19,7 @@ def fee_cost_r(
     entry_price: float,
     atr: float,
     stop_multiplier: float,
-    tier: str = "taker",
+    tier: FeeTier = "taker",
 ) -> float:
     """Compute fee cost in R-multiples.
 
@@ -82,7 +82,7 @@ def total_cost_r(
     entry_price: float,
     atr: float,
     stop_multiplier: float,
-    tier: str = "taker",
+    tier: FeeTier = "taker",
     avg_liquidity: float = 0.0,
 ) -> float:
     """Compute total cost (fee + slippage) in R-multiples.

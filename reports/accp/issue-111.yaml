@@ -1,0 +1,45 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+result: PASS
+scope_confirmation: |
+  Issue #111 Lib Phase 2 — extend lib/costs/ with funding-aware cost functions.
+  Implemented four deliverables:
+  1. lib/costs/funding_impact.py — funding_cost_r per mode (SWING/SCALP/AGGRESSIVE_SCALP)
+     with mode-specific funding interval defaults from simulation/docs/cost_model.md
+  2. lib/costs/combined.py — combined total_cost_r summing fee + slippage + funding
+  3. Extended lib/costs/__init__.py exports
+  4. Test files: test_costs_funding.py (20 tests), test_costs_combined.py (11 tests)
+
+files_changed:
+  - lib/costs/__init__.py
+  - lib/costs/funding_impact.py
+  - lib/costs/combined.py
+  - lib/tests/test_costs_funding.py
+  - lib/tests/test_costs_combined.py
+
+decisions_locked:
+  - FUNDING_INTERVAL_HOURS = 8.0 (standard perpetual exchange default)
+  - Mode default intervals: SWING=15.0, SCALP=2.0, AGGRESSIVE_SCALP=0.0
+  - Direction sign: LONG=+1 (pays funding when rate>0), SHORT=-1 (receives funding)
+  - AGGRESSIVE_SCALP funding=0.0 by default (negligible per cost_model.md); overridable via explicit holding_hours
+  - combined.total_cost_r supersedes r_costs.total_cost_r at package level but old import path remains valid
+  - All functions type-annotated, frozen dataclass pattern respected (pure functions)
+
+remaining_holds:
+  - HOLD: Funding cost parameters are LOCK_CANDIDATE per cost_model.md — requires empirical validation before promotion to LOCKED
+  - HOLD: Perp trading remains blocked at G3 until full simulation integration
+  - HOLD: Pro-rata holding_overlap_rule not yet implemented (uses full interval count; conservative)
+
+safe_next_step: |
+  Integration: wire funding_cost_r into simulation cost model for perp symbols
+  and verify against exchange funding rate data.
+
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_costs_funding.py lib/tests/test_costs_combined.py -q"
+
+evidence:
+  - "31/31 new tests pass (20 funding + 11 combined)"
+  - "Existing test suite unaffected: 31/31 existing cost tests still pass"
+  - "Domain boundaries respected: lib/costs imports no v7/alphaforge/simulation modules"
+  - "All functions type-annotated, match existing code style"

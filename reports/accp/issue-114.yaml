@@ -1,0 +1,32 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: >
+  Issue #114 — Lib Phase 1: extend lib/indicators/ with microstructure-aware indicators.
+  Implemented spread.py, volume_profile.py, microstructure.py and 36 tests.
+files_changed:
+  - lib/indicators/__init__.py
+  - lib/indicators/spread.py
+  - lib/indicators/volume_profile.py
+  - lib/indicators/microstructure.py
+  - lib/tests/test_indicators_spread.py
+  - lib/tests/test_indicators_microstructure.py
+decisions_locked:
+  - "parkinson_spread — per-bar spread from high-low range scaled by Parkinson constant sqrt(1/(4*ln(2)))"
+  - "rolling_parkinson_spread — rolling window spread using mean squared log-ratio"
+  - "corwin_schultz_spread — two-day high-low spread estimator (Corwin & Schultz 2012)"
+  - "typical_price, vwap, rolling_vwap — volume-weighted price calculations"
+  - "amihud_illiquidity — mean absolute return per unit volume (Amihud 2002)"
+  - "roll_spread_estimator — Roll 1984 serial-covariance spread estimator, clamped to 0 for positive covariance"
+remaining_holds:
+  - "No empirical calibration against real market data (no labeled spread data available)"
+  - "Corwin-Schultz estimator may produce NaN for variance-dominated periods — documented behavior"
+safe_next_step: >
+  Wire indicators into alphaforge feature pipeline or use as runtime microstructure
+  signals. Add empirical spread benchmarks if labeled tick data becomes available.
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ -q"
+evidence:
+  - "280 tests passed (244 existing + 36 new)"
+  - "All new test files pass: 20 in test_indicators_spread.py, 16 in test_indicators_microstructure.py"
+  - "Commit hash: $(git rev-parse HEAD)"

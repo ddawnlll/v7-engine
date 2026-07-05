@@ -1,0 +1,177 @@
+# =============================================================================
+# V7 Engine — Data Configuration (example)
+# =============================================================================
+# Copy to configs/data.yaml and customise.
+#
+#   cp configs/data.example.yaml configs/data.yaml
+# =============================================================================
+
+# ── Symbol universe (60 Binance USDT perpetual pairs) ─────────────
+# Target: 60 symbols per v7 architecture ("up to 60 symbols").
+# Progressive scaling plan:
+#   v0.1: fixture data only (done)
+#   v0.2: T1-T3 (20) — first real-data pipeline validation
+#   v0.3: T4 (40) — expanded empirical tuning
+#   v0.4: T5 (60) — full v7 target universe
+#
+# Binance USDT-M perpetuals launched 2019-09 (BTC first).
+# Start dates aim for ~5 years of data where available.
+# Per-symbol overrides set for coins with less history.
+symbols:
+  # ── Tier 1 — Majors (2), perpetual since 2019-09 ─────────────────
+  - BTCUSDT
+  - ETHUSDT
+  # ── Tier 2 — Large Caps (8), perpetual 2020-2021 ─────────────────
+  - BNBUSDT
+  - SOLUSDT
+  - XRPUSDT
+  - ADAUSDT
+  - DOGEUSDT
+  - AVAXUSDT
+  - DOTUSDT
+  - LINKUSDT
+  # ── Tier 3 — Mid Caps (10), perpetual 2021-2022 ──────────────────
+  - MATICUSDT
+  - UNIUSDT
+  - ATOMUSDT
+  - LTCUSDT
+  - APTUSDT
+  - ARBUSDT
+  - OPUSDT
+  - INJUSDT
+  - RNDRUSDT
+  - FILUSDT
+  # ── Tier 4 — Liquid Alts (20), perpetual 2022-2024 ───────────────
+  - TIAUSDT
+  - SEIUSDT
+  - SUIUSDT
+  - WIFUSDT
+  - PEPEUSDT
+  - BONKUSDT
+  - FETUSDT
+  - WLDUSDT
+  - STRKUSDT
+  - JUPUSDT
+  - PYTHUSDT
+  - JTOUSDT
+  - RUNEUSDT
+  - AAVEUSDT
+  - CRVUSDT
+  - FTMUSDT
+  - ENAUSDT
+  - OMUSDT
+  - TAOUSDT
+  - KAITOUSDT
+  # ── Tier 5 — Volume Rotation (20), perpetual 2021-2024 ───────────
+  - GALAUSDT
+  - SANDUSDT
+  - MANAUSDT
+  - AXSUSDT
+  - GRTUSDT
+  - LDOUSDT
+  - MKRUSDT
+  - ICPUSDT
+  - ETCUSDT
+  - NEARUSDT
+  - AEVOUSDT
+  - PENDLEUSDT
+  - EIGENUSDT
+  - ZKUSDT
+  - METISUSDT
+  - STXUSDT
+  - FLOWUSDT
+  - XLMUSDT
+  - ALGOUSDT
+  - EGLDUSDT
+
+# ── Timeframe intervals (all mode intervals) ──────────────────────
+# SWING: 4h primary, 1d context, 1h refinement
+# SCALP: 1h primary, 4h context, 15m refinement
+# AGGRESSIVE_SCALP: 15m primary, 1h context, 5m refinement
+intervals:
+  - 5m
+  - 15m
+  - 1h
+  - 4h
+  - 1d
+
+# ── Lookback — per-symbol start dates (5-year target) ────────────
+# For 6-fold walk-forward validation at SWING primary (4h):
+#   1000 bars × 6 folds ≈ 2.5+ years minimum
+#   5 years (2021-01-01) gives ~41 months as of mid-2026 → ~10 folds possible
+#
+# Binance USDT-M perpetual listing timeline:
+#   2019-09: BTCUSDT (first perpetual)
+#   2019-11: ETHUSDT
+#   2020-02: BNBUSDT, XRPUSDT
+#   2020-08: ADAUSDT, LINKUSDT, LTCUSDT
+#   2020-12: DOTUSDT, SOLUSDT
+#   2021-Q1: UNIUSDT, AAVEUSDT, AVAXUSDT (Jan-Feb)
+#   2021-Q2: DOGEUSDT, MATICUSDT, ETCUSDT, FILUSDT
+#   2021-Q3: AXSUSDT, ATOMUSDT, FTMUSDT, ALGOUSDT
+#   2021-Q4: NEARUSDT, SANDUSDT, MANAUSDT, GALAUSDT
+#   2022:    OPUSDT, APTUSDT, INJUSDT, RUNEUSDT, LDOUSDT
+#   2023:    ARBUSDT, GRTUSDT, STXUSDT, FLOWUSDT, RNDRUSDT
+#   2024-H1: TIAUSDT, SEIUSDT, SUIUSDT, WIFUSDT, FETUSDT, STRKUSDT,
+#            JUPUSDT, PYTHUSDT, JTOUSDT, BONKUSDT, PEPEUSDT
+#   2024-H2: WLDUSDT, ENAUSDT, OMUSDT, TAOUSDT, ZKUSDT, PENDLEUSDT
+#   2024-Q4: KAITOUSDT, AEVOUSDT, EIGENUSDT, METISUSDT
+lookback:
+  bars: 1000
+  # Global default — most T1-T2 coins have data back to 2021.
+  default_start: "2021-01-01"
+  # Per-symbol start overrides for coins listed AFTER default_start.
+  # Backfill resolves: max(override, earliest_available_bar).
+  # Listed here: coins with perpetually < 5 years of data.
+  symbol_start_overrides:
+    # ── 2022 listings (3-4 years data) ──
+    OPUSDT: "2022-06-01"
+    APTUSDT: "2022-10-19"
+    INJUSDT: "2022-11-02"
+    RUNEUSDT: "2022-08-08"
+    LDOUSDT: "2022-05-12"
+    # ── 2023 listings (2-3 years data) ──
+    ARBUSDT: "2023-03-23"
+    GRTUSDT: "2023-02-17"
+    STXUSDT: "2023-03-10"
+    FLOWUSDT: "2023-02-15"
+    RNDRUSDT: "2023-02-02"
+    # ── 2024-H1 listings (1.5-2 years data) ──
+    TIAUSDT: "2024-01-11"
+    SEIUSDT: "2024-01-04"
+    SUIUSDT: "2024-01-12"
+    WIFUSDT: "2024-03-05"
+    FETUSDT: "2024-03-07"
+    STRKUSDT: "2024-02-22"
+    JUPUSDT: "2024-01-31"
+    PYTHUSDT: "2024-02-02"
+    JTOUSDT: "2024-01-16"
+    BONKUSDT: "2024-04-22"
+    PEPEUSDT: "2024-04-30"
+    # ── 2024-H2 listings (1-1.5 years data) ──
+    WLDUSDT: "2024-07-16"
+    ENAUSDT: "2024-04-02"
+    OMUSDT: "2024-06-27"
+    TAOUSDT: "2024-07-30"
+    ZKUSDT: "2024-06-17"
+    PENDLEUSDT: "2024-07-03"
+    # ── 2024-Q4 listings (< 1.5 years data) ──
+    KAITOUSDT: "2024-11-28"
+    AEVOUSDT: "2024-11-28"
+    EIGENUSDT: "2024-10-01"
+    METISUSDT: "2024-10-15"
+
+# ── Data storage ──────────────────────────────────────────────────
+storage:
+  root: "./data/market"
+  format: parquet  # parquet | csv
+
+# ── Training configuration ─────────────────────────────────────────
+training:
+  # GPU acceleration — XGBoost with ROCm/HIP support
+  # Auto-detected: 'gpu_hist' if ROCm/CUDA available, 'hist' (CPU) otherwise
+  tree_method: "auto"
+  # Number of parallel jobs (-1 = all cores)
+  n_jobs: -1
+  # Walk-forward folds (minimum 6 per V7 specification)
+  wfv_folds: 6

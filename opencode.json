@@ -1,0 +1,57 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "provider": {
+    "openrouter": {
+      "models": {
+        "morph-v3-fast": {
+          "name": "Morph V3 Fast",
+          "options": {
+            "temperature": 0.2,
+            "reasoning": {
+              "effort": "minimal",
+              "exclude": true
+            }
+          }
+        },
+        "openai/gpt-oss-120b": {
+          "name": "GPT-OSS 120B · Cerebras Locked",
+          "options": {
+            "provider": {
+              "order": ["Cerebras"],
+              "allow_fallbacks": false
+            },
+            "reasoning": {
+              "effort": "minimal",
+              "exclude": true
+            },
+            "temperature": 0.2
+          }
+        }
+      }
+    }
+  },
+
+  "model": "openrouter/openai/gpt-oss-120b",
+  "small_model": "openrouter/openai/gpt-oss-120b",
+
+  "tools": {
+    "read": true,
+    "write": true,
+    "edit": true,
+    "bash": true
+  },
+
+  "permission": {
+    "edit": "allow",
+    "bash": "allow"
+  },
+
+  "enabled_providers": ["openrouter"],
+
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 10000
+  }
+}

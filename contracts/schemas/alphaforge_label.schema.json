@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://v7-engine/contracts/schemas/alphaforge_label.schema.json",
   "title": "AlphaForgeLabel",
-  "description": "Training label row produced by AlphaForge from simulation outputs. Contains classification label, regression targets for R returns, and path quality metrics.",
+  "description": "Training label row produced by AlphaForge from simulation outputs. Contains classification label, gross/net R returns, cost decomposition, path quality metrics, NO_TRADE quality assessment, ambiguity markers, and provenance. Owned by AlphaForge; consumes SimulationOutput via contracts/mappings/simulation_to_alphaforge.json.",
   "type": "object",
   "required": [
     "symbol",
@@ -10,10 +10,25 @@
     "mode",
     "simulation_family_version",
     "label_interpretation_version",
+    "simulation_profile_id",
+    "simulation_engine_version",
+    "cost_model_version",
+    "long_R_gross",
     "long_R_net",
+    "short_R_gross",
     "short_R_net",
+    "fee_cost_r_long",
+    "slippage_cost_r_long",
+    "total_cost_r_long",
+    "fee_cost_r_short",
+    "slippage_cost_r_short",
+    "total_cost_r_short",
     "best_action_label",
-    "label_validity"
+    "label_validity",
+    "no_trade_quality",
+    "is_ambiguous",
+    "resolution_status",
+    "funding_status"
   ],
   "properties": {
     "symbol": {
@@ -37,58 +52,156 @@
       "type": "string",
       "description": "Version of the label interpretation family."
     },
+    "simulation_profile_id": {
+      "type": "string",
+      "description": "SimulationProfile identifier used to generate this label."
+    },
+    "simulation_engine_version": {
+      "type": "string",
+      "description": "Exact simulation engine version string."
+    },
+    "cost_model_version": {
+      "type": "string",
+      "description": "Version of the cost model used. Links to simulation/docs/cost_model.md."
+    },
+    "long_R_gross": {
+      "type": "number",
+      "description": "Gross R for LONG_NOW action (before fees + slippage). From SimulationOutput.long_outcome.realized_r_gross."
+    },
     "long_R_net": {
       "type": "number",
-      "description": "Net R for LONG_NOW action (from simulation ActionOutcome.realized_r_net)."
+      "description": "Net R for LONG_NOW action (after fees + slippage). From SimulationOutput.long_outcome.realized_r_net."
+    },
+    "short_R_gross": {
+      "type": "number",
+      "description": "Gross R for SHORT_NOW action (before fees + slippage). From SimulationOutput.short_outcome.realized_r_gross."
     },
     "short_R_net": {
       "type": "number",
-      "description": "Net R for SHORT_NOW action (from simulation ActionOutcome.realized_r_net)."
+      "description": "Net R for SHORT_NOW action (after fees + slippage). From SimulationOutput.short_outcome.realized_r_net."
     },
     "best_action_label": {
       "type": "string",
       "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE", "AMBIGUOUS_STATE"],
-      "description": "Classification label: the best comparative action."
+      "description": "Classification label: the best comparative action per simulation truth."
     },
     "label_validity": {
       "type": "string",
-      "description": "Derived from resolution_status and is_ambiguous. Controls whether this row is used for training."
+      "enum": ["valid", "invalid", "ambiguous_excluded"],
+      "description": "Derived from resolution_status and is_ambiguous in simulation output. valid = COMPLETE + not ambiguous, suitable for training; invalid = UNRESOLVED or INVALIDATED, excluded; ambiguous_excluded = COMPLETE + ambiguous, excluded."
     },
-    "long_mae_R": {
-      "type": "number",
-      "description": "MAE in R terms for LONG_NOW."
+    "resolution_status": {
+      "type": "string",
+      "enum": ["COMPLETE", "UNRESOLVED", "INVALIDATED", "TARGET_HIT", "STOP_HIT", "TIME_EXIT", "UNRESOLVED"],
+      "description": "How simulation resolved, propagated from SimulationOutput for audit trail."
     },
-    "short_mae_R": {
-      "type": "number",
-      "description": "MAE in R terms for SHORT_NOW."
+    "exit_reason": {
+      "type": "string",
+      "enum": ["STOP_HIT", "TARGET_HIT", "TIME_EXIT", "HORIZON_END", "UNRESOLVED", "INVALIDATED"],
+      "description": "Reason for long action exit from simulation engine."
     },
-    "long_mfe_R": {
+    "fee_cost_r_long": {
       "type": "number",
-      "description": "MFE in R terms for LONG_NOW."
+      "description": "Fee cost in R terms for LONG_NOW. From SimulationOutput.long_outcome.fee_cost_r."
     },
-    "short_mfe_R": {
+    "slippage_cost_r_long": {
       "type": "number",
-      "description": "MFE in R terms for SHORT_NOW."
+      "description": "Slippage cost in R terms for LONG_NOW. From SimulationOutput.long_outcome.slippage_cost_r."
+    },
+    "total_cost_r_long": {
+      "type": "number",
+      "description": "Total cost (fee+slippage) in R terms for LONG_NOW. From SimulationOutput.long_outcome.total_cost_r."
+    },
+    "fee_cost_r_short": {
+      "type": "number",
+      "description": "Fee cost in R terms for SHORT_NOW. From SimulationOutput.short_outcome.fee_cost_r."
+    },
+    "slippage_cost_r_short": {
+      "type": "number",
+      "description": "Slippage cost in R terms for SHORT_NOW. From SimulationOutput.short_outcome.slippage_cost_r."
+    },
+    "total_cost_r_short": {
+      "type": "number",
+      "description": "Total cost (fee+slippage) in R terms for SHORT_NOW. From SimulationOutput.short_outcome.total_cost_r."
+    },
+    "cost_impact_long": {
+      "type": "number",
+      "description": "Cost impact on LONG side, alias for long_total_cost_r for downstream compatibility."
+    },
+    "cost_impact_short": {
+      "type": "number",
+      "description": "Cost impact on SHORT side, alias for short_total_cost_r for downstream compatibility."
+    },
+    "no_trade_quality": {
+      "type": "string",
+      "enum": ["CORRECT_NO_TRADE", "SAVED_LOSS", "MISSED_OPPORTUNITY", "AMBIGUOUS_NO_TRADE"],
+      "description": "Quality classification of the NO_TRADE outcome. From SimulationOutput.no_trade_outcome.no_trade_quality."
+    },
+    "saved_loss_r": {
+      "type": "number",
+      "description": "Loss avoided by not trading, in R terms. From SimulationOutput.no_trade_outcome.saved_loss_r."
+    },
+    "saved_loss_score": {
+      "type": "number",
+      "description": "Normalized saved loss score (0-1). From SimulationOutput.no_trade_outcome.saved_loss_score."
+    },
+    "missed_opportunity_r": {
+      "type": "number",
+      "description": "Gain missed by not trading, in R terms. From SimulationOutput.no_trade_outcome.missed_opportunity_r."
+    },
+    "missed_opportunity_score": {
+      "type": "number",
+      "description": "Normalized missed opportunity score (0-1). From SimulationOutput.no_trade_outcome.missed_opportunity_score."
+    },
+    "was_correct_skip": {
+      "type": "boolean",
+      "description": "True if NO_TRADE was the correct decision (best_action_label == NO_TRADE and it was profitable to skip). From SimulationOutput.no_trade_outcome.was_correct_skip."
+    },
+    "best_action_after_cost": {
+      "type": "string",
+      "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE", "AMBIGUOUS_STATE"],
+      "description": "Best action after applying full cost model. May differ from best_action_label when costs consume gross edge. NO_TRADE becomes the answer when net edge is consumed by costs."
+    },
+    "action_gap_R": {
+      "type": "number",
+      "description": "Gap between best and second-best action in R terms (net, after costs)."
     },
     "regret_R": {
       "type": "number",
       "description": "Regret relative to best action in R terms."
     },
-    "saved_loss_score": {
-      "type": "number",
-      "description": "Saved loss score from NoTradeOutcome."
+    "is_ambiguous": {
+      "type": "boolean",
+      "description": "Whether action gap is below ambiguity margin. True means the decision was not clear; label may still be valid if gap direction was consistent."
     },
-    "missed_opportunity_score": {
+    "long_mae_R": {
       "type": "number",
-      "description": "Missed opportunity score from NoTradeOutcome."
+      "description": "Maximum adverse excursion in R terms for LONG_NOW."
+    },
+    "short_mae_R": {
+      "type": "number",
+      "description": "Maximum adverse excursion in R terms for SHORT_NOW."
+    },
+    "long_mfe_R": {
+      "type": "number",
+      "description": "Maximum favourable excursion in R terms for LONG_NOW."
+    },
+    "short_mfe_R": {
+      "type": "number",
+      "description": "Maximum favourable excursion in R terms for SHORT_NOW."
     },
     "path_quality_score": {
       "type": "number",
-      "description": "Path quality score for the best action."
+      "description": "Path quality score for the best action (0-1)."
     },
-    "action_gap_R": {
-      "type": "number",
-      "description": "Gap between best and second-best action in R terms."
+    "funding_status": {
+      "type": "string",
+      "enum": ["DEFERRED", "APPLIED", "NOT_APPLICABLE"],
+      "description": "Funding cost status. DEFERRED until simulation funding model is implemented. Labels with DEFERRED funding are valid for SPOT-equivalent analysis only; perpetual/live trading claims are blocked."
+    },
+    "cost_edge_warning": {
+      "type": "boolean",
+      "description": "True when gross edge exists (R_gross > 0) but net edge is consumed by costs (R_net <= 0). Must be flagged in label dataset."
     }
   }
 }

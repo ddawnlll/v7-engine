@@ -1,0 +1,57 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: |
+  Issue #79: Alpha thesis validation protocol implementation.
+  Implemented ThesisValidator in alphaforge/src/alphaforge/validation/thesis_validator.py
+  and 43 tests in alphaforge/tests/test_thesis_validator.py.
+
+  The validator evaluates alpha theses against six evidence categories:
+  - Walk-forward validation (WFV) evidence
+  - Cost stress analysis
+  - Regime breakdown
+  - NO_TRADE comparison
+  - Symbol stability
+  - Overfit risk assessment
+
+  Verdicts: SUPPORTED (evidence confirms hypothesis), REFUTED (evidence contradicts),
+  INCONCLUSIVE (insufficient evidence).
+
+  Applies rejection rules from alpha_thesis_lifecycle.md including:
+  - NO_TRADE beats directional
+  - Non-positive OOS expectancy
+  - Cost stress flips edge negative
+  - Single-symbol overfitting
+  - Rare-regime overfitting
+  - Feature leakage (purge violation)
+  - Excessive drawdown
+  - Critical overfit risk
+
+files_changed:
+  - alphaforge/src/alphaforge/validation/thesis_validator.py (new, 817 lines)
+  - alphaforge/tests/test_thesis_validator.py (new, 820 lines)
+
+decisions_locked:
+  - ThesisVerdict enum: SUPPORTED, REFUTED, INCONCLUSIVE — LOCKED
+  - ThesisValidator.validate() verdict logic: >=2 confirmed categories + 0 refutations → SUPPORTED — LOCKED
+  - Evidence dataclasses (WFVEvidence, CostStressEvidence, etc.) with is_evaluated() sentinel pattern — LOCKED
+  - Cross-reference between expected_evidence and actual evidence — LOCKED
+  - Hard rejection rules from alpha_thesis_lifecycle.md fully encoded — LOCKED
+
+remaining_holds:
+  - None. This is a pure validation protocol — no numeric thresholds locked.
+
+safe_next_step: |
+  Wire ThesisValidator into AlphaForge's validation pipeline so that the
+  TRAINED → VALIDATED transition in alpha_thesis_lifecycle.md invokes
+  ThesisValidator.validate() automatically.
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_thesis_validator.py -v" (43 passed)
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q --ignore=alphaforge/tests/test_ml_pilot_gate.py" (595 passed)
+
+evidence:
+  - "43 tests pass covering SUPPORTED, REFUTED, INCONCLUSIVE verdicts, cross-reference, evidence dataclasses, rejection rules, and mode-awareness"
+  - "Zero regressions: all 595 existing AlphaForge tests pass"
+  - "Commit: b6023c7 feat: #79 Alpha thesis validation protocol"
+  - "No ML imports (xgboost, sklearn, tensorflow, torch) in thesis_validator.py"

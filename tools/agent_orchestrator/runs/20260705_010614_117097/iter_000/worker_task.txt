@@ -1,0 +1,26 @@
+Implement the requested task below.
+
+## Task
+
+Create a Python file `alphaforge/alpha_candidate.py` that implements a single deterministic alpha candidate function `alpha_001`. The function should accept a pandas DataFrame with columns ['open','high','low','close','volume'] and return a pandas Series of alpha signals (numeric values, no NaNs) computed as: (close - open) / (high - low + 1e-8). Also create a test file `tests/test_alpha_candidate.py` that uses pytest to verify the function returns the correct shape and values for a small sample DataFrame. Ensure both files are syntactically valid Python.
+
+## Rules
+
+- Implement only what is requested. Do not over-engineer.
+- If the task asks for code changes, run relevant tests or checks afterward.
+- Write a concise completion summary at the end of your output including:
+  - What was created or changed
+  - Any commands you ran and their exit codes
+  - Any test output
+- Never claim success without evidence (exit codes, file existence, test output).
+- Prefer small, focused changes over large rewrites.
+
+## Completion summary format
+
+```
+## Completion Summary
+- Files changed: [...]
+- Commands run: [...]
+- Results: [...]
+- Status: SUCCESS | FAILURE | BLOCKED
+```

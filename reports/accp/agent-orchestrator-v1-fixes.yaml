@@ -1,0 +1,43 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Agent orchestrator bug fixes + packaging + test suite + retry + cleanup"
+
+files_changed:
+  - tools/agent_orchestrator/strategist_client.py
+  - tools/agent_orchestrator/claude_worker.py
+  - tools/agent_orchestrator/gate.py
+  - tools/agent_orchestrator/controller.py
+  - tools/agent_orchestrator/__init__.py
+  - tools/agent_orchestrator/pyproject.toml
+  - tools/agent_orchestrator/tests/__init__.py
+  - tools/agent_orchestrator/tests/test_gate.py
+  - tools/agent_orchestrator/tests/test_strategist_client.py
+  - tools/agent_orchestrator/tests/test_controller.py
+  - tools/agent_orchestrator/tests/test_run_context.py
+  - tools/agent_orchestrator/prompts/worker_task_template.md
+  - tools/agent_orchestrator/config.example.yaml
+  - tools/agent_orchestrator/config.example.json
+
+decisions_locked:
+  - "gate.py: disabled checks return None (not True) — verdict filters None out"
+  - "claude_worker.py: stderr=STDOUT (not PIPE) — no deadlock risk"
+  - "controller.py: clean-first revert order (clean → checkout → verify)"
+  - "controller.py: retry loop wraps worker only, gate on last attempt"
+  - "controller.py: auto-cleanup old runs on startup (--keep-last-runs, default 20)"
+
+remaining_holds:
+  - "README.md update with new flags (--retry-exit-codes, --max-retries-per-iter, --keep-last-runs)"
+  - "strategist_client.py: empty choices list now guarded but untested edge case"
+  - "gate.py: bare except(Exception) applied to git helpers, but KeyboardInterrupt masked on rapid Ctrl+C in those tight windows"
+
+safe_next_step: "Update README.md with new CLI flags, add integration test for full loop (dry-run mode), write memory file for orchestrator architecture decisions"
+
+commands_run:
+  - "PYTHONPATH=. python -m pytest tests/ -v --tb=short → 23/23 passed (0.12s)"
+  - "python -c 'py_compile.compile(...)' → all 6 .py files compile OK"
+
+evidence:
+  - "23 unit tests passing across gate (8), strategist (4), controller (7), run_context (4)"
+  - "All Python files compile without syntax errors"
+  - "Full project test suite: 794 passed, 5 pre-existing failures (encoding + assertions, unrelated)"

@@ -1,0 +1,32 @@
+{
+  "status": "complete",
+  "total_candidates": 20639,
+  "levels": [
+    1,
+    2
+  ],
+  "min_support": 30,
+  "steps_completed": [
+    "bucketize",
+    "level1",
+    "level2",
+    "score",
+    "mtc",
+    "oos",
+    "export"
+  ],
+  "results": {
+    "level1_count": 77,
+    "level2_count": 100,
+    "passes_correction": 177,
+    "fails_correction": 0,
+    "oos": {
+      "error": "boolean index did not match indexed array along axis 0; size of axis is 20639 but size of corresponding boolean axis is 4127"
+    },
+    "exported_specs": 50
+  },
+  "total_conditions": 77,
+  "total_rules_discovered": 177,
+  "elapsed_seconds": 0.59,
+  "output_dir": "reports/alphaforge/mining/smoke_004"
+}

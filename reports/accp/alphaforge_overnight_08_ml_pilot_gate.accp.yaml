@@ -1,0 +1,19 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-OVERNIGHT-08-ML-PILOT-GATE
+  report_type: SUBPLAN_EXECUTION
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-OVERNIGHT-AUTOPILOT-ALPHAFORGE-SEQUENTIAL-EXECUTION
+  plan_id: ALPHAFORGE-08-ML-PILOT-GATE
+  priority: P1
+result: PASS
+scope_confirmation: "Plan 08 ML pilot gate verified — 42/42 tests pass, no XGBoost, no model training, guards clean"
+targeted_tests:
+  - {command: "pytest alphaforge/tests/test_ml_pilot_gate.py", result: "42 passed", exit: 0}
+guard_scan: [{scan: "forbidden patterns", result: "CLEAN"}]
+no_xgboost: PASS
+files_changed: []
+failed_ACs: []
+remaining_holds: [funding_deferred, no_real_market_data, no_model_training, no_xgboost_training, ml_pilot_not_trained]
+safe_next_step: "Proceed to plan 09"

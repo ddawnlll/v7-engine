@@ -1,0 +1,91 @@
+# =============================================================================
+# V7 Engine — Test-Training Profile
+# =============================================================================
+# Purpose: Baseline real-data training for profitability evidence (v0.30E).
+# Dataset: 4 symbols × 4 years, klines only, SCALP primary focus.
+#
+# Usage:
+#   make test-training        # Default: SCALP mode
+#   make test-training MODE=SWING  # Alternative mode
+# =============================================================================
+
+# ── Dataset specification ────────────────────────────────────────────
+dataset:
+  id: "test-training-v030e"
+  source: "binance"
+  market: "um_futures"
+  priority: "P0"
+  backtest_required: true
+  allow_synthetic: false
+
+  # 4 symbols × 4 years (2023-01-01 → 2027-01-01)
+  symbols:
+    - BTCUSDT
+    - ETHUSDT
+    - SOLUSDT
+    - BNBUSDT
+
+  intervals:
+    - 1h     # SCALP primary
+    - 4h     # SWING primary / SCALP context
+
+  data_types:
+    - klines
+
+  # Date range (ISO 8601)
+  start: "2023-01-01T00:00:00+00:00"
+  end: "2027-01-01T00:00:00+00:00"
+
+# ── Training configuration ──────────────────────────────────────────
+training:
+  # Primary mode for profitability research
+  mode: "SCALP"
+
+  # Alternate modes available
+  alternate_modes:
+    - "SWING"
+    - "AGGRESSIVE_SCALP"
+
+  # Walk-forward validation
+  wfv_folds: 6
+
+  # Feature groups (all = use all 7+ groups)
+  features: "all"
+
+  # Confidence threshold for NO_TRADE filter
+  confidence_threshold: 0.55
+
+  # XGBoost hyperparameters
+  xgboost:
+    max_depth: 4
+    learning_rate: 0.05
+    n_estimators: 200
+    subsample: 0.8
+    colsample_bytree: 0.8
+    early_stopping_rounds: 20
+    tree_method: "hist"    # CPU-optimized histogram method
+    n_jobs: -1             # Use all available cores
+
+# ── Data health ─────────────────────────────────────────────────────
+data_health:
+  coverage_threshold: 90.0   # Min coverage % to be healthy
+  auto_repair: true          # Auto-backfill if data missing
+  repair_max_workers: 4
+  repair_rate_per_minute: 1200
+
+# ── Verification ────────────────────────────────────────────────────
+verification:
+  # After training, verify these gates
+  check_consolidated_report: true
+  check_data_passport: true
+  check_gr1_not_triggered: true
+  check_active_trade_count_positive: true
+  check_exposure_pct_positive: true
+
+# ── Expected outcomes (baseline thresholds) ─────────────────────────
+expected:
+  # These are LOCKED_INITIAL_BASELINE — recalibrate after first run
+  min_oos_trades: 100
+  min_fold_pass_ratio: 0.5
+  expected_coverage_pct: 90.0
+  synthetic_comparison_required: true

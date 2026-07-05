@@ -1,0 +1,33 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: >
+  Issue #131: Per-fold field name mismatch between real_training.py (writer) and
+  empirical.py (reader) causing _fold_metrics_present() to always return False
+  and verdict to always be REJECT/INCONCLUSIVE.
+files_changed:
+  - "cli/real_training.py"
+decisions_locked:
+  - item: "Per-fold field name alignment"
+    status: "LOCKED"
+    detail: >
+      real_training.py now produces per_fold_metrics with keys matching
+      empirical.py expectations: trade_count, sharpe, expectancy_r, win_rate,
+      sum_gross_r, sum_net_r, sum_cost_r. OOS aggregate metrics (oos_sharpe,
+      oos_expectancy_r, oos_win_rate) computed from per-fold raw returns.
+remaining_holds:
+  - "Cost Stress Matrix (HOLD — requires regime-aware cost multipliers)"
+  - "Symbol Stability per-symbol contribution (HOLD — requires multi-symbol WFV)"
+  - "NO_TRADE Collapse edge case under extreme market conditions (HOLD)"
+  - "Real profitability evidence (HOLD — requires real training + WFV)"
+  - "MHT correction real thresholds (HOLD — requires empirical baseline)"
+safe_next_step: "Run real_training.py with real data to verify empirical report produces PASS verdict when edge exists"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ simulation/tests/ -q -x --timeout=60"
+evidence:
+  - "alphaforge: 1083 passed, 1 skipped"
+  - "integration: 176 passed, 2 skipped"
+  - "lib+tests: 352 passed"
+  - "commit: d2dcb22"

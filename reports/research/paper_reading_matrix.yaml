@@ -1,0 +1,388 @@
+# AlphaForge Paper Reading Matrix
+# v0.28 — Her kaynağın AlphaForge için analizi
+# Her implication doğrudan bir kod/validator/pipeline değişikliğine dönüşebilir olmalı
+
+paper_reading_matrix:
+  - source:
+      title: "Machine Learning-Based Bitcoin Trading Under Transaction Costs"
+      id: "arXiv:2606.00060"
+      type: paper
+      domain: cost_aware_trading
+      priority: P0
+
+    claims:
+      - "ML forecasts can predict BTC hourly returns"
+      - "Naive sign-based strategies fail at 10bps cost"
+      - "Cost-aware execution filter restores profitability"
+
+    dataset:
+      - "BTC-USDT hourly, ~70,000 observations"
+      - "2018-2026"
+      - "27-fold walk-forward"
+
+    validation:
+      wfv: true
+      cp cv: false
+      pbo: false
+      dsr: false
+      cost_model: "10bps transaction cost"
+      baseline: "naive sign-based, buy-and-hold implied"
+
+    professional_lesson:
+      - "Forecast → trade conversion is the real research problem, not model accuracy"
+      - "Cost-aware thresholding on forecast magnitude is a simple but effective safeguard"
+
+    alphaforge_implication:
+      - "CONFIDENCE_THRESHOLD alone is insufficient — need expected_net_R > cost check"
+      - "Add cost-aware execution filter flag to pipeline config"
+      - "Validator must penalize models without cost-aware filtering"
+
+    do_not_copy_blindly:
+      - "10bps fixed cost may not capture variable slippage/funding"
+      - "Single-symbol BTC study may not generalize to multi-symbol"
+
+    critical_rating: 9
+
+
+  - source:
+      title: "The Probability of Backtest Overfitting"
+      id: "SSRN 2326253 (Bailey & López de Prado)"
+      type: paper
+      domain: validation
+      priority: P0
+
+    claims:
+      - "Multiple backtest trials produce seemingly good results by chance"
+      - "CSCV framework measures PBO reliably"
+      - "PBO > 0.5 indicates high overfit risk"
+
+    dataset:
+      - "Theoretical framework + synthetic/real market data validation"
+      - "Applicable to any financial ML pipeline"
+
+    validation:
+      wfv: false
+      cp cv: true
+      pbo: true
+      dsr: false
+      cost_model: false
+      baseline: false
+
+    professional_lesson:
+      - "WFV alone is insufficient — combinatorial cross-validation needed"
+      - "Number of trials must be tracked for PBO calculation"
+
+    alphaforge_implication:
+      - "Validator must reject candidates with PBO NOT_RUN"
+      - "Pipeline must track trial count (config changes, Optuna trials)"
+      - "Add CSCV-style cross-validation as optional validation mode"
+
+    do_not_copy_blindly:
+      - "Full CSCV is computationally expensive for large datasets"
+      - "Simplified PBO approximation may suffice for early-stage research"
+
+    critical_rating: 10
+
+
+  - source:
+      title: "The Deflated Sharpe Ratio"
+      id: "SSRN 2460551 (López de Prado)"
+      type: paper
+      domain: validation
+      priority: P0
+
+    claims:
+      - "Classical Sharpe ratio inflates with multiple testing"
+      - "DSR corrects for number of trials and non-normal returns"
+
+    professional_lesson:
+      - "Report DSR alongside Sharpe — never Sharpe alone"
+      - "Especially critical after Optuna hyperparameter search"
+
+    alphaforge_implication:
+      - "Validator must flag reports without DSR"
+      - "Integrate DSR computation into MHT report section"
+      - "Trial count from Optuna studies → DSR input"
+
+    critical_rating: 9
+
+
+  - source:
+      title: "… and the Cross-Section of Expected Returns (t-stat > 3.0)"
+      id: "Harvey, Liu & Zhu / RFS 2016"
+      type: paper
+      domain: validation
+      priority: P0
+
+    claims:
+      - "With hundreds of factors tested, t-stat > 2.0 is too lenient"
+      - "New factors require t-stat > 3.0 for significance"
+
+    alphaforge_implication:
+      - "Trial ledger: every config/feature/model variant counts as a trial"
+      - "Success threshold must rise with trial count"
+      - "Validator must cap scores when trial count is unknown"
+
+    critical_rating: 8
+
+
+  - source:
+      title: "QuantConnect Research Guide"
+      id: "quantconnect.com/docs"
+      type: industry
+      domain: architecture
+      priority: P1
+
+    claims:
+      - "Walk-forward + paper trading + multi-market testing required"
+      - "Each backtest increases overfit risk"
+      - "Number of experiments must be controlled"
+
+    alphaforge_implication:
+      - "Pipeline should enforce paper trading gate before live"
+      - "Multi-symbol/multi-mode testing required for promotion"
+      - "Experiment log / hypothesis register required"
+
+    critical_rating: 7
+
+
+  - source:
+      title: "101 Formulaic Alphas"
+      id: "arXiv:1601.00991 (WorldQuant)"
+      type: paper
+      domain: alpha_mining
+      priority: P1
+
+    claims:
+      - "101 low-correlation formulaic alphas exist for equities"
+      - "Average pairwise correlation: 15.9%"
+      - "Holding period: 0.6-6.4 days"
+
+    professional_lesson:
+      - "Goal is diversified alpha pool, not single best model"
+      - "Low cross-correlation between alphas is a design target"
+
+    alphaforge_implication:
+      - "AlphaForge should evolve toward factor mining platform"
+      - "Feature families = potential alpha families"
+      - "Family correlation matrix must be tracked"
+      - "Family ablation = first step toward factor portfolio"
+
+    do_not_copy_blindly:
+      - "Equity alphas may not transfer to crypto"
+      - "101 specific formulas need crypto adaptation"
+
+    critical_rating: 7
+
+
+  - source:
+      title: "AutoAlpha — Hierarchical Evolutionary Alpha Mining"
+      id: "arXiv:2002.08245"
+      type: paper
+      domain: alpha_mining
+      priority: P2
+
+    claims:
+      - "Evolutionary search can discover effective formulaic alphas"
+      - "Hierarchical structure + PCA-QD efficiently explores search space"
+
+    professional_lesson:
+      - "Systematic alpha discovery beats manual factor creation"
+      - "Formulaic alphas: interpretable, overfit-controllable"
+
+    alphaforge_implication:
+      - "Long-term: evolutionary alpha factor generation"
+      - "Short-term: rigorous feature family ablation = manual alpha mining baseline"
+
+    critical_rating: 6
+
+
+  - source:
+      title: "DeepLOB — Deep CNN for Limit Order Books"
+      id: "arXiv:1808.03668"
+      type: paper
+      domain: lob
+      priority: P2
+
+    claims:
+      - "CNN+LSTM captures LOB spatial+temporal structure"
+      - "Cross-instrument transferability — learns universal LOB features"
+
+    dataset:
+      - "LOB cash equities data"
+      - "1 year LSE data sufficient"
+
+    professional_lesson:
+      - "LOB features require real microstructure data"
+      - "Short horizon only — signal decays rapidly"
+
+    alphaforge_implication:
+      - "Orderbook on SWING (4h) is unlikely to add value"
+      - "SCALP/AGGRESSIVE_SCALP may benefit"
+      - "Synthetic LOB testing is meaningless"
+
+    critical_rating: 5
+
+
+  - source:
+      title: "BDLOB — Bayesian Deep CNN for LOB"
+      id: "arXiv:1811.10041"
+      type: paper
+      domain: lob
+      priority: P2
+
+    claims:
+      - "Bayesian uncertainty in LOB predictions enables position sizing"
+      - "Uncertainty-aware filtering avoids unnecessary trades"
+
+    alphaforge_implication:
+      - "Uncertainty quantification → confidence threshold calibration"
+      - "Bayesian approach could replace hard confidence threshold"
+
+    critical_rating: 5
+
+
+  - source:
+      title: "HLOB — Information Persistence in LOB"
+      id: "arXiv:2405.18938"
+      type: paper
+      domain: lob
+      priority: P1
+
+    claims:
+      - "LOB spatial information degrades with prediction horizon"
+      - "Short horizons: rich structure. Long horizons: weak signal"
+
+    professional_lesson:
+      - "LOB/microstructure features are horizon-dependent"
+      - "Using LOB features at wrong horizon wastes compute + adds noise"
+
+    alphaforge_implication:
+      - "SWING should not use orderbook features (or get penalty)"
+      - "AGGRESSIVE_SCALP (15m) is sweet spot for LOB research"
+      - "Feature-mode compatibility matrix required"
+
+    critical_rating: 8
+
+
+  - source:
+      title: "FinRL-X — AI-Native Modular Infrastructure"
+      id: "arXiv:2603.21330v1"
+      type: paper
+      domain: architecture
+      priority: P0
+
+    claims:
+      - "Interface consistency across research/backtest/live matters more than model sophistication"
+      - "Weight vector wₜ as single interface contract enables clean handoff"
+      - "Backtest→paper and paper→live are two systematic gaps"
+
+    professional_lesson:
+      - "Design the interface first, then everything plugs into it"
+      - "Handoff is not a model file — it's a deployment-consistent decision package"
+
+    alphaforge_implication:
+      - "AlphaForge → V7 handoff must be more than model.pkl"
+      - "Define target weight / edge vector as shared interface"
+      - "Handoff package: edge, confidence, threshold, regimes, risk caps, kill conditions"
+      - "Validator should verify handoff package completeness"
+
+    critical_rating: 9
+
+
+# Synthesis: Cross-Cutting Themes
+
+synthesis:
+  cost_aware_trading:
+    priority: P0
+    key_insight: "forecast-to-trade conversion is the real problem"
+    validator_rules:
+      - "No cost-aware filter → economic_score cap 20"
+      - "Expected net_R must exceed cost threshold per trade"
+
+  validation_hardening:
+    priority: P0
+    key_insight: "PBO/DSR/MHT are not optional — they define alpha credibility"
+    validator_rules:
+      - "PBO NOT_RUN → validation_score cap, no alpha candidate"
+      - "DSR NOT_RUN → net_sharpe unreliable, flagged"
+      - "Trial ledger required for all runs"
+      - "Fold_pass_ratio = 0 → max proximity 25"
+
+  baseline_standards:
+    priority: P0
+    key_insight: "model must beat NO_TRADE, RANDOM, ALWAYS_LONG, ALWAYS_SHORT"
+    validator_rules:
+      - "Baseline library required for promotion assessment"
+      - "No baseline comparison → max level RESEARCH_CANDIDATE"
+
+  alpha_mining:
+    priority: P1
+    key_insight: "diversified low-correlation alpha pool > single black-box"
+    validator_rules:
+      - "Feature family ablation required for proximity > 40"
+      - "Family correlation matrix tracked in report"
+
+  lob_horizon:
+    priority: P1
+    key_insight: "LOB signal decays with horizon — use at correct timeframe"
+    validator_rules:
+      - "SWING + orderbook features → behavior penalty"
+      - "Synthetic LOB testing = invalid"
+
+  architecture_handoff:
+    priority: P0
+    key_insight: "interface consistency over model sophistication"
+    validator_rules:
+      - "Handoff package completeness check"
+      - "Expected net_R, confidence threshold, regimes, risk caps required"
+
+
+# Implementation priority queue
+
+implementation_queue:
+  - id: "P0-VALIDATOR-GATES"
+    description: "Add PBO/DSR/TrialLedger gates to validator"
+    files:
+      - alphaforge/src/alphaforge/validation/target_validator.py
+      - alphaforge/src/alphaforge/reports/mht.py
+    depends_on: []
+
+  - id: "P0-BASELINE-LIBRARY"
+    description: "Build baseline comparison library (NO_TRADE, RANDOM, etc.)"
+    files:
+      - alphaforge/src/alphaforge/validation/baselines.py
+      - alphaforge/src/alphaforge/validation/__init__.py
+    depends_on: []
+
+  - id: "P0-COST-AWARE-FILTER"
+    description: "Add cost-aware execution filter flag and validator penalty"
+    files:
+      - alphaforge/src/alphaforge/train.py
+      - alphaforge/src/alphaforge/validation/target_validator.py
+    depends_on: ["P0-BASELINE-LIBRARY"]
+
+  - id: "P0-HANDOFF-PACKAGE"
+    description: "Define and validate V7 handoff package schema"
+    files:
+      - contracts/schemas/alphaforge/v7_handoff_package.schema.json
+      - alphaforge/src/alphaforge/validation/target_validator.py
+    depends_on: ["P0-VALIDATOR-GATES"]
+
+  - id: "P1-CALIBRATION-REPORT"
+    description: "Confidence bucket → realized net_R calibration report"
+    files:
+      - alphaforge/src/alphaforge/reports/calibration.py
+    depends_on: ["P0-BASELINE-LIBRARY"]
+
+  - id: "P1-ABLATION-INTEGRATION"
+    description: "Feature family ablation into pipeline report"
+    files:
+      - alphaforge/src/alphaforge/features/ablation.py
+    depends_on: ["P0-BASELINE-LIBRARY"]
+
+  - id: "P1-LOB-HORIZON-PENALTY"
+    description: "Mode-feature compatibility enforcement"
+    files:
+      - alphaforge/src/alphaforge/validation/target_validator.py
+    depends_on: ["P0-VALIDATOR-GATES"]

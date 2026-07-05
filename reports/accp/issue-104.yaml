@@ -1,0 +1,47 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+issue: "#104"
+title: "V7 Phase 4 — Mode-specific feature specification"
+
+result: "PASS"
+
+scope_confirmation:
+  - "Created v7/features/ package (__init__.py, spec.py)"
+  - "FeatureSpec dataclass per mode: SWING, SCALP, AGGRESSIVE_SCALP"
+  - "6 feature groups per mode: returns, volatility, atr, momentum, volume, breakout"
+  - "Per-mode window parameters matching locked timeframe stacks"
+  - "check_no_lookahead() guard verifies window monotonicity"
+  - "32 tests in test_features.py — FeatureSpec, no-lookahead, router alignment"
+
+files_changed:
+  - "v7/features/__init__.py"
+  - "v7/features/spec.py"
+  - "v7/tests/test_features.py"
+  - "v7/docs/roadmap.md"
+
+decisions_locked:
+  - "v7/features/ package: LOCKED_INITIAL_BASELINE — implementation-ready spec"
+  - "Feature group structure (6 groups, fixed names): LOCKED for Phase 4"
+  - "Feature intervals locked to router.py profiles (no drift)"
+
+remaining_holds:
+  - "No real profitability evidence (HOLD — requires simulation labels, features, training, WF, OOS)"
+  - "SCALP/AGGRESSIVE_SCALP thresholds (HOLD — empirical backtest evidence required)"
+  - "XGBoost training (DEFERRED to P0.9B/P0.9C)"
+  - "Real data ingestion (DEFERRED to P0.9B)"
+
+safe_next_step: "Feature computation — implement canonical state to feature row transformation using these specs"
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest v7/tests/ -v"
+  - "PYTHONPATH=. python3 -m pytest v7/tests/test_features.py -v"
+
+evidence:
+  - "v7 tests: 125/125 passed (32 new features tests + 93 existing)"
+  - "All 32 new tests: PASS (FeatureGroup, FeatureSpec, NoLookahead, RouterAlignment)"
+  - "check_no_lookahead() verifies all windows >= 1 and monotonic (short <= medium <= long)"
+  - "SWING windows: returns(1,6,24), ATR multiplier=2.0, breakout confirm=3"
+  - "SCALP windows: returns(1,4,24), ATR multiplier=1.5, breakout confirm=2"
+  - "AGGRESSIVE_SCALP windows: returns(1,4,16), ATR multiplier=1.0, breakout confirm=2"
+  - "to_dict() serialization round-trips all fields correctly"

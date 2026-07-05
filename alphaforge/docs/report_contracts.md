@@ -74,10 +74,19 @@ AlphaForgeResearchReport (aggregate, cross-mode)
 - Overfit risk assessment
 
 ### 7. Metrics
-- Per-fold metrics (accuracy, precision, recall, R-squared, Sharpe, etc.)
-- Aggregate metrics with confidence intervals
+**Layer-appropriate metrics (corrected 2026-07-02):** AlphaForge reports signal quality, not trade outcomes. Win rate, Sharpe, profit factor belong to V7. See `v7/docs/pipeline/evaluation.md` Layer Metric Ownership section.
+
+**Primary AlphaForge metrics:**
+- Per-fold IC (Information Coefficient) and Rank IC
+- Calibration error (ECE/MCE) per fold
+- Signal stability: IC variance across folds
+- Regime consistency: IC breakdown by regime
+- MHT survival: PBO, deflated Sharpe, corrected significance
+
+**Reported for V7 consumption (not AlphaForge success metrics):**
 - Edge magnitude (expected return per trade)
 - Win rate
+- Sharpe, profit factor, drawdown
 
 ### 8. Cost Stress
 - Fee sensitivity analysis (±X%)

@@ -1,0 +1,52 @@
+# =============================================================================
+# V7 Engine — Training Configuration (example)
+# =============================================================================
+# Copy to configs/training.yaml and customise.
+#
+#   cp configs/training.example.yaml configs/training.yaml
+# =============================================================================
+
+# ── Model parameters (placeholder — set after alpha research) ────
+model:
+  # Algorithm: xgboost | lightgbm | linear
+  algorithm: xgboost
+
+  # Hyperparameters (tune via research, not guesswork)
+  params:
+    max_depth: 6
+    learning_rate: 0.05
+    n_estimators: 500
+    subsample: 0.8
+    colsample_bytree: 0.8
+
+  # Early stopping
+  early_stopping_rounds: 50
+
+# ── Feature / label configuration ────────────────────────────────
+features:
+  # Feature group identifiers used by the pipeline
+  groups:
+    - price_action
+    - volatility
+    - microstructure
+
+# ── Target label ──────────────────────────────────────────────────
+label:
+  # Label column name in the assembled dataset
+  column: "target_4h_forward_return"
+  # Problem type: regression | classification
+  type: regression
+
+# ── Gate settings ─────────────────────────────────────────────────
+gates:
+  # Training is locked behind a safety gate by default
+  training_authorized: false
+  # WFV requires training to have completed successfully
+  wfv_authorized: false
+
+# ── Train / test split ────────────────────────────────────────────
+split:
+  method: walk_forward
+  n_splits: 5
+  initial_train_pct: 0.6
+  gap: 0

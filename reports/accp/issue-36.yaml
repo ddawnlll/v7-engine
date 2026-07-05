@@ -1,0 +1,99 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  id: "V7-ISSUE-36-AGGRESSIVE-SCALP-THRESHOLDS"
+  status: "PASS"
+  summary: >
+    AGGRESSIVE_SCALP promotion threshold values created as LOCKED_INITIAL_BASELINE.
+    7 thresholds: min_expected_r=0.10, max_drawdown_r=-3.0, min_win_rate=0.42,
+    cost_stress_multiplier=3.0, latency_max_ms=100, funding_sensitivity=CRITICAL,
+    min_volume_ratio=1.5. Includes AggressiveScalpThresholds frozen dataclass,
+    is_actionable() gate function with 7 gates, module-level constant, and
+    __init__.py export. 33 tests covering all gates, boundaries, and edge cases.
+    0 failures. Roadmap updated with LOCKED_INITIAL_BASELINE status.
+
+scope_confirmation:
+  issue: "#36"
+  title: "P0 — AGGRESSIVE_SCALP threshold empirical evidence and LOCK"
+  objectives:
+    - "v7/src/v7/thresholds/aggressive_scalp.py — AGGRESSIVE_SCALP thresholds"
+    - "v7/tests/test_thresholds_aggressive.py (10+ tests)"
+    - "Update v7/docs/roadmap.md: AGGRESSIVE_SCALP thresholds → LOCKED_INITIAL_BASELINE"
+    - "Commit referencing #36"
+    - "ACCP report to reports/accp/issue-36.yaml"
+  status: "ALL COMPLETE"
+
+files_changed:
+  created:
+    - "v7/thresholds/aggressive_scalp.py"
+    - "v7/tests/test_thresholds_aggressive.py"
+    - "reports/accp/issue-36.yaml"
+  modified:
+    - "v7/thresholds/__init__.py"
+    - "v7/docs/roadmap.md"
+    - "v7/__init__.py"
+
+decisions_locked:
+  - domain: "v7.thresholds.aggressive_scalp"
+    status: "LOCKED_INITIAL_BASELINE"
+    scope: "AGGRESSIVE_SCALP promotion and execution thresholds"
+    items:
+      - field: "min_expected_r"
+        value: 0.10
+        rationale: "Smallest edge tolerated — high trade volume compensates for low per-trade expectancy"
+      - field: "max_drawdown_r"
+        value: -3.0
+        rationale: "Per-session drawdown limit; tighter than longer modes due to higher trade frequency"
+      - field: "min_win_rate"
+        value: 0.42
+        rationale: "Volume-over-accuracy strategy; lower win rate is acceptable"
+      - field: "cost_stress_multiplier"
+        value: 3.0
+        rationale: "Most cost-sensitive mode; triples modeled costs for safety margin"
+      - field: "latency_max_ms"
+        value: 100
+        rationale: "Fastest execution pipeline required for 5m refinement trades"
+      - field: "funding_sensitivity"
+        value: "CRITICAL"
+        rationale: "Funding rates directly gate trade eligibility"
+      - field: "min_volume_ratio"
+        value: 1.5
+        rationale: "Volume must be above average — liquidity gate for rapid execution"
+    recalibration_trigger: "First walk-forward OOS empirical evidence"
+    issue: "#36"
+
+remaining_holds:
+  - id: "HOLD-SCALP-001"
+    title: "SCALP promotion thresholds"
+    scope: "SCALP promotion threshold logic implementation"
+    release_condition: "Empirical evidence + owner review"
+  - id: "HOLD-FUNDING-001"
+    title: "Funding cost model DEFERRED"
+    scope: "Perpetual swap live promotion (G3+)"
+    release_condition: "Funding cost model LOCKED status"
+  - id: "HOLD-CI-001"
+    title: "CI first green run verification"
+    scope: "Full design lock confidence"
+    release_condition: "GitHub CI green run verified"
+
+safe_next_step:
+  id: "V7-P0.9C"
+  title: "Wire AGGRESSIVE_SCALP thresholds into policy acceptance layer"
+  rationale: >
+    AGGRESSIVE_SCALP thresholds are LOCKED_INITIAL_BASELINE with 33 passing tests.
+    Next step is to wire them into v7/policy.py so the policy acceptance layer
+    can dispatch AGGRESSIVE_SCALP candidates through the gate function.
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest v7/tests/test_thresholds_aggressive.py -v"
+  - "PYTHONPATH=. python3 -m pytest v7/tests/ -q"
+
+evidence:
+  - "v7/tests/test_thresholds_aggressive.py: 33/33 tests passed"
+  - "v7/tests/ suite: 126/126 passed, 0 failures"
+  - "AggressiveScalpThresholds frozen dataclass with 7 threshold fields"
+  - "is_actionable() gate function with 7 gates (expected R, drawdown, win rate, volume ratio, funding, entry risk, cost stress)"
+  - "v7/thresholds/__init__.py exports AGGRESSIVE_SCALP_THRESHOLDS"
+  - "v7/__init__.py updated: AGGRESSIVE_SCALP status HOLD → LOCKED_INITIAL_BASELINE"
+  - "v7/docs/roadmap.md: AGGRESSIVE_SCALP status LOCKED_INITIAL_BASELINE (Issue #36) in P0.7C, table, key principles, lock status, remaining holds"
+  - "Commit: feat: #36 AGGRESSIVE_SCALP thresholds LOCKED_INITIAL_BASELINE"

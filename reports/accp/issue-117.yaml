@@ -1,0 +1,33 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Issue #117 NO_TRADE Collapse Detector fully implemented"
+files_changed:
+  - "alphaforge/src/alphaforge/reports/collapse_detector.py"
+  - "alphaforge/src/alphaforge/reports/__init__.py"
+  - "alphaforge/src/alphaforge/reports/run_summary.py"
+  - "alphaforge/tests/test_collapse_detector.py"
+  - "v7/docs/roadmap.md"
+  - "reports/accp/issue-117.yaml"
+decisions_locked:
+  - "collapse_threshold: 0.70 (70%) — CONFIGURABLE, default 0.70"
+  - "root_cause_categories: cost/signal/model/threshold"
+  - "window_size: 100 bars — CONFIGURABLE"
+  - "counterfactual: net_r-based saved_loss_r / missed_opportunity_r ratio"
+remaining_holds:
+  - "Integration into empirical report builder (WFV results plumbing) — DEFERRED to Issue #138"
+  - "Real-time runtime collapse monitoring — DEFERRED"
+safe_next_step:
+  - "Integrate collapse detector into empirical report builder when WFV labels field is available"
+  - "Add real-time collapse monitoring in runtime scan loop"
+commands_run:
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_collapse_detector.py -q --timeout=30"
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_run_summary.py -q --timeout=30"
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_research_report.py -q --timeout=30"
+evidence:
+  - "77 tests pass in test_collapse_detector.py"
+  - "37 tests pass in test_run_summary.py (no regressions)"
+  - "43 tests pass in test_research_report.py (no regressions)"
+  - "All exports verified in __init__.py"
+  - "Root cause tree validated with cost/signal/model/threshold attribution"
+  - "Counterfactual analysis with saved_loss_r / missed_opportunity_r ratio"

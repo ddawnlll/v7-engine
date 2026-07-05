@@ -1,0 +1,1101 @@
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: ALPHAFORGE-P0.9B-ML-PILOT-GATE
+  title: AlphaForge P0.9B Subplan 08 — ML Pilot Gate
+  description: 'Implement alphaforge/src/alphaforge/gates/ml_pilot.py: the hard gate that blocks all XGBoost training until
+    8 prerequisite conditions verified. Governance module, not training module. Validates data manifest, label adapter, feature
+    pipeline, dataset assembler, non-ML research report, walk-forward validation, V7 handoff dry run, and all prior ACCP reports.
+    Enforces hard no-xgboost-import guard at module level. All work fixture-only and deterministic.
+
+    '
+  createdAt: '2026-06-23T00:00:00Z'
+  humanId: AlphaForge
+  status: completed
+  completedAt: '2026-06-25T00:00:00Z'
+  completionEvidence:
+    result: PASS
+    targetedTestsPassed: 42
+    implementationVerified: true
+    accpReport: reports/accp/alphaforge_ml_pilot_gate.accp.yaml
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+  - alphaforge/docs/data_contract.md
+  - alphaforge/docs/feature_contract.md
+  - alphaforge/docs/handoff_to_v7.md
+  - alphaforge/docs/label_contract.md
+  - alphaforge/docs/phase_plan.md
+  - alphaforge/docs/validation_contract.md
+  - alphaforge/src/alphaforge/gates/**
+  - alphaforge/tests/**
+  - contracts/fixtures/alphaforge/**
+  - contracts/schemas/alphaforge/**
+  - integration/tests/test_alphaforge_*.py
+  - plans/alphaforge/01_data_manifest.plan.yaml
+  - plans/alphaforge/02_label_adapter.plan.yaml
+  - plans/alphaforge/03_feature_pipeline.plan.yaml
+  - plans/alphaforge/04_dataset_assembler.plan.yaml
+  - plans/alphaforge/05_non_ml_research_report.plan.yaml
+  - plans/alphaforge/06_walk_forward_validation.plan.yaml
+  - plans/alphaforge/07_v7_handoff_dry_run.plan.yaml
+  - reports/accp/**
+  forbiddenFiles:
+  - .github/**
+  - alphaforge/src/alphaforge/inference/**
+  - alphaforge/src/alphaforge/models/**
+  - alphaforge/src/alphaforge/training/**
+  - artifacts/**
+  - data/**
+  - datasets/**
+  - interface/**
+  - lib/**
+  - models/**
+  - runtime/**
+  - simulation/contracts/**
+  - simulation/engine/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: implementation_allowed
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 3
+tasks:
+- id: WS-08-PREREQUISITES
+  title: Define 8 Prerequisite Check Conditions
+  objective: Define 8 Prerequisite Check Conditions
+  implementation:
+    instructions:
+    - '[must] [action] Define prerequisites 1-4 (data manifest, label adapter, feature pipeline, dataset). Each: bool-returning
+      condition function verifying module presence, schema validation, and contract compliance. check_data_manifest_complete(),
+      check_label_adapter_validated(), check_feature_pipeline_causal_validated(), check_dataset_assembled_and_checksummed().
+
+      '
+    - '[must] [action] Define prerequisites 5-8 (non-ML report, walk-forward skeleton, V7 handoff dry run, prior ACCP reports).
+      Each: bool-returning condition function verifying artifact presence, structural validity, and required fields. check_non_ml_research_report_complete(),
+      check_walk_forward_skeleton_validated(), check_v7_handoff_dry_run_complete(), check_all_prior_accp_reports_exist().
+
+      '
+    - '[must] [action] Prerequisite #1 (DATA_MANIFEST_COMPLETE): verify manifest file present, required fields populated,
+      symbol list non-empty, timeframe stack matches locked profiles (SCALP 1h, AGGRESSIVE 15m, SWING 4h).
+
+      '
+    - '[must] [action] Prerequisite #4 (DATASET_ASSEMBLED_AND_CHECKSUMMED): verify dataset manifest present, checksum matches
+      stored reference, feature-label alignment, no null/NaN in label column, mode-level splits confirmed.
+
+      '
+    - '[must] [action] Prerequisite #6 (WALK_FORWARD_SKELETON_VALIDATED): verify 6-fold minimum split structure, OOS periods
+      per fold, MHT correction framework in place, cost stress parameters, regime categories (TREND_UP/DOWN/RANGE/TRANSITION)
+      match contract.
+
+      '
+    - '[must] [action] Prerequisite #7 (V7_HANDOFF_DRY_RUN_COMPLETE): verify V7HandoffPackage schema validated, canonical
+      gate IDs (G0_doc_ready through G10_live) all present, required fields populated, no boundary violations.
+
+      '
+    - '[must] [action] Prerequisite #8 (ALL_PRIOR_ACCP_REPORTS_EXIST): verify 7 ACCP reports present (subplans 01-07), each
+      accp_version "2.0.0", result field populated, scope_confirmation present, no report has result: FAIL.
+
+      '
+    - '[must] [action] Wrap all 8 conditions in PrerequisiteRegistry dataclass: maps prereq IDs to (description, condition_function,
+      critical_flag). DATA_MANIFEST_COMPLETE is critical=True; others critical=False.
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/gates/**
+    - alphaforge/docs/phase_plan.md
+    - alphaforge/docs/handoff_to_v7.md
+    - alphaforge/docs/validation_contract.md
+    - alphaforge/docs/label_contract.md
+    - alphaforge/docs/feature_contract.md
+    - alphaforge/docs/data_contract.md
+    - plans/alphaforge/01_data_manifest.plan.yaml
+    - plans/alphaforge/02_label_adapter.plan.yaml
+    - plans/alphaforge/03_feature_pipeline.plan.yaml
+    - plans/alphaforge/04_dataset_assembler.plan.yaml
+    - plans/alphaforge/05_non_ml_research_report.plan.yaml
+    - plans/alphaforge/06_walk_forward_validation.plan.yaml
+    - plans/alphaforge/07_v7_handoff_dry_run.plan.yaml
+    - contracts/schemas/alphaforge/**
+    - contracts/fixtures/alphaforge/**
+    - reports/accp/**
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/training/**
+    - alphaforge/src/alphaforge/models/**
+    - alphaforge/src/alphaforge/inference/**
+    - lib/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-08-001
+    description: All 8 prerequisite condition functions defined, each returning bool, covering data manifest, label adapter,
+      feature pipeline, dataset, non-ML report, walk-forward, handoff dry run, ACCP reports
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-002
+    description: check_data_manifest_complete() verifies manifest file presence, required fields, non-empty symbol list, timeframe
+      stack matches locked profiles
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-003
+    description: check_dataset_assembled_and_checksummed() verifies dataset manifest, checksum match, feature-label alignment,
+      no null/NaN labels, mode-level splits
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-004
+    description: check_walk_forward_skeleton_validated() verifies 6-fold minimum, OOS periods, MHT framework, cost stress
+      parameters, regime categories match contract
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-005
+    description: check_v7_handoff_dry_run_complete() verifies V7HandoffPackage schema, all canonical V7 gate IDs (G0-G10),
+      required fields, no boundary violations, lineage intact
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-006
+    description: 'check_all_prior_accp_reports_exist() verifies 7 ACCP reports present, each accp_version 2.0.0, result and
+      scope_confirmation fields, no result: FAIL'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-007
+    description: PrerequisiteRegistry dataclass exists, maps prereq IDs to (description, condition_function, critical_flag),
+      DATA_MANIFEST_COMPLETE critical=True
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - schema_validation
+    requiredEvidence:
+    - source
+    - schema_validation
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-08-PREREQUISITES'
+    usageProofs:
+    - id: USE-WS-08-PREREQUISITES
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-08-PREREQUISITES
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-08-VERDICT
+  title: Implement GateVerdict and check_all_prerequisites()
+  objective: Implement GateVerdict and check_all_prerequisites()
+  implementation:
+    instructions:
+    - '[must] [action] Define GateVerdict enum with exactly three members: PASS (all 8 satisfied), HOLD (non-critical incomplete),
+      FAIL (critical missing). Each member carries human-readable label and machine-readable code.
+
+      '
+    - '[must] [action] Implement check_all_prerequisites(registry: PrerequisiteRegistry) -> GateVerdict. Iterate all conditions.
+      Any critical=False -> FAIL. Any non-critical=False -> HOLD. All True -> PASS. FAIL takes precedence over HOLD when both
+      types fail.
+
+      '
+    - '[must] [action] Implement get_failed_prerequisites(registry) -> list[PrerequisiteResult]. For each False condition,
+      capture prereq_id, description, passed=False, critical flag, missing_evidence (list[str]), release_condition (str).
+
+      '
+    - '[must] [action] Define PrerequisiteResult dataclass: prereq_id (str), description (str), passed (bool), critical (bool),
+      missing_evidence (list[str]), release_condition (str).
+
+      '
+    - '[must] [action] Ensure determinism: same registry state always yields same verdict. No random, timestamp, or env-var
+      logic in check_all_prerequisites().
+
+      '
+    - '[must] [action] Guard against bypass: function accepts only registry parameter. No override flags, skip lists, whitelist
+      parameters, or env-var reads. Verdict must be computed, not read from config.
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/gates/**
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/training/**
+    - alphaforge/src/alphaforge/models/**
+    - alphaforge/src/alphaforge/inference/**
+    - lib/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    dependencies:
+    - WS-08-PREREQUISITES
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-08-008
+    description: 'GateVerdict enum defined with exactly three members: PASS, HOLD, FAIL, each with human-readable label and
+      machine-readable code'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - schema_validation
+    requiredEvidence:
+    - source
+    - schema_validation
+  - id: AC-08-009
+    description: check_all_prerequisites() returns PASS when all 8 conditions return True
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-010
+    description: check_all_prerequisites() returns HOLD when non-critical prerequisites return False and all critical prerequisites
+      pass
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-011
+    description: check_all_prerequisites() returns FAIL when any critical prerequisite (data manifest) returns False; FAIL
+      takes precedence over HOLD
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-012
+    description: get_failed_prerequisites() returns list of PrerequisiteResult with prereq_id, description, passed=False,
+      critical flag, missing_evidence, release_condition
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-013
+    description: PrerequisiteResult dataclass has all required fields; check_all_prerequisites() is deterministic and not
+      bypass-able (no override/skip/env-var parameters)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - manual_review
+    requiredEvidence:
+    - source
+    - manual_review
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-08-VERDICT'
+    usageProofs:
+    - id: USE-WS-08-VERDICT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-08-VERDICT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-08-BLOCKING-REPORT
+  title: Implement Blocking Report Generator
+  objective: Implement Blocking Report Generator
+  implementation:
+    instructions:
+    - '[must] [action] Implement generate_blocking_report(verdict, failed) -> BlockingReport. BlockingReport fields: report_id,
+      generated_at (ISO), verdict, overall_status, summary, failed_prerequisites (list[ FailedPrerequisiteDetail]), recommended_actions
+      (list[ActionItem]).
+
+      '
+    - '[must] [action] Define FailedPrerequisiteDetail: prereq_id, prereq_description, critical, status ("MISSING"|"INCOMPLETE"),
+      specific_evidence_missing (list[str]), release_condition, required_subplan_ref (01-07), required_accp_report (exact
+      filename).
+
+      '
+    - '[must] [action] Define ActionItem: action_id, priority (CRITICAL|HIGH|MEDIUM), description, subplan_ref, accp_report_ref,
+      estimated_recovery_steps (list[str]).
+
+      '
+    - '[must] [action] FAIL verdict: summary states "CRITICAL PREREQUISITE MISSING — re-execution of foundational subplans
+      required." First action is re-executing data manifest subplan (01). Failed prerequisites have status "MISSING".
+
+      '
+    - '[must] [action] HOLD verdict: report enumerates every failed prerequisite with exact release condition referencing
+      specific schema file or contract doc. recommended_actions ordered by priority.
+
+      '
+    - '[must] [action] PASS verdict: report returns overall_status "READY", empty failed_prerequisites, single recommended_action
+      confirming gate passage. Report must be structurally complete.
+
+      '
+    - '[must] [action] Implement to_dict() and to_json(indent=2) on BlockingReport for deterministic serialization.
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/gates/**
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/training/**
+    - alphaforge/src/alphaforge/models/**
+    - alphaforge/src/alphaforge/inference/**
+    - lib/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    dependencies:
+    - WS-08-VERDICT
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-08-014
+    description: 'BlockingReport dataclass defined with all required fields: report_id, generated_at, verdict, overall_status,
+      summary, failed_prerequisites, recommended_actions'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-08-015
+    description: FailedPrerequisiteDetail dataclass defined with prereq_id, prereq_description, critical, status (MISSING/INCOMPLETE),
+      specific_evidence_missing, release_condition, required_subplan_ref, required_accp_report
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-08-016
+    description: ActionItem dataclass defined with action_id, priority (CRITICAL/HIGH/MEDIUM), description, subplan_ref, accp_report_ref,
+      estimated_recovery_steps
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-08-017
+    description: 'FAIL verdict blocking report: summary contains ''CRITICAL PREREQUISITE MISSING'', first action is data manifest
+      subplan (01), failed prerequisites status MISSING'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-08-018
+    description: 'HOLD verdict blocking report: enumerates every failed prerequisite with specific release condition referencing
+      exact schema/contract doc; actions ordered by priority'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-08-019
+    description: 'PASS verdict blocking report: overall_status READY, empty failed_prerequisites, single confirmation action;
+      to_dict()/to_json() produce valid deterministic output'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-08-BLOCKING-REPORT'
+    usageProofs:
+    - id: USE-WS-08-BLOCKING-REPORT
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-08-BLOCKING-REPORT
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-08-NO-XGBOOST
+  title: Implement Hard No-XGBoost Import Guard
+  objective: Implement Hard No-XGBoost Import Guard
+  implementation:
+    instructions:
+    - '[must] [action] Implement module-level guard using importlib.util.find_spec to check xgboost availability at import
+      time. If found, raise ImportError: "EXPLICIT_XGBOOST_BLOCK: ml_pilot is a pre-training gate and must not coexist with
+      xgboost." Guard executes at top level, not inside a function — cannot be bypassed by call ordering.
+
+      '
+    - '[must] [action] Add check_no_xgboost_in_environment() -> bool as prerequisite #0 (checked first in PrerequisiteRegistry).
+      Marked critical=True. When False, check_all_prerequisites() returns FAIL with reason EXPLICIT_XGBOOST_BLOCK.
+
+      '
+    - '[must] [action] ml_pilot.py source must not contain "xgboost" in any import statement. Guard uses importlib.util.find_spec
+      only — never imports xgboost. Verify with CMD-no-xgboost-scan.
+
+      '
+    - '[must] [action] Document guard in module docstring: why xgboost blocked, expected error message, resolution (ensure
+      xgboost not installed in gate-check environment).
+
+      '
+    allowedFiles:
+    - alphaforge/src/alphaforge/gates/**
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/training/**
+    - alphaforge/src/alphaforge/models/**
+    - alphaforge/src/alphaforge/inference/**
+    - lib/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    dependencies:
+    - WS-08-VERDICT
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-08-020
+    description: Module-level guard raises ImportError with EXPLICIT_XGBOOST_BLOCK when xgboost is importable (detected via
+      importlib.util.find_spec)
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-021
+    description: Guard executes at module import time (top-level), not inside a function; cannot be bypassed by calling order
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  - id: AC-08-022
+    description: 'check_no_xgboost_in_environment() returns bool, marked critical=True, checked first as prerequisite #0 in
+      PrerequisiteRegistry'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-023
+    description: When check_no_xgboost_in_environment() returns False, check_all_prerequisites() returns FAIL with reason
+      EXPLICIT_XGBOOST_BLOCK
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - test_output
+    requiredEvidence:
+    - source
+    - test_output
+  - id: AC-08-024
+    description: ml_pilot.py source file contains no 'xgboost' string in any import; guard uses importlib.util.find_spec exclusively;
+      CMD-no-xgboost-scan exits 0
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+      - command
+      commandRef: CMD-no-xgboost-scan
+    requiredEvidence:
+    - source
+    - command
+  - id: AC-08-025
+    description: 'Module docstring documents xgboost guard: why blocked, expected error message, resolution steps for users'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: file_contains
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - source
+    requiredEvidence:
+    - source
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-08-NO-XGBOOST'
+    usageProofs:
+    - id: USE-WS-08-NO-XGBOOST
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-08-NO-XGBOOST
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+- id: WS-08-TESTS
+  title: Create Comprehensive ML Pilot Gate Tests
+  objective: Create Comprehensive ML Pilot Gate Tests
+  implementation:
+    instructions:
+    - '[must] [action] Create alphaforge/tests/test_ml_pilot_gate.py. Test PASS verdict: mock all 9 conditions (8 prereqs
+      + no-xgboost) to return True. Verify GateVerdict.PASS and get_failed_prerequisites() empty.
+
+      '
+    - '[must] [action] Test HOLD verdict: mock non-critical prerequisites (label adapter, feature pipeline) to return False,
+      critical prerequisites pass. Verify GateVerdict.HOLD and get_failed_prerequisites() has correct entries with prereq_id,
+      description, missing_evidence.
+
+      '
+    - '[must] [action] Test FAIL verdict: mock critical prerequisite (data manifest) to return False. Verify GateVerdict.FAIL
+      even if others pass. Test FAIL takes precedence over HOLD when both types fail simultaneously.
+
+      '
+    - '[must] [action] Test blocking report for HOLD: verify overall_status correct, failed_prerequisites non-empty, each
+      entry has release_condition, required_subplan_ref, required_accp_report. Actions ordered by priority. Test FAIL report:
+      summary has "CRITICAL PREREQUISITE MISSING", first action is subplan 01 re-execution. Test PASS report: overall_status
+      "READY", empty failed_prerequisites.
+
+      '
+    - '[must] [action] Test no-xgboost guard: mock importlib.util.find_spec to return non-None. Verify importing ml_pilot
+      raises ImportError with "EXPLICIT_XGBOOST_BLOCK". Verify check_no_xgboost_in_environment() returns False, triggering
+      FAIL verdict.
+
+      '
+    - '[must] [action] Test non-bypassability and determinism: verify check_all_prerequisites() accepts only registry parameter
+      (no override/skip/whitelist/env-var). Create two identical registries, call twice, verify same verdict. Repeat for PASS,
+      HOLD, and FAIL scenarios.
+
+      '
+    - '[must] [action] Test all 9 individual prerequisite check functions with mock filesystem checks. For each: True path
+      (all conditions met) and False path (specific condition missing). Document which evidence each check requires.
+
+      '
+    - '[must] [action] Create integration/tests/test_alphaforge_ml_pilot.py: verify ml_pilot module importable (no xgboost),
+      PrerequisiteRegistry has all 9 entries, each condition function callable, BlockingReport JSON round-trips correctly
+      via to_dict()/to_json().
+
+      '
+    - '[must] [action] Run CMD-test-alphaforge, CMD-test-integration-alphaforge, CMD-no-xgboost-scan. All must exit 0. All
+      tests pass with no failures, no errors, no skipped.
+
+      '
+    allowedFiles:
+    - alphaforge/tests/**
+    - integration/tests/test_alphaforge_*.py
+    - alphaforge/src/alphaforge/gates/**
+    forbiddenFiles:
+    - alphaforge/src/alphaforge/training/**
+    - alphaforge/src/alphaforge/models/**
+    - alphaforge/src/alphaforge/inference/**
+    - lib/**
+    - simulation/engine/**
+    - runtime/**
+    - interface/**
+    - data/**
+    - datasets/**
+    - models/**
+    dependencies:
+    - WS-08-PREREQUISITES
+    - WS-08-VERDICT
+    - WS-08-BLOCKING-REPORT
+    - WS-08-NO-XGBOOST
+  artifactPolicy:
+    class: library_code
+    wiringRequired: true
+    reachabilityRequired: true
+    executionRequired: true
+    deterministicEvidenceRequired: true
+  acceptanceCriteria:
+  - id: AC-08-026
+    description: 'Test PASS: check_all_prerequisites() returns PASS when all 9 conditions mocked True; get_failed_prerequisites()
+      returns empty list'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-08-027
+    description: 'Test HOLD: check_all_prerequisites() returns HOLD when non-critical prerequisites mocked False; get_failed_prerequisites()
+      has correct failed entries with prereq_id, description, missing_evidence'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-08-028
+    description: 'Test FAIL: check_all_prerequisites() returns FAIL when critical prerequisite mocked False even if others
+      pass; FAIL takes precedence over HOLD when both types fail'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-08-029
+    description: 'Test blocking reports: HOLD has non-empty failed_prerequisites with release_condition/subplan_ref/accp_report,
+      actions prioritized; FAIL summary has ''CRITICAL PREREQUISITE MISSING'' with subplan 01 first; PASS has overall_status
+      READY and empty failed_prerequisites'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-08-030
+    description: 'Test XGBoost guard: importing ml_pilot raises ImportError with EXPLICIT_XGBOOST_BLOCK when xgboost mock-importable;
+      check_no_xgboost_in_environment() returns False triggering FAIL'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-08-031
+    description: 'Test non-bypassability and determinism: check_all_prerequisites() accepts only registry parameter, no override/skip/env-var;
+      identical registries yield same verdict for PASS, HOLD, FAIL scenarios'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: test_output
+      deterministic: true
+      canSatisfyFinalGate: false
+      advisoryOnly: false
+      evidenceRefs:
+      - test_output
+    requiredEvidence:
+    - test_output
+  - id: AC-08-032
+    description: 'Integration: ml_pilot module importable in clean env, PrerequisiteRegistry has all 9 entries, each condition
+      function callable, BlockingReport JSON round-trips correctly; all test commands exit 0'
+    level: required
+    humanApproved: true
+    criteriaSource: imported_human
+    verification:
+      type: command_output
+      deterministic: true
+      canSatisfyFinalGate: true
+      advisoryOnly: false
+      evidenceRefs:
+      - command
+      - test_output
+      commandRef: CMD-test-alphaforge
+    requiredEvidence:
+    - command
+    - test_output
+  integrationContract:
+    mode: consumer_or_export
+    reason: 'Module must be importable and covered by deterministic tests. Task: WS-08-TESTS'
+    usageProofs:
+    - id: USE-WS-08-TESTS
+      commandRef: CMD-test-alphaforge
+      proves:
+      - module importable
+      - deterministic tests pass
+    entrypoints:
+    - id: ENTRY-WS-08-TESTS
+      path: alphaforge/src/alphaforge/__init__.py
+      kind: library_module
+commands:
+  exactAllowedCommands:
+  - id: CMD-discover-git-status
+    kind: discovery
+    command: git status --porcelain
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  - id: CMD-test-alphaforge
+    kind: targeted_test
+    command: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ -q
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 120
+    noTestsFoundIsFailure: true
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+
+  - id: CMD-no-xgboost-scan
+    kind: targeted_test
+    command: 'python3 -c "import ast, sys; files=[''alphaforge/src/alphaforge/gates/ml_pilot.py'']; [sys.exit(1) if ''xgboost''
+      in open(f).read().lower() or ''XGBClassifier'' in open(f).read() or ''XGBRegressor'' in open(f).read() else None for
+      f in files]; print(''PASS: no xgboost in ml_pilot.py'')"'
+    cwd: .
+    evidenceRequired: true
+    timeoutSeconds: 30
+    noTestsFoundIsFailure: false
+    watchModeForbidden: true
+    expectedExitCode: 0
+    networkAllowed: false
+    shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+  - id: DCMD-no-curl
+    command: curl
+    pattern: ^curl\s
+    reason: No external network during deterministic AlphaForge implementation.
+  - id: DCMD-no-wget
+    command: wget
+    pattern: ^wget\s
+    reason: No external downloads.
+  - id: DCMD-no-binance
+    command: exchange/live pattern
+    pattern: binance|exchange|api_key|live_order|create_order|market_order
+    reason: No exchange or live trading behavior.
+  - id: DCMD-no-xgboost-training
+    command: xgboost model training
+    pattern: xgboost|XGBClassifier|XGBRegressor|fit\(|import xgboost
+    reason: No model training in ML pilot gate phase.
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+  - diff
+  - source
+  - wiring
+  - command
+  - test_output
+  - schema_validation
+  - report
+  - manual_review
+  hashWhenAvailable: true
+gates:
+  sequence:
+  - SchemaGate
+  - LockGate
+  - EvidenceGate
+  - WiringGate
+  - ExecGate
+  - FinalGate
+  verdicts:
+  - PASS
+  - HOLD
+  - FAIL
+  reasonCodes:
+    SchemaGate:
+    - PLAN_SCHEMA_INVALID
+    - UNKNOWN_TOP_LEVEL_KEY
+    - TASK_SCHEMA_INVALID
+    LockGate:
+    - PLAN_NOT_LOCKED
+    - ACCEPTANCE_CRITERIA_HASH_MISSING
+    - COMMAND_POLICY_HASH_MISSING
+    EvidenceGate:
+    - REQUIRED_EVIDENCE_MISSING
+    - COMMAND_OUTPUT_MISSING
+    - PHANTOM_EVIDENCE_DETECTED
+    - PROFITABILITY_CLAIM_WITHOUT_EVIDENCE
+    WiringGate:
+    - ORPHAN_MODULE
+    - EXPORT_SURFACE_MISSING
+    - USAGE_PROOF_MISSING
+    - FORBIDDEN_IMPORT_BOUNDARY
+    ExecGate:
+    - TEST_COMMAND_FAILED
+    - NO_TESTS_FOUND
+    - FORBIDDEN_COMMAND_USED
+    - NETWORK_USED_WHEN_FORBIDDEN
+    FinalGate:
+    - FINAL_VALIDATION_FAILED
+    - REMAINING_REQUIRED_CRITERIA
+    - REPORT_MISSING
+    - HOLD_REQUIRES_REPAIR_PACKET
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 3
+  reverifyCommand: PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/ integration/tests/test_alphaforge_*.py
+    -q
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/alphaforge/alphaforge-p0.9b-ml-pilot-gate.lock.json
+  hashes:
+  - planHash
+  - acceptanceCriteriaHash
+  - artifactPolicyHash
+  - integrationContractHash
+  - commandPolicyHash
+  - allowedFilesHash
+  - forbiddenFilesHash
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

@@ -41,6 +41,13 @@ CANONICAL_V7_GATES = [
     "G10_live",
 ]
 
+# Legacy/forbidden gate names from early AlphaForge drafts (P0.8E).
+# These must never appear in V7HandoffPackage gate mappings.
+FORBIDDEN_GATE_NAMES = [
+    "G3_model_sanity", "G5_cost_resilience", "G8_calibration",
+    "G9_no_trade_baseline", "G10_paper_shadow",
+]
+
 # V7 canonical gate names (friendly labels)
 CANONICAL_V7_GATE_NAMES = {
     "G0_doc_ready": "DOC_READY",

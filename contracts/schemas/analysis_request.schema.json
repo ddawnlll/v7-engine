@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://v7-engine/contracts/schemas/analysis_request.schema.json",
+  "title": "AnalysisRequest",
+  "description": "Request from V7 runtime to the policy engine for a trade analysis decision on a given symbol at a point in time.",
+  "type": "object",
+  "required": [
+    "request_id",
+    "mode",
+    "symbol",
+    "timestamp",
+    "requested_trade_mode",
+    "model_scope",
+    "caller"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "description": "Unique identifier for this analysis request, assigned by the caller."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"],
+      "description": "The trading mode this request operates under."
+    },
+    "symbol": {
+      "type": "string",
+      "description": "Trading symbol, e.g. 'BTCUSDT'."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp at which the request was generated."
+    },
+    "requested_trade_mode": {
+      "type": "string",
+      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"],
+      "description": "The trade mode requested for analysis (redundant with 'mode' for routing clarity)."
+    },
+    "model_scope": {
+      "type": "string",
+      "description": "Identifier for the model scope or alpha candidate to use, e.g. 'swing_v1', 'scalp_xgb_002'."
+    },
+    "caller": {
+      "type": "string",
+      "description": "Component that issued the request, e.g. 'v7_runtime', 'replay_tool'."
+    },
+    "raw_signal": {
+      "type": "object",
+      "description": "Optional raw signal payload from upstream signal sources (alphaforge, external adapter, etc.).",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

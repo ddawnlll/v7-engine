@@ -1,0 +1,393 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-PLANSPEC-GENERATION
+  report_type: PLAN_GENERATION
+  report_family: coordination
+  plan_id: ALPHAFORGE-MASTER-EXECUTION-001
+  generated_at: "2026-06-23T00:00:00Z"
+  generated_by: ClaudeCode
+  model: DeepSeek-V4-Pro
+  effort: ultracode
+  reasoning_mode: xhigh
+  parent_task_id: ACCP-GENERATE-ALPHAFORGE-PLANSPEC-MASTER
+
+summary:
+  created_plan_files:
+    - plans/alphaforge_master_execution_plan.yaml
+  execution_started: false
+  implementation_started: false
+  plan_generation_status: COMPLETE
+  plan_target: P0.9B/P0.9C/P1.0 deterministic AlphaForge implementation pipeline
+
+schema_validation:
+  status: PASS
+  method: structural_validation
+  note: >
+    template.yaml does not exist in the repository. The PlanSpec schema was
+    defined inline in the ACCP task prompt. Structural validation performed
+    via deterministic Python script covering all 13 required top-level keys,
+    6 forbidden keys, 10 task structures, 71 acceptance criteria, 7 allowed
+    commands, 4 denied commands, and 6-gate sequence.
+  jsonschema_available: false
+  jsonschema_validator_used: false
+  structural_checks_passed: true
+  commands_run:
+    - command: >
+        python3 -c "import yaml; structural validation of all 13 top-level keys,
+        10 tasks, 71 ACs, 7 commands, 6 gates"
+      exit_code: 0
+      output_excerpt: "✅ All structural validations PASSED — 10 tasks, 71 ACs, 7 commands, 6 gates"
+
+plan_contents:
+  task_count: 10
+  total_acceptance_criteria: 71
+  allowed_commands: 7
+  denied_commands: 4
+  gate_count: 6
+  tasks:
+    - id: TASK-00-BASELINE-VERIFY
+      title: Baseline Verify
+      type: read_only_verification
+      acceptance_criteria: 7
+      blocks: TASK-01
+    - id: TASK-01-DETERMINISTIC-DATA-MANIFEST
+      title: Deterministic Data Manifest
+      type: library_implementation
+      acceptance_criteria: 7
+      blocks: TASK-02
+      integration_contract: consumer_or_export
+    - id: TASK-02-SIMULATION-DERIVED-LABEL-ADAPTER
+      title: Simulation-Derived Label Adapter
+      type: library_implementation
+      acceptance_criteria: 8
+      blocks: TASK-03
+      integration_contract: consumer_or_export
+    - id: TASK-03-MINIMAL-DETERMINISTIC-FEATURE-PIPELINE
+      title: Minimal Deterministic Feature Pipeline
+      type: library_implementation
+      acceptance_criteria: 7
+      blocks: TASK-04
+      integration_contract: consumer_or_export
+    - id: TASK-04-DATASET-ASSEMBLER-AND-WRITER
+      title: Dataset Assembler and Writer
+      type: library_implementation
+      acceptance_criteria: 6
+      blocks: TASK-05
+      integration_contract: consumer_or_export
+    - id: TASK-05-NON-ML-RESEARCH-REPORT-PATH
+      title: Non-ML Research Report Path
+      type: library_implementation
+      acceptance_criteria: 7
+      blocks: TASK-06
+      integration_contract: consumer_or_export
+    - id: TASK-06-WALK-FORWARD-VALIDATION-SKELETON
+      title: Walk-Forward Validation Skeleton
+      type: library_implementation
+      acceptance_criteria: 7
+      blocks: TASK-07
+      integration_contract: consumer_or_export
+    - id: TASK-07-V7-HANDOFF-DRY-RUN
+      title: V7 Handoff Dry Run
+      type: library_implementation
+      acceptance_criteria: 7
+      blocks: TASK-08
+      integration_contract: consumer_or_export
+    - id: TASK-08-ML-PILOT-GATE-DESIGN
+      title: ML Pilot Gate Design
+      type: governance_implementation
+      acceptance_criteria: 6
+      blocks: none
+      integration_contract: consumer_or_export
+    - id: TASK-09-FINAL-COMPREHENSIVE-VALIDATION
+      title: Final Comprehensive Validation
+      type: read_only_verification
+      acceptance_criteria: 9
+      blocks: none
+
+plan_prerequisites_verified:
+  p0_8e_status: PASS
+  p0_8e_report: reports/p0_8e_alphaforge_contract_patch_reaudit.accp.yaml
+  p0_8e_summary: >
+    Gate mapping corrected to V7 canonical G0-G10. Timeframes aligned to locked
+    simulation profiles. Label schema completed. Validation contract aligned.
+    MHT/data-snooping controls added. Schema strictness improved. 21 fixture
+    tests + 205 existing = 226 total green.
+  p0_9a_status: PASS
+  p0_9a_report: reports/p0_9a_alphaforge_implementation_scaffold.accp.yaml
+  p0_9a_summary: >
+    15 Python source files across 6 modules. Contract loader, validator, mode
+    profiles, report builders, handoff builder, report writer all functional.
+    39 scaffold tests + 21 P0.8E = 60 AlphaForge-specific tests pass. 266 total
+    local tests green.
+  existing_scaffold_modules:
+    - alphaforge/src/alphaforge/__init__.py
+    - alphaforge/src/alphaforge/constants.py
+    - alphaforge/src/alphaforge/errors.py
+    - alphaforge/src/alphaforge/paths.py
+    - alphaforge/src/alphaforge/contracts/__init__.py
+    - alphaforge/src/alphaforge/contracts/loader.py
+    - alphaforge/src/alphaforge/contracts/validator.py
+    - alphaforge/src/alphaforge/contracts/registry.py
+    - alphaforge/src/alphaforge/modes/__init__.py
+    - alphaforge/src/alphaforge/modes/profiles.py
+    - alphaforge/src/alphaforge/reports/__init__.py
+    - alphaforge/src/alphaforge/reports/builders.py
+    - alphaforge/src/alphaforge/reports/writer.py
+    - alphaforge/src/alphaforge/handoff/__init__.py
+    - alphaforge/src/alphaforge/handoff/builders.py
+  existing_integration_tests:
+    - integration/tests/test_alphaforge_fixture_validation.py
+    - integration/tests/test_alphaforge_contract_semantics.py
+    - integration/tests/test_alphaforge_schema_strictness.py
+    - integration/tests/test_alphaforge_scaffold_imports.py
+    - integration/tests/test_alphaforge_contract_loader.py
+    - integration/tests/test_alphaforge_report_builders.py
+    - integration/tests/test_alphaforge_handoff_builder.py
+
+new_modules_to_create:
+  - alphaforge/src/alphaforge/data/__init__.py
+  - alphaforge/src/alphaforge/data/manifest.py
+  - alphaforge/src/alphaforge/labels/__init__.py
+  - alphaforge/src/alphaforge/labels/adapter.py
+  - alphaforge/src/alphaforge/features/__init__.py
+  - alphaforge/src/alphaforge/features/pipeline.py
+  - alphaforge/src/alphaforge/dataset/__init__.py
+  - alphaforge/src/alphaforge/dataset/assembler.py
+  - alphaforge/src/alphaforge/dataset/writer.py
+  - alphaforge/src/alphaforge/reports/research.py
+  - alphaforge/src/alphaforge/validation/__init__.py
+  - alphaforge/src/alphaforge/validation/walk_forward.py
+  - alphaforge/src/alphaforge/handoff/dry_run.py
+  - alphaforge/src/alphaforge/gates/__init__.py
+  - alphaforge/src/alphaforge/gates/ml_pilot.py
+
+new_tests_to_create:
+  - alphaforge/tests/test_data_manifest.py
+  - alphaforge/tests/test_label_adapter.py
+  - alphaforge/tests/test_feature_pipeline.py
+  - alphaforge/tests/test_dataset_assembler.py
+  - alphaforge/tests/test_research_report.py
+  - alphaforge/tests/test_walk_forward.py
+  - alphaforge/tests/test_handoff_dry_run.py
+  - alphaforge/tests/test_ml_pilot_gate.py
+
+readiness:
+  ready_for_execution: conditional
+  reason:
+    - "PlanSpec schema validated (structural PASS)"
+    - "All 10 tasks have required fields, acceptance criteria, integration contracts"
+    - "All 7 required commands defined with evidence requirements"
+    - "All 6 gates defined with verdicts and reason codes"
+    - "P0.8E and P0.9A confirmed PASS — prerequisites satisfied"
+    - "No template.yaml exists — schema was defined inline in ACCP task"
+    - "jsonschema not available — structural validation only (not full Draft202012Validator)"
+    - "Plan lock hashes not yet computed (requires plan lock step before execution)"
+    - "Remote CI status UNKNOWN (HOLD-CI-GREEN-001)"
+    - "User review required before execution"
+
+remaining_holds:
+  - id: no_real_profitability_evidence
+    reason: "No empirical profitability data. All evidence is fixture/contract-level."
+    release_condition: "Real market data + model training + walk-forward validation"
+  - id: no_real_market_data
+    reason: "All data is fixture-derived. No real OHLCV market data ingested."
+    release_condition: "Real market data pipeline (post-P0.9B)"
+  - id: no_model_training
+    reason: "XGBoost not imported. No ML model trained. This plan is deterministic scaffold only."
+    release_condition: "ML pilot gate PASS + P1.0 model training phase"
+  - id: no_xgboost_training
+    reason: "XGBoost blocked by ML pilot gate (TASK-08). Training is P1.0+."
+    release_condition: "Pilot gate released after all 8 prerequisites met"
+  - id: funding_deferred
+    reason: "Funding cost model not implemented in simulation engine."
+    release_condition: "Funding implementation in simulation"
+  - id: scalp_thresholds_hold
+    reason: "SCALP thresholds require empirical evidence. Cannot lock without data."
+    release_condition: "SCALP primary research report with real validation data"
+  - id: aggressive_scalp_thresholds_hold
+    reason: "AGGRESSIVE_SCALP thresholds require empirical evidence."
+    release_condition: "AGGRESSIVE_SCALP primary research report with real validation data"
+  - id: g7_to_g10_runtime_infrastructure_not_built
+    reason: "G7 SHADOW, G8 PAPER, G9 TINY_LIVE, G10 LIVE runtime not built."
+    release_condition: "Runtime infrastructure phases"
+  - id: no_rl_policy_critic_implementation
+    reason: "Policy Critic RL not implemented. Design is LOCK_CANDIDATE."
+    release_condition: "Policy Critic implementation phase"
+  - id: ci_first_green_run_hold
+    reason: "Remote CI never verified. All tests pass locally only."
+    release_condition: "Push to GitHub, verify CI green"
+
+risk_register:
+  - risk: "Module scope creep — data manifest may grow beyond fixture-only"
+    severity: medium
+    mitigation: "TASK-01 allowedFiles and antiPatterns strictly enforce fixture-only"
+  - risk: "Feature pipeline complexity — 6 feature groups with leakage prevention"
+    severity: medium
+    mitigation: "TASK-03 split into discrete sub-steps; all features deterministic"
+  - risk: "Walk-forward skeleton produces meaningless metrics without model training"
+    severity: low
+    mitigation: "TASK-06 explicitly uses placeholder NOT_EVALUATED; no fake metrics"
+  - risk: "jsonschema not available for full Draft202012Validator validation"
+    severity: low
+    mitigation: "Structural validation suffices for planning; CI should install jsonschema"
+  - risk: "PyYAML had to be installed via --break-system-packages for validation"
+    severity: low
+    mitigation: "Project should use uv/pyproject.toml for dependency management"
+
+source_inventory:
+  items:
+    - id: SRC-001
+      title: V7 Engine ai_summary.md
+      author_or_organization: V7 Engine Project
+      url_or_identifier: ai_summary.md (repo root)
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "Project orientation, subsystem authority map, cross-domain rules"
+      trust_rating: high
+      limitations: "Thin meta-hub; not a dense synthesis"
+    - id: SRC-002
+      title: V7 Engine CLAUDE.md
+      author_or_organization: V7 Engine Project
+      url_or_identifier: CLAUDE.md (repo root)
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "Working instructions, design lock semantics, domain boundaries, forbidden actions"
+      trust_rating: high
+      limitations: "Operational instructions; does not define architecture"
+    - id: SRC-003
+      title: AlphaForge AI Summary
+      author_or_organization: AlphaForge
+      url_or_identifier: alphaforge/docs/ai_summary.md
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "AlphaForge mission, authority boundaries, mode priority, V7 gate mapping, data flow"
+      trust_rating: high
+      limitations: "Post-P0.8E state; thin hub"
+    - id: SRC-004
+      title: AlphaForge Phase Plan
+      author_or_organization: AlphaForge
+      url_or_identifier: alphaforge/docs/phase_plan.md
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "Implementation phases P0.8B through P1.0, scope per phase, prerequisites"
+      trust_rating: high
+      limitations: "P0.9A marked BLOCKED (requires P0.8E PASS) — now superseded by this plan"
+    - id: SRC-005
+      title: P0.8E Contract Patch Re-Audit Report
+      author_or_organization: V7 Engine Project
+      url_or_identifier: reports/p0_8e_alphaforge_contract_patch_reaudit.accp.yaml
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: prior_accp_report
+      relevance_to_task: "Confirms P0.8E PASS — gate mapping, timeframes, schemas, fixtures all aligned"
+      trust_rating: high
+      limitations: "Agent self-report; validated by test commands"
+    - id: SRC-006
+      title: P0.9A Implementation Scaffold Report
+      author_or_organization: V7 Engine Project
+      url_or_identifier: reports/p0_9a_alphaforge_implementation_scaffold.accp.yaml
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: prior_accp_report
+      relevance_to_task: "Confirms P0.9A PASS — 15 source files, 39 scaffold tests, 266 total green"
+      trust_rating: high
+      limitations: "Agent self-report; validated by test commands"
+    - id: SRC-007
+      title: AlphaForge Data Contract
+      author_or_organization: AlphaForge
+      url_or_identifier: alphaforge/docs/data_contract.md
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "Data layers (raw → normalized → feature → label → manifest), field definitions"
+      trust_rating: high
+      limitations: "P0.8E note: timeframes corrected to locked simulation profiles"
+    - id: SRC-008
+      title: AlphaForge Label Contract
+      author_or_organization: AlphaForge
+      url_or_identifier: alphaforge/docs/label_contract.md
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "SimulationOutput → AlphaForgeLabel field mapping, NO_TRADE quality, cost-aware labels"
+      trust_rating: high
+      limitations: "Funding marked DEFERRED"
+    - id: SRC-009
+      title: AlphaForge Feature Contract
+      author_or_organization: AlphaForge
+      url_or_identifier: alphaforge/docs/feature_contract.md
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "FeatureSetSpec, 7 feature groups, leakage rules"
+      trust_rating: high
+      limitations: "Lead-lag group requires cross-sectional data (P0.9B)"
+    - id: SRC-010
+      title: AlphaForge Validation Contract
+      author_or_organization: AlphaForge
+      url_or_identifier: alphaforge/docs/validation_contract.md
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "Walk-forward 6-fold, OOS summary, cost stress, regime breakdown, symbol stability, MHT"
+      trust_rating: high
+      limitations: "P0.8E alignments applied"
+    - id: SRC-011
+      title: AlphaForge → V7 Handoff Contract
+      author_or_organization: AlphaForge
+      url_or_identifier: alphaforge/docs/handoff_to_v7.md
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "V7HandoffPackage format, canonical G0-G10 gate mapping, handoff rejection rules"
+      trust_rating: high
+      limitations: "Gate mapping corrected in P0.8E"
+    - id: SRC-012
+      title: V7 Roadmap
+      author_or_organization: V7 Engine Project
+      url_or_identifier: v7/docs/roadmap.md
+      date_published_or_updated: "2026-06-23"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "Implementation phases, lock status, mode priority alignment, P0.9A unblocked"
+      trust_rating: high
+      limitations: "High-level sequencing; not a detailed implementation spec"
+    - id: SRC-013
+      title: ACCP v2.0 Onefile Master
+      author_or_organization: V7 Engine Project
+      url_or_identifier: accp.yaml (repo root)
+      date_published_or_updated: "2026-06-10"
+      retrieval_date: "2026-06-23"
+      source_type: repo_authority
+      relevance_to_task: "ACCP report format, report type registry, generation rules"
+      trust_rating: high
+      limitations: "Template document; partial read (lines 1-2326 of 4276)"
+
+final_status:
+  status: PASS
+  plan_generated: true
+  schema_validated: true
+  schema_validation_method: structural
+  plan_executable: conditional
+  safe_next_step: >
+    Review the generated PlanSpec at plans/alphaforge_master_execution_plan.yaml.
+    After review and approval, run the PRAXIS Truth Kernel execution prompt to
+    begin deterministic AlphaForge implementation. Do NOT execute the plan from
+    this planning report. This report is EVIDENCE ONLY and does not authorize
+    execution.
+
+self_assessment:
+  required_sections_complete: true
+  evidence_coverage: high
+  source_citations: 13
+  unresolved_gaps:
+    - "Plan lock hashes not yet computed (requires separate lock step)"
+    - "No full jsonschema Draft202012Validator run (dependency not available)"
+    - "Remote CI status unknown"
+    - "User review not yet obtained"
+  confidence_in_own_completeness: high

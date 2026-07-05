@@ -76,7 +76,8 @@
     },
     "no_trade_comparison": {
       "type": "object",
-      "description": "Summary of NO_TRADE label distribution.",
+      "description": "Summary of NO_TRADE label distribution. P0.8E: nested required fields strengthened — empty no_trade_comparison cannot pass.",
+      "required": ["correct_no_trade_pct"],
       "properties": {
         "correct_no_trade_pct": { "type": "number", "description": "Percentage of rows where NO_TRADE was correct." },
         "saved_loss_pct": { "type": "number" },
@@ -86,7 +87,8 @@
     },
     "lineage": {
       "type": "object",
-      "description": "Full provenance chain.",
+      "description": "Full provenance chain. P0.8E: nested required fields strengthened — empty lineage cannot pass.",
+      "required": ["simulation_run_ids", "simulation_family_version", "label_interpretation_version"],
       "properties": {
         "simulation_run_ids": {
           "type": "array",

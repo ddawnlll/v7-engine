@@ -1,0 +1,94 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-P1-HOLD-RELEASE-BLOCKED-NO-PLAN-BUNDLE
+  report_type: HOLD
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-FAST-PARALLEL-EXECUTE-ALPHAFORGE-P1-HOLD-RELEASE
+  priority: P1
+  execution_mode: fast_gated_parallel
+
+summary:
+  final_status: HOLD
+  reason: "P1 Hold Release PlanSpec bundle not found on disk"
+  implementation_blocked: true
+  action_required: "Create P1 PlanSpec bundle before execution"
+
+discovery_results:
+  search_paths_checked:
+    - "plans/alphaforge_p1/"
+    - "plans/alphaforge/**p1*.plan.yaml"
+    - "plans/**real_data*.plan.yaml"
+    - "plans/**hold_release*.plan.yaml"
+  p1_bundle_found: false
+  existing_plan_files:
+    - "plans/alphaforge/00_baseline_verify.plan.yaml"
+    - "plans/alphaforge/01_data_manifest.plan.yaml"
+    - "plans/alphaforge/02_label_adapter.plan.yaml"
+    - "plans/alphaforge/03_feature_pipeline.plan.yaml"
+    - "plans/alphaforge/04_dataset_assembler.plan.yaml"
+    - "plans/alphaforge/05_non_ml_research_report.plan.yaml"
+    - "plans/alphaforge/06_walk_forward_validation.plan.yaml"
+    - "plans/alphaforge/07_v7_handoff_dry_run.plan.yaml"
+    - "plans/alphaforge/08_ml_pilot_gate.plan.yaml"
+    - "plans/alphaforge/09_final_validation.plan.yaml"
+    - "plans/alphaforge/master.plan.yaml"
+  note: >
+    Only the P0 AlphaForge PlanSpec bundle exists under plans/alphaforge/.
+    The P1 Hold Release / Real-Data Readiness bundle has NOT been created.
+    This is a planning-gap: P1 execution requires P1 plans.
+
+p0_dependency_state:
+  p0_closure_report: "reports/accp/alphaforge_p0_deterministic_pipeline_closure.accp.yaml"
+  p0_final_status: PASS_WITH_HOLDS
+  p0_tests_passing: 817
+  p0_ready_for_next_phase: true
+  fast_parallel_report: "reports/accp/alphaforge_fast_parallel_execution.accp.yaml"
+  fast_parallel_status: PASS_WITH_HOLDS
+
+pre_execution_checks:
+  - {check: "P0 closure report exists", status: PASS}
+  - {check: "Fast parallel execution report exists", status: PASS}
+  - {check: "P1 master plan exists", status: FAIL, detail: "plans/alphaforge_p1/master.plan.yaml not found"}
+  - {check: "P1 subplan files exist", status: FAIL, detail: "No P1 plan files found"}
+  - {check: "template.yaml exists", status: PASS}
+  - {check: "template.json absent", status: PASS}
+
+expected_p1_subplans_not_found:
+  - "00_p0_closure_verify"
+  - "01_real_data_contract"
+  - "02_offline_data_adapter"
+  - "03_data_quality_point_in_time"
+  - "04_funding_cost_model_decision"
+  - "05_empirical_walk_forward_design"
+  - "06_mht_overfit_controls"
+  - "07_no_trade_baseline_and_cost_stress"
+  - "08_ml_pilot_unlock_gate"
+  - "09_final_p1_readiness_audit"
+
+required_to_proceed:
+  - "Create plans/alphaforge_p1/ directory"
+  - "Create plans/alphaforge_p1/master.plan.yaml (P1 orchestrator)"
+  - "Create subplan files 00-09 with P1 objectives"
+  - "Validate all P1 plans against template.yaml"
+  - "Verify P1 plans do not authorize model training, XGBoost, live APIs, profit claims"
+  - "Re-run ACCP-FAST-PARALLEL-EXECUTE-ALPHAFORGE-P1-HOLD-RELEASE"
+
+holds_before: 8
+holds_after: 8
+hold_changes: []
+
+remaining_holds:
+  - no_real_profitability_evidence
+  - no_real_market_data
+  - no_model_training
+  - no_xgboost_training
+  - funding_deferred
+  - scalp_thresholds_hold
+  - aggressive_scalp_thresholds_hold
+  - g7_to_g10_runtime_infrastructure_not_built
+
+forbidden_scans: NOT_RUN
+reason: "Blocked at pre-execution — P1 bundle missing"
+
+next_step: "Create P1 Hold Release PlanSpec bundle, validate against template.yaml, then re-run this task"

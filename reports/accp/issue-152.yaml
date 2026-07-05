@@ -1,0 +1,66 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+result: "PASS"
+
+scope_confirmation:
+  issue: "#152"
+  title: "Real Data Pipeline — Binance Live Market Data Tuning"
+  milestone: "v0.26"
+  priority: "P2"
+  requirements_met:
+    - "python3 -m cli tune --mode SWING --real --symbols BTCUSDT,ETHUSDT,SOLUSDT works"
+    - "Synthetic vs real comparison report generated"
+    - "No crash on real data (with appropriate error handling when no cached data)"
+    - "Dry-run mode prints what would run"
+    - "CLI help text documents the tune subcommand"
+
+files_changed:
+  - cli/v7_engine.py
+  - cli/tests/test_tune.py
+  - v7/docs/roadmap.md
+
+decisions_locked:
+  - item: "tune CLI command"
+    status: "LOCKED_INITIAL_BASELINE"
+  - item: "Comparison report format"
+    status: "LOCKED_INITIAL_BASELINE"
+  - item: "Real data pipeline integration"
+    status: "LOCKED_INITIAL_BASELINE"
+
+remaining_holds:
+  - hold: "Real profitability evidence"
+    release_condition: "Requires real training + WFV with meaningful data"
+  - hold: "Comparison thresholds not yet calibrated"
+    release_condition: "Requires empirical baseline"
+  - hold: "Binance data must be cached first"
+    release_condition: "Run backfill or download_binance_data.py first"
+
+safe_next_step:
+  - "Add Optuna hyperparameter tuning to the cmd_tune workflow"
+  - "Wire comparison report into the Research Artifact Registry (RunIndex)"
+
+commands_run:
+  - description: "Syntax check"
+    command: "python3 -c 'import ast; ast.parse(open(\"cli/v7_engine.py\").read()); print(\"Syntax OK\")'"
+    exit_code: 0
+  - description: "Import check"
+    command: "PYTHONPATH=. python3 -c 'from cli.v7_engine import main, cmd_tune; print(\"Import OK\")'"
+    exit_code: 0
+  - description: "Tune tests"
+    command: "PYTHONPATH=.:alphaforge/src python3 -m pytest cli/tests/test_tune.py -q -v --timeout=30"
+    exit_code: 0
+    result: "15 passed"
+  - description: "Existing pipeline tests (regression check)"
+    command: "PYTHONPATH=.:alphaforge/src python3 -m pytest cli/tests/test_v7_pipeline.py -q --timeout=30"
+    exit_code: 0
+    result: "47 passed"
+  - description: "Dry-run smoke test"
+    command: "PYTHONPATH=.:alphaforge/src python3 -m cli tune --mode SWING --dry-run"
+    exit_code: 0
+
+evidence:
+  - "15/15 tune tests pass"
+  - "47/47 existing pipeline tests pass (no regression)"
+  - "CLI help shows tune subcommand"
+  - "Dry-run produces expected output"

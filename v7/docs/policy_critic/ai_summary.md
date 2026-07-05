@@ -16,7 +16,7 @@ The critic is the **lowest authority** in V7's truth hierarchy (simulation > rea
 | **Runner-up / cross-check** | Conservative Q-Learning (CQL) — IQL/CQL disagreement -> REQUIRE_REVIEW |
 | **Training data** | (state, action, realized_r_net, mae_r, next_state) tuples from `/simulation` engine replay adapter |
 | **Reward** | Decomposable mode-weighted: action_utility + drawdown penalty + NO_TRADE credit (saved_loss_r - 0.5*missed_opportunity_r) + overtrading penalty. NO_TRADE is first-class zero-cost baseline. |
-| **Where it lives** | `v7/src/v7/alpha/policy_bridge/` (greenfield; v7/src/ empty today) |
+| **Where it lives** | `v7/policy_critic/` — replay buffer, regret, expected return (Phase 1 core) |
 
 ## Three Q-Values
 
@@ -80,16 +80,26 @@ Q(s, NO_TRADE)  -- same, for not trading (first-class action, zero-cost baseline
 
 ## Open HOLDs (Must Resolve Before Lock)
 
-1. **Replay buffer does not exist** -- (state, action, realized_r_net, mae_r, next_state) tuple emitter must be built
-2. **regret_r hardcoded to 0.0** in engine.py:168
-3. **funding_cost_r DEFERRED** -- critic spot-only-valid, perp blocked
-4. **Per-direction expected_R not in V6** -- train on simulation per-direction realized R, use V6 single expected_return as proxy
-5. **bad_trade_probability, model_disagreement, recent_prediction_error don't exist live** -- must be synthesized (v2+) or wait for P9
-6. **Per-decision portfolio drawdown doesn't exist** -- mae_r used as proxy
-7. **Conformal exchangeability violated** by time-series -- which time-aware variant is implementable?
-8. **Decision-event family contracts not registered** -- PolicyCriticReview can proceed independently
-9. **v7/src greenfield** -- wire critic into runtime adapter (no V6 patch) for interim
-10. **IQL expectile tau, conformal coverage** -- numeric thresholds not lockable without empirical evidence
+1. ~~**Replay buffer does not exist**~~ — RESOLVED (#37): `v7/policy_critic/replay_buffer.py` — ReplayBuffer (capacity 100k), ReplayTuple (state/action/reward/next_state/terminal), build_replay_tuple from DecisionEvents via simulation engine
+2. ~~**regret_r hardcoded to 0.0**~~ — RESOLVED (#37): `v7/policy_critic/regret.py` — compute_regret_r with R_NET and SHAPED_REWARD bases, mode-specific drawdown penalties (lambda_dd: SWING=0.5, SCALP=1.0, AGGRESSIVE_SCALP=2.0), compute_regret_from_simulation convenience
+3. **funding_cost_r DEFERRED** — critic spot-only-valid, perp blocked
+4. ~~**Per-direction expected_R not in V6**~~ — RESOLVED (#37): `v7/policy_critic/expected_return.py` — rule-based (v1 shadow, source=RULE_BASED) and simulation-mean (v2, source=SIMULATION_MEAN) per-direction expected_R; compare_directions for best-action selection with ambiguity detection
+5. **bad_trade_probability, model_disagreement, recent_prediction_error don't exist live** — must be synthesized (v2+) or wait for P9
+6. **Per-decision portfolio drawdown doesn't exist** — mae_r used as proxy
+7. **Conformal exchangeability violated** by time-series — which time-aware variant is implementable?
+8. **Decision-event family contracts not registered** — PolicyCriticReview can proceed independently
+9. ~~**v7/src greenfield**~~ — RESOLVED (#37): `v7/policy_critic/` package created with 64 passing unit tests
+10. **IQL expectile tau, conformal coverage** — numeric thresholds not lockable without empirical evidence
+
+## Code Locations
+
+| Module | Path | Purpose |
+|--------|------|---------|
+| `policy_critic/` | `v7/policy_critic/__init__.py` | Package init, version 0.1.0 |
+| `replay_buffer` | `v7/policy_critic/replay_buffer.py` | ReplayBuffer, ReplayTuple, build_replay_tuple, build_state_feature_vector, map_decision_to_critic_action |
+| `regret` | `v7/policy_critic/regret.py` | compute_regret_r (R_NET + SHAPED_REWARD bases), compute_regret_from_simulation, RegretBasis, RegretResult, get_lambda_dd |
+| `expected_return` | `v7/policy_critic/expected_return.py` | compute_rule_based_expected_r, compute_expected_r_from_simulation, compare_directions, ExpectedReturn |
+| `tests/` | `v7/policy_critic/tests/` | 64 unit tests (all passing): test_replay_buffer (33), test_regret (20), test_expected_return (11) |
 
 ## Doc Tree
 

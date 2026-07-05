@@ -1,0 +1,367 @@
+# v0.30 — Data Source Matrix
+# Generated: 2026-07-02
+# Status: RESEARCH_COMPLETE
+
+data_sources:
+
+  # ===========================================================================
+  # P0 — Core Market Data
+  # ===========================================================================
+
+  - name: binance_um_klines
+    tier: P0
+    market: USD-M Futures
+    data_types:
+      - klines (open, high, low, close, volume, quote_volume, trade_count,
+                taker_buy_base_volume, taker_buy_quote_volume)
+    intervals:
+      - 1m
+      - 5m
+      - 15m
+      - 30m
+      - 1h
+      - 2h
+      - 4h
+      - 6h
+      - 8h
+      - 12h
+      - 1d
+      - 3d
+      - 1w
+      - 1mo
+    historical_depth: full (since ~2019)
+    access_method: public S3 archive (data.binance.vision) + REST API
+    bulk_export: true
+    format: ZIP/CSV → Parquet+Zstd
+    checksum: SHA-256 CHECKSUM files provided
+    cost: free
+    rate_limit: none (archive); weight-based (REST API)
+    point_in_time_safe: true
+    revision_risk: none
+    backtest_suitable: true
+    live_context_suitable: true
+    label_generation_allowed: true
+    notes: >
+      Primary data source for all backtest and training.
+      Monthly ZIP + daily ZIP available.
+      REST API max 1500 bars/call for fresh data.
+      Since ~2019 for most popular pairs.
+    alphaforge_usage: P0
+
+  - name: binance_um_funding_rate
+    tier: P0
+    market: USD-M Futures
+    data_types:
+      - funding_rate
+      - mark_price (associated with funding fee)
+    intervals: [8h]
+    historical_depth: full
+    access_method: REST API (GET /fapi/v1/fundingRate)
+    bulk_export: false (API only, max 1000 records/call)
+    format: JSON
+    cost: free
+    rate_limit: 500/5min/IP (shared with fundingInfo)
+    point_in_time_safe: true
+    revision_risk: none
+    backtest_suitable: true
+    live_context_suitable: true
+    label_generation_allowed: false
+    notes: >
+      Critical for cost model validation.
+      Max 1000 records per call — need pagination for multi-year backfill.
+      markPrice included in response.
+    alphaforge_usage: P0
+    integration_to: simulation.cost_model
+
+  - name: binance_um_mark_price
+    tier: P0
+    market: USD-M Futures
+    data_types:
+      - mark_price
+      - index_price
+      - premium_index
+    intervals: same as klines
+    historical_depth: full
+    access_method: klines API + archive (markPrice klines available)
+    bulk_export: true
+    cost: free
+    point_in_time_safe: true
+    backtest_suitable: true
+    label_generation_allowed: false
+    notes: >
+      Mark price and index price available as klines data type.
+      Premium index also available.
+      Useful for basis trading context and funding validation.
+    alphaforge_usage: P0
+
+  # ===========================================================================
+  # P1 — Derivatives Context
+  # ===========================================================================
+
+  - name: binance_um_open_interest
+    tier: P1
+    market: USD-M Futures
+    data_types:
+      - open_interest
+      - open_interest_history
+    intervals: [5m, 15m, 30m, 1h, 2h, 4h, 6h, 12h, 1d]
+    historical_depth: "30 days only"
+    access_method: REST API
+    bulk_export: false
+    format: JSON
+    cost: free
+    rate_limit: IP based
+    point_in_time_safe: n/a (short window)
+    revision_risk: n/a
+    backtest_suitable: false
+    live_context_suitable: true
+    label_generation_allowed: false
+    notes: >
+      30-day window limitation means NOT suitable for backtesting.
+      Viable as live context feature only.
+      For backtest OI, need Coinalyze or vendor with deeper history.
+    alphaforge_usage: P1
+
+  - name: binance_um_taker_volume
+    tier: P1
+    market: USD-M Futures
+    data_types:
+      - taker_buy_volume
+      - taker_sell_volume
+      - buy_sell_ratio
+    intervals: [5m, 15m, 30m, 1h, 2h, 4h, 6h, 12h, 1d]
+    historical_depth: "30 days only"
+    access_method: REST API (GET /futures/data/takerlongshortRatio)
+    bulk_export: false
+    format: JSON
+    cost: free
+    rate_limit: 1000/5min
+    point_in_time_safe: n/a
+    backtest_suitable: false
+    live_context_suitable: true
+    label_generation_allowed: false
+    notes: >
+      Same 30-day limitation as OI.
+      IP rate limit 1000 requests/5min.
+    alphaforge_usage: P1
+
+  - name: coinalyze
+    tier: P1
+    market: Multi-exchange derivatives
+    data_types:
+      - open_interest
+      - open_interest_history
+      - funding_rate
+      - funding_rate_history
+      - predicted_funding_rate
+      - liquidations
+      - CVD
+    historical_depth: unknown (not well documented)
+    access_method: REST API
+    bulk_export: false
+    cost: free
+    rate_limit: 40/min
+    point_in_time_safe: unknown
+    revision_risk: unknown
+    backtest_suitable: unknown (needs PIT verification)
+    live_context_suitable: true
+    label_generation_allowed: false
+    notes: >
+      Free API makes it easy to test.
+      Historical depth needs verification.
+      40/min rate limit makes bulk impractical.
+      PIT/revision test required before backtest use.
+    alphaforge_usage: P3 (conditional on PIT pass)
+
+  # ===========================================================================
+  # P2 — Orderflow Proxy
+  # ===========================================================================
+
+  - name: binance_um_agg_trades
+    tier: P2
+    market: USD-M Futures
+    data_types:
+      - agg_trades (aggregated trade id, price, quantity, first/last trade id,
+                    timestamp, is_buyer_maker)
+    historical_depth: full
+    access_method: public S3 archive
+    bulk_export: true
+    format: ZIP/CSV
+    cost: free
+    point_in_time_safe: true
+    backtest_suitable: true (research only)
+    label_generation_allowed: false
+    notes: >
+      Extremely large data volume.
+      Research use only — orderflow proxy studies.
+      Not practical for routine feature pipeline.
+    alphaforge_usage: P2
+
+  # ===========================================================================
+  # P3 — On-Chain Vendor Pilot
+  # ===========================================================================
+
+  - name: glassnode
+    tier: P3
+    market: On-chain + derivatives + spot
+    data_types:
+      - on-chain (addresses, supply, P/L, exchange flows)
+      - derivatives (OI, funding, liquidations)
+      - spot (price, volume, orderbook)
+      - macro (ETF flows, economic indicators)
+    historical_depth: full (paid)
+    access_method: REST API (Professional plan)
+    bulk_export: partial (API credits)
+    cost: high (>$500/mo estimated)
+    rate_limit: credits-based
+    point_in_time_safe: true
+    revision_risk: none (explicit PIT guarantee)
+    backtest_suitable: conditional (PIT gate required)
+    live_context_suitable: true
+    label_generation_allowed: false
+    notes: >
+      Only vendor with explicit PIT guarantee found in research.
+      API cost is significant.
+      Pilot: 5-10 BTC/ETH metrics for feature research.
+      PIT test required: 30-day fetch → 7-day refetch → diff.
+    alphaforge_usage: P3
+
+  - name: cryptoquant
+    tier: P4
+    market: On-chain
+    data_types:
+      - exchange flows
+      - mining data
+      - reserve risk
+      - etc.
+    historical_depth: full (paid)
+    access_method: API
+    cost: high (not publicly priced)
+    point_in_time_safe: unknown
+    revision_risk: unknown (no explicit PIT guarantee found)
+    backtest_suitable: unknown
+    label_generation_allowed: false
+    notes: >
+      No explicit PIT guarantee found during research.
+      DEFERRED until vendor evaluation completed.
+    alphaforge_usage: P4 (deferred)
+
+  - name: santiment
+    tier: P4
+    market: Social + on-chain
+    data_types:
+      - social sentiment (volume, score, trending)
+      - on-chain (addresses, NVT, MVRV)
+      - dev activity (GitHub commits)
+    historical_depth: 7 days free; full paid
+    access_method: GraphQL API
+    cost: medium
+    point_in_time_safe: false
+    revision_risk: high (known mutation — canMutate: true)
+    backtest_suitable: false
+    label_generation_allowed: false
+    notes: >
+      CAN MUTATE flag confirmed in API docs (e.g., exchange_inflow).
+      Hard blocker for backtest use.
+      Live/context-only at absolute best.
+      Social sentiment of limited value for major pair alpha.
+    alphaforge_usage: P4 (not recommended)
+
+  # ===========================================================================
+  # P4 — L2 Order Book Vendors
+  # ===========================================================================
+
+  - name: crypto_lake
+    tier: P4
+    market: Multi-exchange spot + perps
+    data_types:
+      - L2 order book (20 levels, 100ms snapshots)
+      - tick trades
+      - 1m OHLCV
+      - open interest
+      - funding rates
+    historical_depth: years
+    access_method: Python API (lakeapi)
+    bulk_export: true
+    cost: medium (~€64/mo)
+    point_in_time_safe: unknown
+    backtest_suitable: conditional
+    label_generation_allowed: false
+    notes: >
+      Best value for order book research.
+      Free sample data available.
+      PIT safety needs verification.
+      Python API well designed for quant work.
+    alphaforge_usage: P4
+
+  - name: tardis_dev
+    tier: P4
+    market: Multi-exchange
+    data_types:
+      - full order book (L2 + incremental updates)
+      - tick trades
+      - open interest
+      - funding
+      - liquidations
+      - options chains
+    historical_depth: full (depends on plan)
+    access_method: Python API + Node.js API + CSV download
+    bulk_export: true (CSV + replay API)
+    cost: high ($50-500+/mo)
+    point_in_time_safe: unknown
+    backtest_suitable: conditional
+    label_generation_allowed: false
+    notes: >
+      Gold standard for crypto quant research.
+      Most comprehensive data coverage.
+      Most expensive.
+      Overkill for P0-P2 needs.
+    alphaforge_usage: P4
+
+  - name: binance_um_book_ticker
+    tier: P4
+    market: USD-M Futures
+    data_types:
+      - best bid/ask (bookTicker)
+      - partial order book depth
+    historical_depth: none (not archived publicly)
+    access_method: WebSocket only (real-time)
+    bulk_export: false
+    cost: free
+    point_in_time_safe: n/a
+    backtest_suitable: false
+    label_generation_allowed: false
+    notes: >
+      Real-time only. No public historical archive.
+      Not suitable for backtesting.
+    alphaforge_usage: P4 (live only)
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+summary:
+  p0_ready:
+    - binance_um_klines (FREE)
+    - binance_um_funding_rate (FREE)
+    - binance_um_mark_price (FREE)
+  p1_ready_live_only:
+    - binance_um_open_interest (30d limit)
+    - binance_um_taker_volume (30d limit)
+  p2_research:
+    - binance_um_agg_trades (FREE, very large)
+  p3_conditional:
+    - glassnode (needs PIT test, high cost)
+    - coinalyze (needs historical depth verification)
+  p4_deferred:
+    - cryptoquant (no PIT guarantee)
+    - santiment (known mutation)
+    - crypto_lake (L2 research)
+    - tardis_dev (L2 + most comprehensive)
+    - binance_um_book_ticker (real-time only)
+
+  immediate_action:
+    - Start Binance klines backfill (5 symbols, 4 intervals, 2022-present)
+    - Start funding rate backfill (same scope)
+    - Metric plumbing fix (independent, can parallel)
+    - DataPassport schema and RealDataRequired gate

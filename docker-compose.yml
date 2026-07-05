@@ -1,0 +1,83 @@
+# =============================================================================
+# V7 Engine — Docker Compose
+# =============================================================================
+# Services: backend (FastAPI), frontend (Nginx), postgres (16)
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: v7-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-v7}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-v7}
+      POSTGRES_DB: ${POSTGRES_DB:-v7_engine}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - v7-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-v7} -d ${POSTGRES_DB:-v7_engine}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend (FastAPI) ───────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: v7-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-v7}:${POSTGRES_PASSWORD:-v7}@postgres:5432/${POSTGRES_DB:-v7_engine}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PYTHONPATH: /app
+      PYTHONUNBUFFERED: "1"
+      # Binance credentials (optional)
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_SECRET: ${BINANCE_SECRET:-}
+      # Data and log directories
+      DATA_DIR: /app/data
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+      - ./config:/app/config:ro
+    networks:
+      - v7-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── Frontend (Nginx + Vite build) ───────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: v7-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    networks:
+      - v7-net
+    depends_on:
+      - backend
+
+# ── Volumes ───────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  app_data:
+  app_logs:
+
+# ── Network ───────────────────────────────────────────────────────────
+networks:
+  v7-net:
+    driver: bridge

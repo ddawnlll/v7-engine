@@ -1,0 +1,5 @@
+{
+  "head": "693a4c4b041f06815bc336cfa707711473527bd2",
+  "diff_stat": "Makefile                                           |   5 +-\n alphaforge/src/alphaforge/dashboard/app.py         | 139 +++++++++---\n .../src/alphaforge/dashboard/templates/index.html  | 199 ++++++++++-------\n alphaforge/src/alphaforge/sprint/cost_sanity.py    | 237 ++++++++++++++++++++-\n alphaforge/tests/test_dashboard.py                 |  25 ++-\n lib/tests/test_data_lake_storage.py                |   2 +-\n scripts/setup.sh                                   |  10 +-\n 7 files changed, 490 insertions(+), 127 deletions(-)",
+  "porcelain": "M Makefile\n M alphaforge/src/alphaforge/dashboard/app.py\n M alphaforge/src/alphaforge/dashboard/templates/index.html\n M alphaforge/src/alphaforge/sprint/cost_sanity.py\n M alphaforge/tests/test_dashboard.py\n M lib/tests/test_data_lake_storage.py\n M scripts/setup.sh\n?? reports/alphaforge_4x_fark_aciklama.accp.yaml\n?? tools/"
+}

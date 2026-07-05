@@ -1,0 +1,1100 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://praxis.local/schemas/planspec/v0.1/planspec.schema.yaml"
+title: "PRAXIS PlanSpec v0.1 Native Schema"
+description: "PRAXIS-native ImplementationPlan schema: implementation instructions for Claude Code + verification contract for PRAXIS Truth Kernel."
+type: object
+additionalProperties: false
+
+required:
+  - planSpecVersion
+  - kind
+  - profile
+  - metadata
+  - authority
+  - workspace
+  - execution
+  - tasks
+  - commands
+  - evidence
+  - gates
+  - repair
+  - locking
+  - reports
+
+properties:
+  planSpecVersion:
+    type: string
+    const: "0.1.0"
+
+  kind:
+    type: string
+    const: "ImplementationPlan"
+
+  profile:
+    type: string
+    const: "praxis-v0.1"
+
+  metadata:
+    $ref: "#/$defs/metadata"
+
+  authority:
+    $ref: "#/$defs/authority"
+
+  workspace:
+    $ref: "#/$defs/workspace"
+
+  execution:
+    $ref: "#/$defs/execution"
+
+  tasks:
+    type: array
+    minItems: 1
+    items:
+      $ref: "#/$defs/task"
+
+  commands:
+    $ref: "#/$defs/commands"
+
+  evidence:
+    $ref: "#/$defs/evidence"
+
+  gates:
+    $ref: "#/$defs/gates"
+
+  repair:
+    $ref: "#/$defs/repair"
+
+  locking:
+    $ref: "#/$defs/locking"
+
+  reports:
+    $ref: "#/$defs/reports"
+
+allOf:
+  - if:
+      properties:
+        reports:
+          properties:
+            repairPacketRequiredOnHoldOrFail:
+              const: true
+    then:
+      properties:
+        repair:
+          properties:
+            enabled:
+              const: true
+
+$defs:
+  metadata:
+    type: object
+    additionalProperties: false
+    required:
+      - planId
+      - title
+      - description
+      - createdAt
+      - humanId
+      - status
+    properties:
+      planId:
+        type: string
+        minLength: 1
+      title:
+        type: string
+        minLength: 1
+      description:
+        type: string
+        minLength: 1
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+      humanId:
+        type: string
+        minLength: 1
+      status:
+        type: string
+        enum:
+          - draft
+          - locked
+          - running
+          - held
+          - failed
+          - passed
+          - superseded
+
+  authority:
+    type: object
+    additionalProperties: false
+    required:
+      - executor
+      - completionAuthority
+      - agentSelfReportIsClaimOnly
+      - criteriaSourceRequired
+      - reportsAreEvidenceOnly
+      - pluginOwnsTruth
+    properties:
+      executor:
+        type: string
+        enum:
+          - ClaudeCode
+          - Human
+          - OtherAgent
+      completionAuthority:
+        type: string
+        const: PraxisTruthKernel
+      agentSelfReportIsClaimOnly:
+        type: boolean
+        const: true
+      criteriaSourceRequired:
+        type: string
+        enum:
+          - human
+          - imported_human
+      reportsAreEvidenceOnly:
+        type: boolean
+        const: true
+      pluginOwnsTruth:
+        type: boolean
+        const: false
+
+  workspace:
+    type: object
+    additionalProperties: false
+    required:
+      - root
+      - allowedFiles
+      - forbiddenFiles
+    properties:
+      root:
+        type: string
+        minLength: 1
+      allowedFiles:
+        type: array
+        minItems: 1
+        items:
+          type: string
+      forbiddenFiles:
+        type: array
+        items:
+          type: string
+
+  execution:
+    type: object
+    additionalProperties: false
+    required:
+      - mode
+      - agent
+      - autonomy
+      - canModifyCode
+      - canModifyPlan
+      - canModifyAcceptanceCriteria
+      - maxRepairLoops
+    properties:
+      mode:
+        type: string
+        enum:
+          - single_session
+      agent:
+        type: string
+        enum:
+          - claude-code
+      autonomy:
+        type: string
+        enum:
+          - implementation_allowed
+          - analysis_only
+      canModifyCode:
+        type: boolean
+      canModifyPlan:
+        type: boolean
+        const: false
+      canModifyAcceptanceCriteria:
+        type: boolean
+        const: false
+      maxRepairLoops:
+        type: integer
+        minimum: 0
+        maximum: 10
+
+  task:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - title
+      - objective
+      - implementation
+      - artifactPolicy
+      - acceptanceCriteria
+    properties:
+      id:
+        type: string
+        minLength: 1
+      title:
+        type: string
+        minLength: 1
+      objective:
+        type: string
+        minLength: 1
+      implementation:
+        $ref: "#/$defs/implementation"
+      artifactPolicy:
+        $ref: "#/$defs/artifactPolicy"
+      integrationContract:
+        $ref: "#/$defs/integrationContract"
+      acceptanceCriteria:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/acceptanceCriterion"
+
+    allOf:
+      - if:
+          properties:
+            artifactPolicy:
+              properties:
+                class:
+                  enum:
+                    - runtime_code
+                    - cli_command
+              required:
+                - class
+        then:
+          required:
+            - integrationContract
+
+      - if:
+          properties:
+            artifactPolicy:
+              properties:
+                wiringRequired:
+                  const: true
+              required:
+                - wiringRequired
+        then:
+          required:
+            - integrationContract
+
+      - if:
+          properties:
+            artifactPolicy:
+              properties:
+                wiringRequired:
+                  enum:
+                    - "consumer_or_export"
+                    - "runner_discovery"
+              required:
+                - wiringRequired
+        then:
+          required:
+            - integrationContract
+
+      - if:
+          properties:
+            artifactPolicy:
+              properties:
+                reachabilityRequired:
+                  const: true
+              required:
+                - reachabilityRequired
+        then:
+          properties:
+            integrationContract:
+              required:
+                - entrypoints
+
+      - if:
+          properties:
+            artifactPolicy:
+              properties:
+                executionRequired:
+                  const: true
+              required:
+                - executionRequired
+        then:
+          properties:
+            integrationContract:
+              anyOf:
+                - required:
+                    - runtimeProbes
+                - required:
+                    - usageProofs
+
+      - if:
+          properties:
+            artifactPolicy:
+              properties:
+                class:
+                  enum:
+                    - runtime_code
+                    - cli_command
+              required:
+                - class
+        then:
+          properties:
+            integrationContract:
+              properties:
+                mode:
+                  not:
+                    const: "none"
+
+  implementation:
+    type: object
+    additionalProperties: false
+    required:
+      - instructions
+    properties:
+      instructions:
+        type: array
+        minItems: 1
+        items:
+          type: string
+      allowedFiles:
+        type: array
+        items:
+          type: string
+      forbiddenFiles:
+        type: array
+        items:
+          type: string
+      suggestedSteps:
+        type: array
+        items:
+          type: string
+      antiPatterns:
+        type: array
+        items:
+          type: string
+      dependencies:
+        type: array
+        items:
+          type: string
+      expectedOutputs:
+        type: array
+        items:
+          type: string
+
+  artifactPolicy:
+    type: object
+    additionalProperties: false
+    required:
+      - class
+      - wiringRequired
+      - reachabilityRequired
+      - executionRequired
+      - deterministicEvidenceRequired
+    properties:
+      class:
+        type: string
+        enum:
+          - runtime_code
+          - library_code
+          - cli_command
+          - test_only
+          - documentation
+          - config
+          - schema
+          - migration
+          - script
+          - generated_report
+          - fixture
+      wiringRequired:
+        oneOf:
+          - type: boolean
+          - type: string
+            enum:
+              - consumer_or_export
+              - runner_discovery
+              - conditional
+              - optional_or_test_usage
+      reachabilityRequired:
+        type: boolean
+      executionRequired:
+        type: boolean
+      deterministicEvidenceRequired:
+        type: boolean
+      advisoryReviewAllowed:
+        type: boolean
+
+  integrationContract:
+    type: object
+    additionalProperties: false
+    required:
+      - mode
+      - reason
+    properties:
+      mode:
+        type: string
+        enum:
+          - none
+          - required
+          - consumer_or_export
+          - runner_discovery
+          - runtime_probe
+          - manual_only
+      reason:
+        type: string
+        minLength: 1
+      declaredUnits:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/declaredUnit"
+      integrationPoints:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/integrationPoint"
+      entrypoints:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/entrypoint"
+      exportSurfaces:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/exportSurface"
+      usageProofs:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/usageProof"
+      runtimeProbes:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/runtimeProbe"
+      runnerDiscovery:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/runnerDiscovery"
+      forbiddenOrphanModules:
+        type: boolean
+    allOf:
+      - if:
+          not:
+            properties:
+              mode:
+                const: "none"
+        then:
+          anyOf:
+            - required:
+                - declaredUnits
+            - required:
+                - integrationPoints
+            - required:
+                - exportSurfaces
+            - required:
+                - usageProofs
+            - required:
+                - runtimeProbes
+
+  declaredUnit:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - path
+      - kind
+    properties:
+      id:
+        type: string
+      path:
+        type: string
+      kind:
+        type: string
+        enum:
+          - runtime_module
+          - library_module
+          - cli_module
+          - test_module
+          - config_file
+          - schema_file
+          - migration_file
+          - script_file
+          - documentation_file
+          - fixture_file
+      expectedExports:
+        type: array
+        items:
+          type: string
+      requiredPatterns:
+        type: array
+        items:
+          type: string
+      language:
+        type: string
+
+  integrationPoint:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - path
+    properties:
+      id:
+        type: string
+      path:
+        type: string
+      requiredPatterns:
+        type: array
+        items:
+          type: string
+      expectedImports:
+        type: array
+        items:
+          type: string
+      expectedRegistrationPatterns:
+        type: array
+        items:
+          type: string
+
+  entrypoint:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - path
+    properties:
+      id:
+        type: string
+      path:
+        type: string
+      kind:
+        type: string
+      requiredReachabilityFrom:
+        type: array
+        items:
+          type: string
+
+  exportSurface:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - path
+      - requiredExports
+    properties:
+      id:
+        type: string
+      path:
+        type: string
+      requiredExports:
+        type: array
+        minItems: 1
+        items:
+          type: string
+
+  usageProof:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - commandRef
+    properties:
+      id:
+        type: string
+      commandRef:
+        type: string
+        pattern: "^CMD-[A-Za-z0-9_.-]+$"
+        description: "References an exactAllowedCommand.id"
+      expectedOutputPatterns:
+        type: array
+        items:
+          type: string
+      proves:
+        type: array
+        items:
+          type: string
+
+  runtimeProbe:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - commandRef
+    properties:
+      id:
+        type: string
+      commandRef:
+        type: string
+        pattern: "^CMD-[A-Za-z0-9_.-]+$"
+        description: "References an exactAllowedCommand.id"
+      expectedOutputPatterns:
+        type: array
+        items:
+          type: string
+      expectedExitCode:
+        type: integer
+      proves:
+        type: array
+        items:
+          type: string
+
+  runnerDiscovery:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - commandRef
+    properties:
+      id:
+        type: string
+      commandRef:
+        type: string
+        pattern: "^CMD-[A-Za-z0-9_.-]+$"
+        description: "References an exactAllowedCommand.id"
+      expectedOutputPatterns:
+        type: array
+        items:
+          type: string
+
+  acceptanceCriterion:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - description
+      - level
+      - humanApproved
+      - criteriaSource
+      - verification
+      - requiredEvidence
+    properties:
+      id:
+        type: string
+        pattern: "^AC-[A-Za-z0-9_.-]+$"
+      description:
+        type: string
+        minLength: 1
+      level:
+        type: string
+        enum:
+          - required
+          - optional
+          - advisory
+      humanApproved:
+        type: boolean
+      criteriaSource:
+        type: string
+        enum:
+          - human
+          - imported_human
+          - agent_draft
+      verification:
+        $ref: "#/$defs/verification"
+      requiredEvidence:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/evidenceType"
+      artifactPolicyOverride:
+        $ref: "#/$defs/artifactPolicy"
+    allOf:
+      - not:
+          properties:
+            verification:
+              properties:
+                advisoryOnly:
+                  const: true
+                canSatisfyFinalGate:
+                  const: true
+      - not:
+          properties:
+            humanApproved:
+              const: false
+            verification:
+              properties:
+                canSatisfyFinalGate:
+                  const: true
+
+  verification:
+    type: object
+    additionalProperties: false
+    required:
+      - type
+      - deterministic
+      - canSatisfyFinalGate
+      - advisoryOnly
+      - evidenceRefs
+    properties:
+      type:
+        type: string
+        enum:
+          - file_exists
+          - file_contains
+          - static_pattern
+          - diff_contains
+          - no_diff_contains
+          - command_output
+          - test_output
+          - schema_validation
+          - integration_contract
+          - import_graph
+          - entrypoint_reachability
+          - runtime_probe
+          - runner_discovery
+          - coverage
+          - manual_review
+          - llm_advisory
+      path:
+        type: string
+      patterns:
+        type: array
+        items:
+          type: string
+      commandRef:
+        type: string
+        pattern: "^CMD-[A-Za-z0-9_.-]+$"
+        description: "References an exactAllowedCommand.id"
+      deterministic:
+        type: boolean
+      canSatisfyFinalGate:
+        type: boolean
+      advisoryOnly:
+        type: boolean
+      evidenceRefs:
+        type: array
+        items:
+          type: string
+
+  commands:
+    type: object
+    additionalProperties: false
+    required:
+      - exactAllowedCommands
+      - validationEvidenceRules
+      - hardDeniedCommands
+    properties:
+      exactAllowedCommands:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/exactAllowedCommand"
+      validationEvidenceRules:
+        $ref: "#/$defs/validationEvidenceRules"
+      hardDeniedCommands:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/deniedCommand"
+
+  exactAllowedCommand:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - kind
+      - command
+      - evidenceRequired
+      - timeoutSeconds
+    properties:
+      id:
+        type: string
+        pattern: "^CMD-[A-Za-z0-9_.-]+$"
+      kind:
+        type: string
+        enum:
+          - final_validation
+          - targeted_test
+          - typecheck
+          - lint
+          - build
+          - runtime_probe
+          - discovery
+      command:
+        type: string
+        minLength: 1
+      cwd:
+        type: string
+      evidenceRequired:
+        type: boolean
+      timeoutSeconds:
+        type: integer
+        minimum: 1
+      noTestsFoundIsFailure:
+        type: boolean
+      watchModeForbidden:
+        type: boolean
+      expectedExitCode:
+        type: integer
+      networkAllowed:
+        type: boolean
+      shellAllowed:
+        type: boolean
+      expectedOutputPatterns:
+        type: array
+        items:
+          type: string
+
+  deniedCommand:
+    type: object
+    additionalProperties: false
+    required:
+      - command
+      - reason
+    properties:
+      id:
+        type: string
+        pattern: "^DCMD-[A-Za-z0-9_.-]+$"
+      kind:
+        type: string
+        enum:
+          - final_validation
+          - targeted_test
+          - typecheck
+          - lint
+          - build
+          - runtime_probe
+          - discovery
+      command:
+        type: string
+        minLength: 1
+      pattern:
+        type: string
+      reason:
+        type: string
+        minLength: 1
+
+  validationEvidenceRules:
+    type: object
+    additionalProperties: false
+    required:
+      - finalPromotionRequiresExactAllowedCommand
+      - discoveryCommandsMayNotSatisfyFinalValidation
+      - runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose
+    properties:
+      finalPromotionRequiresExactAllowedCommand:
+        type: boolean
+        const: true
+      discoveryCommandsMayNotSatisfyFinalValidation:
+        type: boolean
+        const: true
+      runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose:
+        type: boolean
+
+  evidence:
+    type: object
+    additionalProperties: false
+    required:
+      - ledgerRequired
+      - requiredEvidenceTypes
+      - hashWhenAvailable
+    properties:
+      ledgerRequired:
+        type: boolean
+        const: true
+      requiredEvidenceTypes:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/evidenceType"
+      hashWhenAvailable:
+        type: boolean
+
+  evidenceType:
+    type: string
+    enum:
+      - diff
+      - source
+      - wiring
+      - command
+      - test_output
+      - runtime_probe
+      - schema_validation
+      - manual_review
+      - llm_advisory
+      - report
+
+  gates:
+    type: object
+    additionalProperties: false
+    required:
+      - sequence
+      - verdicts
+      - reasonCodes
+    properties:
+      sequence:
+        type: array
+        prefixItems:
+          - const: SchemaGate
+          - const: LockGate
+          - const: EvidenceGate
+          - const: WiringGate
+          - const: ExecGate
+          - const: FinalGate
+        minItems: 6
+        maxItems: 6
+      verdicts:
+        type: array
+        minItems: 3
+        items:
+          type: string
+          enum:
+            - PASS
+            - HOLD
+            - FAIL
+      reasonCodes:
+        type: object
+        additionalProperties:
+          type: array
+          items:
+            type: string
+
+  gateVerdict:
+    type: object
+    additionalProperties: false
+    description: "Runtime verdict object produced by the Truth Kernel for each gate evaluation."
+    required:
+      - gateName
+      - verdict
+      - reasonCodes
+      - failedCriteriaIds
+      - evidenceRefs
+      - attemptId
+      - timestamp
+    properties:
+      gateName:
+        type: string
+        enum:
+          - SchemaGate
+          - LockGate
+          - EvidenceGate
+          - WiringGate
+          - ExecGate
+          - FinalGate
+      verdict:
+        type: string
+        enum:
+          - PASS
+          - HOLD
+          - FAIL
+      reasonCodes:
+        type: array
+        minItems: 1
+        items:
+          type: string
+      failedCriteriaIds:
+        type: array
+        items:
+          type: string
+      evidenceRefs:
+        type: array
+        minItems: 1
+        items:
+          type: string
+      repairHint:
+        type: string
+      attemptId:
+        type: string
+        minLength: 1
+      timestamp:
+        type: string
+        format: date-time
+
+  repair:
+    type: object
+    additionalProperties: false
+    required:
+      - enabled
+      - failedCriteriaOnly
+      - mayModifyAcceptanceCriteria
+      - mayModifyPlan
+      - allowedFilesFromFailedTasksOnly
+      - maxRepairLoops
+      - reverifyCommand
+      - repairPacketFormat
+    properties:
+      enabled:
+        type: boolean
+      failedCriteriaOnly:
+        type: boolean
+        const: true
+      mayModifyAcceptanceCriteria:
+        type: boolean
+        const: false
+      mayModifyPlan:
+        type: boolean
+        const: false
+      allowedFilesFromFailedTasksOnly:
+        type: boolean
+      maxRepairLoops:
+        type: integer
+        minimum: 0
+        maximum: 10
+      reverifyCommand:
+        type: string
+      repairPacketFormat:
+        type: object
+        additionalProperties: false
+        required:
+          - json
+          - markdown
+        properties:
+          json:
+            type: boolean
+          markdown:
+            type: boolean
+
+  locking:
+    type: object
+    additionalProperties: false
+    required:
+      - lockRequired
+      - canonicalHashRequired
+      - planLockFile
+      - hashes
+    properties:
+      lockRequired:
+        type: boolean
+        const: true
+      canonicalHashRequired:
+        type: boolean
+        const: true
+      planLockFile:
+        type: string
+      hashes:
+        type: array
+        minItems: 1
+        items:
+          type: string
+          enum:
+            - planHash
+            - acceptanceCriteriaHash
+            - artifactPolicyHash
+            - integrationContractHash
+            - commandPolicyHash
+            - allowedFilesHash
+            - forbiddenFilesHash
+
+  reports:
+    type: object
+    additionalProperties: false
+    required:
+      - protocol
+      - artifactDirectory
+      - reportsAreEvidenceOnly
+      - reportsDoNotAuthorizeExecution
+      - commandEvidenceRequired
+      - repairPacketRequiredOnHoldOrFail
+    properties:
+      protocol:
+        type: string
+        const: ACCP
+      artifactDirectory:
+        type: string
+      reportsAreEvidenceOnly:
+        type: boolean
+        const: true
+      reportsDoNotAuthorizeExecution:
+        type: boolean
+        const: true
+      commandEvidenceRequired:
+        type: boolean
+      repairPacketRequiredOnHoldOrFail:
+        type: boolean

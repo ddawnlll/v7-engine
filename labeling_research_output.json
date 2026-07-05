@@ -1,0 +1,63 @@
+{
+  "current_approach_limitations": [
+    "Fixed-horizon forward return labeling ignores the path the price takes between entry and evaluation horizon. A position can briefly spike to a profit target before crashing, or hit a stop-loss mid-period and recover -- both cases produce misleading labels under fixed-horizon labeling.",
+    "Fixed-horizon labels do not incorporate real trading constraints such as stop-losses, profit-taking limits, margin calls, or maximum holding periods. Models trained on these signals learn patterns that do not reflect actual trading mechanics, leading to poor out-of-sample generalization (observed generalization ratios of only 0.117-0.188 vs 0.365 for robustness-aware alternatives in the GT-Score paper).",
+    "Fixed horizons are static and do not adapt to changing volatility regimes. During high volatility, a fixed horizon may catch excessive noise; during low volatility, it may not capture meaningful moves, producing inconsistent label quality across market conditions.",
+    "The approach ignores censoring and path dependency entirely. A trade that doubled before collapsing is labeled the same as one that went straight down, even though the two paths have completely different practical trading outcomes (one would have triggered a profit-taking exit).",
+    "Models trained on fixed-horizon labels conflate direction prediction with timing of exits, making it impossible for the model to learn when to exit or how to manage risk."
+  ],
+  "triple_barrier_details": {
+    "algorithm": "For each observation at entry time t: 1) Compute volatility sigma_t using exponentially weighted standard deviation of returns (typical span 20-100). 2) Set Upper Barrier = S_t * (1 + sigma_t * pt_multiplier) where pt_multiplier is typically 1.0-3.0. 3) Set Lower Barrier = S_t * (1 - sigma_t * sl_multiplier) where sl_multiplier is typically 1.0-3.0. 4) Set Vertical Barrier = t + max_hold_period (typically 5-50 bars). 5) Scan forward price path from t until first barrier touch. 6) Assign label: +1 if upper barrier hit first, -1 if lower barrier hit first, 0 if vertical barrier expires with no horizontal touch.",
+    "volatility_adjustment": "Barriers are dynamically scaled by rolling volatility (EWMA or ATR) to account for heteroskedasticity. The scaling factor c (multiplier) determines barrier tightness: c=1.0 gives narrow barriers (frequent stops), c=3.0 gives wide barriers. Common asymmetric settings use pt_sl=(2.0, 1.0) for more profit room with tighter stops. Empirical crypto studies show TBM + CUSUM with 2% threshold achieves Sharpe 1.42 on ETH. The 2025 comprehensive crypto DL study achieves Sharpe 1.42 (ETH) and 0.51 (BTC) using triple-barrier labeled data.",
+    "recommended_params": "For crypto daily data: pt_multiplier=2.0, sl_multiplier=2.0, max_hold=15-30 bars, volatility_span=50 for EWMA. For higher frequency: pt_multiplier=1.5-2.0, sl_multiplier=1.5-2.0, max_hold=5-20 bars. Asymmetric barriers (pt>sl) are common. The c parameter should be calibrated via walk-forward optimization, not fixed arbitrarily."
+  },
+  "meta_labeling": {
+    "description": "Meta-labeling is a two-stage architecture developed by Lopez de Prado (2018) that separates the directional prediction task (side) from the trade sizing/filtering task (size). Stage 1: A primary model generates directional trade signals (long/short/neutral) maximizing recall. Stage 2: A binary meta-classifier predicts whether the primary signal will succeed (1 if profitable, 0 if not), acting as a filter. The meta-model is trained on contextual features including volatility state, trend regime, liquidity conditions, and recent primary model performance. At deployment, the meta-model's calibrated probability score determines trade size via Kelly criterion or sigmoid position sizing.",
+    "how_it_reduces_overfitting": "Meta-labeling reduces overfitting through four mechanisms: 1) Dimensionality reduction -- two simpler models (direction + confidence) replace one complex model, reducing the parameter space and variance. 2) Precision focus -- the meta-model only needs to learn when the primary signal fails, a simpler task than predicting raw market direction. 3) Natural regularization -- the meta-model's binary filtering introduces a hard decision boundary that suppresses low-confidence signals. 4) Regime-aware suppression -- by incorporating market regime features (volatility, liquidity), the meta-model can dynamically disable strategies in adverse conditions, preventing the model from learning spurious regime-specific patterns. Empirical studies show meta-labeling improves out-of-sample accuracy from 17% to 63% for mean-reverting strategies on S&P 500.",
+    "implementation_steps": [
+      "Step 1: Design primary signal generator (can be rule-based or ML, focus on maximizing recall)",
+      "Step 2: Label past primary signals with their actual outcomes using triple-barrier method (1=profitable, 0=not)",
+      "Step 3: Engineer meta-features at signal time: volatility regime, trend strength, liquidity/spread, macro proximity, cross-asset confirmation, recent primary model win rate",
+      "Step 4: Train binary classifier (XGBoost, logistic regression, or RF) on meta-features to predict signal success probability",
+      "Step 5: Calibrate probability outputs using Platt scaling or isotonic regression to align with empirical win rates",
+      "Step 6: Apply calibrated probability to position sizing algorithm (Kelly criterion or sigmoid scaling) at deploy time",
+      "Step 7: Execute trade only if meta-model assigns sufficient probability of profit above configured threshold (e.g., >0.55)"
+    ]
+  },
+  "comparison": {
+    "fixed_horizon_return": {
+      "description": "Labels based on return at a fixed future point t+h. Simple, widely used in academic literature, computationally cheap.",
+      "strengths": ["Computationally trivial", "Standard baseline for academic comparison", "Interpretable"],
+      "weaknesses": ["Ignores path dependency entirely", "No risk management embedded", "Static horizons don't adapt to volatility", "Mislabels trades with interim extremes", "Poor OOS generalization (gen ratio ~0.12-0.19)"],
+      "best_use": "Baseline comparisons only. Not recommended for live trading systems."
+    },
+    "triple_barrier_volatility_adjusted": {
+      "description": "Labels based on first touch of dynamic profit-taking, stop-loss, or time-expiry barriers scaled by rolling volatility.",
+      "strengths": ["Embeds real trading constraints", "Path-dependent labeling reflects actual trading outcomes", "Volatility-adaptive barriers produce robust labels across regimes", "Industry gold standard (Lopez de Prado framework)", "Achieves Sharpe 1.42 on crypto (ETH) in empirical studies", "Generalization ratio 0.365 in GT-Score study"],
+      "weaknesses": ["Requires careful barrier parameter calibration", "Vertical barrier introduces censoring bias", "Computationally more expensive than fixed horizon", "Label distribution sensitive to multiplier choice"],
+      "best_use": "Primary labeling method for any ML-based trading system. Use CUSUM filter for event-driven entry sampling."
+    },
+    "meta_labeling": {
+      "description": "Two-stage architecture: primary model generates signals (maximizing recall), secondary model filters them (maximizing precision).",
+      "strengths": ["Reduces overfitting via dimension reduction", "Improves precision dramatically (17% to 63% in empirical studies)", "Enables dynamic position sizing", "Natural cost-aware filtering reduces transaction costs", "Composable with any primary signal source"],
+      "weaknesses": ["Requires sufficient primary signal history to train meta-model", "Two-stage adds complexity and inference latency", "Primary model must have non-zero predictive power", "Meta-model can itself overfit without proper walk-forward validation"],
+      "best_use": "Add over any primary strategy to filter false positives and size positions. Best combined with triple-barrier labeling."
+    },
+    "time_series_clustering_labels": {
+      "description": "Labels derived from unsupervised clustering of market regimes or return patterns, assigning categorical labels based on cluster membership.",
+      "strengths": ["Captures complex non-linear market states", "No assumptions about label distribution", "Can discover hidden regime structure"],
+      "weaknesses": ["Cluster labels are arbitrary and unstable across time periods", "Hard to map clusters to actionable trading decisions", "Cluster assignments change when model is retrained", "Not directly linked to trading outcomes or risk management"],
+      "best_use": "Exploratory analysis and regime detection only. Not a replacement for outcome-based labeling for supervised ML."
+    },
+    "regime_based_labeling": {
+      "description": "Labels conditioned on detected market regimes (high/low volatility, trending/mean-reverting, bull/bear), often using HMM or change-point detection.",
+      "strengths": ["Incorporates non-stationarity explicitly", "Can adapt strategy behavior per regime", "Interpretable regime boundaries"],
+      "weaknesses": ["Regime detection adds model risk and latency", "Regime boundaries are themselves estimated with error", "Requires separate regime detection system", "May introduce additional lookahead bias if not carefully implemented"],
+      "best_use": "Conditional layer on top of triple-barrier labeling (regime-specific barrier parameters). Not a standalone labeling method."
+    }
+  },
+  "recommended_approach": "Triple-Barrier labeling with volatility-adjusted barriers as the primary labeling method, combined with Meta-Labeling as a secondary filter. Use CUSUM-filtered event-driven sampling for entry points. Implement asymmetric barriers (pt_sl=(2.0, 1.0) or similar) for favorable risk-reward. Calibrate barrier multipliers via walk-forward optimization with at least 9 sequential validation periods. Add meta-labeling layer with an XGBoost classifier trained on regime features (volatility, trend, liquidity). Always use purged cross-validation to prevent data leakage. Include realistic transaction cost assumptions (5-10 bps per side) in barrier calculations by adjusting profit targets above cost thresholds.",
+  "transaction_costs_in_labels": "Transaction costs should be explicitly incorporated into the labeling process. For triple-barrier labeling: 1) Adjust upper barrier upward and lower barrier downward by the cost amount to ensure labeled profits exceed execution costs. 2) A trade hitting the exact entry price at the vertical barrier should be labeled 0 (not +1 or -1) because it failed to generate a net profit after costs. 3) Meta-labeling naturally filters cost-consuming trades by rejecting low-confidence signals that would be eroded by transaction costs. 4) The walk-forward validation framework (2512.12924) uses $1 fixed commission + 5 bps slippage per trade side. 5) GT-Score paper (2602.00080) tests sensitivity across 0-10 bps per side and finds objective function rankings remain stable, but higher-cost trades reduce net returns monotonically.",
+  "volatility_adjustment_recommendation": "Use exponentially weighted standard deviation of daily returns with span=50 as the volatility estimator for barrier scaling. The multiplier c should be set such that approximately 60-70% of trades hit a horizontal barrier before the vertical barrier expires. A starting point of c=2.0 for both profit-taking and stop-loss is recommended as LOCKED_INITIAL_BASELINE, but this should be recalibrated per asset class via walk-forward optimization. For crypto assets with higher volatility, consider c=1.5-2.5 to account for wider swings. Asymmetric barriers (pt_multiplier > sl_multiplier) provide better risk-adjusted outcomes by giving trades more room to run while capping downside.",
+  "min_samples_per_class": "Based on the evidence across the reviewed sources: a minimum of 50 trades per class is recommended as a practical default (from GT-Score paper's n_min=50 threshold). For binary classification with meta-labeling, aim for at least 100-200 samples per class to train a robust meta-classifier. The walk-forward validation study (2512.12924) demonstrates that with only 140 total trades across 34 periods, statistical power is only 12% for detecting small effect sizes (d=0.17), requiring ~540 folds for 80% power. For practical ML training, a minimum of 30 samples per class is the statistical lower bound (Central Limit Theorem threshold), but 100+ per class is strongly recommended for stable model training in financial applications where signal-to-noise ratio is low."
+}

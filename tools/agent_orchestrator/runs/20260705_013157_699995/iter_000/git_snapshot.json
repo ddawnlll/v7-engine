@@ -1,0 +1,5 @@
+{
+  "head": "c0449a84531974b18d8f94ebdce4d7e925c99637",
+  "diff_stat": "",
+  "porcelain": "?? alphaforge/src/alphaforge/alphas/\n?? scripts/backtest_alpha_momentum.py\n?? tools/agent_orchestrator/runs/20260705_013157_699995/\n?? tools/momentum_factor_research/"
+}

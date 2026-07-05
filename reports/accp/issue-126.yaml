@@ -1,0 +1,40 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: |
+  Fixed four report consistency issues in the empirical report builder:
+  1. edge_only_in_rare_regime contradiction: When regimes_raw is empty
+     and placeholder regimes from V7_REGIMES are used, force
+     edge_only_rare=False since no edge exists in any regime.
+  2. Stale single symbol text: _build_blocked_scopes now accepts a
+     symbol_count parameter; only appends 'Single symbol limitation'
+     text when symbol_count <= 1.
+  3. Duplicate report_id: Default report_id includes microsecond
+     timestamp component instead of static '-001' suffix.
+  4. Cost stress empty-level handling: When both stress level arrays
+     are empty, cost_stress_verdict set to 'NOT_RUN' instead of
+     'FAIL_EDGE_DESTROYED_BY_COSTS'.
+files_changed:
+  - "alphaforge/src/alphaforge/reports/empirical.py"
+  - "alphaforge/tests/test_empirical_report.py"
+decisions_locked:
+  - "edge_only_in_rare_regime forced False when no real regime data: LOCKED"
+  - "symbol_count parameter in _build_blocked_scopes: LOCKED"
+  - "Microsecond-precision report_id: LOCKED"
+  - "NOT_RUN cost_stress_verdict for empty stress data: LOCKED"
+remaining_holds:
+  - "Empty regime data edge case may need re-evaluation when real regime labels are available (HOLD)"
+  - "Symbol count hard-coded to 1 in some call chains (HOLD — requires multi-symbol WFV)"
+  - "Real profitability evidence still placeholder (HOLD — requires real training + WFV)"
+safe_next_step: "Wire symbol_count properly from WFV results through the report builder chain"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ simulation/tests/ -q -x --timeout=60"
+evidence:
+  - "alphaforge/tests/: 1095 passed, 1 skipped (pre-existing)"
+  - "integration/tests/: 176 passed, 2 skipped"
+  - "lib/tests/ + simulation/tests/: 352 passed"
+  - "6 new tests for edge_only_rare, single symbol text, report_id uniqueness, cost stress empty"
+  - "Total: 1623 passed, 3 skipped, 0 failures"
+  - "Commit: 39462c0"

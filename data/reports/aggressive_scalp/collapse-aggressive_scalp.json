@@ -1,0 +1,53 @@
+{
+  "collapse_detected": false,
+  "collapse_severity": "NONE",
+  "trend": {
+    "windows": [],
+    "overall_no_trade_pct": 0.0,
+    "trend_direction": "insufficient_data",
+    "max_window_pct": 0.0,
+    "min_window_pct": 0.0,
+    "collapse_detected": false,
+    "total_bars": 0
+  },
+  "detection": {
+    "collapse_detected": false,
+    "collapse_severity": "NONE",
+    "overall_no_trade_pct": 0.0,
+    "collapse_threshold_used": 0.7,
+    "windows_above_threshold": 0,
+    "total_windows": 0,
+    "mode": "AGGRESSIVE_SCALP",
+    "summary": "No collapse detected. NO_TRADE is 0.0% (threshold: 70%)."
+  },
+  "root_cause": {
+    "root_cause_breakdown": {
+      "cost": 0.0,
+      "signal": 0.0,
+      "model": 0.0,
+      "threshold": 0.0,
+      "unknown": 0.0
+    },
+    "primary_cause": "unknown",
+    "secondary_causes": [],
+    "unclassified_count": 0,
+    "total_no_trade": 0,
+    "evidence": [
+      "No label data available for root cause analysis."
+    ],
+    "summary": "No label data available."
+  },
+  "counterfactual": {
+    "total_no_trade": 0,
+    "saved_loss_count": 0,
+    "missed_opportunity_count": 0,
+    "saved_loss_r": 0.0,
+    "missed_opportunity_r": 0.0,
+    "total_counterfactual_r": 0.0,
+    "saved_missed_ratio": null,
+    "neutral_count": 0,
+    "summary": "No label data available for counterfactual analysis."
+  },
+  "mode": "AGGRESSIVE_SCALP",
+  "summary": "No collapse: NO_TRADE at 0.0% (threshold 70%) | trend: insufficient_data | primary root cause: unknown | saved/missed ratio: N/A"
+}

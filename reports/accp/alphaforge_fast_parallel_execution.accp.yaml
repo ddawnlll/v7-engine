@@ -1,0 +1,88 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-FAST-PARALLEL-EXECUTION
+  report_type: BUNDLE_EXECUTION_CLOSURE
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-FAST-PARALLEL-EXECUTE-ALPHAFORGE-PLANSPEC-BUNDLE
+  priority: P1
+  execution_mode: fast_gated_parallel
+  parallel_workspaces_used: 2
+  parallel_workspaces_summary: "Batch1: subplans 02-04 parallel; Batch2: subplans 05-08 parallel"
+
+summary:
+  final_status: PASS_WITH_HOLDS
+  execution_complete: true
+  all_subplans_pass: true
+  final_validation_pass: true
+  forbidden_scans_clean: true
+  safety_preserved: true
+
+subplan_verdicts:
+  - {plan: "00_baseline_verify", verdict: PASS, tests: "616 passed"}
+  - {plan: "01_data_manifest", verdict: PASS, tests: "33/33", import: PASS, guard: CLEAN}
+  - {plan: "02_label_adapter", verdict: PASS, tests: "85/85", import: PASS, guard: CLEAN}
+  - {plan: "03_feature_pipeline", verdict: PASS, tests: "103/103", import: PASS, guard: CLEAN}
+  - {plan: "04_dataset_assembler", verdict: PASS, tests: "53/53", import: PASS, guard: CLEAN}
+  - {plan: "05_non_ml_research_report", verdict: PASS, tests: "43/43", guard: CLEAN}
+  - {plan: "06_walk_forward_validation", verdict: PASS, tests: "39/39", import: PASS, guard: CLEAN}
+  - {plan: "07_v7_handoff_dry_run", verdict: PASS, tests: "41/41 + 8 integration", guard: CLEAN}
+  - {plan: "08_ml_pilot_gate", verdict: PASS, tests: "42/42 + 7 integration", no_xgboost: PASS}
+  - {plan: "09_final_validation", verdict: PASS, tests: "817 passed, 2 skipped in 3.27s"}
+
+targeted_tests:
+  - {command: "CMD-test-data-manifest", result: "33 passed"}
+  - {command: "CMD-test-label-adapter", result: "85 passed"}
+  - {command: "CMD-test-feature-pipeline", result: "103 passed"}
+  - {command: "CMD-04-test-assembler + writer", result: "53 passed"}
+  - {command: "CMD-test-research-report", result: "43 passed"}
+  - {command: "CMD-test-validation", result: "39 passed"}
+  - {command: "CMD-test-dry-run", result: "41 passed + 8 integration"}
+  - {command: "CMD-test-ml-pilot-gate", result: "42 passed + 7 integration"}
+
+final_validation:
+  - {command: "CMD-final-validation", result: "817 passed, 2 skipped, exit 0"}
+  - {command: "CMD-scan-forbidden-diff", result: "CLEAN:FORBIDDEN_DIFF"}
+  - {command: "CMD-scan-training", result: "CLEAN (all hits are guardrail assertions)"}
+  - {command: "CMD-scan-profit-claims", result: "CLEAN (no real profit claims)"}
+  - {command: "CMD-list-model-artifacts", result: "CLEAN:NO_MODEL_ARTIFACTS"}
+  - {command: "CMD-discover-git-status", result: "Only allowed changes"}
+
+changed_files:
+  - "plans/alphaforge/01-08 + master (speed optimization edits)"
+  - "reports/accp/alphaforge_p1_planspec_speed_optimization.accp.yaml"
+  - "reports/accp/alphaforge_fast_parallel_execution.accp.yaml"
+
+forbidden_scans:
+  - {scan: "xgboost_training", result: "CLEAN"}
+  - {scan: "live_trading", result: "CLEAN"}
+  - {scan: "profitability_claims", result: "CLEAN"}
+  - {scan: "network_api", result: "CLEAN"}
+  - {scan: "model_artifacts", result: "CLEAN"}
+  - {scan: "forbidden_diff", result: "CLEAN"}
+
+repairs_attempted: 0
+repair_loop_count: 0
+
+remaining_holds:
+  - no_real_profitability_evidence
+  - no_real_market_data
+  - no_model_training
+  - no_xgboost_training
+  - funding_deferred
+  - scalp_thresholds_hold
+  - aggressive_scalp_thresholds_hold
+  - g7_to_g10_runtime_infrastructure_not_built
+
+constraints_verified:
+  - "No PlanSpec files modified during execution"
+  - "No acceptance criteria modified"
+  - "No template.yaml modified"
+  - "No template.json created"
+  - "No XGBoost/training introduced"
+  - "No network/exchange API used"
+  - "No profitability claims"
+  - "All 8 holds preserved"
+  - "FAST-GATED policy followed"
+
+next_step: "Bundle ready for P2 (policy acceptance + risk integration) when hold release conditions met"

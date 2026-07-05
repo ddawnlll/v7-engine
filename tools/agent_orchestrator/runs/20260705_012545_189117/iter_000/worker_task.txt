@@ -1,0 +1,34 @@
+Implement the requested task below.
+
+## Task
+
+Create a new alpha factor in the AlphaForge framework that uses a volume-weighted momentum signal. Write the factor to a file named 'vwap_momentum_factor.py' in the factors directory. The factor should: 1) load daily price and volume data from a data source (assume a CSV with columns: date, ticker, close, volume, vwap), 2) compute the 20-day rolling VWAP, 3) calculate the percentage difference between current close and 20-day VWAP, 4) normalize the signal to z-scores over a 60-day rolling window, 5) generate long/short signals based on z-score thresholds of ±1.5. Train on data from 2020-01-01 to 2021-12-31, test on 2022-01-01 to 2022-12-31. Run a parameter sweep over lookback periods [10, 20, 30, 40] and z-score thresholds [1.0, 1.5, 2.0] (12 combinations total). Output a CSV with columns: ticker, date, signal, and a performance summary. In your completion summary, include: train_start, train_end, test_start, test_end, n_combinations (12), and the metric (IC or Sharpe ratio of the best parameter set).
+
+## Rules
+
+- Implement only what is requested. Do not over-engineer.
+- If the task asks for code changes, run relevant tests/checks afterward.
+- Do NOT modify these authority files: evaluation.py, factors.py,
+  simulation_adapter.py, fast_simulator.py, authority_map.md
+- Never claim success without evidence.
+
+## Required — Completion Summary
+
+Your final output MUST include a completion summary with these fields:
+
+```
+## Completion Summary
+- Files changed: [...]
+- Commands run: [...]
+- train_start: <date>
+- train_end: <date>
+- test_start: <date>
+- test_end: <date>
+- n_combinations: <number of trials>
+- metric: <key metric value>
+- Results: [...]
+- Status: SUCCESS | FAILURE | BLOCKED
+```
+
+The gate checks for these fields. If they are missing, the iteration FAILs
+and your work may be discarded.

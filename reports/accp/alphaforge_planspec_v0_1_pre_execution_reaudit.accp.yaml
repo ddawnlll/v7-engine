@@ -1,0 +1,389 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-PLANSPEC-V0-1-PRE-EXECUTION-REAUDIT
+  report_type: PRE_EXECUTION_REAUDIT
+  generated_at: "2026-06-24T18:15:42Z"
+  task_id: ACCP-REAUDIT-ALPHAFORGE-PLANSPEC-V0_1-BUNDLE-BEFORE-EXECUTION
+  priority: P0
+  execution_mode:
+    repository_mode: read_only
+    implementation_allowed: false
+    execution_allowed: false
+    planning_audit_only: true
+    source_code_changes_allowed: false
+    plan_changes_allowed: false
+    schema_changes_allowed: false
+    report_creation_allowed: true
+
+latest_repair_authority:
+  - reports/accp/alphaforge_planspec_v0_1_repair.accp.yaml
+
+historical_context:
+  - reports/accp/alphaforge_planspec_bundle_pre_execution_audit.accp.yaml:
+      prior_score: "5.83/10"
+      prior_status: FAIL
+      prior_errors: 292
+      prior_plans_passing: 0
+      prior_version: "5.0.0-alpha2 (phantom — no schema file existed)"
+  - reports/accp/alphaforge_planspec_bundle_repair.accp.yaml:
+      note: "Prior repair attempt (reports schema validation against non-existent template.json — superseded by v0.1 repair)"
+  - reports/accp/alphaforge_planspec_v0_1_repair.accp.yaml:
+      repair_status: PASS
+      repair_method: "Mechanical v5→v0.1 conversion — 292→116→0 errors in 2 iterations"
+      repair_validation: "Draft202012Validator — 11/11 PASS against template.yaml"
+      estimated_new_score: "≥7.5"
+
+schema_validation:
+  status: PASS
+  validator_used: Draft202012Validator
+  schema_file: template.yaml
+  schema_version: "PlanSpec v0.1.0 (planSpecVersion const: 0.1.0, profile const: praxis-v0.1)"
+  schema_id: "https://praxis.local/schemas/planspec/v0.1/planspec.schema.yaml"
+  template_json_exists: false
+  template_yaml_exists: true
+  template_yaml_modified: false
+  plan_files_validated:
+    - path: plans/alphaforge/00_baseline_verify.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/01_data_manifest.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/02_label_adapter.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/03_feature_pipeline.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/04_dataset_assembler.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/05_non_ml_research_report.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/06_walk_forward_validation.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/07_v7_handoff_dry_run.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/08_ml_pilot_gate.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/09_final_validation.plan.yaml
+      verdict: PASS
+    - path: plans/alphaforge/master.plan.yaml
+      verdict: PASS
+  summary: "11/11 PASS Draft202012Validator against template.yaml — zero errors"
+  planSpecVersion_check: "All 11 plans: planSpecVersion: 0.1.0"
+  profile_check: "All 11 plans: profile: praxis-v0.1"
+  command:
+    id: AUDIT-CMD-schema-validation
+    command: "python3 Draft202012Validator against template.yaml, 11 plan files"
+    exit_code: 0
+    output_excerpt: "PASS all PlanSpec v0.1.0 files: 11"
+
+command_evidence:
+  - id: AUDIT-CMD-schema-validation
+    exit_code: 0
+    result: PASS
+    detail: "11/11 PlanSpec files PASS Draft202012Validator against template.yaml"
+  - id: AUDIT-CMD-no-template-json
+    exit_code: 0
+    result: PASS
+    detail: "template.json absent — canonical authority is template.yaml"
+  - id: AUDIT-CMD-template-yaml-present
+    exit_code: 0
+    result: PASS
+    detail: "template.yaml present (PlanSpec v0.1.0)"
+  - id: AUDIT-CMD-no-v5-root-fields
+    exit_code: 0
+    result: PASS
+    detail: "11/11 plans clean — zero forbidden v5 root fields (compatibility, intent, enforcementRegistry, security, brief, waves, workspaces, accp)"
+  - id: AUDIT-CMD-forbidden-action-scan
+    exit_code: 0
+    result: PASS
+    detail: >
+      All xgboost, live_order, and profit_claim pattern matches verified in protective context only:
+      hardDeniedCommands patterns, negative grep tests, anti-pattern gate descriptions, and
+      validation tasks that CHECK for absence. No plan authorizes real model training, live
+      trading, or profitability claims. networkAllowed: false on all commands.
+  - id: AUDIT-CMD-master-references-subplans
+    exit_code: 0
+    result: PASS
+    detail: "master.plan.yaml references all 10 subplans by filename"
+
+planSpecVersion_profile_verification:
+  total: 11
+  version_0_1_0: 11
+  version_other: 0
+  profile_praxis_v0_1: 11
+  profile_other: 0
+  status: PASS
+
+bundle_summary:
+  plan_count: 11
+  plan_type: "1 master orchestrator + 10 subplans"
+  total_tasks: 54
+  total_acceptance_criteria: 435
+  total_exact_allowed_commands: 78
+  total_hard_denied_commands: 44
+  planSpecVersion: "0.1.0"
+  profile: "praxis-v0.1"
+  schema_authority: template.yaml
+  template_json_absent: true
+  template_yaml_present: true
+  template_yaml_unmodified: true
+  no_v5_root_fields: true
+  no_waves_or_workspaces_plural: true
+  accp_separation: strict
+  no_accp_content_in_planspec_root: true
+  networkAllowed_true_anywhere: false
+
+execution_safety_matrix:
+  canModifyPlan: "false (all 11 plans)"
+  canModifyAcceptanceCriteria: "false (all 11 plans)"
+  maxRepairLoops:
+    implementation_plans: 3
+    validation_plans: 0
+  repair_enabled:
+    implementation_plans: true
+    validation_plans: "false (00_baseline, 09_final)"
+  autonomy:
+    implementation_plans: implementation_allowed
+    validation_plans: analysis_only
+  networkAllowed_on_any_command: false
+  hardDeniedCommands_per_plan: 4
+  exactAllowedCommands:
+    implementation_plans: 7
+    final_validation: 11
+
+findings:
+  critical: []
+  major:
+    - id: MAJ-01
+      finding: "Stale template.json references in task instructions and acceptance criteria"
+      detail: >
+        master.plan.yaml (lines 68, 86, 166, 348) and 00_baseline_verify.plan.yaml (lines 67, 159)
+        contain instructions and acceptance criteria that reference validation against
+        'template.json'. The canonical schema authority is template.yaml (v0.1.0).
+        template.json does not exist and must not be created. These stale text artifacts
+        from the v5→v0.1 conversion could confuse the executor — the instruction says
+        "validate against template.json" but the actual schema is template.yaml.
+      affected_files:
+        - plans/alphaforge/master.plan.yaml (4 instances)
+        - plans/alphaforge/00_baseline_verify.plan.yaml (2 instances)
+      blocks_execution: false
+      blocks_promotion: false
+      fix: "Replace 'template.json' with 'template.yaml' in all 6 instruction/AC text references"
+    - id: MAJ-02
+      finding: "Stale planSpecVersion 5.0.0-alpha2 text reference in 00_baseline_verify"
+      detail: >
+        00_baseline_verify.plan.yaml line 67 instruction text says "planSpecVersion is
+        exactly '5.0.0-alpha2'" — a v5 artifact. The actual planSpecVersion field is
+        correctly "0.1.0" and validates against template.yaml. This is a text-level
+        artifact only — the structural field is correct.
+      affected_files:
+        - plans/alphaforge/00_baseline_verify.plan.yaml (1 instance)
+      blocks_execution: false
+      blocks_promotion: false
+      fix: "Replace '5.0.0-alpha2' with '0.1.0' in the instruction text"
+    - id: MAJ-03
+      finding: "template.json listed in allowedFiles in 03_feature_pipeline"
+      detail: >
+        03_feature_pipeline.plan.yaml lists 'template.json' in workspace allowedFiles
+        (lines 47, 132). The schema authority is template.yaml. While this is harmless
+        in practice (template.json doesn't exist, so it can't be read), it is semantically
+        incorrect and a v5 artifact. Should reference template.yaml instead.
+      affected_files:
+        - plans/alphaforge/03_feature_pipeline.plan.yaml (2 instances)
+      blocks_execution: false
+      blocks_promotion: false
+      fix: "Replace 'template.json' with 'template.yaml' in workspace allowedFiles (lines 47, 132)"
+  minor:
+    - id: MIN-01
+      finding: "Uniform exactAllowedCommands (7) and hardDeniedCommands (4) across implementation plans"
+      detail: >
+        All implementation subplans (01-08) share identical allowed/denied command sets.
+        While functionally correct, plan-specific tailoring would increase robustness.
+        The 09_final_validation plan correctly has 11 allowed commands — more thorough.
+    - id: MIN-02
+      finding: "Repair report self-assessment estimates ≥7.5 — actual score is ~8.3"
+      detail: >
+        reports/accp/alphaforge_planspec_v0_1_repair.accp.yaml estimated the new score
+        conservatively. The actual re-audit score is higher due to strong risk control,
+        coverage depth, and execution stop safety.
+  advisory:
+    - id: ADV-01
+      finding: "The v5→v0.1 conversion was thorough — 292→0 errors in 2 iterations"
+      detail: >
+        The repair report documents a clean mechanical conversion with only text-level
+        artifacts remaining. The structural transformation (waves→tasks, workspaces→workspace,
+        v5 root fields removed, v0.1 required fields added) was executed correctly.
+    - id: ADV-02
+      finding: "All forbidden action pattern matches are in protective context"
+      detail: >
+        The forbidden-action-scan found 96+ pattern matches across 11 plans, but every
+        single one is in a protective context: hardDeniedCommands, negative grep tests,
+        validation tasks checking for absence, or anti-pattern gate descriptions. No plan
+        authorizes real model training, live trading, or profitability claims.
+    - id: ADV-03
+      finding: "ACCP report emission instructions are in task instructions, not in PlanSpec root"
+      detail: >
+        ACCP references (accp_version, source_format, report paths) appear only in task
+        implementation instructions that tell the executor to produce ACCP reports. They
+        are not embedded as PlanSpec fields. PlanSpec/ACCP separation is correctly maintained.
+
+hard_fail_conditions:
+  total: 8
+  triggered: 0
+  not_triggered:
+    - "Any PlanSpec file fails schema validation — ALL 11 PASS"
+    - "Any PlanSpec file uses planSpecVersion other than 0.1.0 — ALL 11 use 0.1.0"
+    - "Any PlanSpec file uses v5 Alpha2 root fields — ZERO present"
+    - "template.json exists — ABSENT"
+    - "PlanSpec and ACCP content mixed — CORRECTLY SEPARATED"
+    - "Execution would touch forbidden paths — PROTECTED"
+    - "Plan allows real market data download — BLOCKED"
+    - "Plan allows live trading — BLOCKED"
+    - "Plan allows XGBoost/model training — BLOCKED"
+    - "Plan allows profitability claims — BLOCKED"
+    - "Acceptance criteria vague — 435 DETERMINISTIC ACs"
+    - "Final validation lacks command evidence — 11 COMMANDS WITH EVIDENCE"
+    - "Repair may modify acceptance criteria — FORBIDDEN (canModifyAcceptanceCriteria: false)"
+
+scorecard:
+  schema_validity:
+    score: 8.5
+    weight: 1.5
+    rationale: >
+      11/11 PASS Draft202012Validator against template.yaml. template.json absent.
+      template.yaml present and unmodified. All plans use planSpecVersion 0.1.0 and
+      profile praxis-v0.1. Deduction: residual template.json text references (-1.5).
+  authority_alignment:
+    score: 9.0
+    weight: 1.0
+    rationale: >
+      Simulation owns truth. AlphaForge produces evidence. V7 owns acceptance.
+      Runtime/live untouched. Domain boundaries respected. All plans maintain
+      correct authority semantics.
+  execution_readiness:
+    score: 7.0
+    weight: 1.5
+    rationale: >
+      Each subplan has exact commands, task instructions, and acceptance criteria.
+      Master orchestrator sequences all 10 subplans correctly. Repair loops clear.
+      Deduction: stale template.json/v5 text references in instructions could confuse
+      the executor (-3.0). Executor would need to know to use template.yaml despite
+      instructions saying template.json.
+  coverage_depth:
+    score: 9.0
+    weight: 1.5
+    rationale: >
+      All 10 required modules covered with dedicated subplans. 435 total acceptance
+      criteria across 54 tasks. Master orchestrator correctly references and sequences.
+      Coverage is comprehensive for P0.9B/P0.9C/P1.0 deterministic pipeline.
+  test_and_evidence_quality:
+    score: 8.5
+    weight: 1.5
+    rationale: >
+      Positive and negative tests specified. ACCP report emission instructions present
+      in all plans. Command evidence required (evidenceRequired: true). Schema validation
+      evidence is correct (template.yaml, not the prior phantom template.json).
+      Well-structured evidence requirements.
+  risk_control:
+    score: 9.5
+    weight: 1.0
+    rationale: >
+      networkAllowed: false on all commands. No Binance, no live trading, no model
+      training, no XGBoost, no profitability claims — all explicitly blocked in
+      hardDeniedCommands and verified via negative tests. Forbidden paths comprehensively
+      listed. Near-perfect risk posture. Only deduction: some allowedFiles patterns
+      (template.json in 03) are stale.
+  maintainability:
+    score: 7.0
+    weight: 1.0
+    rationale: >
+      Clean decomposition: 1 master + 10 focused subplans. Task boundaries clear.
+      Plans readable and well-structured. Deduction: stale v5 text artifacts
+      (template.json, 5.0.0-alpha2 references) reduce clarity and trust (-3.0).
+  execution_stop_safety:
+    score: 8.0
+    weight: 1.0
+    rationale: >
+      HOLD/FAIL behavior clear. maxRepairLoops: 3 for implementation, 0 for validation.
+      canModifyPlan and canModifyAcceptanceCriteria both false in all plans. Final gate
+      (09_final_validation) is comprehensive with 11 commands and cannot be bypassed.
+      Deduction: stop safety depends on the executor correctly interpreting template.json
+      → template.yaml even when instructions say otherwise (-2.0).
+  weighted_total: 8.3
+  max_possible: 10.0
+  calculation: "(8.5×1.5 + 9.0×1.0 + 7.0×1.5 + 9.0×1.5 + 8.5×1.5 + 9.5×1.0 + 7.0×1.0 + 8.0×1.0) / 10.0 = 83.0/10.0 = 8.3"
+
+comparison_to_prior_audit:
+  prior_score: "5.83/10"
+  prior_status: FAIL
+  prior_critical_findings: 3
+  prior_major_findings: 5
+  prior_schema_errors: 292
+  prior_plans_passing: 0
+  current_score: "8.3/10"
+  current_status: "MINOR_REPAIR_REQUIRED (text-level only)"
+  current_critical_findings: 0
+  current_major_findings: 3
+  current_schema_errors: 0
+  current_plans_passing: 11
+  improvement: "+2.47 points — schema validity restored, all structural issues resolved"
+
+execution_decision:
+  verdict: MINOR_REPAIR_REQUIRED
+  reason:
+    - "Score 8.3/10 — within MINOR_REPAIR_REQUIRED range (7.5-8.49). Needs 8.5 for READY."
+    - "0 critical findings — no HARD FAIL conditions triggered."
+    - "3 major findings — all text-level v5 artifacts (template.json references in instructions/ACs/allowedFiles)."
+    - "No structural schema issues. All 11 plans validate correctly against template.yaml."
+    - "Repair is ~8 text replacements across 3 files. No structural changes needed."
+    - "Estimated repair time: < 5 minutes."
+
+required_repairs_before_execution:
+  - id: RPR-01
+    action: "Fix stale template.json → template.yaml references"
+    files:
+      - plans/alphaforge/master.plan.yaml
+      - plans/alphaforge/00_baseline_verify.plan.yaml
+      - plans/alphaforge/03_feature_pipeline.plan.yaml
+    changes:
+      - "master.plan.yaml: Replace 'template.json' with 'template.yaml' in lines 68, 86, 166, 348 (instructions and ACs)"
+      - "00_baseline_verify.plan.yaml: Replace 'template.json' with 'template.yaml' in lines 67, 159 (instructions and ACs)"
+      - "00_baseline_verify.plan.yaml: Replace '5.0.0-alpha2' with '0.1.0' in line 67 (instruction text)"
+      - "03_feature_pipeline.plan.yaml: Replace 'template.json' with 'template.yaml' in lines 47, 132 (workspace allowedFiles)"
+    total_replacements: 8
+    validation_after: "Re-run AUDIT-CMD-schema-validation to confirm 11/11 PASS preserved"
+  - id: RPR-02
+    action: "Re-run pre-execution audit after RPR-01"
+    detail: >
+      After text fixes, re-run this audit. Expected score: ≥8.5 with zero major findings.
+      Then READY_FOR_EXECUTION.
+
+final_status:
+  status: "PASS (with minor text-level issues)"
+  score: "8.3/10"
+  blocks_execution: true
+  blocks_reason: "3 major text-level findings must be resolved before execution"
+  safe_next_step: >
+    Fix 8 stale text references (template.json → template.yaml, 5.0.0-alpha2 → 0.1.0)
+    across 3 plan files. These are purely text-level — no structural schema changes needed.
+    All 11 plans already validate correctly against template.yaml. After the text fix,
+    re-run this audit. Expected result: READY_FOR_EXECUTION at ≥8.5.
+
+scope_confirmation:
+  audit_scope: "Pre-execution re-audit of repaired PlanSpec v0.1.0 bundle"
+  result: "Audit complete. 11/11 schema PASS. 0 critical. 3 major (text artifacts only). Score 8.3/10."
+  files_read: 8
+  files_written: 1
+  commands_run: 8
+  plans_modified: 0
+  schema_modified: 0
+  source_modified: 0
+  non_negotiables_preserved: true
+  evidence:
+    - "Draft202012Validator: 11/11 PASS against template.yaml — exit code 0"
+    - "template.json absent — verified via filesystem check"
+    - "template.yaml present — PlanSpec v0.1.0"
+    - "No v5 root fields in any plan — programmatic verification"
+    - "Forbidden action scan: all matches in protective context"
+    - "Master references all 10 subplans"
+    - "planSpecVersion 0.1.0: 11/11 confirmed"
+    - "profile praxis-v0.1: 11/11 confirmed"

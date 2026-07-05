@@ -13,6 +13,8 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
+import numpy as np
+
 from simulation.contracts.models import (
     ActionOutcome,
     Candle,
@@ -25,7 +27,13 @@ from simulation.contracts.models import (
     SimulationProfile,
 )
 from simulation.engine.costs import total_cost_r
-from simulation.engine.exits import ExitResult, compute_utility, simulate_path
+from simulation.engine.exits import (
+    ExitResult,
+    _extract_ohlc,
+    compute_utility,
+    simulate_path,
+    simulate_path_from_arrays,
+)
 
 
 def _build_action_outcome(
@@ -37,11 +45,13 @@ def _build_action_outcome(
     profile: SimulationProfile,
 ) -> ActionOutcome:
     """Build an ActionOutcome from an ExitResult + cost model."""
-    fcr, scr, tcr = total_cost_r(
+    fcr, scr, fund_r, tcr = total_cost_r(
         notional=notional,
         entry_price=entry_price,
         atr=atr,
         stop_multiplier=profile.stop_multiplier,
+        funding_rate=getattr(profile, "funding_rate", 0.0),
+        holding_bars=exit_result.hold_duration_bars,
     )
     realized_r_net = exit_result.realized_r_gross - tcr
 
@@ -65,6 +75,7 @@ def _build_action_outcome(
         realized_r_net=realized_r_net,
         fee_cost_r=fcr,
         slippage_cost_r=scr,
+        funding_cost_r=fund_r,
         total_cost_r=tcr,
         exit_reason=exit_result.exit_reason,
         exit_price=exit_result.exit_price,
@@ -72,6 +83,7 @@ def _build_action_outcome(
         hold_duration_bars=exit_result.hold_duration_bars,
         action_utility=utility,
         path_metrics=pm,
+        same_candle_ambiguity=exit_result.same_candle_ambiguity,
     )
 
 
@@ -92,16 +104,34 @@ def _build_no_trade_outcome(
         1.0, missed_opportunity_r / max(profile.target_multiplier, 0.01)
     )
 
-    # Classify no-trade quality
-    if best_r <= 0:
-        quality = "SAVED_LOSS" if saved_loss_r > 0 else "CORRECT_NO_TRADE"
+    # Classify no-trade quality per no_trade_quality.md:84-101
+    # Uses saved_loss_r and missed_opportunity_r (not best_r) for
+    # classification, matching the authoritative doc.
+    if saved_loss_r == 0.0 and missed_opportunity_r == 0.0:
+        # Neither direction lost money, neither produced a clear edge
+        quality = "CORRECT_NO_TRADE"
         was_correct = True
-    elif best_r > profile.min_action_edge_r:
+    elif saved_loss_r > 0.0 and missed_opportunity_r == 0.0:
+        quality = "SAVED_LOSS"
+        was_correct = True
+    elif missed_opportunity_r > 0.0 and saved_loss_r == 0.0:
         quality = "MISSED_OPPORTUNITY"
         was_correct = False
+    elif saved_loss_r > 0.0 and missed_opportunity_r > 0.0:
+        # Contradictory: one direction lost, the other won.
+        # Use ambiguity margin to decide — close scores → AMBIGUOUS.
+        if abs(saved_loss_r - missed_opportunity_r) < profile.ambiguity_margin_r:
+            quality = "AMBIGUOUS_NO_TRADE"
+            was_correct = False
+        elif saved_loss_r >= missed_opportunity_r:
+            quality = "SAVED_LOSS"
+            was_correct = True
+        else:
+            quality = "MISSED_OPPORTUNITY"
+            was_correct = False
     else:
-        quality = "AMBIGUOUS_NO_TRADE"
-        was_correct = False
+        quality = "CORRECT_NO_TRADE"
+        was_correct = True
 
     return NoTradeOutcome(
         saved_loss_r=saved_loss_r,
@@ -202,20 +232,30 @@ def simulate(input: SimulationInput) -> SimulationOutput:
 
     candles = input.future_path.candles
     max_bars = profile.max_holding_bars
+    available_bars = max(0, min(len(candles), max_bars))
+
+    # Pre-extract OHLC arrays once — shared by both directions
+    if available_bars > 0:
+        highs, lows = _extract_ohlc(candles, available_bars)
+        close_price = candles[available_bars - 1].close
+    else:
+        highs = np.array([], dtype=float)
+        lows = np.array([], dtype=float)
+        close_price = input.entry_price
 
     # Simulate LONG_NOW
-    long_exit = simulate_path(
+    long_exit = simulate_path_from_arrays(
         "LONG", input.entry_price, long_stop, long_target,
-        candles, max_bars, entry_risk,
+        highs, lows, max_bars, available_bars, entry_risk, close_price,
     )
     long_outcome = _build_action_outcome(
         "LONG_NOW", long_exit, notional, input.entry_price, input.atr, profile,
     )
 
     # Simulate SHORT_NOW
-    short_exit = simulate_path(
+    short_exit = simulate_path_from_arrays(
         "SHORT", input.entry_price, short_stop, short_target,
-        candles, max_bars, entry_risk,
+        highs, lows, max_bars, available_bars, entry_risk, close_price,
     )
     short_outcome = _build_action_outcome(
         "SHORT_NOW", short_exit, notional, input.entry_price, input.atr, profile,
@@ -244,6 +284,7 @@ def simulate(input: SimulationInput) -> SimulationOutput:
         cost_model_version=input.cost_model_version,
         fee_model_version="fee-1.0.0",
         slippage_model_version="slippage-1.0.0",
+        funding_model_version="funding-1.0.0",
         horizon_family=f"{profile.mode.value.lower()}_horizon",
         stop_family=profile.stop_method,
         target_family=profile.target_method,

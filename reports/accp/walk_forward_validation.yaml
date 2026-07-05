@@ -1,0 +1,41 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation:
+  task: "Implement 6-fold walk-forward validation in cli/real_training.py"
+  requirements_met:
+    - "walk_forward_validate() function with 6-fold anchored expanding windows"
+    - "125 measures per-fold candidate performance (NOT divided by fold_count)"
+    - "MHT (124) handles hypothesis counting independently"
+    - "purge_period_bars = fold_size // 4"
+    - "embargo_period_bars = fold_size // 8"
+    - "Per-fold metrics: accuracy, active_trade_count, long/short/no_trade counts"
+    - "wfv_results with fold_count, per_fold_metrics, oos_summary"
+    - "Prints fold count, stability_score, avg_val_accuracy"
+    - "Anchor type: anchored_expanding (rolling_window noted as future option)"
+files_changed:
+  - "cli/real_training.py"
+decisions_locked:
+  - "walk_forward.fold_count: 6 (LOCKED_INITIAL_BASELINE)"
+  - "walk_forward.anchor_type: anchored_expanding (LOCKED)"
+  - "walk_forward.purge_ratio: fold_size // 4 (LOCKED_INITIAL_BASELINE)"
+  - "walk_forward.embargo_ratio: fold_size // 8 (LOCKED_INITIAL_BASELINE)"
+  - "walk_forward.measures_per_fold: 125 (LOCKED)"
+  - "walk_forward.mht_hypotheses_per_fold: 124 (LOCKED)"
+remaining_holds:
+  - "oos_sharpe, oos_expectancy_r, oos_win_rate set to placeholder 0.0 — needs real trade-level PnL computation across folds"
+  - "oos_max_drawdown_r set to -1.0 placeholder — needs path-dependent drawdown tracking"
+  - "Multiple hypothesis correction method set to NONE_APPLIED — Bonferroni/Holm to be wired after empirical baseline"
+  - "Rolling-window anchor variant deferred (explicitly marked as future option)"
+safe_next_step:
+  - "Wire real trade-level PnL computation into walk_forward_validate returns for oos_sharpe/oos_expectancy_r"
+  - "Add MHT correction (Bonferroni step-down) once oos metrics are real"
+  - "Run end-to-end real_training.py with actual parquet data to exercise walk-forward paths"
+commands_run:
+  - "python3 -m pytest integration/tests/ simulation/tests/ lib/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+evidence:
+  - "500 passed, 2 skipped — zero regressions"
+  - "AST parse: OK — all 6 functions present (load_cached_data, build_candle, generate_labels, _compute_stability, walk_forward_validate, main)"
+  - "All imports resolve (numpy, xgboost, XGBoostTrainer, build_empirical_mode_research_report)"
+  - "walk_forward_validate defined as anchored_expanding with purge/embargo, 125 measures/fold, 124 MHT hypotheses/fold"
+  - "Final model trained on ALL data after WFV loop for production artifact"

@@ -1,0 +1,30 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "MHT pipeline/builder contradiction resolved. Pipeline correction_method is now respected; NONE_APPLIED defaults with blocking hold; deflated Sharpe from actual data; PBO assessment; BH-based rejected_candidate_count."
+files_changed:
+  - "alphaforge/src/alphaforge/reports/empirical.py"
+  - "alphaforge/tests/test_empirical_report.py"
+  - "v7/docs/roadmap.md"
+  - "reports/accp/issue-138.yaml"
+decisions_locked:
+  - "MHT pipeline/builder agreement: LOCKED_INITIAL_BASELINE"
+  - "Deflated Sharpe from actual data: LOCKED_INITIAL_BASELINE"
+  - "PBO assessment: LOCKED_INITIAL_BASELINE"
+remaining_holds:
+  - "MHT correction real thresholds (HOLD — requires empirical baseline)"
+  - "Cost Stress Matrix (HOLD — requires regime-aware cost multipliers)"
+  - "Symbol Stability per-symbol contribution (HOLD — requires multi-symbol WFV)"
+  - "NO_TRADE Collapse edge case under extreme market conditions (HOLD)"
+  - "Real profitability evidence (HOLD — requires real training + WFV)"
+  - "Walk-forward OOS expectancy_r/Sharpe still placeholder 0.0 (HOLD — needs per-fold PnL)"
+safe_next_step: "Integrate MHT-aware pipeline output into empirical report builder with real trial_context from walk-forward validation."
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ simulation/tests/ -q -x --timeout=60"
+evidence:
+  - "alphaforge/tests/: 1100 passed, 1 skipped"
+  - "integration/tests/: 176 passed, 2 skipped"
+  - "lib/tests/ + simulation/tests/: 352 passed"
+  - "17 new MHT pipeline/builder tests added and passing"

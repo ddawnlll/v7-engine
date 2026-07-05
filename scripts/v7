@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# V7 Engine CLI — entry point.
+# Usage:  ./scripts/v7 <command> [options]
+#         ./scripts/v7 runs --mode SCALP
+#         ./scripts/v7 viz data/reports/train-results-SCALP.json
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${REPO_ROOT}:${REPO_ROOT}/alphaforge/src"
+
+exec python3 "${REPO_ROOT}/cli/v7_engine.py" "$@"

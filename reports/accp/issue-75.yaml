@@ -1,0 +1,13 @@
+accp_version: "2.0.0"
+report_id: "ISSUE-75-CLOSURE"
+issue_ref: "#75"
+title: "Walk-forward / OOS evidence protocol defined"
+result: "PASS"
+scope: "Protocol design documented in v7/docs/pipeline/walk_forward_protocol.md"
+evidence:
+  - "Protocol doc created: fold strategy, metrics, pass/fail per mode"
+decisions_locked:
+  - "Expanding window fold strategy LOCKED"
+  - "6 folds minimum LOCKED"
+  - "Per-mode fold window sizes LOCKED_INITIAL_BASELINE"
+safe_next_step: "Implemented in alphaforge WFV pipeline"

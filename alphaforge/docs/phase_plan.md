@@ -10,9 +10,13 @@
 
 | Phase | ID | Title | Status |
 |-------|----|-------|--------|
-| P0.8B | Current | Authority Lock + Docs + Contracts | IN PROGRESS |
-| P0.8C | Current | Re-Audit After Authority Lock | IN PROGRESS |
-| P0.9A | Next | Implementation Scaffold | PENDING |
+| P0.8B | Complete | Authority Lock + Docs + Contracts | DONE |
+| P0.8C | Complete | Re-Audit After Authority Lock | DONE |
+| P0.8D | Complete | Profitability/Efficiency Squeeze Audit | DONE |
+| P0.8E | Complete | Contract/Docs Profitability Patch | DONE |
+| P0.9A | Next | Implementation Scaffold | REDESIGN_IN_PROGRESS |
+| P0.9A-FREEZE | Current | Freeze + Metric Ownership Redesign | IN_PROGRESS |
+| XSMOM | Complete | Cross-Sectional Momentum Baseline | DONE |
 | P0.9B | Future | Data/Label/Feature Pipeline | PENDING |
 | P0.9C | Future | All-Mode Research Reports | PENDING |
 | P1.0 | Future | V7 Handoff Candidate | PENDING |
@@ -40,7 +44,7 @@
 
 ---
 
-## P0.8C — Re-Audit (Current)
+## P0.8C — Re-Audit (Complete)
 
 **What:** Re-audit AlphaForge readiness after P0.8B docs and contracts are locked.
 
@@ -52,7 +56,41 @@
 
 ---
 
-## P0.9A — Implementation Scaffold (Next)
+## P0.8D — Profitability/Efficiency Squeeze Audit (Complete)
+
+**What:** Audit AlphaForge profitability thesis and efficiency surface. Identified critical contract/doc drift that must be fixed before P0.9A scaffold.
+
+**Output:**
+- Profitability/efficiency squeeze audit ACCP-YAML report
+- Identified gate mapping drift, timeframe drift, label schema gaps, validation contract misalignment
+- Recommended P0.8E targeted patch before P0.9A
+
+---
+
+## P0.8E — Contract/Docs Profitability Patch (Complete)
+
+**What:** Targeted contract, schema, fixture, and documentation patch to fix critical drift identified by P0.8D audit. Repaired the contract/documentation foundation so P0.9A can safely build on correct contracts.
+
+**Status: DONE (2026-06-23).** All 8 objectives completed. 295 tests pass with 0 failures. See `reports/p0_8e_alphaforge_profitability_contract_patch.accp.yaml` for completion report.
+
+**Scope:**
+- Fix gate mapping to V7 canonical G0-G10
+- Reconcile timeframe stacks to locked simulation profiles
+- Complete AlphaForgeLabel schema (gross/net cost, NO_TRADE quality, lineage)
+- Align validation contract to V7 gates (6-fold minimum, canonical regimes, MHT)
+- Add MHT/data-snooping controls
+- Tighten schema strictness (nested required fields)
+- Mark legacy docs as superseded
+- Gate P0.9A on P0.8E PASS
+- Add/update fixture validation, contract semantics, and schema strictness tests
+
+**Prerequisites:** P0.8B + P0.8C + P0.8D PASS
+
+**Exit condition:** All 5 validation commands pass. P0.9A unblocked.
+
+---
+
+## P0.9A — Implementation Scaffold (REDESIGN_IN_PROGRESS)
 
 **What:** Create minimal AlphaForge package structure without full model training.
 
@@ -64,7 +102,20 @@
 - CI integration (basic)
 - No actual training, no data pipeline yet
 
-**Prerequisites:** P0.8B + P0.8C PASS
+**Prerequisites:** P0.8B + P0.8C + P0.8D + P0.8E PASS
+
+---
+
+## P0.9A-FREEZE — Freeze + Metric Ownership Redesign (IN_PROGRESS)
+
+**What:** Pause the original P0.9A scaffold implementation. Redesign to account for layer metric ownership (Metric Philosophy) discovered during v0.25 diagnostics repair and v0.30 metric plumbing audit.
+
+**Scope:**
+- Freeze P0.9A scaffold source tree
+- Document layer metric ownership in discovery_authority.md
+- Redesign scaffold to respect metric layer boundaries
+
+**Prerequisites:** P0.8B + P0.8C + P0.8D + P0.8E PASS
 
 ---
 
@@ -111,6 +162,23 @@
 - Handoff to V7 acceptance pipeline
 
 **Prerequisites:** P0.9C complete. At least one mode has CANDIDATE_FOR_V7_GATES verdict.
+
+---
+
+## XSMOM — Cross-Sectional Momentum Baseline (DONE)
+
+**Issue:** #v034 — Cross-sectional momentum (XSMOM) baseline for all 16 symbols.
+
+**What:** Research and implement cross-sectional momentum alpha discovery. Rank symbols by trailing returns, go long top quantile, short bottom quantile. Baseline validated for 16 Binance USDT perpetual symbols.
+
+**Output:**
+- XSMOM baseline implementation
+- 16-symbol ranking and scoring
+- Cross-sectional momentum research report
+
+**Lock status:** LOCKED_INITIAL_BASELINE. Recalibrate after first walk-forward on real data.
+
+**Evidence:** Committed as v0.34A.
 
 ---
 

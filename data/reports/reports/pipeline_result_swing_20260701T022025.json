@@ -1,0 +1,327 @@
+{
+  "pipeline_version": "0.2.0",
+  "schema_version": "1.0.0",
+  "config": {
+    "pipeline_version": "0.2.0",
+    "mode": "SWING",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "start_date": null,
+    "end_date": null,
+    "output_dir": "data/reports",
+    "random_seed": 42,
+    "dry_run": false,
+    "force": true,
+    "use_synthetic": true,
+    "n_bars": 2000,
+    "steps": [
+      "validate",
+      "backfill",
+      "labels",
+      "features",
+      "train",
+      "wfv",
+      "report"
+    ]
+  },
+  "evidence": [
+    {
+      "step": "validate",
+      "status": "COMPLETED",
+      "timestamp": "2026-07-01T02:20:21.202954+00:00",
+      "duration_seconds": 6.609999945794698e-05,
+      "metrics": {
+        "mode": "SWING",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT"
+        ],
+        "use_synthetic": true,
+        "n_bars": 2000,
+        "output_dir": "data/reports",
+        "random_seed": 42
+      },
+      "errors": [],
+      "warnings": [],
+      "artifacts": [],
+      "checksum": "2dc4369866d63705"
+    },
+    {
+      "step": "backfill",
+      "status": "COMPLETED",
+      "timestamp": "2026-07-01T02:20:21.210405+00:00",
+      "duration_seconds": 0.007443599999533035,
+      "metrics": {
+        "mode": "SWING",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT"
+        ],
+        "use_synthetic": true,
+        "total_bars": 6000,
+        "n_symbols": 3,
+        "bars_per_symbol": 2000,
+        "data_source": "synthetic",
+        "random_seed": 42
+      },
+      "errors": [],
+      "warnings": [],
+      "artifacts": [],
+      "checksum": "7f30d544078ab925"
+    },
+    {
+      "step": "labels",
+      "status": "COMPLETED",
+      "timestamp": "2026-07-01T02:20:21.212848+00:00",
+      "duration_seconds": 0.0024157000007107854,
+      "metrics": {
+        "mode": "SWING",
+        "label_method": "synthetic",
+        "n_labels": 6000,
+        "label_distribution": {
+          "LONG_NOW": 1959,
+          "NO_TRADE": 2010,
+          "SHORT_NOW": 2031
+        },
+        "label_classes": [
+          "LONG_NOW",
+          "NO_TRADE",
+          "SHORT_NOW"
+        ]
+      },
+      "errors": [],
+      "warnings": [],
+      "artifacts": [],
+      "checksum": "6000e0b197d5f62a"
+    },
+    {
+      "step": "features",
+      "status": "COMPLETED",
+      "timestamp": "2026-07-01T02:20:22.401495+00:00",
+      "duration_seconds": 1.1888190250010666,
+      "metrics": {
+        "mode": "SWING",
+        "pipeline_version": "0.1.0",
+        "n_features": 35,
+        "n_bars": 6000,
+        "feature_names": [
+          "amihud_illiquidity_N",
+          "atr_N",
+          "atr_expansion_N",
+          "atr_pct_N",
+          "bb_position",
+          "bb_width",
+          "garman_klass_vol_N",
+          "high_low_range_N",
+          "highest_N",
+          "log_return_1",
+          "log_return_N",
+          "lowest_N",
+          "macd",
+          "macd_histogram",
+          "macd_signal",
+          "microstructure_noise_N",
+          "momentum_N",
+          "obv_N",
+          "parkinson_vol_N",
+          "price_impact_slope_N",
+          "range_breakout_N",
+          "realized_volatility_N",
+          "return_volatility_N",
+          "return_zscore_N",
+          "roc_N",
+          "roll_spread_N",
+          "rsi_N",
+          "serial_correlation_N",
+          "spread_pct_N",
+          "trade_intensity_N",
+          "volume_imbalance_N",
+          "volume_ratio_N",
+          "volume_trend_N",
+          "vpin_N",
+          "vwap_deviation"
+        ],
+        "feature_groups": [
+          "returns",
+          "volatility",
+          "atr",
+          "momentum",
+          "volume",
+          "breakout",
+          "orderbook"
+        ],
+        "lead_lag_status": "HOLD-LEAD-LAG",
+        "valid_rows": 5959,
+        "nan_rows_dropped": 41
+      },
+      "errors": [],
+      "warnings": [],
+      "artifacts": [],
+      "checksum": "da65f33c3acef916"
+    },
+    {
+      "step": "train",
+      "status": "COMPLETED",
+      "timestamp": "2026-07-01T02:20:23.184408+00:00",
+      "duration_seconds": 0.782749796000644,
+      "metrics": {
+        "mode": "SWING",
+        "model_family": "xgboost",
+        "hyperparameters": "SWING_DEFAULT_HYPERPARAMS (LOCKED_INITIAL_BASELINE)",
+        "n_samples": 5959,
+        "n_features": 35,
+        "train_accuracy": 0.5318791946308725,
+        "val_accuracy": 0.31821998320738876,
+        "train_logloss": 1.0673895953285615,
+        "val_logloss": 1.1014698117245756,
+        "training_duration_seconds": 0.05156559900024149,
+        "model_size_bytes": 99722,
+        "artifact_path": "data/reports/models/xgb_swing_20260701T022023Z.json",
+        "per_class_train": {
+          "LONG_NOW": {
+            "precision": 0.6383881230116649,
+            "recall": 0.38713826366559484,
+            "f1": 0.48198558847077666,
+            "support": 1555
+          },
+          "SHORT_NOW": {
+            "precision": 0.5028423772609819,
+            "recall": 0.6054760423148724,
+            "f1": 0.549407114624506,
+            "support": 1607
+          },
+          "NO_TRADE": {
+            "precision": 0.5084656084656085,
+            "recall": 0.5983810709838107,
+            "f1": 0.549771167048055,
+            "support": 1606
+          }
+        }
+      },
+      "errors": [],
+      "warnings": [],
+      "artifacts": [
+        "data/reports/models/xgb_swing_20260701T022023Z.json"
+      ],
+      "checksum": "1385f7186fe3fb84"
+    },
+    {
+      "step": "wfv",
+      "status": "COMPLETED",
+      "timestamp": "2026-07-01T02:20:25.202279+00:00",
+      "duration_seconds": 2.017864791001557,
+      "metrics": {
+        "mode": "SWING",
+        "n_folds": 7,
+        "verdict": "FAIL_OVERFIT",
+        "report_id": "WFV-SWING-20260701T022025-72c88ae8",
+        "avg_train_accuracy": 0.6178129923824843,
+        "avg_val_accuracy": 0.33749999999999997,
+        "avg_accuracy_gap": 0.28031299238248447,
+        "avg_logloss_gap": 0.07902090435682294,
+        "avg_sharpe": -9.285153126179694,
+        "sharpe_stability_std": 3.0246583431497194,
+        "avg_win_rate": 0.32470641315413895,
+        "avg_max_drawdown": -39.92857142857143,
+        "avg_profit_factor": 0.6416627648492634,
+        "total_oos_trades": 1420,
+        "overfit_flags": 9,
+        "overfit_details": [
+          {
+            "indicator": "train_oos_gap",
+            "severity": "HIGH",
+            "description": "Fold 0: accuracy gap 0.3285 exceeds threshold 0.15. Train acc=0.6660, Val acc=0.3375"
+          },
+          {
+            "indicator": "train_oos_gap",
+            "severity": "MEDIUM",
+            "description": "Fold 0: logloss gap 0.1034 exceeds threshold 0.1. Train ll=0.9988, Val ll=1.1022"
+          },
+          {
+            "indicator": "train_oos_gap",
+            "severity": "HIGH",
+            "description": "Fold 1: accuracy gap 0.3250 exceeds threshold 0.15. Train acc=0.7167, Val acc=0.3917"
+          },
+          {
+            "indicator": "train_oos_gap",
+            "severity": "MEDIUM",
+            "description": "Fold 1: logloss gap 0.1359 exceeds threshold 0.1. Train ll=0.9468, Val ll=1.0826"
+          },
+          {
+            "indicator": "train_oos_gap",
+            "severity": "HIGH",
+            "description": "Fold 2: accuracy gap 0.2277 exceeds threshold 0.15. Train acc=0.5694, Val acc=0.3417"
+          },
+          {
+            "indicator": "train_oos_gap",
+            "severity": "HIGH",
+            "description": "Fold 3: accuracy gap 0.2179 exceeds threshold 0.15. Train acc=0.5596, Val acc=0.3417"
+          },
+          {
+            "indicator": "train_oos_gap",
+            "severity": "HIGH",
+            "description": "Fold 4: accuracy gap 0.3272 exceeds threshold 0.15. Train acc=0.6564, Val acc=0.3292"
+          },
+          {
+            "indicator": "train_oos_gap",
+            "severity": "HIGH",
+            "description": "Fold 5: accuracy gap 0.2845 exceeds threshold 0.15. Train acc=0.5928, Val acc=0.3083"
+          },
+          {
+            "indicator": "train_oos_gap",
+            "severity": "HIGH",
+            "description": "Fold 6: accuracy gap 0.2514 exceeds threshold 0.15. Train acc=0.5639, Val acc=0.3125"
+          }
+        ],
+        "wfv_report_path": "data/reports/reports/wfv_report_WFV-SWING-20260701T022025-72c88ae8.json"
+      },
+      "errors": [],
+      "warnings": [],
+      "artifacts": [
+        "data/reports/reports/wfv_report_WFV-SWING-20260701T022025-72c88ae8.json"
+      ],
+      "checksum": "29cdb816af810c74"
+    },
+    {
+      "step": "report",
+      "status": "COMPLETED",
+      "timestamp": "2026-07-01T02:20:25.202499+00:00",
+      "duration_seconds": 0.00018939999972644728,
+      "metrics": {
+        "mode": "SWING",
+        "pipeline_version": "0.2.0",
+        "output_dir": "data/reports",
+        "step_results": {
+          "validate": "COMPLETED",
+          "backfill": "COMPLETED",
+          "labels": "COMPLETED",
+          "features": "COMPLETED",
+          "train": "COMPLETED",
+          "wfv": "COMPLETED"
+        },
+        "train_accuracy": 0.5318791946308725,
+        "val_accuracy": 0.31821998320738876,
+        "wfv_verdict": "FAIL_OVERFIT",
+        "wfv_n_folds": 7,
+        "wfv_avg_sharpe": -9.285153126179694,
+        "report_path": "data/reports/reports/pipeline_v02_swing_20260701T022025.json"
+      },
+      "errors": [],
+      "warnings": [],
+      "artifacts": [
+        "data/reports/reports/pipeline_v02_swing_20260701T022025.json"
+      ],
+      "checksum": "977fd6cc3b5cb8be"
+    }
+  ],
+  "verdict": "PASS",
+  "report_path": "data/reports/reports/pipeline_v02_swing_20260701T022025.json",
+  "started_at": "2026-07-01T02:20:21.202920+00:00",
+  "completed_at": "2026-07-01T02:20:25.202528+00:00",
+  "total_duration_seconds": 3.999598712000079
+}

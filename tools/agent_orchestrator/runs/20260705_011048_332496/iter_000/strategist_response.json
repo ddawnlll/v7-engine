@@ -1,0 +1,14 @@
+{
+  "worker_task": "Create a Python script `alpha_candidate.py` that implements a simple moving average crossover strategy using yfinance. The script should: 1) Fetch 1 year of daily OHLCV data for SPY. 2) Compute 20-day and 50-day simple moving averages. 3) Generate a buy signal when the 20-day SMA crosses above the 50-day SMA, and a sell signal when it crosses below. 4) Print the number of trades and final portfolio value assuming $10,000 initial capital and trading 100 shares per signal (no transaction costs). 5) Include a `if __name__ == '__main__':` block that runs the strategy and prints results.",
+  "rationale": "This is a minimal, deterministic alpha candidate that can be built and tested incrementally. It uses a classic, well-understood strategy, fetches real data, and produces numeric output that can be validated by the gate.",
+  "expected_artifacts": [
+    "alpha_candidate.py"
+  ],
+  "success_criteria": [
+    "Script runs without errors",
+    "Prints number of trades (integer)",
+    "Prints final portfolio value (float)",
+    "Output matches expected format and is deterministic for same date range"
+  ],
+  "risk_notes": "yfinance may fail if network is unavailable or data is incomplete; script should handle errors gracefully. No transaction costs or slippage modeled."
+}

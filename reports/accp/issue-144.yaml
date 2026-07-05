@@ -1,0 +1,53 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+issue: "#144"
+title: "Model Evolution Research — XGBoost vs RandomForest vs MLP"
+result: "PASS"
+
+scope_confirmation:
+  implemented:
+    - "alphaforge/src/alphaforge/research/evolution.py — RandomForestTrainer, MLPTrainer, compare_models(), inference_cost_benchmark(), recommend_best_per_mode()"
+    - "alphaforge/src/alphaforge/research/__init__.py — Public API exports"
+    - "alphaforge/tests/test_model_evolution.py — 26 tests"
+  requirements_met:
+    - "2+ alternative architectures implemented (RandomForest, MLP)"
+    - "Head-to-head on identical data (consistent train/val split via deterministic shuffle)"
+    - "Best architecture per mode (compare_models() returns best_model + recommendations)"
+    - "Inference cost benchmark (batched and single-sample latency in microseconds)"
+
+files_changed:
+  - "alphaforge/src/alphaforge/research/__init__.py"
+  - "alphaforge/src/alphaforge/research/evolution.py"
+  - "alphaforge/tests/test_model_evolution.py"
+  - "v7/docs/roadmap.md"
+  - "reports/accp/issue-144.yaml"
+
+decisions_locked:
+  - "Model evolution research module: LOCKED_INITIAL_BASELINE"
+  - "Comparison framework (consistent split, metrics, benchmarking): LOCKED_INITIAL_BASELINE"
+  - "Per-mode recommendation logic: LOCKED_INITIAL_BASELINE"
+
+remaining_holds:
+  - "No real profitability evidence (HOLD — requires real training + WFV for model comparison on real data)"
+  - "SCALP/AGGRESSIVE_SCALP model recommendations (HOLD — requires mode-specific hyperparameter tuning)"
+  - "LSTM/Transformer architectures (DEFERRED — requires torch dependency installation)"
+  - "Hyperparameter optimization per architecture (HOLD — optuna not yet installed)"
+
+safe_next_step:
+  action: "TRAIN_REAL_MODELS"
+  description: "Apply model evolution comparison to real training data. Integrate recommendation into real_training.py pipeline."
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_model_evolution.py -q -x --timeout=120"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/ -q -x --timeout=120"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/ -q -x --timeout=60"
+  - "PYTHONPATH=. python3 -m pytest lib/tests/ simulation/tests/ -q -x --timeout=60"
+
+evidence:
+  test_results:
+    alphaforge_model_evolution: "26/26 passed"
+    alphaforge_full: "1109/1109 passed, 1 skipped"
+    integration_full: "176/176 passed, 2 skipped"
+    lib_plus_simulation: "352/352 passed"
+  total: "1637/1637 passed, 3 skipped, 0 failures"

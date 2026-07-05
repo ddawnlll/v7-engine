@@ -1,0 +1,54 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+
+result: "PASS"
+
+scope_confirmation: |
+  Issue #158: Add feature caching with Parquet+Zstd for pipeline speedup.
+  All 5 requirements implemented:
+    1. FeatureCache class with SHA-256 cache key, Parquet+Zstd storage,
+       memory_map loading, version-based invalidation, thread-safe write.
+    2. cached_compute_features() wrapper with cache-first semantics.
+    3. CACHE_DIR_DEFAULT: str = ".cache/features/"
+    4. PIPELINE_VERSION bumped to "0.2.0".
+    5. Unit tests in test_feature_cache.py (31 tests).
+
+files_changed:
+  - alphaforge/src/alphaforge/features/pipeline.py
+      (+FeatureCache class, +cached_compute_features(), +CACHE_DIR_DEFAULT,
+       +imports (hashlib, json, threading, pathlib, pyarrow),
+       PIPELINE_VERSION 0.1.0 -> 0.2.0)
+  - alphaforge/src/alphaforge/features/__init__.py
+      (+exports: FeatureCache, cached_compute_features, CACHE_DIR_DEFAULT)
+  - alphaforge/tests/test_feature_cache.py
+      (NEW — 31 tests across 7 test classes)
+  - alphaforge/tests/test_causality_audit.py
+      (PIPELINE_VERSION assertion 0.1.0 -> 0.2.0)
+  - v7/docs/roadmap.md
+      (+#158 entry with lock status)
+
+decisions_locked:
+  - FeatureCache: LOCKED_INITIAL_BASELINE
+  - cached_compute_features wrapper: LOCKED_INITIAL_BASELINE
+  - CACHE_DIR_DEFAULT: LOCKED_INITIAL_BASELINE
+  - PIPELINE_VERSION 0.2.0: LOCKED
+
+remaining_holds:
+  - Cache directory not configurable via env/config file (LOW)
+  - No cache size limit or LRU eviction (LOW)
+  - No cross-process file locking (LOW)
+
+safe_next_step: |
+  Begin using cached_compute_features in pipeline callers (training runner,
+  walk-forward validation) to realize speedup. Monitor cache hit rates
+  in production-like runs.
+
+commands_run:
+  - PYTHONPATH=. python3 -m pytest alphaforge/tests/test_feature_cache.py -v
+  - PYTHONPATH=. python3 -m pytest alphaforge/tests/test_causality_audit.py -v
+  - git add -A && git commit -m "feat: #158 add feature caching with Parquet+Zstd"
+
+evidence:
+  - "31/31 new feature cache tests pass"
+  - "76/76 causality audit tests pass (version check updated)"
+  - "Commit a42fb21 on worktree-agent-a2b149031dae617d7"

@@ -1,0 +1,22 @@
+accp_version: "2.0.0"
+milestone: "v0.25 — AlphaForge Evaluation & Diagnostics Repair"
+result: "PASS"
+scope_confirmation: "All 8 remaining issues implemented and verified"
+issues_closed:
+  - 122: Centralized Research Run Summary
+  - 123: Active Trade Metrics + oos_trade_count Correctness
+  - 124: MHT / Trial Ledger / Data-Snooping Correction
+  - 115: Cost Stress Matrix
+  - 116: Symbol + Regime Stability Real Metrics
+  - 117: NO_TRADE Collapse Detector
+  - 118: Autotune Engine with Nested WFV
+  - 119: Alpha Surface Expansion
+evidence:
+  - "All tests passing (2048 alphaforge, 176 integration, 335 lib/simulation)"
+  - "All 8 issues closed with commit references"
+files_changed: "alphaforge/src/reporting/, alphaforge/src/validation/, alphaforge/src/features/, alphaforge/src/regime/, alphaforge/src/tuning/"
+decisions_locked:
+  - "6-fold WFV with anchored expanding window — LOCKED"
+  - "MHT correction with Bonferroni — LOCKED"
+remaining_holds: []
+safe_next_step: "Proceed to v0.26 Alpha Profitability Engine"

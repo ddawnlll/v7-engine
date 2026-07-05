@@ -1,0 +1,83 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result:
+  status: PASS
+  summary: "Repaired stale pipeline Makefile/CLI wiring for backfill/report paths and verified local tests."
+scope_confirmation:
+  requested_scope: "Fix failing make backfill and commands that are not working."
+  completed_scope:
+    - "Replaced removed AlphaForgeBackfillPipeline import path with maintained Binance Vision downloader delegation."
+    - "make backfill now passes MODE, SYMBOLS, DATA_DIR, ARGS and uses the repository Python interpreter."
+    - "Pipeline Makefile targets now use $(PYTHON) rather than hardcoded python3."
+    - "make install includes downloader/report/test dependencies needed by CLI paths."
+    - "Downloader writes timestamp column and supports legacy open_time during resampling."
+    - "Empirical ModeResearchReport builder emits required oos_ic/oos_rank_ic metrics."
+  out_of_scope:
+    - "No trading thresholds changed."
+    - "No live execution or policy promotion behavior changed."
+    - "Legacy simulate/build-dataset/train/wfv implementations remain conservative stubs/gates outside pipeline-v0.2."
+files_changed:
+  - path: "Makefile"
+    change: "Pipeline targets use $(PYTHON), pass mode/symbol/data args, and install practical CLI dependencies."
+  - path: "cli/v7_engine.py"
+    change: "Backfill delegates to scripts/download_binance.py; added mode/default interval/output-dir helpers; report default WFV includes IC metrics."
+  - path: "scripts/download_binance.py"
+    change: "Writes timestamp column and handles open_time fallback in resampling."
+  - path: "alphaforge/src/alphaforge/reports/empirical.py"
+    change: "Adds required oos_ic and oos_rank_ic metrics to empirical report payloads."
+  - path: "alphaforge/docs/ai_summary.md"
+    change: "Documents CLI/report metric repair."
+  - path: "v7/docs/roadmap.md"
+    change: "Adds pipeline backfill/report CLI repair ledger entry."
+  - path: "reports/make_pipeline_backfill_repair.accp.yaml"
+    change: "Completion report."
+decisions_locked:
+  - decision: "Backfill CLI uses maintained Binance Vision downloader instead of removed AlphaForgeBackfillPipeline API."
+    status: LOCKED
+  - decision: "Make pipeline targets must execute with the repository-selected PYTHON interpreter."
+    status: LOCKED
+  - decision: "Empirical ModeResearchReport payloads must include oos_ic and oos_rank_ic."
+    status: LOCKED
+remaining_holds:
+  - hold: "Legacy simulate/build-dataset/train/wfv CLI commands are not yet production implementations; train/WFV remain gated."
+    status: HOLD_NON_BLOCKING
+    release_condition: "Wire targets to implemented pipeline-v0.2 steps or formally deprecate the legacy command names."
+  - hold: "Pytest warning: unknown config option timeout."
+    status: HOLD_NON_BLOCKING
+    release_condition: "Install/register pytest-timeout or remove timeout config assumption."
+  - hold: "Pytest warning: unknown mark integration."
+    status: HOLD_NON_BLOCKING
+    release_condition: "Register integration marker in pytest config."
+safe_next_step:
+  - "If you want all old command names to execute real pipeline stages, map simulate/build-dataset/train/wfv onto pipeline-v0.2 step bundles with explicit gates."
+commands_run:
+  - command: "make install"
+    result: "PASS — installed/verified CLI dependencies including aiohttp."
+  - command: "make backfill MODE=SCALP DRY_RUN=1"
+    result: "PASS — resolves to downloader command without stale import."
+  - command: ".venv/bin/python3 -m cli backfill --mode SCALP --symbols BTCUSDT --start 2024-01-01 --end 2024-01-31 --dry-run"
+    result: "PASS — prints Binance Vision downloader command."
+  - command: "make backfill MODE=SCALP SYMBOLS=BTCUSDT DATA_DIR=/tmp/v7-backfill-smoke ARGS='--intervals 1h --start 2024-01-01 --end 2024-01-01'"
+    result: "PASS — downloaded 1 monthly parquet file, 744 records."
+  - command: "make report MODE=SCALP"
+    result: "PASS — generated schema-valid report; generated artifact removed from repo after verification."
+  - command: ".venv/bin/python3 -m pytest alphaforge/tests/test_data_backfill.py integration/tests/test_alphaforge_report_builders.py integration/tests/test_alphaforge_research_report.py -q"
+    result: "PASS — 75 passed, 1 warning."
+  - command: "make test"
+    result: "PASS — lib tests passed."
+  - command: "PYTHONPATH=. .venv/bin/python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+    result: "PASS — 792 passed, 2 skipped, 2 warnings."
+  - command: "make check-boundaries && make check-contracts"
+    result: "PASS — boundaries/contracts pass."
+evidence:
+  backfill_smoke:
+    output_dir: "/tmp/v7-backfill-smoke/raw/binance/um/klines"
+    files_downloaded: 1
+    records: 744
+  tests:
+    - "Focused AlphaForge/backfill/report tests: 75 passed"
+    - "Local suite: 792 passed, 2 skipped"
+    - "Boundaries/contracts pass"
+  warnings:
+    - "PytestConfigWarning: Unknown config option timeout"
+    - "PytestUnknownMarkWarning: Unknown pytest.mark.integration"

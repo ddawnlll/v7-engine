@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://v7-engine/contracts/schemas/alphaforge/validation_report.schema.json",
   "title": "ValidationReport",
-  "description": "Walk-forward validation report for an alpha candidate. Documents split policy, OOS results, symbol stability, regime breakdown, cost stress, NO_TRADE comparison, and overfit risk. Owned by AlphaForge.",
+  "description": "Walk-forward validation report for an alpha candidate. Documents split policy, OOS results, symbol stability, regime breakdown, cost stress, NO_TRADE comparison, MHT/data-snooping controls, and overfit risk. Owned by AlphaForge. P0.8E: MHT controls added, nested required strengthened, regime taxonomy aligned to V7 canonical (TREND_UP/DOWN/RANGE/TRANSITION), cost stress expanded with spread+funding_deferred_block, calibration mapped to G6. Multiple hypothesis testing and data snooping controls. BLOCKING: NONE_APPLIED or NOT_RUN prevent strong edge/profitability claims. Reports may still be generated but must be marked HOLD or BLOCKED_FOR_MHT.",
   "type": "object",
   "required": [
     "schema_version",
@@ -16,6 +16,7 @@
     "cost_stress",
     "no_trade_comparison",
     "overfit_risk_flags",
+    "multiple_hypothesis_control",
     "verdict"
   ],
   "properties": {
@@ -52,22 +53,31 @@
       "type": "object",
       "required": ["fold_count", "fold_type", "folds"],
       "properties": {
-        "fold_count": { "type": "integer" },
+        "fold_count": {
+          "type": "integer",
+          "minimum": 6,
+          "description": "Minimum 6 walk-forward folds required. P0.8E: minimum 6 folds required for all modes (aligned to V7 G2: WALK_FORWARD_OOS)."
+        },
         "fold_type": { "type": "string", "enum": ["anchored", "rolling"] },
         "folds": {
           "type": "array",
+          "minItems": 6,
+          "description": "Minimum 6 walk-forward folds. Each fold: 12-month train, 2-month validation.",
           "items": {
             "type": "object",
+            "required": ["fold_number", "train_start", "train_end", "test_start", "test_end"],
             "properties": {
               "fold_number": { "type": "integer" },
               "train_start": { "type": "string", "format": "date-time" },
               "train_end": { "type": "string", "format": "date-time" },
               "test_start": { "type": "string", "format": "date-time" },
               "test_end": { "type": "string", "format": "date-time" },
-              "train_sharpe": { "type": "number" },
-              "test_sharpe": { "type": "number" },
-              "test_expectancy_r": { "type": "number" },
-              "test_win_rate": { "type": "number" },
+              "test_ic": { "type": "number", "description": "Per-fold Information Coefficient — PRIMARY AlphaForge metric." },
+              "test_rank_ic": { "type": "number", "description": "Per-fold Rank IC." },
+              "train_sharpe": { "type": "number", "description": "V7-consumption per-fold metric." },
+              "test_sharpe": { "type": "number", "description": "V7-consumption per-fold metric." },
+              "test_expectancy_r": { "type": "number", "description": "V7-consumption per-fold metric." },
+              "test_win_rate": { "type": "number", "description": "V7-consumption per-fold metric." },
               "test_trade_count": { "type": "integer" }
             }
           }
@@ -76,35 +86,82 @@
     },
     "oos_summary": {
       "type": "object",
+      "description": "OOS summary. P0.8E-FIX (2026-07-02): IC/Rank IC added as primary AlphaForge metrics. Trade-level metrics (Sharpe, win rate) remain for V7 consumption but are no longer required.",
+      "required": ["oos_ic", "oos_rank_ic", "oos_positive_expectancy", "oos_trade_count"],
       "properties": {
-        "oos_sharpe": { "type": "number" },
-        "oos_expectancy_r": { "type": "number" },
-        "oos_win_rate": { "type": "number" },
-        "oos_max_drawdown_r": { "type": "number" },
-        "oos_profit_factor": { "type": "number" },
-        "oos_trade_count": { "type": "integer" },
-        "oos_positive_expectancy": { "type": "boolean" },
+        "oos_ic": { "type": "number", "description": "Information Coefficient — rank correlation between predicted R and realized R. PRIMARY AlphaForge metric." },
+        "oos_rank_ic": { "type": "number", "description": "Rank IC — does AlphaForge correctly rank-order symbols by expected return?" },
+        "oos_calibration_error": { "type": "number", "description": "ECE — Expected Calibration Error for probability estimates." },
+        "oos_mce": { "type": "number", "description": "MCE — Maximum Calibration Error." },
+        "oos_ic_stability": { "type": "number", "description": "Standard deviation of IC across folds — lower is better." },
+        "oos_ic_by_regime": {
+          "type": "object",
+          "description": "IC breakdown by regime: TREND_UP/DOWN/RANGE/TRANSITION.",
+          "properties": {
+            "TREND_UP": { "type": "number" },
+            "TREND_DOWN": { "type": "number" },
+            "RANGE": { "type": "number" },
+            "TRANSITION": { "type": "number" }
+          }
+        },
+        "oos_sharpe": { "type": "number", "description": "V7-consumption metric — NOT AlphaForge's success metric." },
+        "oos_expectancy_r": { "type": "number", "description": "V7-consumption metric." },
+        "oos_win_rate": { "type": "number", "description": "V7-consumption metric." },
+        "oos_max_drawdown_r": { "type": "number", "description": "V7-consumption metric." },
+        "oos_profit_factor": { "type": "number", "description": "V7-consumption metric." },
+        "oos_trade_count": { "type": "integer", "description": "Number of decision points." },
+        "oos_positive_expectancy": { "type": "boolean", "description": "True if OOS expectancy > 0." },
         "fold_stability_score": { "type": "number", "description": "0-1 stability across folds." }
       }
     },
     "symbol_stability": {
       "type": "object",
+      "description": "Symbol stability assessment. Max single symbol concentration: 0.40. Max cluster concentration: 0.60.",
+      "required": [
+        "symbols_tested",
+        "symbol_count",
+        "max_single_symbol_concentration",
+        "max_cluster_concentration",
+        "single_symbol_limitation"
+      ],
       "properties": {
-        "symbols_tested": { "type": "array", "items": { "type": "string" } },
-        "symbol_count": { "type": "integer" },
+        "symbols_tested": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "symbol_count": { "type": "integer", "minimum": 1 },
+        "max_single_symbol_concentration": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Maximum fraction of total edge from any single symbol. Must be <= 0.40. P0.8E: max single symbol contribution to total edge. Must be <=0.40 per V7 G5."
+        },
+        "max_cluster_concentration": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Maximum fraction of total edge from any symbol cluster. Must be <= 0.60. P0.8E: max correlated cluster contribution to total edge. Must be <=0.60 per V7 G5."
+        },
         "single_symbol_limitation": { "type": "boolean" },
-        "cross_symbol_metric_variance": { "type": "string", "description": "Qualitative assessment." }
+        "cross_symbol_metric_variance": {
+          "type": ["number", "string"],
+          "description": "Quantitative variance of OOS expectancy across symbols, or qualitative assessment of cross-symbol variance."
+        }
       }
     },
     "regime_breakdown": {
       "type": "object",
+      "required": ["regimes", "edge_only_in_rare_regime"],
       "properties": {
         "regimes": {
           "type": "array",
+          "minItems": 4,
           "items": {
             "type": "object",
+            "required": ["regime", "sample_pct", "oos_expectancy_r", "edge_present"],
             "properties": {
-              "regime": { "type": "string" },
+              "regime": {
+                "type": "string",
+                "enum": ["TREND_UP", "TREND_DOWN", "RANGE", "TRANSITION"],
+                "description": "P0.8E: V7 canonical regime taxonomy."
+              },
               "sample_pct": { "type": "number" },
               "oos_expectancy_r": { "type": "number" },
               "oos_sharpe": { "type": "number" },
@@ -118,27 +175,72 @@
     },
     "cost_stress": {
       "type": "object",
+      "description": "Cost stress analysis. Required components: fee, slippage, spread_or_proxy, funding_or_deferred_block. Empty cost_stress must fail validation.",
+      "required": [
+        "baseline_fee_pct",
+        "baseline_slippage_pct",
+        "baseline_spread_pct",
+        "fee_stress_edge_survives",
+        "slippage_stress_edge_survives",
+        "combined_stress_edge_survives",
+        "funding_deferred_block"
+      ],
       "properties": {
-        "baseline_fee_pct": { "type": "number" },
-        "baseline_slippage_pct": { "type": "number" },
-        "fee_stress_edge_survives": { "type": "boolean" },
-        "slippage_stress_edge_survives": { "type": "boolean" },
-        "combined_stress_edge_survives": { "type": "boolean" },
-        "break_even_cost_total_pct": { "type": "number" },
-        "cost_edge_destroyed": { "type": "boolean" }
+        "baseline_fee_pct": { "type": "number", "minimum": 0, "description": "Baseline fee percentage (taker rate)." },
+        "baseline_slippage_pct": { "type": "number", "minimum": 0, "description": "Baseline slippage percentage (volatility-adjusted)." },
+        "baseline_spread_pct": {
+          "type": "number",
+          "description": "P0.8E: baseline spread or spread proxy estimate. Required for cost stress."
+        },
+        "spread_or_proxy": { "type": "string", "description": "Spread assumption or proxy used for cost calculation." },
+        "funding_or_deferred_block": { "type": "string", "description": "Funding cost treatment: DEFERRED (blocks perpetual/live claims) or APPLIED with rate." },
+        "fee_stress_edge_survives": { "type": "boolean", "description": "Edge survives 2x fee stress." },
+        "slippage_stress_edge_survives": { "type": "boolean", "description": "Edge survives 2x slippage stress." },
+        "spread_stress_edge_survives": { "type": "boolean", "description": "P0.8E: spread stress survival check." },
+        "combined_stress_edge_survives": { "type": "boolean", "description": "Edge survives combined 2x fee + 2x slippage stress." },
+        "break_even_cost_total_pct": { "type": "number", "description": "Total cost percentage at which edge breaks even." },
+        "cost_edge_destroyed": { "type": "boolean", "description": "True if edge is destroyed at baseline costs." },
+        "scalp_cost_adjusted_expectancy_r": {
+          "type": "number",
+          "description": "P0.8E: SCALP reference minimum cost-adjusted OOS expectancy. Must be >=0.10R per V7 G3."
+        },
+        "funding_deferred_block": {
+          "type": "object",
+          "required": ["funding_deferred", "block_reason"],
+          "description": "P0.8E: required when funding model is DEFERRED. Blocks live/perpetual promotion.",
+          "properties": {
+            "funding_deferred": { "type": "boolean" },
+            "block_reason": { "type": "string" },
+            "affected_scopes": { "type": "array", "items": { "type": "string" } }
+          }
+        }
       }
     },
     "no_trade_comparison": {
       "type": "object",
+      "description": "Comparison of active trading vs doing nothing. Empty no_trade_comparison must fail validation.",
+      "required": [
+        "active_beats_no_trade",
+        "summary"
+      ],
       "properties": {
         "long_better_than_no_trade": { "type": "boolean" },
         "short_better_than_no_trade": { "type": "boolean" },
         "active_beats_no_trade": { "type": "boolean" },
+        "saved_loss_r": {
+          "type": "number",
+          "description": "P0.8E: saved loss in R terms from NO_TRADE."
+        },
+        "missed_opportunity_r": {
+          "type": "number",
+          "description": "P0.8E: missed opportunity in R terms from NO_TRADE."
+        },
         "summary": { "type": "string" }
       }
     },
     "overfit_risk_flags": {
       "type": "object",
+      "required": ["overfit_risk_overall"],
       "properties": {
         "train_oos_gap": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
         "fold_instability": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
@@ -149,10 +251,115 @@
         "overfit_risk_overall": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
       }
     },
+    "multiple_hypothesis_control": {
+      "type": "object",
+      "description": "P0.8E: MHT and data-snooping controls. Required — reports without MHT control carry a blocking hold. BLOCKING: NONE_APPLIED or NOT_RUN prevent strong edge/profitability claims. Reports may still be generated but must be marked HOLD or BLOCKED_FOR_MHT.",
+      "required": [
+        "tested_hypothesis_count",
+        "correction_method",
+        "trial_count_disclosure",
+        "rejected_candidate_count",
+        "data_snooping_risk_flag"
+      ],
+      "properties": {
+        "mht_status": {
+          "type": "string",
+          "enum": ["APPLIED_AND_PASSED", "APPLIED_WITH_WARNINGS", "NOT_RUN", "NONE_APPLIED"],
+          "description": "MHT control status. NOT_RUN or NONE_APPLIED: edge/profitability claims are blocked; report must be marked HOLD or BLOCKED_FOR_MHT."
+        },
+        "tested_hypothesis_count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Total number of hypotheses/theses/feature-sets tested."
+        },
+        "tested_feature_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of features screened/tested across all hypotheses."
+        },
+        "tested_thesis_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of alpha theses evaluated."
+        },
+        "correction_method": {
+          "type": "string",
+          "enum": ["FDR", "Bonferroni", "Deflated_Sharpe", "PBO", "NONE_APPLIED", "Holm-Bonferroni", "Benjamini-Hochberg", "DeflatedSharpeRatio", "FWER_Control"],
+          "description": "MHT correction method used. NONE_APPLIED requires a blocking hold. Examples: Bonferroni, Holm-Bonferroni, Benjamini-Hochberg (FDR), Deflated Sharpe Ratio (DSR), PBO (probability of backtest overfitting), family-wise error rate (FWER) control."
+        },
+        "corrected_significance": {
+          "type": ["number", "null"],
+          "description": "Significance after correction (null if NONE_APPLIED)."
+        },
+        "false_discovery_control": {
+          "type": ["boolean", "string"],
+          "description": "Whether FDR or equivalent false discovery control is active. FDR control method description or NONE if not applied."
+        },
+        "deflated_sharpe_or_equivalent": {
+          "type": ["number", "null"],
+          "description": "Deflated Sharpe ratio or PBO risk assessment result."
+        },
+        "deflated_sharpe_or_pbo_assessment": {
+          "type": "string",
+          "description": "Deflated Sharpe Ratio or Probability of Backtest Overfitting assessment result. Required when MHT is applied."
+        },
+        "pbo_or_backtest_overfit_risk": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL", "NOT_RUN"],
+          "description": "Probability of Backtest Overfit assessment."
+        },
+        "trial_count_disclosure": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of trial configurations tested. Must be disclosed honestly even if MHT was not applied."
+        },
+        "rejected_candidate_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of candidates rejected during this research run."
+        },
+        "data_snooping_risk_flag": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+          "description": "Overall data-snooping risk assessment."
+        },
+        "blocking_hold": {
+          "type": "string",
+          "description": "Required if correction_method is NONE_APPLIED. Explains why MHT was not run."
+        },
+        "mht_block_reason": {
+          "type": "string",
+          "description": "If mht_status is NOT_RUN or NONE_APPLIED: explain why MHT was not applied and what evidence is blocked."
+        }
+      }
+    },
+    "calibration_gate_alignment": {
+      "type": "object",
+      "description": "P0.8E: calibration reliability mapped to V7 G6: CALIBRATION_RELIABILITY.",
+      "required": ["calibration_candidate_id"],
+      "properties": {
+        "calibration_candidate_id": { "type": "string" },
+        "ece": { "type": "number", "description": "Expected Calibration Error." },
+        "mce": { "type": "number", "description": "Maximum Calibration Error." },
+        "confidence_bin_count": { "type": "integer" },
+        "reliability_within_bounds": { "type": "boolean" },
+        "calibration_status": { "type": "string", "enum": ["CALIBRATED", "UNCALIBRATED", "UNRELIABLE"] }
+      }
+    },
     "verdict": {
       "type": "string",
-      "enum": ["PASS", "PASS_WITH_LIMITATIONS", "FAIL_OVERFIT", "FAIL_COST", "FAIL_REGIME", "FAIL_OOS", "INCONCLUSIVE"],
-      "description": "Validation verdict."
+      "enum": [
+        "PASS",
+        "PASS_WITH_LIMITATIONS",
+        "FAIL_OVERFIT",
+        "FAIL_COST",
+        "FAIL_REGIME",
+        "FAIL_OOS",
+        "FAIL_MHT",
+        "INCONCLUSIVE",
+        "BLOCKED_FOR_MHT"
+      ],
+      "description": "Validation verdict. P0.8E: FAIL_MHT added for MHT/data-snooping failures. BLOCKED_FOR_MHT when multiple_hypothesis_control.mht_status is NOT_RUN or NONE_APPLIED."
     },
     "limitations": {
       "type": "array",

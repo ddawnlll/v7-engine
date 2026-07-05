@@ -1,0 +1,8 @@
+{
+  "goal": "Create and test one deterministic AlphaForge alpha candidate",
+  "iterations_run": 1,
+  "max_iters": 1,
+  "final_verdict": "FAIL",
+  "dry_run": false,
+  "run_dir": "C:\\Users\\dresden\\Documents\\v7-engine\\tools\\agent_orchestrator\\runs\\20260705_005820_853581"
+}

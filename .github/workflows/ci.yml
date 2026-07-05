@@ -32,5 +32,11 @@ jobs:
       - name: Run boundary checks
         run: make check-boundaries
 
-      - name: Run all tests
-        run: PYTHONPATH=alphaforge/src python -m pytest lib/tests/ integration/tests/ simulation/tests/ runtime/tests/ v7/tests/ alphaforge/tests/ -q
+      - name: Run lib + integration + simulation tests
+        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q
+
+      - name: Run runtime tests
+        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest runtime/tests/ -q
+
+      - name: Run alphaforge + v7 + policycritic tests
+        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest alphaforge/tests/ v7/tests/ policycritic/tests/ -q

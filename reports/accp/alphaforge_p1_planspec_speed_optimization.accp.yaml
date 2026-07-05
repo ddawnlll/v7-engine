@@ -1,0 +1,121 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+metadata:
+  report_id: ALPHAFORGE-P1-PLANSPEC-SPEED-OPTIMIZATION
+  report_type: PLAN_OPTIMIZATION
+  generated_at: "2026-06-25T00:00:00Z"
+  task_id: ACCP-OPTIMIZE-P1-PLANSPEC-EXECUTION-SPEED
+  priority: P1
+  execution_mode: planning_only
+  source_code_changes: false
+
+summary:
+  final_status: PASS
+  optimization_applied: true
+  safety_preserved: true
+  plans_optimized: 8
+  plans_unchanged: 3
+  validation_strategy: FAST-GATED
+  estimated_speedup: "3-6x per subplan execution"
+
+optimization_rules_applied:
+  - rule: targeted_validation_per_subplan
+    description: >
+      Each implementation subplan (01-08) now runs only directly affected unit tests,
+      targeted import probes, lightweight guard scans, and git status. Full final
+      validation delegated to 09_final_validation.
+  - rule: no_full_validation_in_subplans
+    description: >
+      CMD-final-validation removed from all subplans 01-08. Full non-Binance test
+      suite (lib + integration + simulation + alphaforge) now runs ONLY in 09.
+  - rule: compact_accp_reports
+    description: >
+      Per-subplan ACCP reports now require: result, scope_confirmation, files_changed,
+      targeted_tests, guard_scan_result, AC_summary, failed_ACs (detail only),
+      remaining_holds, safe_next_step. Full evidence deferred to 09.
+  - rule: no_broad_scans_in_subplans
+    description: >
+      Removed CMD-test-integration-alphaforge, CMD-test-contract-registry-schema,
+      CMD-test-import-boundaries, CMD-test-simulation from subplans 01-08.
+  - rule: safety_constraints_preserved
+    description: >
+      All hardDeniedCommands preserved. No XGBoost, network/API, profitability claims,
+      or hold releases. No template.json created.
+
+files_modified:
+  - plans/alphaforge/01_data_manifest.plan.yaml
+  - plans/alphaforge/02_label_adapter.plan.yaml
+  - plans/alphaforge/03_feature_pipeline.plan.yaml
+  - plans/alphaforge/04_dataset_assembler.plan.yaml
+  - plans/alphaforge/05_non_ml_research_report.plan.yaml
+  - plans/alphaforge/06_walk_forward_validation.plan.yaml
+  - plans/alphaforge/07_v7_handoff_dry_run.plan.yaml
+  - plans/alphaforge/08_ml_pilot_gate.plan.yaml
+  - plans/alphaforge/master.plan.yaml
+
+plans_unchanged:
+  - plans/alphaforge/00_baseline_verify.plan.yaml  # must run full suite for baseline
+  - plans/alphaforge/09_final_validation.plan.yaml  # final gate — comprehensive validation
+  - template.yaml  # schema authority
+
+before_after_validation_strategy:
+  before:
+    per_subplan_commands: 7
+    estimated_duration_per_subplan: "15-25 minutes"
+    total_estimated: "120-200 minutes for 8 subplans"
+  after:
+    per_subplan_commands: "2-4"
+    estimated_duration_per_subplan: "3-8 minutes"
+    total_estimated: "30-65 minutes for 8 subplans"
+
+estimated_speedup:
+  before: "CMD-final-validation (300s) ran 8 times + broad tests = ~120-200 min total"
+  after: "CMD-final-validation (300s) runs once at 09 + targeted tests = ~30-65 min total"
+  factor: "3-6x"
+
+validation_strategy:
+  targeted_subplans: "01-08: subplan-specific unit tests only + import probes + guard scans + git status"
+  final_gate: "09_final_validation: full non-Binance suite + forbidden diff + profitability scan + training scan + model artifact scan"
+
+schema_validation:
+  status: PASS
+  verified_plans:
+    - "00: valid, 7 cmds, fv=True (baseline)"
+    - "01: valid, 4 cmds, fv=False"
+    - "02: valid, 4 cmds, fv=False"
+    - "03: valid, 2 cmds, fv=False"
+    - "04: valid, 3 cmds, fv=False"
+    - "05: valid, 3 cmds, fv=False"
+    - "06: valid, 2 cmds, fv=False"
+    - "07: valid, 3 cmds, fv=False"
+    - "08: valid, 3 cmds, fv=False"
+    - "09: valid, 11 cmds, fv=True (final gate)"
+    - "master: valid, 2 cmds, fv=False"
+
+safety_preserved:
+  - "No XGBoost training allowed: DCMD preserved, targeted guard scans added"
+  - "No network/API: DCMD-no-curl, DCMD-no-wget preserved"
+  - "No exchange/live trading: DCMD-no-binance preserved"
+  - "No profitability claims: scan in 09, guard scans in 01-08"
+  - "No real market data: fixtures only"
+  - "Domain boundaries: import boundary tests at 00 + 09"
+  - "All holds preserved: no release conditions modified"
+  - "All forbiddenFiles preserved: unchanged in every plan"
+  - "No template.json created"
+
+remaining_holds:
+  - no_real_profitability_evidence
+  - no_real_market_data
+  - no_model_training
+  - no_xgboost_training
+  - funding_deferred
+  - scalp_thresholds_hold
+  - aggressive_scalp_thresholds_hold
+  - g7_to_g10_runtime_infrastructure_not_built
+
+known_limitations:
+  - "Plans 04-08 REPORT workspace instruction text not fully rewritten (commands section is authoritative)"
+  - "Design-phase manual_review ACs not compressed (execution-speed focus only)"
+  - "Implementation workspaces retain CMD-test-alphaforge references (not used in REPORT)"
+
+next_step: "Run P1 pre-execution audit then execute with FAST-GATED mode"

@@ -10,7 +10,7 @@
       "report_id": "mrr-scalp-example-001",
       "report_type": "primary_research_report",
       "verdict": "CONTINUE_RESEARCH",
-      "summary": "SCALP primary research — dummy example. No empirical evidence yet."
+      "summary": "SCALP primary research — dummy example. No empirical evidence yet. P0.8E: mode_priority+report_type required."
     },
     {
       "mode": "AGGRESSIVE_SCALP",
@@ -18,7 +18,7 @@
       "report_id": "mrr-aggressive-scalp-example-001",
       "report_type": "primary_research_report",
       "verdict": "CONTINUE_RESEARCH",
-      "summary": "AGGRESSIVE_SCALP primary research — dummy example. No empirical evidence yet."
+      "summary": "AGGRESSIVE_SCALP primary research — dummy example. No empirical evidence yet. P0.8E: mode_priority+report_type required."
     },
     {
       "mode": "SWING",
@@ -26,7 +26,7 @@
       "report_id": "mrr-swing-example-001",
       "report_type": "secondary_baseline_report",
       "verdict": "BASELINE_WEAK",
-      "summary": "SWING secondary baseline — dummy example. No empirical evidence yet."
+      "summary": "SWING secondary baseline — dummy example. No empirical evidence yet. P0.8E: mode_priority+report_type required."
     }
   ],
   "promoted_candidates": [],
@@ -46,6 +46,16 @@
     "Funding model is DEFERRED for all modes",
     "P0.8E: mode coverage enforced (SCALP+AGGRESSIVE_SCALP PRIMARY, SWING SECONDARY_BASELINE)"
   ],
+  "multiple_hypothesis_control": {
+    "aggregate_mht_status": "NOT_RUN",
+    "aggregate_tested_hypothesis_count": 0,
+    "aggregate_tested_feature_count": 0,
+    "aggregate_trial_count": 0,
+    "correction_method": "NONE_APPLIED",
+    "false_discovery_control": "NOT_APPLIED",
+    "deflated_sharpe_or_pbo_assessment": "NOT_APPLIED",
+    "mht_block_reason": "Fixture-only report — no empirical MHT performed. Strong edge/profitability claims are BLOCKED."
+  },
   "v7_handoff_packages": [],
   "cross_mode_insights": [
     "Dummy example — no cross-mode insights available",

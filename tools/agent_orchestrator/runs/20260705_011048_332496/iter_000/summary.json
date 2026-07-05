@@ -1,0 +1,15 @@
+{
+  "iteration": 1,
+  "goal": "Create and test one deterministic AlphaForge alpha candidate",
+  "strategist_task": "Create a Python script `alpha_candidate.py` that implements a simple moving average crossover strategy using yfinance. The script should: 1) Fetch 1 year of daily OHLCV data for SPY. 2) Compute 20-day and 50-day simple moving averages. 3) Generate a buy signal when the 20-day SMA crosses above the 50-day SMA, and a sell signal when it crosses below. 4) Print the number of trades and final portfolio value assuming $10,000 initial capital and trading 100 shares per signal (no transaction costs). 5) Include a `if __name__ == '__main__':` block that runs the strategy and prints results.",
+  "worker_exit_code": 0,
+  "gate_verdict": "FAIL",
+  "gate_reasons": [
+    "Worker exited cleanly",
+    "Worker log exists (597739 bytes)",
+    "Git HEAD: 964e4a050de4",
+    "No tracked files modified",
+    "Changes outside allowed paths:\n?? alphaforge/src/alphaforge/alpha_candidate.py\n?? alphaforge/tests/test_alpha_candidate.py"
+  ],
+  "overall_status": "FAIL"
+}

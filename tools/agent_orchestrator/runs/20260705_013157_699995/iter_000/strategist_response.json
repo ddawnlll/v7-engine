@@ -1,0 +1,14 @@
+{
+  "worker_task": "Create a new alpha candidate file at alphaforge/src/alphaforge/candidates/mean_reversion_5d.py that implements a simple 5-day mean reversion factor. The factor should compute the z-score of the latest close relative to the rolling 5-day mean and standard deviation, then return -zscore (so high zscore -> sell signal). Include a function `generate_signals(data: pd.DataFrame) -> pd.Series` that takes a DataFrame with columns ['date','close'] and returns a Series of signals aligned by date. Also create a companion test script at alphaforge/src/alphaforge/candidates/test_mean_reversion_5d.py that tests the factor on synthetic data (e.g., a sine wave with noise) and prints the following report fields in its output: train_start, train_end, test_start, test_end, n_combinations, metric (use IC between signals and forward 1-day returns as the metric). In the completion summary, explicitly include these fields with their values.",
+  "rationale": "This is a small, safe, reversible first step. It creates a deterministic alpha candidate and a test harness that exercises the gate's required report fields. The factor is simple enough to validate manually and the test script ensures we can measure performance.",
+  "expected_artifacts": [
+    "alphaforge/src/alphaforge/candidates/mean_reversion_5d.py",
+    "alphaforge/src/alphaforge/candidates/test_mean_reversion_5d.py"
+  ],
+  "success_criteria": [
+    "mean_reversion_5d.py exists and defines generate_signals",
+    "test_mean_reversion_5d.py runs without errors and prints all required report fields",
+    "Gate PASS (worker summary includes train_start, train_end, test_start, test_end, n_combinations, metric)"
+  ],
+  "risk_notes": "Low risk. No modification of protected files. All new files go under the sandbox path. The factor is deterministic and the test uses synthetic data."
+}

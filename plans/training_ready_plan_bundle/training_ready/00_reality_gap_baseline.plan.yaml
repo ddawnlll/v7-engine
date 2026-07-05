@@ -1,0 +1,236 @@
+planSpecVersion: "0.1.0"
+kind: ImplementationPlan
+profile: praxis-v0.1
+metadata:
+  planId: TR-00-REALITY-GAP-BASELINE
+  title: "Training-Ready Plan 00 — Reality Gap Baseline Verification"
+  description: >
+    Verify the Reality Gap Audit is present and valid. Confirm current
+    readiness baseline (24.5% overall). Verify AlphaForge scaffold
+    completion evidence. Confirm all holds. Prevent implementation if
+    audit evidence is stale or missing.
+  createdAt: "2026-06-25T00:00:00Z"
+  humanId: TrainingReady
+  status: draft
+authority:
+  executor: ClaudeCode
+  completionAuthority: PraxisTruthKernel
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: imported_human
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+workspace:
+  root: .
+  allowedFiles:
+    - reports/accp/v7_engine_reality_gap_audit.accp.yaml
+    - reports/accp/alphaforge_p0_deterministic_pipeline_closure.accp.yaml
+    - reports/accp/alphaforge_final_validation.accp.yaml
+    - reports/accp/**
+  forbiddenFiles:
+    - lib/**
+    - simulation/**
+    - alphaforge/src/**
+    - alphaforge/tests/**
+    - v7/src/**
+    - runtime/**
+    - data/**
+    - models/**
+    - artifacts/**
+execution:
+  mode: single_session
+  agent: claude-code
+  autonomy: analysis_only
+  canModifyCode: false
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 1
+tasks:
+  - id: WS-TR00-01-VERIFY-AUDIT
+    title: Verify Reality Gap Audit Exists and Is Current
+    objective: >
+      Confirm reports/accp/v7_engine_reality_gap_audit.accp.yaml exists,
+      is valid ACCP-YAML, and reports overall_readiness_percent: 24.5.
+      Verify audit was generated within acceptable recency window.
+    implementation:
+      instructions:
+        - "[must] [action] Read reports/accp/v7_engine_reality_gap_audit.accp.yaml and verify accp_version is 2.0.0."
+        - "[must] [action] Confirm report_id is V7-ENGINE-REALITY-GAP-AUDIT."
+        - "[must] [action] Confirm overall_quant_pipeline_readiness_percent exists and is <= 50."
+        - "[must] [action] Confirm scaffold_completion_percent exists and is >= 85."
+        - "[must] [action] Confirm training_ready is false."
+        - "[must] [action] Confirm backfill_ready is false."
+        - "[must] [action] If any check fails, emit HOLD with specific missing evidence."
+    artifactPolicy:
+      class: documentation
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR00-01
+        description: "Reality Gap Audit report exists and is valid ACCP-YAML 2.0.0"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_exists
+          path: reports/accp/v7_engine_reality_gap_audit.accp.yaml
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+      - id: AC-TR00-02
+        description: "Audit reports training_ready: false"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_contains
+          path: reports/accp/v7_engine_reality_gap_audit.accp.yaml
+          patterns: ["training_ready: false"]
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+      - id: AC-TR00-03
+        description: "Audit reports overall readiness percent match"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_contains
+          path: reports/accp/v7_engine_reality_gap_audit.accp.yaml
+          patterns: ["overall_quant_pipeline_readiness_percent: 24.5"]
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+  - id: WS-TR00-02-VERIFY-SCAFFOLD
+    title: Verify AlphaForge Scaffold Completion Evidence
+    objective: >
+      Confirm the AlphaForge deterministic scaffold is complete and
+      evidence-backed. Read final validation ACCP report and confirm
+      PASS_WITH_HOLDS verdict with explicit hold list.
+    implementation:
+      instructions:
+        - "[must] [action] Read reports/accp/alphaforge_final_validation.accp.yaml."
+        - "[must] [action] Confirm result: PASS or PASS_WITH_HOLDS."
+        - "[must] [action] Confirm total_tests_passing >= 800."
+        - "[must] [action] Confirm total_tests_failing: 0."
+        - "[must] [action] Confirm remaining_holds list includes HOLD-XGBOOST, HOLD-FUNDING, HOLD-LIVE-PROMOTION."
+        - "[must] [action] Run CMD-verify-scaffold to confirm tests still pass."
+    artifactPolicy:
+      class: documentation
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: AC-TR00-04
+        description: "AlphaForge final validation report confirms PASS_WITH_HOLDS"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: file_contains
+          path: reports/accp/alphaforge_final_validation.accp.yaml
+          patterns: ["result: \"PASS\"", "PASS_WITH_HOLDS"]
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [source]
+        requiredEvidence: [source]
+      - id: AC-TR00-05
+        description: "CMD-verify-scaffold passes full non-Binance test suite"
+        level: required
+        humanApproved: true
+        criteriaSource: imported_human
+        verification:
+          type: test_output
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: [command, test_output]
+          commandRef: CMD-verify-scaffold
+        requiredEvidence: [command, test_output]
+commands:
+  exactAllowedCommands:
+    - id: CMD-verify-scaffold
+      kind: targeted_test
+      command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 180
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: CMD-discover-audit-report
+      kind: discovery
+      command: "test -f reports/accp/v7_engine_reality_gap_audit.accp.yaml && echo 'AUDIT_EXISTS' || echo 'AUDIT_MISSING'"
+      cwd: .
+      evidenceRequired: true
+      timeoutSeconds: 10
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: curl
+      pattern: "^curl\\s"
+      reason: "No external network during baseline verification."
+    - command: wget
+      pattern: "^wget\\s"
+      reason: "No external downloads."
+    - command: xgboost/training
+      pattern: "xgboost|XGBClassifier|XGBRegressor|\\.fit\\(|import xgboost"
+      reason: "No model training in baseline verification."
+    - command: code modification
+      pattern: "Edit|Write.*alphaforge|Write.*lib|Write.*simulation"
+      reason: "Read-only baseline — no code changes allowed."
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: [source, command, test_output, report]
+  hashWhenAvailable: true
+gates:
+  sequence: [SchemaGate, LockGate, EvidenceGate, WiringGate, ExecGate, FinalGate]
+  verdicts: [PASS, HOLD, FAIL]
+  reasonCodes:
+    SchemaGate: [PLAN_SCHEMA_INVALID]
+    LockGate: [PLAN_NOT_LOCKED]
+    EvidenceGate: [REQUIRED_EVIDENCE_MISSING, AUDIT_REPORT_MISSING]
+    WiringGate: [FORBIDDEN_FILE_MODIFIED]
+    ExecGate: [TEST_COMMAND_FAILED]
+    FinalGate: [FINAL_VALIDATION_FAILED, BASELINE_NOT_VERIFIED]
+repair:
+  enabled: false
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 0
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ alphaforge/tests/ -q --ignore=lib/tests/test_market_data_binance.py"
+  repairPacketFormat:
+    json: true
+    markdown: true
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: plans/training_ready/00_reality_gap_baseline.lock.json
+  hashes: [planHash, acceptanceCriteriaHash, artifactPolicyHash, commandPolicyHash, allowedFilesHash, forbiddenFilesHash]
+reports:
+  protocol: ACCP
+  artifactDirectory: reports/accp
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

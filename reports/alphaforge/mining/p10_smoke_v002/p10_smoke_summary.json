@@ -1,0 +1,2989 @@
+{
+  "pipeline": "P1.0 Profit-State Mining Alpha Factory v002",
+  "status": "complete",
+  "elapsed_seconds": 19.01,
+  "dataset": {
+    "rows": 2000,
+    "columns": 38,
+    "version": "v002"
+  },
+  "baseline": {
+    "groups": 96,
+    "target": "excess_net_R"
+  },
+  "mining": {
+    "level1_count": 90,
+    "level2_count": 389,
+    "total_unique_rules": 479
+  },
+  "dedup": {
+    "raw_rule_count": 479,
+    "non_duplicate_rule_count": 420,
+    "independent_alpha_family_count": 420,
+    "families": [
+      {
+        "family_id": "family_001",
+        "primary_feature_family": "volatility",
+        "member_count": 3,
+        "mean_net_R": 0.112298,
+        "representative_rule_id": "rule_0"
+      },
+      {
+        "family_id": "family_002",
+        "primary_feature_family": "momentum",
+        "member_count": 2,
+        "mean_net_R": 0.084141,
+        "representative_rule_id": "rule_2"
+      },
+      {
+        "family_id": "family_003",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.064369,
+        "representative_rule_id": "rule_3"
+      },
+      {
+        "family_id": "family_004",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.04544,
+        "representative_rule_id": "rule_4"
+      },
+      {
+        "family_id": "family_005",
+        "primary_feature_family": "momentum",
+        "member_count": 2,
+        "mean_net_R": 0.044598,
+        "representative_rule_id": "rule_5"
+      },
+      {
+        "family_id": "family_006",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.035544,
+        "representative_rule_id": "rule_6"
+      },
+      {
+        "family_id": "family_007",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.034174,
+        "representative_rule_id": "rule_7"
+      },
+      {
+        "family_id": "family_008",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.033145,
+        "representative_rule_id": "rule_8"
+      },
+      {
+        "family_id": "family_009",
+        "primary_feature_family": "volatility",
+        "member_count": 3,
+        "mean_net_R": 0.030585,
+        "representative_rule_id": "rule_9"
+      },
+      {
+        "family_id": "family_010",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.02611,
+        "representative_rule_id": "rule_11"
+      },
+      {
+        "family_id": "family_011",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.024912,
+        "representative_rule_id": "rule_12"
+      },
+      {
+        "family_id": "family_012",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.023328,
+        "representative_rule_id": "rule_13"
+      },
+      {
+        "family_id": "family_013",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.022254,
+        "representative_rule_id": "rule_14"
+      },
+      {
+        "family_id": "family_014",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.019947,
+        "representative_rule_id": "rule_15"
+      },
+      {
+        "family_id": "family_015",
+        "primary_feature_family": "volatility",
+        "member_count": 3,
+        "mean_net_R": 0.014128,
+        "representative_rule_id": "rule_16"
+      },
+      {
+        "family_id": "family_016",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.012742,
+        "representative_rule_id": "rule_18"
+      },
+      {
+        "family_id": "family_017",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.012464,
+        "representative_rule_id": "rule_19"
+      },
+      {
+        "family_id": "family_018",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.011992,
+        "representative_rule_id": "rule_20"
+      },
+      {
+        "family_id": "family_019",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.011888,
+        "representative_rule_id": "rule_21"
+      },
+      {
+        "family_id": "family_020",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.007913,
+        "representative_rule_id": "rule_22"
+      },
+      {
+        "family_id": "family_021",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.007366,
+        "representative_rule_id": "rule_23"
+      },
+      {
+        "family_id": "family_022",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.007361,
+        "representative_rule_id": "rule_24"
+      },
+      {
+        "family_id": "family_023",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.007132,
+        "representative_rule_id": "rule_25"
+      },
+      {
+        "family_id": "family_024",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.003195,
+        "representative_rule_id": "rule_26"
+      },
+      {
+        "family_id": "family_025",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.001722,
+        "representative_rule_id": "rule_27"
+      },
+      {
+        "family_id": "family_026",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.001667,
+        "representative_rule_id": "rule_28"
+      },
+      {
+        "family_id": "family_027",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.000637,
+        "representative_rule_id": "rule_29"
+      },
+      {
+        "family_id": "family_028",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.000574,
+        "representative_rule_id": "rule_30"
+      },
+      {
+        "family_id": "family_029",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.00051,
+        "representative_rule_id": "rule_31"
+      },
+      {
+        "family_id": "family_030",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.000235,
+        "representative_rule_id": "rule_32"
+      },
+      {
+        "family_id": "family_031",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.000104,
+        "representative_rule_id": "rule_33"
+      },
+      {
+        "family_id": "family_032",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 3.1e-05,
+        "representative_rule_id": "rule_34"
+      },
+      {
+        "family_id": "family_033",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_35"
+      },
+      {
+        "family_id": "family_034",
+        "primary_feature_family": "other",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_36"
+      },
+      {
+        "family_id": "family_035",
+        "primary_feature_family": "other",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_37"
+      },
+      {
+        "family_id": "family_036",
+        "primary_feature_family": "other",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_38"
+      },
+      {
+        "family_id": "family_037",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_39"
+      },
+      {
+        "family_id": "family_038",
+        "primary_feature_family": "other",
+        "member_count": 1,
+        "mean_net_R": -0.0,
+        "representative_rule_id": "rule_40"
+      },
+      {
+        "family_id": "family_039",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.0,
+        "representative_rule_id": "rule_41"
+      },
+      {
+        "family_id": "family_040",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.000462,
+        "representative_rule_id": "rule_42"
+      },
+      {
+        "family_id": "family_041",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.001513,
+        "representative_rule_id": "rule_43"
+      },
+      {
+        "family_id": "family_042",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.002102,
+        "representative_rule_id": "rule_44"
+      },
+      {
+        "family_id": "family_043",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.002438,
+        "representative_rule_id": "rule_45"
+      },
+      {
+        "family_id": "family_044",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.004024,
+        "representative_rule_id": "rule_46"
+      },
+      {
+        "family_id": "family_045",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.004646,
+        "representative_rule_id": "rule_47"
+      },
+      {
+        "family_id": "family_046",
+        "primary_feature_family": "momentum",
+        "member_count": 2,
+        "mean_net_R": -0.005728,
+        "representative_rule_id": "rule_48"
+      },
+      {
+        "family_id": "family_047",
+        "primary_feature_family": "momentum",
+        "member_count": 2,
+        "mean_net_R": -0.005822,
+        "representative_rule_id": "rule_49"
+      },
+      {
+        "family_id": "family_048",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.006025,
+        "representative_rule_id": "rule_50"
+      },
+      {
+        "family_id": "family_049",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.006613,
+        "representative_rule_id": "rule_51"
+      },
+      {
+        "family_id": "family_050",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.006674,
+        "representative_rule_id": "rule_52"
+      },
+      {
+        "family_id": "family_051",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.00679,
+        "representative_rule_id": "rule_53"
+      },
+      {
+        "family_id": "family_052",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.00693,
+        "representative_rule_id": "rule_54"
+      },
+      {
+        "family_id": "family_053",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.006967,
+        "representative_rule_id": "rule_55"
+      },
+      {
+        "family_id": "family_054",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.007619,
+        "representative_rule_id": "rule_56"
+      },
+      {
+        "family_id": "family_055",
+        "primary_feature_family": "momentum",
+        "member_count": 2,
+        "mean_net_R": -0.007699,
+        "representative_rule_id": "rule_57"
+      },
+      {
+        "family_id": "family_056",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.008386,
+        "representative_rule_id": "rule_58"
+      },
+      {
+        "family_id": "family_057",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.009167,
+        "representative_rule_id": "rule_59"
+      },
+      {
+        "family_id": "family_058",
+        "primary_feature_family": "volatility",
+        "member_count": 3,
+        "mean_net_R": -0.010244,
+        "representative_rule_id": "rule_60"
+      },
+      {
+        "family_id": "family_059",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.01038,
+        "representative_rule_id": "rule_62"
+      },
+      {
+        "family_id": "family_060",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.010398,
+        "representative_rule_id": "rule_63"
+      },
+      {
+        "family_id": "family_061",
+        "primary_feature_family": "momentum",
+        "member_count": 2,
+        "mean_net_R": -0.010949,
+        "representative_rule_id": "rule_64"
+      },
+      {
+        "family_id": "family_062",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.011118,
+        "representative_rule_id": "rule_65"
+      },
+      {
+        "family_id": "family_063",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.011378,
+        "representative_rule_id": "rule_66"
+      },
+      {
+        "family_id": "family_064",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.013448,
+        "representative_rule_id": "rule_67"
+      },
+      {
+        "family_id": "family_065",
+        "primary_feature_family": "momentum",
+        "member_count": 2,
+        "mean_net_R": -0.014799,
+        "representative_rule_id": "rule_68"
+      },
+      {
+        "family_id": "family_066",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.014877,
+        "representative_rule_id": "rule_69"
+      },
+      {
+        "family_id": "family_067",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.016951,
+        "representative_rule_id": "rule_70"
+      },
+      {
+        "family_id": "family_068",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.018508,
+        "representative_rule_id": "rule_71"
+      },
+      {
+        "family_id": "family_069",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.018683,
+        "representative_rule_id": "rule_72"
+      },
+      {
+        "family_id": "family_070",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.019798,
+        "representative_rule_id": "rule_73"
+      },
+      {
+        "family_id": "family_071",
+        "primary_feature_family": "momentum",
+        "member_count": 2,
+        "mean_net_R": -0.021167,
+        "representative_rule_id": "rule_74"
+      },
+      {
+        "family_id": "family_072",
+        "primary_feature_family": "momentum",
+        "member_count": 2,
+        "mean_net_R": -0.022566,
+        "representative_rule_id": "rule_75"
+      },
+      {
+        "family_id": "family_073",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.023592,
+        "representative_rule_id": "rule_76"
+      },
+      {
+        "family_id": "family_074",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.023854,
+        "representative_rule_id": "rule_77"
+      },
+      {
+        "family_id": "family_075",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.025297,
+        "representative_rule_id": "rule_78"
+      },
+      {
+        "family_id": "family_076",
+        "primary_feature_family": "volatility",
+        "member_count": 3,
+        "mean_net_R": -0.026562,
+        "representative_rule_id": "rule_79"
+      },
+      {
+        "family_id": "family_077",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.026581,
+        "representative_rule_id": "rule_81"
+      },
+      {
+        "family_id": "family_078",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.037114,
+        "representative_rule_id": "rule_82"
+      },
+      {
+        "family_id": "family_079",
+        "primary_feature_family": "momentum",
+        "member_count": 2,
+        "mean_net_R": -0.040008,
+        "representative_rule_id": "rule_83"
+      },
+      {
+        "family_id": "family_080",
+        "primary_feature_family": "volatility",
+        "member_count": 3,
+        "mean_net_R": -0.040946,
+        "representative_rule_id": "rule_84"
+      },
+      {
+        "family_id": "family_081",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.041042,
+        "representative_rule_id": "rule_86"
+      },
+      {
+        "family_id": "family_082",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.045997,
+        "representative_rule_id": "rule_87"
+      },
+      {
+        "family_id": "family_083",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.046375,
+        "representative_rule_id": "rule_88"
+      },
+      {
+        "family_id": "family_084",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.046754,
+        "representative_rule_id": "rule_89"
+      },
+      {
+        "family_id": "family_085",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.119583,
+        "representative_rule_id": "rule_90"
+      },
+      {
+        "family_id": "family_086",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.115046,
+        "representative_rule_id": "rule_92"
+      },
+      {
+        "family_id": "family_087",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.101217,
+        "representative_rule_id": "rule_95"
+      },
+      {
+        "family_id": "family_088",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.097297,
+        "representative_rule_id": "rule_96"
+      },
+      {
+        "family_id": "family_089",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.086413,
+        "representative_rule_id": "rule_97"
+      },
+      {
+        "family_id": "family_090",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.081974,
+        "representative_rule_id": "rule_99"
+      },
+      {
+        "family_id": "family_091",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.081203,
+        "representative_rule_id": "rule_100"
+      },
+      {
+        "family_id": "family_092",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.06913,
+        "representative_rule_id": "rule_102"
+      },
+      {
+        "family_id": "family_093",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.068885,
+        "representative_rule_id": "rule_103"
+      },
+      {
+        "family_id": "family_094",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.068521,
+        "representative_rule_id": "rule_104"
+      },
+      {
+        "family_id": "family_095",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.066832,
+        "representative_rule_id": "rule_105"
+      },
+      {
+        "family_id": "family_096",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.064198,
+        "representative_rule_id": "rule_106"
+      },
+      {
+        "family_id": "family_097",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.062208,
+        "representative_rule_id": "rule_107"
+      },
+      {
+        "family_id": "family_098",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.060365,
+        "representative_rule_id": "rule_108"
+      },
+      {
+        "family_id": "family_099",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.059557,
+        "representative_rule_id": "rule_109"
+      },
+      {
+        "family_id": "family_100",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.059366,
+        "representative_rule_id": "rule_110"
+      },
+      {
+        "family_id": "family_101",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.056915,
+        "representative_rule_id": "rule_111"
+      },
+      {
+        "family_id": "family_102",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.055111,
+        "representative_rule_id": "rule_112"
+      },
+      {
+        "family_id": "family_103",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.05239,
+        "representative_rule_id": "rule_113"
+      },
+      {
+        "family_id": "family_104",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.051395,
+        "representative_rule_id": "rule_114"
+      },
+      {
+        "family_id": "family_105",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.050732,
+        "representative_rule_id": "rule_115"
+      },
+      {
+        "family_id": "family_106",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.04967,
+        "representative_rule_id": "rule_117"
+      },
+      {
+        "family_id": "family_107",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.048949,
+        "representative_rule_id": "rule_118"
+      },
+      {
+        "family_id": "family_108",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.048903,
+        "representative_rule_id": "rule_119"
+      },
+      {
+        "family_id": "family_109",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.048684,
+        "representative_rule_id": "rule_120"
+      },
+      {
+        "family_id": "family_110",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.04692,
+        "representative_rule_id": "rule_121"
+      },
+      {
+        "family_id": "family_111",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.04251,
+        "representative_rule_id": "rule_123"
+      },
+      {
+        "family_id": "family_112",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.042054,
+        "representative_rule_id": "rule_124"
+      },
+      {
+        "family_id": "family_113",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.041491,
+        "representative_rule_id": "rule_125"
+      },
+      {
+        "family_id": "family_114",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.040326,
+        "representative_rule_id": "rule_126"
+      },
+      {
+        "family_id": "family_115",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.039493,
+        "representative_rule_id": "rule_127"
+      },
+      {
+        "family_id": "family_116",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.036609,
+        "representative_rule_id": "rule_128"
+      },
+      {
+        "family_id": "family_117",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.034949,
+        "representative_rule_id": "rule_129"
+      },
+      {
+        "family_id": "family_118",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.03344,
+        "representative_rule_id": "rule_131"
+      },
+      {
+        "family_id": "family_119",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.032769,
+        "representative_rule_id": "rule_133"
+      },
+      {
+        "family_id": "family_120",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.032695,
+        "representative_rule_id": "rule_134"
+      },
+      {
+        "family_id": "family_121",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.032147,
+        "representative_rule_id": "rule_135"
+      },
+      {
+        "family_id": "family_122",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.031039,
+        "representative_rule_id": "rule_136"
+      },
+      {
+        "family_id": "family_123",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.02892,
+        "representative_rule_id": "rule_138"
+      },
+      {
+        "family_id": "family_124",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.028017,
+        "representative_rule_id": "rule_139"
+      },
+      {
+        "family_id": "family_125",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.027822,
+        "representative_rule_id": "rule_140"
+      },
+      {
+        "family_id": "family_126",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.027343,
+        "representative_rule_id": "rule_141"
+      },
+      {
+        "family_id": "family_127",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.02558,
+        "representative_rule_id": "rule_143"
+      },
+      {
+        "family_id": "family_128",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.025468,
+        "representative_rule_id": "rule_144"
+      },
+      {
+        "family_id": "family_129",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.024789,
+        "representative_rule_id": "rule_146"
+      },
+      {
+        "family_id": "family_130",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.02378,
+        "representative_rule_id": "rule_147"
+      },
+      {
+        "family_id": "family_131",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.023278,
+        "representative_rule_id": "rule_149"
+      },
+      {
+        "family_id": "family_132",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.02194,
+        "representative_rule_id": "rule_150"
+      },
+      {
+        "family_id": "family_133",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.02174,
+        "representative_rule_id": "rule_151"
+      },
+      {
+        "family_id": "family_134",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.021295,
+        "representative_rule_id": "rule_152"
+      },
+      {
+        "family_id": "family_135",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.020133,
+        "representative_rule_id": "rule_153"
+      },
+      {
+        "family_id": "family_136",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.019824,
+        "representative_rule_id": "rule_155"
+      },
+      {
+        "family_id": "family_137",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.019692,
+        "representative_rule_id": "rule_156"
+      },
+      {
+        "family_id": "family_138",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.019104,
+        "representative_rule_id": "rule_157"
+      },
+      {
+        "family_id": "family_139",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.018652,
+        "representative_rule_id": "rule_158"
+      },
+      {
+        "family_id": "family_140",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.017933,
+        "representative_rule_id": "rule_159"
+      },
+      {
+        "family_id": "family_141",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.017897,
+        "representative_rule_id": "rule_160"
+      },
+      {
+        "family_id": "family_142",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.017763,
+        "representative_rule_id": "rule_161"
+      },
+      {
+        "family_id": "family_143",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.017458,
+        "representative_rule_id": "rule_162"
+      },
+      {
+        "family_id": "family_144",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.017429,
+        "representative_rule_id": "rule_163"
+      },
+      {
+        "family_id": "family_145",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.017311,
+        "representative_rule_id": "rule_164"
+      },
+      {
+        "family_id": "family_146",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.01687,
+        "representative_rule_id": "rule_165"
+      },
+      {
+        "family_id": "family_147",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.01649,
+        "representative_rule_id": "rule_166"
+      },
+      {
+        "family_id": "family_148",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.016467,
+        "representative_rule_id": "rule_167"
+      },
+      {
+        "family_id": "family_149",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.015582,
+        "representative_rule_id": "rule_168"
+      },
+      {
+        "family_id": "family_150",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.015476,
+        "representative_rule_id": "rule_169"
+      },
+      {
+        "family_id": "family_151",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.015269,
+        "representative_rule_id": "rule_170"
+      },
+      {
+        "family_id": "family_152",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.01518,
+        "representative_rule_id": "rule_171"
+      },
+      {
+        "family_id": "family_153",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.014981,
+        "representative_rule_id": "rule_172"
+      },
+      {
+        "family_id": "family_154",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.014788,
+        "representative_rule_id": "rule_173"
+      },
+      {
+        "family_id": "family_155",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.014759,
+        "representative_rule_id": "rule_174"
+      },
+      {
+        "family_id": "family_156",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.014756,
+        "representative_rule_id": "rule_175"
+      },
+      {
+        "family_id": "family_157",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.014607,
+        "representative_rule_id": "rule_176"
+      },
+      {
+        "family_id": "family_158",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.014006,
+        "representative_rule_id": "rule_178"
+      },
+      {
+        "family_id": "family_159",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.013918,
+        "representative_rule_id": "rule_179"
+      },
+      {
+        "family_id": "family_160",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.013057,
+        "representative_rule_id": "rule_180"
+      },
+      {
+        "family_id": "family_161",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.012889,
+        "representative_rule_id": "rule_181"
+      },
+      {
+        "family_id": "family_162",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.012788,
+        "representative_rule_id": "rule_182"
+      },
+      {
+        "family_id": "family_163",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.012294,
+        "representative_rule_id": "rule_184"
+      },
+      {
+        "family_id": "family_164",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.012171,
+        "representative_rule_id": "rule_185"
+      },
+      {
+        "family_id": "family_165",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.011728,
+        "representative_rule_id": "rule_186"
+      },
+      {
+        "family_id": "family_166",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.011187,
+        "representative_rule_id": "rule_187"
+      },
+      {
+        "family_id": "family_167",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.011158,
+        "representative_rule_id": "rule_188"
+      },
+      {
+        "family_id": "family_168",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.011033,
+        "representative_rule_id": "rule_189"
+      },
+      {
+        "family_id": "family_169",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.010839,
+        "representative_rule_id": "rule_190"
+      },
+      {
+        "family_id": "family_170",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.010823,
+        "representative_rule_id": "rule_191"
+      },
+      {
+        "family_id": "family_171",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.010752,
+        "representative_rule_id": "rule_192"
+      },
+      {
+        "family_id": "family_172",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.010513,
+        "representative_rule_id": "rule_193"
+      },
+      {
+        "family_id": "family_173",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.010459,
+        "representative_rule_id": "rule_194"
+      },
+      {
+        "family_id": "family_174",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.010297,
+        "representative_rule_id": "rule_195"
+      },
+      {
+        "family_id": "family_175",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.010227,
+        "representative_rule_id": "rule_196"
+      },
+      {
+        "family_id": "family_176",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.010012,
+        "representative_rule_id": "rule_197"
+      },
+      {
+        "family_id": "family_177",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.00975,
+        "representative_rule_id": "rule_198"
+      },
+      {
+        "family_id": "family_178",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.00969,
+        "representative_rule_id": "rule_199"
+      },
+      {
+        "family_id": "family_179",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.008817,
+        "representative_rule_id": "rule_200"
+      },
+      {
+        "family_id": "family_180",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.008757,
+        "representative_rule_id": "rule_201"
+      },
+      {
+        "family_id": "family_181",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.008706,
+        "representative_rule_id": "rule_202"
+      },
+      {
+        "family_id": "family_182",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.008407,
+        "representative_rule_id": "rule_203"
+      },
+      {
+        "family_id": "family_183",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.008165,
+        "representative_rule_id": "rule_204"
+      },
+      {
+        "family_id": "family_184",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.007615,
+        "representative_rule_id": "rule_205"
+      },
+      {
+        "family_id": "family_185",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.007533,
+        "representative_rule_id": "rule_206"
+      },
+      {
+        "family_id": "family_186",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.007214,
+        "representative_rule_id": "rule_208"
+      },
+      {
+        "family_id": "family_187",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.007208,
+        "representative_rule_id": "rule_209"
+      },
+      {
+        "family_id": "family_188",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.00694,
+        "representative_rule_id": "rule_211"
+      },
+      {
+        "family_id": "family_189",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.006924,
+        "representative_rule_id": "rule_212"
+      },
+      {
+        "family_id": "family_190",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.006669,
+        "representative_rule_id": "rule_213"
+      },
+      {
+        "family_id": "family_191",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.00657,
+        "representative_rule_id": "rule_215"
+      },
+      {
+        "family_id": "family_192",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.006454,
+        "representative_rule_id": "rule_216"
+      },
+      {
+        "family_id": "family_193",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.005905,
+        "representative_rule_id": "rule_217"
+      },
+      {
+        "family_id": "family_194",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.005816,
+        "representative_rule_id": "rule_218"
+      },
+      {
+        "family_id": "family_195",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.005464,
+        "representative_rule_id": "rule_219"
+      },
+      {
+        "family_id": "family_196",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.005245,
+        "representative_rule_id": "rule_220"
+      },
+      {
+        "family_id": "family_197",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.005071,
+        "representative_rule_id": "rule_221"
+      },
+      {
+        "family_id": "family_198",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.005037,
+        "representative_rule_id": "rule_222"
+      },
+      {
+        "family_id": "family_199",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.00465,
+        "representative_rule_id": "rule_223"
+      },
+      {
+        "family_id": "family_200",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.004586,
+        "representative_rule_id": "rule_224"
+      },
+      {
+        "family_id": "family_201",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.004391,
+        "representative_rule_id": "rule_225"
+      },
+      {
+        "family_id": "family_202",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.004349,
+        "representative_rule_id": "rule_226"
+      },
+      {
+        "family_id": "family_203",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.004064,
+        "representative_rule_id": "rule_227"
+      },
+      {
+        "family_id": "family_204",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.003908,
+        "representative_rule_id": "rule_228"
+      },
+      {
+        "family_id": "family_205",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.003891,
+        "representative_rule_id": "rule_229"
+      },
+      {
+        "family_id": "family_206",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.003794,
+        "representative_rule_id": "rule_230"
+      },
+      {
+        "family_id": "family_207",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.00365,
+        "representative_rule_id": "rule_231"
+      },
+      {
+        "family_id": "family_208",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.003349,
+        "representative_rule_id": "rule_232"
+      },
+      {
+        "family_id": "family_209",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.003308,
+        "representative_rule_id": "rule_233"
+      },
+      {
+        "family_id": "family_210",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.003258,
+        "representative_rule_id": "rule_234"
+      },
+      {
+        "family_id": "family_211",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": 0.003172,
+        "representative_rule_id": "rule_236"
+      },
+      {
+        "family_id": "family_212",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": 0.00302,
+        "representative_rule_id": "rule_237"
+      },
+      {
+        "family_id": "family_213",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.002986,
+        "representative_rule_id": "rule_238"
+      },
+      {
+        "family_id": "family_214",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.002599,
+        "representative_rule_id": "rule_239"
+      },
+      {
+        "family_id": "family_215",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.002412,
+        "representative_rule_id": "rule_240"
+      },
+      {
+        "family_id": "family_216",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.002131,
+        "representative_rule_id": "rule_241"
+      },
+      {
+        "family_id": "family_217",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.00191,
+        "representative_rule_id": "rule_242"
+      },
+      {
+        "family_id": "family_218",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": 0.001859,
+        "representative_rule_id": "rule_243"
+      },
+      {
+        "family_id": "family_219",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.001549,
+        "representative_rule_id": "rule_246"
+      },
+      {
+        "family_id": "family_220",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.001499,
+        "representative_rule_id": "rule_247"
+      },
+      {
+        "family_id": "family_221",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.001492,
+        "representative_rule_id": "rule_248"
+      },
+      {
+        "family_id": "family_222",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": 0.000532,
+        "representative_rule_id": "rule_249"
+      },
+      {
+        "family_id": "family_223",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": 0.000145,
+        "representative_rule_id": "rule_250"
+      },
+      {
+        "family_id": "family_224",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_251"
+      },
+      {
+        "family_id": "family_225",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_252"
+      },
+      {
+        "family_id": "family_226",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_253"
+      },
+      {
+        "family_id": "family_227",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_254"
+      },
+      {
+        "family_id": "family_228",
+        "primary_feature_family": "other",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_255"
+      },
+      {
+        "family_id": "family_229",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_256"
+      },
+      {
+        "family_id": "family_230",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_257"
+      },
+      {
+        "family_id": "family_231",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_258"
+      },
+      {
+        "family_id": "family_232",
+        "primary_feature_family": "other",
+        "member_count": 1,
+        "mean_net_R": 0.0,
+        "representative_rule_id": "rule_259"
+      },
+      {
+        "family_id": "family_233",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.0,
+        "representative_rule_id": "rule_260"
+      },
+      {
+        "family_id": "family_234",
+        "primary_feature_family": "other",
+        "member_count": 1,
+        "mean_net_R": -0.0,
+        "representative_rule_id": "rule_261"
+      },
+      {
+        "family_id": "family_235",
+        "primary_feature_family": "other",
+        "member_count": 1,
+        "mean_net_R": -0.0,
+        "representative_rule_id": "rule_262"
+      },
+      {
+        "family_id": "family_236",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.0,
+        "representative_rule_id": "rule_263"
+      },
+      {
+        "family_id": "family_237",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.0,
+        "representative_rule_id": "rule_264"
+      },
+      {
+        "family_id": "family_238",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.0,
+        "representative_rule_id": "rule_265"
+      },
+      {
+        "family_id": "family_239",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.0,
+        "representative_rule_id": "rule_266"
+      },
+      {
+        "family_id": "family_240",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.000111,
+        "representative_rule_id": "rule_267"
+      },
+      {
+        "family_id": "family_241",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.000175,
+        "representative_rule_id": "rule_268"
+      },
+      {
+        "family_id": "family_242",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.000194,
+        "representative_rule_id": "rule_269"
+      },
+      {
+        "family_id": "family_243",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.000376,
+        "representative_rule_id": "rule_270"
+      },
+      {
+        "family_id": "family_244",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.000432,
+        "representative_rule_id": "rule_271"
+      },
+      {
+        "family_id": "family_245",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.00061,
+        "representative_rule_id": "rule_272"
+      },
+      {
+        "family_id": "family_246",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.000639,
+        "representative_rule_id": "rule_273"
+      },
+      {
+        "family_id": "family_247",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.000937,
+        "representative_rule_id": "rule_274"
+      },
+      {
+        "family_id": "family_248",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.001313,
+        "representative_rule_id": "rule_275"
+      },
+      {
+        "family_id": "family_249",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.001474,
+        "representative_rule_id": "rule_276"
+      },
+      {
+        "family_id": "family_250",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.001522,
+        "representative_rule_id": "rule_278"
+      },
+      {
+        "family_id": "family_251",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.001764,
+        "representative_rule_id": "rule_279"
+      },
+      {
+        "family_id": "family_252",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.001977,
+        "representative_rule_id": "rule_280"
+      },
+      {
+        "family_id": "family_253",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.002064,
+        "representative_rule_id": "rule_281"
+      },
+      {
+        "family_id": "family_254",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.002124,
+        "representative_rule_id": "rule_282"
+      },
+      {
+        "family_id": "family_255",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.002138,
+        "representative_rule_id": "rule_283"
+      },
+      {
+        "family_id": "family_256",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.0023,
+        "representative_rule_id": "rule_284"
+      },
+      {
+        "family_id": "family_257",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.002347,
+        "representative_rule_id": "rule_285"
+      },
+      {
+        "family_id": "family_258",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.002549,
+        "representative_rule_id": "rule_287"
+      },
+      {
+        "family_id": "family_259",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.002822,
+        "representative_rule_id": "rule_288"
+      },
+      {
+        "family_id": "family_260",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.00287,
+        "representative_rule_id": "rule_289"
+      },
+      {
+        "family_id": "family_261",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.003219,
+        "representative_rule_id": "rule_290"
+      },
+      {
+        "family_id": "family_262",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.003316,
+        "representative_rule_id": "rule_291"
+      },
+      {
+        "family_id": "family_263",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.003457,
+        "representative_rule_id": "rule_292"
+      },
+      {
+        "family_id": "family_264",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.003477,
+        "representative_rule_id": "rule_293"
+      },
+      {
+        "family_id": "family_265",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.003852,
+        "representative_rule_id": "rule_294"
+      },
+      {
+        "family_id": "family_266",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.004195,
+        "representative_rule_id": "rule_296"
+      },
+      {
+        "family_id": "family_267",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.004386,
+        "representative_rule_id": "rule_297"
+      },
+      {
+        "family_id": "family_268",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.00478,
+        "representative_rule_id": "rule_298"
+      },
+      {
+        "family_id": "family_269",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.004971,
+        "representative_rule_id": "rule_299"
+      },
+      {
+        "family_id": "family_270",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.005156,
+        "representative_rule_id": "rule_300"
+      },
+      {
+        "family_id": "family_271",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.005199,
+        "representative_rule_id": "rule_301"
+      },
+      {
+        "family_id": "family_272",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.005494,
+        "representative_rule_id": "rule_302"
+      },
+      {
+        "family_id": "family_273",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.005627,
+        "representative_rule_id": "rule_303"
+      },
+      {
+        "family_id": "family_274",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.005686,
+        "representative_rule_id": "rule_304"
+      },
+      {
+        "family_id": "family_275",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.005777,
+        "representative_rule_id": "rule_306"
+      },
+      {
+        "family_id": "family_276",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.006083,
+        "representative_rule_id": "rule_308"
+      },
+      {
+        "family_id": "family_277",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.006207,
+        "representative_rule_id": "rule_309"
+      },
+      {
+        "family_id": "family_278",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.006358,
+        "representative_rule_id": "rule_310"
+      },
+      {
+        "family_id": "family_279",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.006395,
+        "representative_rule_id": "rule_311"
+      },
+      {
+        "family_id": "family_280",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.006595,
+        "representative_rule_id": "rule_312"
+      },
+      {
+        "family_id": "family_281",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.006617,
+        "representative_rule_id": "rule_313"
+      },
+      {
+        "family_id": "family_282",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.006712,
+        "representative_rule_id": "rule_314"
+      },
+      {
+        "family_id": "family_283",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.006767,
+        "representative_rule_id": "rule_315"
+      },
+      {
+        "family_id": "family_284",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.006827,
+        "representative_rule_id": "rule_316"
+      },
+      {
+        "family_id": "family_285",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.006974,
+        "representative_rule_id": "rule_318"
+      },
+      {
+        "family_id": "family_286",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.007963,
+        "representative_rule_id": "rule_320"
+      },
+      {
+        "family_id": "family_287",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.008238,
+        "representative_rule_id": "rule_321"
+      },
+      {
+        "family_id": "family_288",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.008391,
+        "representative_rule_id": "rule_322"
+      },
+      {
+        "family_id": "family_289",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.008708,
+        "representative_rule_id": "rule_323"
+      },
+      {
+        "family_id": "family_290",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.009052,
+        "representative_rule_id": "rule_324"
+      },
+      {
+        "family_id": "family_291",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.009121,
+        "representative_rule_id": "rule_326"
+      },
+      {
+        "family_id": "family_292",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.009417,
+        "representative_rule_id": "rule_328"
+      },
+      {
+        "family_id": "family_293",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.009573,
+        "representative_rule_id": "rule_329"
+      },
+      {
+        "family_id": "family_294",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.009591,
+        "representative_rule_id": "rule_330"
+      },
+      {
+        "family_id": "family_295",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.009818,
+        "representative_rule_id": "rule_331"
+      },
+      {
+        "family_id": "family_296",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.009993,
+        "representative_rule_id": "rule_332"
+      },
+      {
+        "family_id": "family_297",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.010207,
+        "representative_rule_id": "rule_333"
+      },
+      {
+        "family_id": "family_298",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.010236,
+        "representative_rule_id": "rule_334"
+      },
+      {
+        "family_id": "family_299",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.010281,
+        "representative_rule_id": "rule_336"
+      },
+      {
+        "family_id": "family_300",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.010802,
+        "representative_rule_id": "rule_339"
+      },
+      {
+        "family_id": "family_301",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.010823,
+        "representative_rule_id": "rule_340"
+      },
+      {
+        "family_id": "family_302",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.010957,
+        "representative_rule_id": "rule_342"
+      },
+      {
+        "family_id": "family_303",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.011061,
+        "representative_rule_id": "rule_343"
+      },
+      {
+        "family_id": "family_304",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.011136,
+        "representative_rule_id": "rule_344"
+      },
+      {
+        "family_id": "family_305",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.011294,
+        "representative_rule_id": "rule_345"
+      },
+      {
+        "family_id": "family_306",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.011549,
+        "representative_rule_id": "rule_347"
+      },
+      {
+        "family_id": "family_307",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.012066,
+        "representative_rule_id": "rule_348"
+      },
+      {
+        "family_id": "family_308",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.012174,
+        "representative_rule_id": "rule_349"
+      },
+      {
+        "family_id": "family_309",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.012319,
+        "representative_rule_id": "rule_350"
+      },
+      {
+        "family_id": "family_310",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.012513,
+        "representative_rule_id": "rule_351"
+      },
+      {
+        "family_id": "family_311",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.012791,
+        "representative_rule_id": "rule_352"
+      },
+      {
+        "family_id": "family_312",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.012942,
+        "representative_rule_id": "rule_353"
+      },
+      {
+        "family_id": "family_313",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.013037,
+        "representative_rule_id": "rule_354"
+      },
+      {
+        "family_id": "family_314",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.013427,
+        "representative_rule_id": "rule_355"
+      },
+      {
+        "family_id": "family_315",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.014008,
+        "representative_rule_id": "rule_356"
+      },
+      {
+        "family_id": "family_316",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.014186,
+        "representative_rule_id": "rule_357"
+      },
+      {
+        "family_id": "family_317",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.014337,
+        "representative_rule_id": "rule_358"
+      },
+      {
+        "family_id": "family_318",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.014844,
+        "representative_rule_id": "rule_360"
+      },
+      {
+        "family_id": "family_319",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.015006,
+        "representative_rule_id": "rule_361"
+      },
+      {
+        "family_id": "family_320",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.015018,
+        "representative_rule_id": "rule_362"
+      },
+      {
+        "family_id": "family_321",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.015123,
+        "representative_rule_id": "rule_363"
+      },
+      {
+        "family_id": "family_322",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.015919,
+        "representative_rule_id": "rule_364"
+      },
+      {
+        "family_id": "family_323",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.016167,
+        "representative_rule_id": "rule_365"
+      },
+      {
+        "family_id": "family_324",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.01628,
+        "representative_rule_id": "rule_366"
+      },
+      {
+        "family_id": "family_325",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.016284,
+        "representative_rule_id": "rule_367"
+      },
+      {
+        "family_id": "family_326",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.016648,
+        "representative_rule_id": "rule_368"
+      },
+      {
+        "family_id": "family_327",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.017042,
+        "representative_rule_id": "rule_369"
+      },
+      {
+        "family_id": "family_328",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.017085,
+        "representative_rule_id": "rule_370"
+      },
+      {
+        "family_id": "family_329",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.017141,
+        "representative_rule_id": "rule_371"
+      },
+      {
+        "family_id": "family_330",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.01716,
+        "representative_rule_id": "rule_372"
+      },
+      {
+        "family_id": "family_331",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.017201,
+        "representative_rule_id": "rule_373"
+      },
+      {
+        "family_id": "family_332",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.017304,
+        "representative_rule_id": "rule_374"
+      },
+      {
+        "family_id": "family_333",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.017306,
+        "representative_rule_id": "rule_375"
+      },
+      {
+        "family_id": "family_334",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.017368,
+        "representative_rule_id": "rule_376"
+      },
+      {
+        "family_id": "family_335",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.017513,
+        "representative_rule_id": "rule_377"
+      },
+      {
+        "family_id": "family_336",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.017574,
+        "representative_rule_id": "rule_378"
+      },
+      {
+        "family_id": "family_337",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.017684,
+        "representative_rule_id": "rule_379"
+      },
+      {
+        "family_id": "family_338",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.017858,
+        "representative_rule_id": "rule_380"
+      },
+      {
+        "family_id": "family_339",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.018127,
+        "representative_rule_id": "rule_381"
+      },
+      {
+        "family_id": "family_340",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.018448,
+        "representative_rule_id": "rule_382"
+      },
+      {
+        "family_id": "family_341",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.018961,
+        "representative_rule_id": "rule_384"
+      },
+      {
+        "family_id": "family_342",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.019027,
+        "representative_rule_id": "rule_385"
+      },
+      {
+        "family_id": "family_343",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.019337,
+        "representative_rule_id": "rule_386"
+      },
+      {
+        "family_id": "family_344",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.019781,
+        "representative_rule_id": "rule_387"
+      },
+      {
+        "family_id": "family_345",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.019785,
+        "representative_rule_id": "rule_388"
+      },
+      {
+        "family_id": "family_346",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.019957,
+        "representative_rule_id": "rule_390"
+      },
+      {
+        "family_id": "family_347",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.020088,
+        "representative_rule_id": "rule_391"
+      },
+      {
+        "family_id": "family_348",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.020255,
+        "representative_rule_id": "rule_392"
+      },
+      {
+        "family_id": "family_349",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.020324,
+        "representative_rule_id": "rule_393"
+      },
+      {
+        "family_id": "family_350",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.020482,
+        "representative_rule_id": "rule_394"
+      },
+      {
+        "family_id": "family_351",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.020829,
+        "representative_rule_id": "rule_395"
+      },
+      {
+        "family_id": "family_352",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.020911,
+        "representative_rule_id": "rule_396"
+      },
+      {
+        "family_id": "family_353",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.020958,
+        "representative_rule_id": "rule_397"
+      },
+      {
+        "family_id": "family_354",
+        "primary_feature_family": "regime",
+        "member_count": 1,
+        "mean_net_R": -0.021049,
+        "representative_rule_id": "rule_398"
+      },
+      {
+        "family_id": "family_355",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.021074,
+        "representative_rule_id": "rule_399"
+      },
+      {
+        "family_id": "family_356",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.02216,
+        "representative_rule_id": "rule_401"
+      },
+      {
+        "family_id": "family_357",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.022311,
+        "representative_rule_id": "rule_402"
+      },
+      {
+        "family_id": "family_358",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.023218,
+        "representative_rule_id": "rule_404"
+      },
+      {
+        "family_id": "family_359",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.023319,
+        "representative_rule_id": "rule_405"
+      },
+      {
+        "family_id": "family_360",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.023446,
+        "representative_rule_id": "rule_406"
+      },
+      {
+        "family_id": "family_361",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.023645,
+        "representative_rule_id": "rule_407"
+      },
+      {
+        "family_id": "family_362",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.023795,
+        "representative_rule_id": "rule_409"
+      },
+      {
+        "family_id": "family_363",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.02409,
+        "representative_rule_id": "rule_410"
+      },
+      {
+        "family_id": "family_364",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.024938,
+        "representative_rule_id": "rule_411"
+      },
+      {
+        "family_id": "family_365",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.025138,
+        "representative_rule_id": "rule_412"
+      },
+      {
+        "family_id": "family_366",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.025178,
+        "representative_rule_id": "rule_413"
+      },
+      {
+        "family_id": "family_367",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.025204,
+        "representative_rule_id": "rule_414"
+      },
+      {
+        "family_id": "family_368",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.025739,
+        "representative_rule_id": "rule_416"
+      },
+      {
+        "family_id": "family_369",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.025938,
+        "representative_rule_id": "rule_417"
+      },
+      {
+        "family_id": "family_370",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.026354,
+        "representative_rule_id": "rule_418"
+      },
+      {
+        "family_id": "family_371",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.026376,
+        "representative_rule_id": "rule_419"
+      },
+      {
+        "family_id": "family_372",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.026731,
+        "representative_rule_id": "rule_421"
+      },
+      {
+        "family_id": "family_373",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.026904,
+        "representative_rule_id": "rule_422"
+      },
+      {
+        "family_id": "family_374",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.027096,
+        "representative_rule_id": "rule_423"
+      },
+      {
+        "family_id": "family_375",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.027126,
+        "representative_rule_id": "rule_424"
+      },
+      {
+        "family_id": "family_376",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.027408,
+        "representative_rule_id": "rule_425"
+      },
+      {
+        "family_id": "family_377",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.027577,
+        "representative_rule_id": "rule_426"
+      },
+      {
+        "family_id": "family_378",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.028405,
+        "representative_rule_id": "rule_427"
+      },
+      {
+        "family_id": "family_379",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.028437,
+        "representative_rule_id": "rule_429"
+      },
+      {
+        "family_id": "family_380",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.028458,
+        "representative_rule_id": "rule_430"
+      },
+      {
+        "family_id": "family_381",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.028642,
+        "representative_rule_id": "rule_431"
+      },
+      {
+        "family_id": "family_382",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.029018,
+        "representative_rule_id": "rule_432"
+      },
+      {
+        "family_id": "family_383",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.029081,
+        "representative_rule_id": "rule_433"
+      },
+      {
+        "family_id": "family_384",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.030892,
+        "representative_rule_id": "rule_434"
+      },
+      {
+        "family_id": "family_385",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.032257,
+        "representative_rule_id": "rule_435"
+      },
+      {
+        "family_id": "family_386",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.033397,
+        "representative_rule_id": "rule_436"
+      },
+      {
+        "family_id": "family_387",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.033592,
+        "representative_rule_id": "rule_437"
+      },
+      {
+        "family_id": "family_388",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.033908,
+        "representative_rule_id": "rule_438"
+      },
+      {
+        "family_id": "family_389",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.033934,
+        "representative_rule_id": "rule_439"
+      },
+      {
+        "family_id": "family_390",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.034239,
+        "representative_rule_id": "rule_440"
+      },
+      {
+        "family_id": "family_391",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.035524,
+        "representative_rule_id": "rule_441"
+      },
+      {
+        "family_id": "family_392",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.036007,
+        "representative_rule_id": "rule_442"
+      },
+      {
+        "family_id": "family_393",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.039745,
+        "representative_rule_id": "rule_444"
+      },
+      {
+        "family_id": "family_394",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.0399,
+        "representative_rule_id": "rule_445"
+      },
+      {
+        "family_id": "family_395",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.040322,
+        "representative_rule_id": "rule_447"
+      },
+      {
+        "family_id": "family_396",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.042422,
+        "representative_rule_id": "rule_449"
+      },
+      {
+        "family_id": "family_397",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.042739,
+        "representative_rule_id": "rule_450"
+      },
+      {
+        "family_id": "family_398",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.044072,
+        "representative_rule_id": "rule_452"
+      },
+      {
+        "family_id": "family_399",
+        "primary_feature_family": "volatility",
+        "member_count": 2,
+        "mean_net_R": -0.044501,
+        "representative_rule_id": "rule_454"
+      },
+      {
+        "family_id": "family_400",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.045603,
+        "representative_rule_id": "rule_456"
+      },
+      {
+        "family_id": "family_401",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.045605,
+        "representative_rule_id": "rule_457"
+      },
+      {
+        "family_id": "family_402",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.046838,
+        "representative_rule_id": "rule_460"
+      },
+      {
+        "family_id": "family_403",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.046926,
+        "representative_rule_id": "rule_461"
+      },
+      {
+        "family_id": "family_404",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.048531,
+        "representative_rule_id": "rule_462"
+      },
+      {
+        "family_id": "family_405",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.05008,
+        "representative_rule_id": "rule_463"
+      },
+      {
+        "family_id": "family_406",
+        "primary_feature_family": "volume",
+        "member_count": 1,
+        "mean_net_R": -0.050181,
+        "representative_rule_id": "rule_464"
+      },
+      {
+        "family_id": "family_407",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.050539,
+        "representative_rule_id": "rule_465"
+      },
+      {
+        "family_id": "family_408",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.050759,
+        "representative_rule_id": "rule_466"
+      },
+      {
+        "family_id": "family_409",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.051239,
+        "representative_rule_id": "rule_467"
+      },
+      {
+        "family_id": "family_410",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.055543,
+        "representative_rule_id": "rule_468"
+      },
+      {
+        "family_id": "family_411",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.056297,
+        "representative_rule_id": "rule_469"
+      },
+      {
+        "family_id": "family_412",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.058506,
+        "representative_rule_id": "rule_470"
+      },
+      {
+        "family_id": "family_413",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.058598,
+        "representative_rule_id": "rule_471"
+      },
+      {
+        "family_id": "family_414",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.06233,
+        "representative_rule_id": "rule_472"
+      },
+      {
+        "family_id": "family_415",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.065676,
+        "representative_rule_id": "rule_473"
+      },
+      {
+        "family_id": "family_416",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.067649,
+        "representative_rule_id": "rule_474"
+      },
+      {
+        "family_id": "family_417",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.068884,
+        "representative_rule_id": "rule_475"
+      },
+      {
+        "family_id": "family_418",
+        "primary_feature_family": "range_position",
+        "member_count": 1,
+        "mean_net_R": -0.069428,
+        "representative_rule_id": "rule_476"
+      },
+      {
+        "family_id": "family_419",
+        "primary_feature_family": "momentum",
+        "member_count": 1,
+        "mean_net_R": -0.080963,
+        "representative_rule_id": "rule_477"
+      },
+      {
+        "family_id": "family_420",
+        "primary_feature_family": "volatility",
+        "member_count": 1,
+        "mean_net_R": -0.092669,
+        "representative_rule_id": "rule_478"
+      }
+    ]
+  },
+  "validation": {
+    "total_rules": 479,
+    "validated_count": 0,
+    "rejected_count": 479,
+    "candidate_only_count": 0,
+    "fully_validated_count": 0,
+    "gates": {
+      "min_support_total": 100,
+      "min_support_per_split": 30,
+      "min_validation_mean_excess_net_R": 0.0,
+      "min_oos_is_ratio": 0.5,
+      "min_symbol_stability": 0.3,
+      "max_redundancy": 0.8,
+      "cost_stress_required": true
+    },
+    "discovery_rows": 1200,
+    "validation_rows": 400,
+    "holdout_rows": 400
+  },
+  "export": {
+    "specs_exported": 0,
+    "registry_path": "reports/alphaforge/mining/p10_smoke_v002/alpha_registry.json"
+  }
+}

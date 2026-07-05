@@ -1,0 +1,68 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report_id: "ACCP-ISSUE-15-LEAD-LAG-FEATURE-GROUP"
+issue_ref: "GITHUB_ISSUE_15"
+task_id: "ISSUE-15"
+title: "Lead-Lag Feature Group Implementation — Cross-Sectional Multi-Symbol Features"
+domain: "alphaforge"
+phase: "P0.9B-pre"
+timestamp_utc: "2026-06-26T00:00:00Z"
+author: "Claude Code (dawn_ll)"
+repository: "ddawnlll/v7-engine"
+commit_hash: "d2ce938"
+
+result: PASS
+
+scope_confirmation:
+  - "Created alphaforge/src/alphaforge/features/lead_lag.py: 3 cross-sectional feature functions + group compute entry point"
+  - "tf_alignment: timeframe volatility alignment between primary and context symbols [-1, 1]"
+  - "correlation_pairwise: rolling pairwise correlation over lookback window [-1, 1]"
+  - "lead_lag_score: lead/lag detection via cross-correlation at multiple lag offsets [-1, 1]"
+  - "Extended FeatureGroup enum: LEAD_LAG now mapped in FEATURE_GROUP_MAP (was commented out)"
+  - "Updated __init__.py: exports all lead-lag functions and constants"
+  - "Updated pipeline.py: FEATURE_GROUP_MAP includes LEAD_LAG → compute_lead_lag_group, metadata status changed DEFERRED→HOLD-LEAD-LAG"
+  - "Created alphaforge/tests/test_lead_lag.py: 48 tests (10 test classes, 48 individual tests)"
+  - "Updated existing TestLeadLagDeferred tests: test_not_in_feature_group_map → test_in_feature_group_map, metadata status check updated"
+  - "All 48 lead-lag tests PASS, all 103 feature pipeline tests PASS, 5/5 boundary tests PASS"
+  - "Lead-Lag NOT wired into compute_features() main pipeline — HOLD-LEAD-LAG (requires P0.9B)"
+
+files_changed:
+  - "alphaforge/src/alphaforge/features/lead_lag.py: NEW — 3 cross-sectional features + compute_lead_lag_group (343 lines)"
+  - "alphaforge/src/alphaforge/features/__init__.py: Added lead-lag exports, version bump 0.1.0→0.2.0"
+  - "alphaforge/src/alphaforge/features/pipeline.py: FeatureGroup enum docstring update, FEATURE_GROUP_MAP includes LEAD_LAG, metadata status HOLD-LEAD-LAG"
+  - "alphaforge/tests/test_lead_lag.py: NEW — 48 tests with multi-symbol fixtures"
+  - "alphaforge/tests/test_feature_pipeline.py: Updated TestLeadLagDeferred tests to reflect new map/status"
+  - "v7/docs/roadmap.md: Added Issue #15 section with lock status and holds"
+
+decisions_locked:
+  - "Lead-Lag feature signatures: LOCKED (tf_alignment, correlation_pairwise, lead_lag_score)"
+  - "Cross-sectional data contract: LOCKED (multi_ohlcv dict, min 2 symbols, aligned bar counts)"
+  - "FEATURE_GROUP_MAP includes LEAD_LAG: LOCKED (mapped to compute_lead_lag_group)"
+  - "compute_features() intentionally skips LEAD_LAG: LOCKED (HOLD-LEAD-LAG, P0.9B blocker)"
+
+remaining_holds:
+  - hold_id: "HOLD-LEAD-LAG"
+    domain: "alphaforge/features"
+    description: "Cross-sectional data pipeline (P0.9B) required to wire compute_lead_lag_group() into the main compute_features() pipeline"
+    release_conditions:
+      - "(a) Cross-sectional data pipeline available — delivers aligned multi-symbol OHLCV"
+      - "(b) Correlation computation across symbols validated against benchmarks"
+      - "(c) Timeframe alignment logic tested with multi-timeframe fixtures"
+      - "(d) lead_lag_score validated against academic lead-lag detection methods"
+      - "(e) FEATURE_GROUP_MAP[FeatureGroup.LEAD_LAG] wired into compute_features()"
+
+safe_next_step: "Implement P0.9B cross-sectional data pipeline — aligned multi-symbol OHLCV delivery. Then wire compute_lead_lag_group into compute_features() main pipeline. Validate correlation and lead-lag against known benchmarks."
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_lead_lag.py -v: 48 passed"
+  - "PYTHONPATH=. python3 -m pytest alphaforge/tests/test_feature_pipeline.py -q: 103 passed"
+  - "PYTHONPATH=. python3 -m pytest integration/tests/test_cross_domain_boundaries.py -q: 5 passed, 1 skipped"
+
+evidence:
+  test_output:
+    lead_lag: "48/48 PASS"
+    feature_pipeline: "103/103 PASS"
+    boundaries: "5/5 PASS (1 skipped)"
+  module_lines:
+    lead_lag_py: 343
+    test_lead_lag_py: 472

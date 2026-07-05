@@ -1,5 +1,14 @@
 # V7 AlphaForge XGB — COMPLETE AI SUMMARY
 
+> **⚠️ SUPERSEDED — HISTORICAL REFERENCE ONLY — ROOT CAUSE OF METRIC CONFUSION**
+> This combined document (625KB) was the pre-authority-lock AlphaForge reference. **It is the root cause of the metric ownership confusion that led to the FREEZE_AND_REDESIGN.** It defined AlphaForge as a "classifier" with trade-level artifact names ("v7_alphaforge_xgb_swing_classifier") and mixed signal-quality metrics with trade-outcome metrics — without specifying which layer owns which.
+>
+> It has been superseded by the 12 canonical AlphaForge docs listed in `alphaforge/docs/ai_summary.md`. Do not use this document as a current authority. The critical fix: AlphaForge measures **IC, Rank IC, calibration error** — NOT win rate, Sharpe, or profit factor. See `v7/docs/pipeline/evaluation.md` Layer Metric Ownership section.
+>
+> Superseded by: P0.8B Authority Lock (2026-06-18)
+> Canonical entry: `alphaforge/docs/ai_summary.md`
+> **FIXED BY:** FREEZE_AND_REDESIGN milestone — Layer Metric Ownership decision (2026-07-02)
+
 ## META
 
 This document is a dense, machine-readable AI implementation reference for adding a V7-compatible alpha generation system.

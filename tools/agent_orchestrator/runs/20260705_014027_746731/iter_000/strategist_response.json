@@ -1,0 +1,15 @@
+{
+  "worker_task": "Write a new Python file `alphaforge/src/alphaforge/candidates/alpha_momentum_mean_reversion.py` that implements a deterministic alpha candidate combining momentum and mean-reversion signals. The alpha should: 1) Use a 20-day rolling mean of daily returns as a momentum factor, 2) Use a 5-day rolling z-score of price relative to its 20-day mean as a mean-reversion factor, 3) Combine them as `alpha = 0.5 * momentum_signal - 0.5 * mean_reversion_signal` (the minus sign encodes mean reversion). 4) The candidate class should have a `generate_signals(data)` method that takes a DataFrame with columns `['close', 'returns']` and returns a Series of alpha signals aligned to the index. 5) Also write a companion test file `alphaforge/src/alphaforge/candidates/test_alpha_momentum_mean_reversion.py` that tests the alpha on synthetic data: create 100 days of random walk price data, compute signals, and assert that the output Series has the same length as the input, contains no NaNs after the warm-up period (first 20 days can be NaN), and that the correlation between momentum and mean-reversion components is negative (since they are opposites by construction). 6) In your completion summary, include: train_start='2020-01-01', train_end='2020-12-31', test_start='2021-01-01', test_end='2021-12-31', n_combinations=1, metric='IC' with a placeholder value of 0.0 (since we are not running a full backtest yet).",
+  "rationale": "This is a small, safe, reversible first step: creating a simple deterministic alpha and its unit test. It establishes the pattern for future alpha candidates, uses only allowed paths, and produces a measurable artifact. The task is concrete and testable.",
+  "expected_artifacts": [
+    "alphaforge/src/alphaforge/candidates/alpha_momentum_mean_reversion.py",
+    "alphaforge/src/alphaforge/candidates/test_alpha_momentum_mean_reversion.py"
+  ],
+  "success_criteria": [
+    "Both files are created under alphaforge/src/alphaforge/candidates/",
+    "The alpha class is importable and has a generate_signals method",
+    "The test file runs without errors and all assertions pass",
+    "Worker completion summary includes all required report fields"
+  ],
+  "risk_notes": "Low risk. The task only creates new files in the allowed sandbox path. The code is deterministic and has no external dependencies beyond pandas and numpy. The test uses synthetic data, so no market data access is needed."
+}

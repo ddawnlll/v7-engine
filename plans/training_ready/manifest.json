@@ -1,0 +1,62 @@
+{
+  "bundle": {
+    "name": "training-ready-quant-pipeline",
+    "version": "0.1.1",
+    "repair_version": 1,
+    "generated_at": "2026-06-25T00:00:00Z",
+    "planSpecVersion": "0.1.0",
+    "source_audit": "reports/accp/v7_engine_reality_gap_audit.accp.yaml",
+    "baseline_readiness_percent": 24.5,
+    "target_readiness_percent": 55,
+    "plan_count": 10,
+    "total_acceptance_criteria": 70,
+    "domains": ["audit", "lib", "simulation", "ops", "alphaforge", "v7"],
+    "repair_changes": [
+      "R01: master hardDeny scoped — uncontrolled training denied, controlled allowed",
+      "R02: plan files treated as read-only inputs in implementation tasks",
+      "R03: Makefile sole owner Plan 03 — Plan 01 removed from Makefile",
+      "R04: backfill plan 11 ACs with mock command proof",
+      "R05: canonical data/raw/ + data/normalized/ throughout",
+      "R06: training verdict policy — PASS_TRAINING_EXECUTED vs HOLD_NO_XGBOOST",
+      "R07: V7 plan 10 ACs with canonical G0-G10 gates",
+      "R08: funding plan 8 ACs with 429/retry/backoff",
+      "R09: final audit 7 strict truth rules — skip != ready",
+      "R10: all critical plans >= 8 ACs"
+    ]
+  },
+  "plans": [
+    {"order": 0, "id": "TR-MASTER-TRAINING-READY", "file": "master.plan.yaml", "domain": "all", "gated": false},
+    {"order": 1, "id": "TR-00-REALITY-GAP-BASELINE", "file": "00_reality_gap_baseline.plan.yaml", "domain": "audit", "autonomy": "analysis_only", "gated": false},
+    {"order": 2, "id": "TR-01-MARKET-DATA-BACKFILL-STORAGE", "file": "01_market_data_backfill_storage.plan.yaml", "domain": "lib", "gated": false, "note": "Python module contract only — Makefile owned by Plan 03"},
+    {"order": 3, "id": "TR-02-SIMULATION-MARKET-DATA-ADAPTER", "file": "02_simulation_market_data_adapter.plan.yaml", "domain": "simulation", "gated": false},
+    {"order": 4, "id": "TR-03-PIPELINE-CLI-MAKEFILE-RUNBOOK", "file": "03_pipeline_cli_makefile_runbook.plan.yaml", "domain": "ops", "gated": false, "note": "Sole owner of Makefile, CLI, .env.example, configs/, docs/"},
+    {"order": 5, "id": "TR-04-FUNDING-PAGINATION-RATE-LIMIT", "file": "04_funding_pagination_rate_limit.plan.yaml", "domain": "lib+simulation", "gated": false},
+    {"order": 6, "id": "TR-05-TRAINING-RUNNER-XGBOOST-GATE", "file": "05_training_runner_xgboost_gate.plan.yaml", "domain": "alphaforge", "gated": true, "gate_prerequisites": ["TR-01", "TR-02", "TR-03", "TR-04"], "training_verdict_policy": "PASS_TRAINING_EXECUTED | HOLD_NO_XGBOOST | HOLD_MISSING_REAL_DATASET"},
+    {"order": 7, "id": "TR-06-EMPIRICAL-WFV-METRICS", "file": "06_empirical_wfv_metrics.plan.yaml", "domain": "alphaforge", "gated": true, "gate_prerequisites": ["TR-05"]},
+    {"order": 8, "id": "TR-07-V7-POLICY-ACCEPTANCE-IMPL", "file": "07_v7_policy_acceptance_impl.plan.yaml", "domain": "v7", "gated": true, "gate_prerequisites": ["TR-05", "TR-06"]},
+    {"order": 9, "id": "TR-08-FINAL-TRAINING-READINESS-AUDIT", "file": "08_final_training_readiness_audit.plan.yaml", "domain": "audit", "autonomy": "analysis_only", "gated": false}
+  ],
+  "parallel_allowed": [["01", "03"]],
+  "hard_gates": {
+    "05": "Requires TR-01..04 all PASS. Controlled training verdicts: PASS_TRAINING_EXECUTED | HOLD_NO_XGBOOST",
+    "06": "Requires TR-05 PASS_TRAINING_EXECUTED",
+    "07": "Requires TR-05 and TR-06 both PASS"
+  },
+  "canonical_data_paths": {
+    "raw_market_data": "data/raw/",
+    "normalized_market_data": "data/normalized/",
+    "model_artifacts": "data/models/",
+    "results": "data/results/",
+    "processed": "data/processed/ (legacy/compat only, not for market data)"
+  },
+  "safety": {
+    "live_trading": "FORBIDDEN",
+    "profitability_claims": "FORBIDDEN",
+    "network_in_tests": "FORBIDDEN",
+    "uncontrolled_training": "DENIED",
+    "controlled_training_plan_05": "ALLOWED_BY_GATE",
+    "xgboost_skip": "HOLD_NEVER_PASS",
+    "funding_model": "MAY_REMAIN_HOLD",
+    "scalp_thresholds": "HOLD_UNTIL_EMPIRICAL"
+  }
+}

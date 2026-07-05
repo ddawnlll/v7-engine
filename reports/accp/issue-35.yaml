@@ -1,0 +1,59 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+issue: "#35"
+title: "P0 — Real profitability evidence pipeline"
+result: "PASS"
+scope_confirmation: |
+  Created the E2E pipeline runner that wires together backfill → labels →
+  features → training → WFV → profitability metrics. All pieces from issue
+  spec implemented: cli/v7_pipeline.py, cli/tests/test_v7_pipeline.py,
+  Makefile target pipeline-v0.2, v02 CLI subcommand.
+
+  CRITICAL RULES enforced:
+    - NO profitability claims in source code
+    - NO live trading
+    - Dry-run by default, --real required for actual execution
+    - All steps emit deterministic evidence with SHA-256 checksums
+
+  Known limitations:
+    - Labels step uses synthetic labels (SimulationOutput not yet wired)
+    - Full train+wfv steps not tested in CI (xgboost import required)
+    - Backfill step uses synthetic data by default
+
+files_changed:
+  - cli/v7_pipeline.py                          (new, 1365 lines)
+  - cli/tests/__init__.py                       (new, 1 line)
+  - cli/tests/test_v7_pipeline.py               (new, 651 lines)
+  - cli/v7_engine.py                            (modified: added v02 subcommand)
+  - Makefile                                    (modified: added pipeline-v0.2 target)
+
+decisions_locked:
+  - LOCKED_INITIAL_BASELINE: Pipeline step order (validate → backfill → labels → features → train → wfv → report)
+  - LOCKED_INITIAL_BASELINE: Dry-run by default, --real required for execution
+  - LOCKED_INITIAL_BASELINE: Deterministic evidence with SHA-256 checksums per step
+  - LOCKED_INITIAL_BASELINE: Synthetic data mode uses random seed for reproducibility
+  - LOCKED_INITIAL_BASELINE: Label mapping LONG_NOW=0, SHORT_NOW=1, NO_TRADE=2
+
+remaining_holds:
+  - HOLD: Real label generation requires SimulationOutput pipeline (not yet wired)
+  - HOLD: Train+wfv steps require xgboost dependency (gated behind synthetic/check)
+  - HOLD: Full backfill with real Binance data requires network + API keys
+  - HOLD: SCALP and AGGRESSIVE_SCALP modes not yet tuned (SWING baseline only)
+
+safe_next_step:
+  - Wire SimulationOutput into labels step for real label generation
+  - Add train+wfv integration test with xgboost in CI
+  - Tune SCALP and AGGRESSIVE_SCALP feature sets
+
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest cli/tests/test_v7_pipeline.py -v -q"
+  - "PYTHONPATH=alphaforge/src:. python3 -m cli v02 --mode SWING --dry-run"
+  - "PYTHONPATH=alphaforge/src:. python3 -m cli v02 --mode SWING --real --synthetic --n-bars 300 --steps validate,backfill,labels,features --output-dir /tmp/pipeline-test-2"
+  - "make pipeline-v0.2 DRY_RUN=1"
+
+evidence:
+  - "47/47 tests pass (0.19s)"
+  - "Dry-run mode displays all 7 steps with correct config"
+  - "Real mode completes backfill → labels → features (26 features, 900 bars, 3 symbols)"
+  - "Pipeline result saved as JSON with deterministic checksums"
+  - "Makefile target make pipeline-v0.2 wired and functional"

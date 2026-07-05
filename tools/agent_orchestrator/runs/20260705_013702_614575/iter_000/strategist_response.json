@@ -1,0 +1,14 @@
+{
+  "worker_task": "Create a new alpha factor in alphaforge/src/alphaforge/candidates/ called momentum_alpha.py that implements a simple 20-day momentum factor. The factor should: 1) Take a price series as input (list or numpy array). 2) Compute the 20-day return: (price[-1] - price[-21]) / price[-21]. 3) Return the computed value. Also create a test script in alphaforge/src/alphaforge/candidates/ called test_momentum_alpha.py that: 1) Generates a synthetic price series (e.g., random walk of 100 days). 2) Imports and calls the momentum_alpha function. 3) Prints the resulting factor value. 4) Prints a report with fields: train_start='2020-01-01', train_end='2020-12-31', test_start='2021-01-01', test_end='2021-12-31', n_combinations=1, metric='IC' with value 0.0 (placeholder). Run the test script and include the report fields in the final completion summary.",
+  "rationale": "This is a small, safe, reversible first step to create a deterministic alpha candidate and test harness. It follows the sandbox path rule, does not touch any protected files, and the test script explicitly outputs the required report fields so the gate can evaluate PASS/FAIL.",
+  "expected_artifacts": [
+    "alphaforge/src/alphaforge/candidates/momentum_alpha.py",
+    "alphaforge/src/alphaforge/candidates/test_momentum_alpha.py"
+  ],
+  "success_criteria": [
+    "Both files are created under the sandbox path",
+    "The test script runs without errors and prints the factor value",
+    "The completion summary includes train_start, train_end, test_start, test_end, n_combinations, and metric fields"
+  ],
+  "risk_notes": "Low risk. No modification of protected files. The factor is simple and deterministic. The test uses synthetic data so no external dependencies."
+}

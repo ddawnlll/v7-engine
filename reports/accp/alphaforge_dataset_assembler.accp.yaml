@@ -1,0 +1,161 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+report_id: "ALPHAFORGE-04-DATASET-ASSEMBLER-COMPLETION"
+plan_ref: "plans/alphaforge/04_dataset_assembler.plan.yaml"
+plan_id: "ALPHAFORGE-04-DATASET-ASSEMBLER"
+timestamp: "2026-06-24T00:00:00Z"
+executor: "ClaudeCode"
+
+result: PASS
+
+scope_confirmation:
+  workspaces_completed:
+    - id: WS-04-CONTRACT
+      title: "Design LabeledDataset dataclass — align with data_contract.md Layers 4-5"
+      status: COMPLETE
+      evidence: "alphaforge/src/alphaforge/dataset/contracts.py — LabeledDataset, LineageProvenance (frozen), JoinAuditTrail dataclasses; DatasetAssembler and DatasetWriter protocols defined. Zero ML imports."
+    - id: WS-04-JOIN
+      title: "Implement DatasetAssembler.assemble() — join manifest + labels + features"
+      status: COMPLETE
+      evidence: "alphaforge/src/alphaforge/dataset/assembler.py — DefaultAssembler with inner-join on (symbol,timestamp), label_validity==VALID filter, purge-window enforcement (feature_timestamp < label_timestamp), full JoinAuditTrail population, deterministic row_id generation, mode mismatch ValueError."
+    - id: WS-04-LINEAGE
+      title: "Implement lineage tracking — provenance refs, checksum chain"
+      status: COMPLETE
+      evidence: "alphaforge/src/alphaforge/dataset/lineage.py — LineageTracker with build_provenance(), SHA-256 label_checksum computation/extraction, LineageError for missing required fields (source_manifest_id, feature_set_id, label_dataset_id, simulation_profile_id)."
+    - id: WS-04-WRITER
+      title: "Implement DatasetWriter — deterministic serialization, SHA-256 checksum, roundtrip"
+      status: COMPLETE
+      evidence: "alphaforge/src/alphaforge/dataset/writer.py — DefaultWriter with deterministic CSV (sorted by symbol+feature_timestamp, fixed column order, repr() float formatting for lossless roundtrip), SHA-256 checksum, read/write/verify_roundtrip, Parquet support with CSV fallback."
+    - id: WS-04-NEGATIVE-TESTS
+      title: "Negative tests — invalid joins, missing timestamps/symbols, data leakage, lineage integrity, checksum stability"
+      status: COMPLETE
+      evidence: "53 unit tests + 6 integration tests = 59 total, all passing. Covers: label_validity filtering (VALID/INVALID/AMBIGUOUS/empty), purge-window violations, mode mismatch ValueError, empty joins (non-overlapping symbols/timestamps), data leakage scenario (all timestamps >= labels), frozen LineageProvenance, missing field errors, deterministic write, roundtrip verification, modified data detection."
+    - id: WS-04-REPORT
+      title: "Run all tests, emit ACCP report, validate constraints"
+      status: COMPLETE
+      evidence: "Full validation sweep: 71 passed, 0 failed, 2 skipped. No forbidden imports, no profitability claims, no cross-domain boundary violations, only allowed files modified."
+
+files_changed:
+  new:
+    - alphaforge/src/alphaforge/dataset/__init__.py
+    - alphaforge/src/alphaforge/dataset/contracts.py
+    - alphaforge/src/alphaforge/dataset/assembler.py
+    - alphaforge/src/alphaforge/dataset/lineage.py
+    - alphaforge/src/alphaforge/dataset/writer.py
+    - alphaforge/tests/conftest.py
+    - alphaforge/tests/test_dataset_assembler.py
+    - alphaforge/tests/test_dataset_lineage.py
+    - alphaforge/tests/test_dataset_writer.py
+    - integration/tests/test_alphaforge_dataset.py
+    - reports/accp/alphaforge_dataset_assembler.accp.yaml
+  modified: []
+  forbidden_touched: []
+
+decisions_locked:
+  - "LabeledDataset carries all Layer 4-5 fields from data_contract.md (row_id, symbol, feature_timestamp, label_timestamp, mode, features dict, label fields, lineage, quality_flags)"
+  - "LineageProvenance is frozen (immutable) with 7 required fields (source_manifest_id, label_checksum, feature_spec_version, feature_set_id, label_dataset_id, simulation_profile_id, assembled_at)"
+  - "JoinAuditTrail carries 7 count fields (total_feature_rows, total_label_rows, joined_rows, unmatched_feature_rows, unmatched_label_rows, invalid_label_rows_dropped, purge_violation_rows_dropped)"
+  - "DatasetAssembler.assemble() inner-joins on (symbol, timestamp), filters label_validity==VALID, enforces feature_timestamp < label_timestamp purge window"
+  - "Mode mismatch raises ValueError with both mode names in message"
+  - "Empty join returns empty list + populated audit trail (not exception)"
+  - "label_checksum computed via SHA-256 over canonical JSON of label fields (sorted keys, deterministic float formatting) when not pre-computed"
+  - "Missing lineage fields (source_manifest_id, feature_set_id, label_dataset_id, simulation_profile_id) raise LineageError with explicit field name"
+  - "Writer uses repr() for float formatting (lossless float64 roundtrip) and sorts rows by (symbol, feature_timestamp)"
+  - "Row IDs are deterministic (SHA-256 prefix over symbol+timestamp+manifest+specs)"
+  - "assembled_at is deterministic within an assemble() call (derived from manifest_id hash)"
+
+remaining_holds:
+  - id: HOLD-04-001
+    description: "Cross-sectional (multi-symbol) data layer not yet implemented — single-symbol tests only"
+    release_condition: "P0.9B cross-sectional data pipeline"
+    severity: LOW
+  - id: HOLD-04-002
+    description: "Parquet support requires pyarrow — current tests use CSV only; Parquet path exists but is not exercised in CI"
+    release_condition: "Add pyarrow to test dependencies and enable Parquet integration tests"
+    severity: LOW
+  - id: HOLD-04-003
+    description: "Purge-window currently checks for separate label_timestamp column; single-timestamp join rows pass through without purge if no separate label_timestamp"
+    release_condition: "Real data pipeline should always carry offset label_timestamp for proper purge enforcement"
+    severity: MEDIUM
+
+safe_next_step:
+  description: "Proceed to WS-05 (model training scaffold) or WS-05.1 (XGBoost baseline trainer). The dataset assembler, lineage tracker, and writer are fully functional and tested."
+  prerequisite_plan: "plans/alphaforge/05_model_training.plan.yaml"
+  readiness: "All 48 acceptance criteria satisfied. Zero failures in full sweep. Import boundaries clean."
+
+commands_run:
+  - id: CMD-04-test-assembler
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_dataset_assembler.py alphaforge/tests/test_dataset_lineage.py -q -v"
+    exit_code: 0
+    tests_passed: 34
+    tests_failed: 0
+    evidence: "Assembler and lineage unit tests pass"
+  - id: CMD-04-test-writer
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_dataset_writer.py -q -v"
+    exit_code: 0
+    tests_passed: 19
+    tests_failed: 0
+    evidence: "Writer unit tests pass"
+  - id: CMD-04-test-integration
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest integration/tests/test_alphaforge_dataset.py -q"
+    exit_code: 0
+    tests_passed: 6
+    tests_failed: 0
+    evidence: "Integration tests (50-row/5-symbol fixtures, full pipeline, determinism, lineage integrity) pass"
+  - id: CMD-04-test-boundaries
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest lib/tests/test_import_boundary.py integration/tests/test_cross_domain_boundaries.py simulation/tests/test_import_boundary.py -q"
+    exit_code: 0
+    tests_passed: 7
+    tests_failed: 0
+    tests_skipped: 2
+    evidence: "Cross-domain boundary tests pass (2 skips for unbuilt V7/interface domains)"
+  - id: CMD-04-test-simulation
+    command: "PYTHONPATH=alphaforge/src:. python3 -m pytest simulation/tests/ -q"
+    exit_code: 0
+    tests_passed: 5
+    tests_failed: 0
+    evidence: "Simulation tests pass (no regression)"
+  - id: CMD-04-discover-git-status
+    command: "git status --porcelain"
+    exit_code: 0
+    evidence: "Only allowed files modified; no forbidden directories touched"
+  - id: CMD-04-no-xgboost
+    command: "grep -rn 'xgboost|XGBClassifier|XGBRegressor' in new source files — code-level scan"
+    result: "Only docstring/comment mentions; zero actual imports"
+  - id: CMD-04-no-profitability
+    command: "grep -rn 'profitability|profit edge|alpha works|edge confirmed' in new files"
+    result: "Zero matches"
+  - id: CMD-04-import-boundaries
+    command: "grep -n 'from v7|import v7|from simulation.engine|from runtime|from interface' in dataset/*.py"
+    result: "Zero matches — all import boundaries respected"
+
+evidence:
+  test_output:
+    total_tests: 71
+    passed: 71
+    failed: 0
+    skipped: 2
+    coverage: "59 dataset-specific tests + 12 boundary/simulation tests"
+  source:
+    - alphaforge/src/alphaforge/dataset/contracts.py
+    - alphaforge/src/alphaforge/dataset/assembler.py
+    - alphaforge/src/alphaforge/dataset/lineage.py
+    - alphaforge/src/alphaforge/dataset/writer.py
+  wiring:
+    - alphaforge/src/alphaforge/dataset/__init__.py (exports: LabeledDataset, LineageProvenance, JoinAuditTrail, DefaultAssembler, LineageTracker, LineageError, DefaultWriter)
+  schema_validation:
+    - "All 48 acceptance criteria met"
+    - "contracts.py has zero imports from assembler.py, writer.py, lineage.py, xgboost, sklearn"
+    - "LineageProvenance frozen=True verified"
+    - "assembler.py, lineage.py, writer.py have zero ML library imports"
+  diff:
+    - "No changes to lib/, simulation/engine/, runtime/, interface/, data/, datasets/, models/, artifacts/, .github/"
+  report:
+    - reports/accp/alphaforge_dataset_assembler.accp.yaml
+
+acceptance_criteria_summary:
+  total: 48
+  verified: 48
+  unverified: 0
+  blocked: 0
+  failed: 0
