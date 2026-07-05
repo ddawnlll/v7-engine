@@ -64,5 +64,9 @@ class AlphaForgeAdapter:
 
 
 class LabelBuilder(AlphaForgeAdapter):
-    """Specialized adapter for R-label generation from simulation outputs."""
+    """Specialized adapter for R-label generation from simulation outputs.
+
+    The real implementation lives in alphaforge.labels.builder.
+    This adapter is the cross-domain interface contract.
+    """
     pass
