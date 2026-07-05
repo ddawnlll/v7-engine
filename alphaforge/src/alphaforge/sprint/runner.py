@@ -16,9 +16,8 @@ from alphaforge.factors.evaluation import (
 )
 from alphaforge.factors.factors import FACTOR_REGISTRY
 from alphaforge.sprint.config import SprintConfig
+from simulation.authority import get_cost_constants
 from simulation.engine.costs import (
-    DEFAULT_TAKER_FEE_BPS,
-    DEFAULT_SLIPPAGE_BPS,
     compute_entry_risk,
     fee_cost_r,
     slippage_cost_r,

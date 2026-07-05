@@ -32,6 +32,9 @@ jobs:
       - name: Run boundary checks
         run: make check-boundaries
 
+      - name: Run authority contract check
+        run: make check-authority
+
       - name: Run lib + integration + simulation tests
         run: PYTHONPATH=alphaforge/src:v7/src python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q \
           --ignore=lib/tests/test_data_lake_downloader.py \

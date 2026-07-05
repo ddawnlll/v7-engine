@@ -1,4 +1,4 @@
-.PHONY: help install test check-lib-boundaries check-boundaries check-contracts test-system test-all clean lint typecheck setup
+.PHONY: help install test check-lib-boundaries check-boundaries check-contracts test-system test-all clean lint typecheck setup data-health download test-training test-training-full candidate diagnostic candidate-lightgbm af-report menu check-authority
 
 PYTHON ?= $(shell if [ -x .venv/bin/python3 ]; then echo .venv/bin/python3; else echo python3; fi)
 
@@ -111,6 +111,38 @@ lint:
 	@ruff check lib/ --ignore=E501,F401 2>/dev/null || ruff --help >/dev/null 2>&1 && ruff check lib/ --ignore=E501 || echo "  ruff not installed, skipping"
 	@echo ""
 
+# ====================================================================
+# Authority lint — prevent hardcoded cost/label constants outside authority.py
+# ====================================================================
+check-authority:
+	@echo "=== Checking authority contract compliance ==="
+	@FAILED=0; \
+	EXEMPT_FILES="simulation/authority.py|test_.*\.py|simulation/engine/costs\.py"; \
+	for PATTERN in \
+		'fee_pct\s*=\s*0\.' \
+		'DEFAULT_TAKER_FEE_BPS' \
+		'DEFAULT_MAKER_FEE_BPS' \
+		'TOTAL_COST_RATE\s*=\s*0\.' \
+		'round_trip_cost_r\s*=\s*0\.'; \
+	do \
+		MATCHES=$$(grep -rn "$$PATTERN" --include="*.py" alphaforge/ simulation/ 2>/dev/null | grep -vE "($$EXEMPT_FILES)" || true); \
+		if [ -n "$$MATCHES" ]; then \
+			echo "  FAIL: Pattern '$$PATTERN' found outside authority:"; \
+			echo "$$MATCHES" | sed 's/^/    /'; \
+			FAILED=1; \
+		fi; \
+	done; \
+	if [ "$$FAILED" = "1" ]; then \
+		echo ""; \
+		echo "  ❌ AUTHORITY VIOLATION: Hardcoded cost/label constants found outside"; \
+		echo "     simulation/authority.py. All cost/label logic must come from"; \
+		echo "     simulation.authority.get_cost_constants() and related functions."; \
+		exit 1; \
+	else \
+		echo "  ✅ No authority violations found."; \
+	fi
+	@echo ""
+
 typecheck:
 	@echo "Running mypy..."
 	@mypy lib/ --ignore-missing-imports --no-strict-optional 2>/dev/null || echo "  mypy not installed, skipping"
@@ -178,9 +210,9 @@ report:
 validate:
 	@echo "=== TR-03-PIPELINE-CLI-MAKEFILE-RUNBOOK | validate ==="; \
 	if [ "$(DRY_RUN)" = "1" ]; then \
-		echo "[DRY RUN] Would run: check-contracts + check-boundaries + test-system"; \
+		echo "[DRY RUN] Would run: check-contracts + check-boundaries + check-authority + test-system"; \
 	else \
-		$(MAKE) check-contracts && $(MAKE) check-boundaries && $(MAKE) test-system; \
+		$(MAKE) check-contracts && $(MAKE) check-boundaries && $(MAKE) check-authority && $(MAKE) test-system; \
 	fi
 
 pipeline:

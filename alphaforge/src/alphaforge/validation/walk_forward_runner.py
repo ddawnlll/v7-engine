@@ -23,16 +23,21 @@ Usage:
 
 from __future__ import annotations
 
-import hashlib
 import json
-import logging
 import os
-import time
-from dataclasses import dataclass, field
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+
+# Cost authority — SINGLE source of truth
+from simulation.authority import get_cost_constants
+
+_AUTHORITY = get_cost_constants()
+_FEE_FRACTIONAL = _AUTHORITY["taker_fee_bps"] / 10000.0  # 0.0004 per side
+_ROUND_TRIP_COST = _FEE_FRACTIONAL * 2  # 0.0008 round trip
 import xgboost as xgb
 
 from alphaforge.validation.contracts import (
@@ -335,7 +340,7 @@ def generate_net_r_from_ohlcv(
     ohlcv_data: Dict[str, np.ndarray],
     n_bars: int,
     mode: str = "SWING",
-    fee_pct: float = 0.04,
+    fee_pct: float = _ROUND_TRIP_COST,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Generate synthetic net_R and gross_R values from OHLCV data.
 
@@ -350,7 +355,7 @@ def generate_net_r_from_ohlcv(
         ohlcv_data: OHLCV data dict with close/high/low/symbol arrays.
         n_bars: Number of bars per symbol (symbols are concatenated).
         mode: Trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
-        fee_pct: Per-trade fee in percent (default 0.04 = 4 bps).
+        fee_pct: Round-trip cost as fraction of return (default 0.0008 = 8 bps, authority).
 
     Returns:
         Tuple of (gross_r_values, net_r_values) arrays aligned with input.
@@ -364,7 +369,7 @@ def generate_net_r_from_ohlcv(
     high_arr = ohlcv_data["high"]
     low_arr = ohlcv_data["low"]
     n = len(close_arr)
-    round_trip_cost = fee_pct * 2 / 100  # e.g. 0.0008 for fee_pct=0.04
+    round_trip_cost = fee_pct  # authority: 0.0008 (8 bps) in fractional return space
 
     gross_r = np.zeros(n, dtype=np.float64)
     net_r = np.zeros(n, dtype=np.float64)
@@ -646,8 +651,8 @@ def compute_economic_metrics(
         "gross_expectancy": 0.0,
         # Cost decomposition
         "cost_decomposition": {
-            "fee_pct": 0.04,
-            "round_trip_cost_r": 0.0008,
+            "fee_pct": _FEE_FRACTIONAL,  # 0.0004 per side
+            "round_trip_cost_r": _ROUND_TRIP_COST,  # 0.0008 round trip
         },
     }
 

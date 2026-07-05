@@ -19,7 +19,7 @@ Works WITHOUT numba: the fallback decorator makes @njit a no-op.
 Cost model (sourced from simulation.engine.costs):
     Taker fee:  4bps per side (8bps round trip)
     Slippage:   1bp per side (2bps round trip)
-    Total:     10bps round trip (TOTAL_COST_RATE = 0.0010)
+    Total:     10bps round trip (cf. authority total_round_trip_cost_bps)
 """
 
 from __future__ import annotations
@@ -36,16 +36,17 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Cost model constant — sourced from simulation.engine.costs (authority)
+# Cost model constant — sourced from simulation.authority (canonical)
 # ---------------------------------------------------------------------------
-# Authority: simulation/engine/costs.py defines:
-#   DEFAULT_TAKER_FEE_BPS = 4.0   → 4bps entry + 4bps exit = 8bps
-#   DEFAULT_SLIPPAGE_BPS = 1.0    → 1bp entry + 1bp exit = 2bps
+# Authority: simulation.authority.get_cost_constants() defines:
+#   taker_fee_bps = 4.0     → 4bps entry + 4bps exit = 8bps
+#   slippage_bps  = 1.0     → 1bp entry + 1bp exit = 2bps
 # Total round trip = 10bps = 0.0010 as fraction of notional.
 # This replaces the old hardcoded 0.0012 (12bps) which did not match the engine.
-from simulation.engine.costs import DEFAULT_TAKER_FEE_BPS, DEFAULT_SLIPPAGE_BPS
+from simulation.authority import get_cost_constants
 
-TOTAL_COST_RATE: float = (DEFAULT_TAKER_FEE_BPS * 2 + DEFAULT_SLIPPAGE_BPS * 2) / 10_000
+_COST_AUTH = get_cost_constants()
+TOTAL_COST_RATE: float = _COST_AUTH["total_round_trip_cost_bps"] / 10_000  # 0.0010 (10bps)
 assert abs(TOTAL_COST_RATE - 0.0010) < 1e-10, f"TOTAL_COST_RATE={TOTAL_COST_RATE} != 0.0010"
 
 

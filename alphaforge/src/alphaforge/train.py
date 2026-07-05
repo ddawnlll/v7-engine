@@ -1,4 +1,4 @@
-﻿"""
+"""
 AlphaForge Full Training Pipeline.
 
 Usage:
@@ -26,6 +26,15 @@ try:
     from numba import njit
 except ImportError:
     njit = lambda x: x
+
+# Cost authority — SINGLE source of truth
+from simulation.authority import get_cost_constants
+
+_AUTHORITY = get_cost_constants()
+# fee_pct in FRACTIONAL RETURN space (not R-multiples):
+#   taker_fee_bps = 4.0 → 0.0004 per side → 0.0008 round trip
+_FEE_FRACTIONAL = _AUTHORITY["taker_fee_bps"] / 10000.0  # 0.0004
+_ROUND_TRIP_COST_FRACTIONAL = _FEE_FRACTIONAL * 2  # 0.0008
 
 logging.basicConfig(
     level=logging.INFO,
@@ -239,8 +248,8 @@ def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n
     gross_r_vals = np.empty(n - max_hold - 1, dtype=np.float64)
     net_r_vals = np.empty(n - max_hold - 1, dtype=np.float64)
 
-    fee_pct = 0.04
-    round_trip_cost_r = fee_pct * 2 / 100.0
+    fee_pct = _FEE_FRACTIONAL  # authority: 4 bps taker
+    round_trip_cost_r = _ROUND_TRIP_COST_FRACTIONAL  # authority: 8 bps round trip
 
     for i in range(n - max_hold - 1):
         entry_price = close[i]
@@ -701,7 +710,7 @@ def walk_forward_validate(
 
         pred_labels = np.array(["LONG_NOW" if p == 0 else "SHORT_NOW" if p == 1 else "NO_TRADE" for p in y_pred], dtype=object)
         pred_gross_r = val_action_net[np.arange(len(y_pred)), y_pred]
-        pred_metrics = compute_oos_metrics(pred_labels.tolist(), pred_gross_r.tolist(), fee_pct=0.04)
+        pred_metrics = compute_oos_metrics(pred_labels.tolist(), pred_gross_r.tolist(), fee_pct=_ROUND_TRIP_COST_FRACTIONAL)
 
         val_accuracy = float(np.mean(y_pred == y_val))
         train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
@@ -720,7 +729,7 @@ def walk_forward_validate(
 
         true_labels = np.array(["LONG_NOW" if t == 0 else "SHORT_NOW" if t == 1 else "NO_TRADE" for t in y_val], dtype=object)
         true_gross_r = val_action_net[np.arange(len(y_val)), y_val]
-        oracle_metrics = compute_oos_metrics(true_labels.tolist(), true_gross_r.tolist(), fee_pct=0.04)
+        oracle_metrics = compute_oos_metrics(true_labels.tolist(), true_gross_r.tolist(), fee_pct=_ROUND_TRIP_COST_FRACTIONAL)
         net_r_expectancy_val = float(pred_metrics.get("avg_net_R_per_active_trade", 0.0))
 
         results.append({
@@ -843,7 +852,7 @@ def collect_metrics(
     wfv_results: List[dict],
     X: np.ndarray,
     feature_names: List[str],
-    fee_pct: float = 0.04,
+    fee_pct: float = _ROUND_TRIP_COST_FRACTIONAL,
 ) -> dict:
     """Collect and aggregate training metrics."""
     val_accs = [r["val_accuracy"] for r in wfv_results]
@@ -855,7 +864,7 @@ def collect_metrics(
 
     overfit = compute_overfit_gap(wfv_results)
     net_sharpe = compute_oos_sharpe(wfv_results)
-    round_trip_cost_r = fee_pct * 2 / 100
+    round_trip_cost_r = fee_pct  # authority: 8 bps in fractional return space
 
     from alphaforge.reports.metrics import compute_oos_metrics
 
@@ -902,7 +911,7 @@ def collect_metrics(
     low_conf_rate = float(total_low_conf / total_val_samples * 100) if total_val_samples > 0 else 0.0
 
     # Cost decomposition
-    round_trip_cost_bps = fee_pct * 2  # bps
+    round_trip_cost_bps = _AUTHORITY["round_trip_taker_fee_bps"]  # 8.0 bps
 
     return {
         "mode": mode.upper(),
@@ -1223,7 +1232,7 @@ def main():
 
     # Step 6: Collect metrics
     print("\n[6/6] Collecting metrics...")
-    fee_pct = cfg.get("ambiguity_margin_r", 0.04) if False else 0.04  # keep at 4bps
+    fee_pct = _ROUND_TRIP_COST_FRACTIONAL  # authority: 8 bps round trip
     metrics = collect_metrics(wfv_results, X_clean, feat_names, fee_pct=fee_pct)
 
     print(f"\n{'='*60}")

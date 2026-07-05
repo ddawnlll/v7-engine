@@ -30,10 +30,16 @@ import pandas as pd
 
 
 # ── COST MODEL ────────────────────────────────────────────────────
+# Sourced from simulation.authority (canonical cost constants).
+# Authority: taker_fee_bps=4.0 (0.0004), slippage_bps=1.0 (0.0001)
+# Total round trip = 10bps = 0.0010
+# Note: OLD values were TAKER_FEE_RATE=0.0004, SLIPPAGE_RATE=0.0002
+#       giving 0.12% round trip — now corrected to 0.10%.
 
-TAKER_FEE_RATE = 0.0004   # 0.04% per side
-SLIPPAGE_RATE = 0.0002    # 0.02% per side
-TOTAL_COST_RATE = 2 * (TAKER_FEE_RATE + SLIPPAGE_RATE)  # 0.12% round trip
+from simulation.authority import get_cost_constants
+
+_COST_AUTH = get_cost_constants()
+TOTAL_COST_RATE = _COST_AUTH["total_round_trip_cost_bps"] / 10000  # 0.0010 (10bps)
 
 
 @dataclass(frozen=True)
