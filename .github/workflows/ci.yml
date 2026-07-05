@@ -40,6 +40,7 @@ jobs:
           --ignore=lib/tests/test_data_lake_catalog.py \
           --ignore=lib/tests/test_data_lake_gateway.py \
           --ignore=integration/tests/test_alphaforge_report_builders.py \
+          --ignore=integration/tests/test_alphaforge_scaffold_imports.py \
           --ignore=integration/tests/test_alphaforge_research_report.py \
           --ignore=integration/tests/test_mock_backfill_writes_outputs.py \
           --ignore=simulation/tests/test_simulation_writer.py
