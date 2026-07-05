@@ -1,0 +1,17 @@
+{
+  "iteration": 1,
+  "goal": "Create and test one deterministic AlphaForge alpha candidate",
+  "strategist_task": "Create a deterministic alpha factor script that implements a simple momentum-based signal using rolling 5-day and 20-day returns on stock data. 1. Write the factor script (e.g., 'momentum_factor.py') that loads price data from a CSV (assumed to have columns: 'date', 'ticker', 'close'), computes the 5-day and 20-day rolling returns, and outputs a combined signal (difference of normalized returns). 2. Run a backtest over the period 2020-01-01 to 2022-12-31, with training from 2020-01-01 to 2021-12-31 and testing from 2022-01-01 to 2022-12-31. 3. Evaluate the factor's performance using information coefficient (IC) and Sharpe ratio. 4. Report the following in your completion summary: train_start='2020-01-01', train_end='2021-12-31', test_start='2022-01-01', test_end='2022-12-31', n_combinations=1, metric='IC' with its value.",
+  "worker_exit_code": -1,
+  "gate_verdict": "FAIL",
+  "gate_reasons": [
+    "Worker exited with code -1",
+    "Worker log exists (103405 bytes)",
+    "Git HEAD: 815a2739b4c8",
+    "No tracked files modified",
+    "All changes in allowed paths",
+    "No authority files touched",
+    "Report missing required fields: train_start, train_end, test_start, test_end, n_combinations, metric"
+  ],
+  "overall_status": "FAIL"
+}
