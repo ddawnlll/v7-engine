@@ -27,7 +27,7 @@ def run_worker(task: str, config: WorkerConfig, log_dir: str | os.PathLike[str],
     print(f"\n{'='*60}\n  Worker: {' '.join(shlex.quote(c) for c in cmd)[:120]}\n  Log:    {log_path}\n{'='*60}\n", file=sys.stderr)
     raw_lines, summary, error, proc = [], "", "", None
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, cwd=cwd)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", errors="replace", bufsize=1, cwd=cwd)
         if proc.stdout:
             for line in iter(proc.stdout.readline, ""): raw_lines.append(line); sys.stderr.write(line); sys.stderr.flush()
         stderr_text = proc.stderr.read() if proc.stderr else ""
