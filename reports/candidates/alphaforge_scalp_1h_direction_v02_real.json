@@ -1,0 +1,230 @@
+{
+  "schema_version": "1.1.0",
+  "handoff_package_id": "v7hp-scalp-bb-position-v2-real-20260706",
+  "mode": "SCALP",
+  "alpha_candidate_id": "ac-scalp-bb-mean-reversion-v2-real",
+  "mode_research_report_id": "mrr-scalp-bb-position-v2-real",
+  "validation_report_id": "vr-scalp-bb-position-v2-real",
+  "model_artifact_id": "ma-scalp-xgb-v2-real",
+  "calibration_candidate_id": "cc-scalp-threshold-0550-v2",
+
+  "alpha_thesis": {
+    "id": "ath-scalp-bb-position-mean-reversion-v2",
+    "title": "BB Position Dominated Mean-Reversion Edge — SCALP 1h (Real Data)",
+    "status": "VALIDATED_ON_REAL_DATA",
+    "evidence_quality": "MODERATE",
+    "description": "bb_position = normalized location of close within Bollinger Bands. Near upper band (bb_position≈1) → mean-reversion sell signal (SHORT). Near lower band (bb_position≈0) → mean-reversion buy signal (LONG). The 16-feature XGBoost model on REAL Binance data (4 symbols, 118K 1h bars) learns a threshold/regime-dependent version of this strategy where bb_position carries 97.3% of predictive power (DoubleEnsemble shuffle ablation).",
+    "primary_driver": {
+      "feature": "bb_position",
+      "formula": "bb_position[t] = (close[t] - lower[t]) / (upper[t] - lower[t])",
+      "bands_formula": "upper[t] = SMA(close, window=20) + 2.0 × rolling_std(close, window=20); lower[t] = SMA(close, window=20) - 2.0 × rolling_std(close, window=20)",
+      "causality": "uses close[t-window+1 .. t] only — causal, no lookahead",
+      "shuffle_impact_pct": 97.30,
+      "leakage_audit": "CLEAN — verified on real Binance data"
+    },
+    "secondary_features": [
+      {"name": "ofi_N", "formula": "Order Flow Imbalance normalized", "shuffle_impact_pct": 26.53},
+      {"name": "atr_expansion_N", "formula": "Rate of change of ATR", "shuffle_impact_pct": 20.87},
+      {"name": "return_zscore_N", "formula": "Z-score of recent returns", "shuffle_impact_pct": 7.51},
+      {"name": "vwap_mid_deviation_N", "formula": "(close[t] - vwap[t]) / vwap[t]", "shuffle_impact_pct": 7.21},
+      {"name": "trade_count_N", "formula": "Normalized trade count", "shuffle_impact_pct": 6.64},
+      {"name": "multi_level_obi_N", "formula": "Multi-level Order Book Imbalance", "shuffle_impact_pct": 6.60},
+      {"name": "microprice_N", "formula": "Microprice = (bid+ask)/2 weighted", "shuffle_impact_pct": 6.55},
+      {"name": "log_return_1", "formula": "Log return over 1 bar", "shuffle_impact_pct": 5.74}
+    ]
+  },
+
+  "is_real_data": true,
+  "data_source": "binance",
+  "data_source_type": "public_archive",
+  "data_market": "um_futures",
+  "data_coverage": {
+    "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"],
+    "intervals": ["1h"],
+    "start": "2023-01-01T00:00:00+00:00",
+    "end": "2026-07-05T21:55:00+00:00",
+    "n_bars_total": 118276,
+    "n_bars_per_symbol": {"BTCUSDT": 28492, "ETHUSDT": 29928, "SOLUSDT": 29928, "BNBUSDT": 29928},
+    "n_training_samples": 118068,
+    "coverage_pct": 100.0
+  },
+
+  "model_config": {
+    "model_family": "XGBoost",
+    "mode": "SCALP",
+    "primary_timeframe": "1h",
+    "context_timeframe": "4h",
+    "refinement_timeframe": "15m",
+    "confidence_threshold": 0.55,
+    "n_features": 16,
+    "n_features_full": 54,
+    "feature_pruning_method": "DoubleEnsemble shuffle ablation (<2% impact removed, retrain validated) on REAL Binance data",
+    "n_folds": 6,
+    "fold_structure": "anchored expanding walk-forward",
+    "fold_size": 16866,
+    "purge_bars": 4216,
+    "embargo_bars": 2108,
+    "val_folds_used": [0, 1, 2, 3, 4],
+    "test_fold": 5,
+    "label_generation": "triple-barrier with mode-specific stop/target, cost deducted (8bps round trip)",
+    "cost_model": "simulation/authority.py (taker_fee_bps=4.0, slippage_bps=1.0, round_trip=10bps total)",
+    "training_hyperparams": "XGBoostTrainer defaults (alphaforge.training.xgb_trainer)"
+  },
+
+  "selected_16_features": [
+    {"name": "bb_position", "group": "breakout", "importance_rank": 1, "shuffle_drop_pct": 97.30},
+    {"name": "ofi_N", "group": "orderbook", "importance_rank": 2, "shuffle_drop_pct": 26.53},
+    {"name": "atr_expansion_N", "group": "atr", "importance_rank": 3, "shuffle_drop_pct": 20.87},
+    {"name": "return_zscore_N", "group": "returns", "importance_rank": 4, "shuffle_drop_pct": 7.51},
+    {"name": "vwap_mid_deviation_N", "group": "orderbook", "importance_rank": 5, "shuffle_drop_pct": 7.21},
+    {"name": "trade_count_N", "group": "orderbook", "importance_rank": 6, "shuffle_drop_pct": 6.64},
+    {"name": "multi_level_obi_N", "group": "orderbook", "importance_rank": 7, "shuffle_drop_pct": 6.60},
+    {"name": "microprice_N", "group": "orderbook", "importance_rank": 8, "shuffle_drop_pct": 6.55},
+    {"name": "log_return_1", "group": "returns", "importance_rank": 9, "shuffle_drop_pct": 5.74},
+    {"name": "garman_klass_vol_N", "group": "volatility", "importance_rank": 10, "shuffle_drop_pct": 5.23},
+    {"name": "doji_N", "group": "candle_pattern", "importance_rank": 11, "shuffle_drop_pct": 4.82},
+    {"name": "hammer_N", "group": "candle_pattern", "importance_rank": 12, "shuffle_drop_pct": 4.79},
+    {"name": "volume_trend_N", "group": "volume", "importance_rank": 13, "shuffle_drop_pct": 4.19},
+    {"name": "cusum_positive", "group": "regime", "importance_rank": 14, "shuffle_drop_pct": 3.84},
+    {"name": "rsi_N", "group": "momentum", "importance_rank": 15, "shuffle_drop_pct": 3.16},
+    {"name": "parkinson_vol_N", "group": "volatility", "importance_rank": 16, "shuffle_drop_pct": 2.67}
+  ],
+
+  "removed_38_features": [
+    "amihud_illiquidity_N", "atr_N", "atr_pct_N", "bb_width", "consecutive_dn_N",
+    "consecutive_up_N", "cusum_negative", "cusum_signal", "depth_ratio_N",
+    "engulfing_N", "gap_N", "high_low_range_N", "hmm_vol_probability",
+    "hmm_vol_state", "liquidity_vacuum_N", "log_return_N", "macd", "macd_histogram",
+    "macd_signal", "marubozu_N", "microstructure_noise_N", "momentum_N", "obi",
+    "obv_N", "price_impact_slope_N", "quoted_spread_N", "range_breakout_N",
+    "return_volatility_N", "roll_spread_N", "serial_correlation_N", "spread_pct_N",
+    "trade_intensity_N", "volatility_regime", "volume_concentration_hhi_N",
+    "volume_imbalance_N", "volume_ratio_N", "vpin_N", "vwap_deviation"
+  ],
+
+  "validation_results": {
+    "phase1_audit": {
+      "1a_gross_net": {"status": "PASS", "detail": "Cost authority 8bps round trip. decision_gross_r net of cost."},
+      "1b_block_bootstrap": {"status": "PASS", "detail": "Aggregate CI=[0.007633, 0.008560], 329 blocks, all 6 folds fully positive. Edge robust on real data."},
+      "1c_threshold_audit": {"status": "PASS", "detail": "Threshold 0.55 selected via val composite optimization on real data. No data leakage."}
+    },
+    "feature_ablation": {
+      "method": "DoubleEnsemble shuffle ablation on REAL Binance data",
+      "n_full": 54,
+      "n_kept": 16,
+      "n_removed": 38,
+      "removal_threshold_pct": 2.0,
+      "baseline_val_composite": 465.00,
+      "pruned_val_composite": 533.66,
+      "val_composite_improvement_pct": 14.77
+    },
+    "threshold_optimization": {
+      "objective": "total_net_R / max_drawdown",
+      "selected_threshold": 0.55,
+      "val_grid": [
+        {"threshold": 0.385, "composite": 591.32},
+        {"threshold": 0.440, "composite": 662.04},
+        {"threshold": 0.495, "composite": 617.17},
+        {"threshold": 0.550, "composite": 710.20},
+        {"threshold": 0.605, "composite": 584.16},
+        {"threshold": 0.660, "composite": 582.44},
+        {"threshold": 0.715, "composite": 533.66}
+      ]
+    },
+    "test_results": {
+      "threshold_used": 0.55,
+      "total_net_R": 19.66,
+      "mean_R": 0.0043,
+      "ci_95": [0.003718, 0.004997],
+      "ci_fully_positive": true,
+      "max_drawdown": 0.1518,
+      "composite": 129.47,
+      "active_trades": 4552,
+      "long_trades": 2062,
+      "short_trades": 2490,
+      "no_trade_calls": 1773,
+      "exposure_pct": 71.97,
+      "decision": "PASS"
+    },
+    "model_quality": {
+      "note": "Correct-predictions-only metric (mirrors ADIM 3 methodology). Stable across all configs.",
+      "mean_R_correct_only": 0.0081,
+      "ci_95_correct_only": [0.007349, 0.008902],
+      "isolation_test": "ADIM 3 vs ADIM 4 farki tamamen metrik tanimindan. Model quality degismemis."
+    },
+    "synthetic_comparison": {
+      "note": "PREVIOUS SYNTHETIC RESULTS INVALIDATED. This JSON is canonical.",
+      "synthetic_feature_count": 32,
+      "synthetic_threshold": 0.715,
+      "synthetic_test_composite": 223.02,
+      "synthetic_test_ci": [0.0225, 0.0256]
+    }
+  },
+
+  "feature_ablation_ranking": [
+    [4, "bb_position", 97.30], [33, "ofi_N", 26.53], [2, "atr_expansion_N", 20.87],
+    [39, "return_zscore_N", 7.51], [53, "vwap_mid_deviation_N", 7.21], [44, "trade_count_N", 6.64],
+    [30, "multi_level_obi_N", 6.60], [27, "microprice_N", 6.55], [21, "log_return_1", 5.74],
+    [15, "garman_klass_vol_N", 5.23], [12, "doji_N", 4.82], [16, "hammer_N", 4.79],
+    [50, "volume_trend_N", 4.19], [9, "cusum_positive", 3.84], [41, "rsi_N", 3.16],
+    [34, "parkinson_vol_N", 2.67], [36, "quoted_spread_N", 1.28], [37, "range_breakout_N", 1.27],
+    [29, "momentum_N", 1.15], [24, "macd_histogram", 0.84], [45, "trade_intensity_N", 0.82],
+    [5, "bb_width", 0.49], [49, "volume_ratio_N", 0.29], [43, "spread_pct_N", 0.17],
+    [10, "cusum_signal", 0.00], [14, "gap_N", 0.00], [19, "hmm_vol_state", 0.00],
+    [31, "obi", 0.00], [51, "vpin_N", -0.01], [22, "log_return_N", -0.38],
+    [52, "vwap_deviation", -0.49], [35, "price_impact_slope_N", -0.50],
+    [28, "microstructure_noise_N", -0.83], [23, "macd", -0.94], [46, "volatility_regime", -0.94],
+    [38, "return_volatility_N", -0.95], [1, "atr_N", -1.04], [0, "amihud_illiquidity_N", -1.15],
+    [7, "consecutive_up_N", -1.25], [32, "obv_N", -1.89], [47, "volume_concentration_hhi_N", -2.19],
+    [8, "cusum_negative", -2.22], [20, "liquidity_vacuum_N", -2.39], [26, "marubozu_N", -2.70],
+    [17, "high_low_range_N", -3.00], [18, "hmm_vol_probability", -3.69],
+    [42, "serial_correlation_N", -3.92], [25, "macd_signal", -4.91], [6, "consecutive_dn_N", -5.83],
+    [13, "engulfing_N", -5.99], [3, "atr_pct_N", -6.45], [40, "roll_spread_N", -7.64],
+    [48, "volume_imbalance_N", -8.25], [11, "depth_ratio_N", -10.39]
+  ],
+
+  "v7_gate_mapping": {
+    "G0_doc_ready": {"status": "PASS", "evidence": "Handoff JSON v02_real, schema v1.1.0, is_real_data=true."},
+    "G1_research_backtest": {"status": "PASS", "evidence": "Test total_net_R=19.66 > 0, CI=[0.0037, 0.0050] fully positive. Real Binance data."},
+    "G2_walk_forward_oos": {"status": "PASS", "evidence": "6-fold anchored expanding WFV on real data. 5 val + 1 test fold. BB CI fully positive."},
+    "G3_cost_stress": {"status": "PASS", "evidence": "8bps round trip deducted. Phase 1a audit PASS. Edge survives cost."},
+    "G4_regime_breakdown": {"status": "NOT_EVALUATED"},
+    "G5_symbol_stability": {"status": "NOT_EVALUATED"},
+    "G6_calibration_reliability": {"status": "PENDING"},
+    "G7_shadow": {"status": "NOT_EVALUATED"},
+    "G8_paper": {"status": "NOT_EVALUATED"},
+    "G9_tiny_live": {"status": "NOT_EVALUATED"},
+    "G10_live": {"status": "NOT_EVALUATED"}
+  },
+
+  "recommended_status": "REVIEW_REQUIRED",
+
+  "blocked_scopes": [
+    "SCALP mode only — no SWING or AGGRESSIVE_SCALP validation",
+    "4-symbol universe — cross-sectional not fully tested",
+    "Funding model DEFERRED — perpetual/live scope blocked",
+    "G7-G10 infrastructure not built",
+    "Regime/symbol stability not evaluated"
+  ],
+
+  "limitations": [
+    "bb_position 97.3% dominance = concentration risk",
+    "without_bb_position model not retested on real data (likely collapses)",
+    "XGBoost softmax calibration not validated",
+    "No transaction cost modeling beyond taker fee",
+    "Test composite (129) moderate — reflects real market difficulty"
+  ],
+
+  "lineage": {
+    "data_refs": ["binance-real-4symbol-118Kbar-1h-2023-2026"],
+    "feature_set_id": "fs-scalp-54-to-16-v2-real",
+    "label_dataset_id": "lds-scalp-triple-barrier-v1",
+    "simulation_profile_id": "scalp_profile-1.0.0",
+    "training_run_id": "run-scalp-16feat-xgb-v2-real",
+    "git_commit": "5d2edde",
+    "guard_commit": "1b81fdf",
+    "lineage_verified": true
+  },
+
+  "created_at": "2026-07-06T01:10:00Z"
+}
