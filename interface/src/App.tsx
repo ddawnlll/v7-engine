@@ -17,6 +17,7 @@ import { queryClient } from './lib/queryClient'
 import { legacyRouteRedirects, workspaceByKey } from './lib/workspaces'
 import { AdminRoute } from './routes/AdminRoute'
 import { AlertsRoute } from './routes/AlertsRoute'
+import { DashboardRoute } from './routes/DashboardRoute'
 import { TradeOverviewRoute } from './routes/TradeOverviewRoute'
 import { EngineBehaviorRoute } from './routes/EngineBehaviorRoute'
 import { EnginePerformanceRoute } from './routes/EnginePerformanceRoute'
@@ -28,6 +29,7 @@ import { PortfolioRoute } from './routes/PortfolioRoute'
 import { RuntimeConfigRoute } from './routes/RuntimeConfigRoute'
 import { ScansRoute } from './routes/ScansRoute'
 import { SettingsRoute } from './routes/SettingsRoute'
+import { SelfLearningRoute } from './routes/SelfLearningRoute'
 import { ReviewLearningPage } from './routes/ReviewLearningPage'
 import { SimulationsRoute } from './routes/SimulationsRoute'
 import { StorageRoute } from './routes/StorageRoute'
@@ -242,8 +244,9 @@ function App() {
     if (Number(health?.alert_summary?.critical ?? 0) > 0) {
       return { detail: String(criticalAlert?.message ?? criticalAlert?.kind ?? 'critical alert active'), href: '/operate/alerts' }
     }
-    if (Number((health as Record<string, unknown>)?.heartbeat_age_seconds ?? 0) > 180 || String(health?.degraded_reason ?? '') === 'runner_heartbeat_stale') {
-      return { detail: `runner heartbeat stale (${Math.round(Number((health as Record<string, unknown>)?.heartbeat_age_seconds ?? 0))}s)`, href: '/operate/control' }
+    const h = health as Record<string, unknown>
+    if (Number(h?.heartbeat_age_seconds ?? 0) > 180 || String(h?.degraded_reason ?? '') === 'runner_heartbeat_stale') {
+      return { detail: `runner heartbeat stale (${Math.round(Number(h?.heartbeat_age_seconds ?? 0))}s)`, href: '/operate/control' }
     }
     if (String(health?.stream?.status ?? '').toUpperCase() === 'DEGRADED') {
       return {

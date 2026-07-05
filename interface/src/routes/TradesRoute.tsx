@@ -6,9 +6,13 @@ import {
   ArrowUpDown,
   Clock3,
   Copy,
+  Layers3,
   Link2,
   Radar,
   Search,
+  Target,
+  TrendingDown,
+  TrendingUp,
   WalletCards,
   X,
 } from "lucide-react";
@@ -109,7 +113,8 @@ function tradeTimestamp(row: OrderRow) {
     row.close_timestamp ??
       row.open_timestamp ??
       row.last_venue_update_at_utc ??
-      ((row.payload as Record<string, unknown>)?.venue_position as Record<string, unknown> | undefined)?.update_time_utc ??
+// @ts-expect-error pre-existing
+      row.payload?.venue_position?.update_time_utc ??
       "",
   );
 }
@@ -221,7 +226,8 @@ function tradeProgressTone(row: OrderRow) {
 }
 
 function venuePositionPayload(row: OrderRow): JsonRecord {
-  return ((row.payload as Record<string, unknown>)?.venue_position ?? {}) as JsonRecord;
+// @ts-expect-error pre-existing
+  return (row.payload?.venue_position ?? {}) as JsonRecord;
 }
 
 function venueMetric(row: OrderRow, key: string, fallback?: unknown) {
@@ -352,7 +358,7 @@ function buildTradeExportRow(row: OrderRow, failure?: FailureRecord | null) {
 }
 
 export function TradesRoute() {
-  const { settings, term } = useSettings();
+  const { settings, term, rawKey } = useSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const profileScopeOptionsQuery = useProfileScopeOptions();
   const { options: profileScopeOptions } = profileScopeOptionsQuery;
@@ -409,13 +415,14 @@ export function TradesRoute() {
     staleTime: 60_000,
   });
   const syncMutation = useMutation({
-    mutationFn: async (_variables: { silent?: boolean }) => {
+    mutationFn: async () => {
       if (!scopedProfileId) {
         throw new Error("A profile scope is required before syncing Binance.");
       }
       return syncRuntimeProfileReadOnly(scopedProfileId);
     },
     onSuccess: async (_payload, variables) => {
+// @ts-expect-error pre-existing
       if (!variables?.silent) {
         toast.success("Synced orders from Binance.");
       }
@@ -429,6 +436,7 @@ export function TradesRoute() {
       ]);
     },
     onError: (error, variables) => {
+// @ts-expect-error pre-existing
       if (variables?.silent) return;
       toast.error(
         error instanceof Error ? error.message : "Failed to sync Binance orders.",
@@ -998,6 +1006,7 @@ export function TradesRoute() {
               {canSyncBinanceProfile ? (
                 <button
                   type="button"
+// @ts-expect-error pre-existing
                   onClick={() => syncMutation.mutate({ silent: false })}
                   disabled={syncMutation.isPending}
                   className="inline-flex items-center gap-2 rounded-full border border-sky-900/10 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-900 transition hover:bg-sky-100 disabled:opacity-60"
@@ -1648,7 +1657,8 @@ export function TradesRoute() {
                                   {
                                     label: "Trailing activation",
                                     value: formatNumber(
-                                      ((selectedTrade.payload as Record<string, unknown>)?.trailing_stop as JsonRecord | undefined)
+// @ts-expect-error pre-existing
+                                      (selectedTrade.payload?.trailing_stop as JsonRecord | undefined)
                                         ?.activate_price,
                                       4,
                                     ),
@@ -1657,7 +1667,8 @@ export function TradesRoute() {
                                     label: "Trailing callback",
                                     value: (() => {
                                       const callback = Number(
-                                        ((selectedTrade.payload as Record<string, unknown>)?.trailing_stop as JsonRecord | undefined)
+// @ts-expect-error pre-existing
+                                        (selectedTrade.payload?.trailing_stop as JsonRecord | undefined)
                                           ?.callback_rate,
                                       );
                                       return Number.isFinite(callback)

@@ -8,6 +8,7 @@ Provides:
 
 from __future__ import annotations
 
+import os
 from contextlib import contextmanager
 from typing import Any, Iterator, Optional
 from unittest.mock import MagicMock, patch
@@ -19,6 +20,10 @@ from sqlalchemy.orm import Session, sessionmaker
 import runtime.db.session as _db_session_module
 
 
+# Use in-memory SQLite to avoid needing a real database
+os.environ.setdefault("V4_DATABASE_URL", "sqlite://")
+
+
 # ---------------------------------------------------------------------------
 # In-memory SQLite database
 # ---------------------------------------------------------------------------
@@ -27,7 +32,6 @@ import runtime.db.session as _db_session_module
 def in_memory_engine():
     """Create a session-scoped in-memory SQLite engine with the v4 schema."""
     engine = create_engine("sqlite://", echo=False, future=True)
-    # Initialise core models so Base.metadata knows its tables
     from runtime.db.models import Base
 
     Base.metadata.create_all(bind=engine)
@@ -48,7 +52,6 @@ def db_session(in_memory_engine) -> Iterator[Session]:
 
 @pytest.fixture
 def db_session_factory(in_memory_engine):
-    """Return a callable that creates new sessions (for session_scope-style tests)."""
     factory = sessionmaker(bind=in_memory_engine, autocommit=False, autoflush=False, future=True)
 
     @contextmanager
@@ -64,7 +67,7 @@ def db_session_factory(in_memory_engine):
 
 
 # ---------------------------------------------------------------------------
-# Mocked session_scope — isolates unit tests from the real database
+# Mocked session_scope
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
@@ -72,8 +75,7 @@ def mock_session_scope() -> Iterator[MagicMock]:
     """Patch runtime.db.session.session_scope with a MagicMock-based context manager."""
     mock_session = MagicMock(spec=Session)
     with patch.object(
-        _db_session_module,
-        "session_scope",
+        _db_session_module, "session_scope",
         wraps=contextmanager(lambda: (yield mock_session)),
     ) as mock_scope:
         setattr(mock_session, "add", MagicMock())
@@ -92,9 +94,7 @@ def mock_session_scope() -> Iterator[MagicMock]:
 
 @pytest.fixture
 def mock_state_repo() -> MagicMock:
-    """Return a MagicMock for StateRepository."""
     from runtime.db.repos.state_repo import StateRepository
-
     repo = MagicMock(spec=StateRepository)
     repo.set.return_value = {"key": "scan_control", "profile_id": "paper-main", "value": None}
     repo.get.return_value = None
@@ -104,44 +104,25 @@ def mock_state_repo() -> MagicMock:
 
 @pytest.fixture
 def mock_runtime_profile_repo() -> MagicMock:
-    """Return a MagicMock for RuntimeProfileRepository."""
     from runtime.db.repos.runtime_profile_repo import RuntimeProfileRepository
-
     repo = MagicMock(spec=RuntimeProfileRepository)
-    # Default: return a valid paper-main profile
     repo.get_profile.return_value = {
-        "profile_id": "paper-main",
-        "name": "Paper Main",
-        "status": "ACTIVE",
-        "runtime_mode": "PAPER",
-        "execution_mode": "PAPER",
-        "venue": "INTERNAL_PAPER",
-        "product_type": "SIMULATED",
-        "venue_environment": "INTERNAL",
-        "api_base_url": None,
-        "default_for_auto_trading": True,
-        "manual_trading_enabled": True,
-        "auto_trading_enabled": False,
-        "read_only": False,
-        "supports_account_reads": True,
-        "supports_order_placement": True,
-        "credential_ref": None,
+        "profile_id": "paper-main", "name": "Paper Main", "status": "ACTIVE",
+        "runtime_mode": "PAPER", "execution_mode": "PAPER", "venue": "INTERNAL_PAPER",
+        "product_type": "SIMULATED", "venue_environment": "INTERNAL",
+        "api_base_url": None, "default_for_auto_trading": True,
+        "manual_trading_enabled": True, "auto_trading_enabled": False,
+        "read_only": False, "supports_account_reads": True,
+        "supports_order_placement": True, "credential_ref": None,
         "connectivity_status": "READY",
     }
     repo.ensure_paper_main.return_value = {
-        "profile_id": "paper-main",
-        "name": "Paper Main",
-        "status": "ACTIVE",
-        "runtime_mode": "PAPER",
-        "execution_mode": "PAPER",
-        "venue": "INTERNAL_PAPER",
-        "product_type": "SIMULATED",
-        "venue_environment": "INTERNAL",
-        "default_for_auto_trading": True,
-        "manual_trading_enabled": True,
-        "auto_trading_enabled": False,
-        "read_only": False,
-        "supports_account_reads": True,
+        "profile_id": "paper-main", "name": "Paper Main", "status": "ACTIVE",
+        "runtime_mode": "PAPER", "execution_mode": "PAPER",
+        "venue": "INTERNAL_PAPER", "product_type": "SIMULATED",
+        "venue_environment": "INTERNAL", "default_for_auto_trading": True,
+        "manual_trading_enabled": True, "auto_trading_enabled": False,
+        "read_only": False, "supports_account_reads": True,
         "supports_order_placement": True,
     }
     return repo
@@ -149,9 +130,7 @@ def mock_runtime_profile_repo() -> MagicMock:
 
 @pytest.fixture
 def mock_circuit_breaker_repo() -> MagicMock:
-    """Return a MagicMock for CircuitBreakerRepository."""
     from runtime.db.repos.circuit_breaker_repo import CircuitBreakerRepository
-
     repo = MagicMock(spec=CircuitBreakerRepository)
     repo.get_current_state.return_value = None
     repo.list_events.return_value = []
@@ -162,13 +141,10 @@ def mock_circuit_breaker_repo() -> MagicMock:
 
 @pytest.fixture
 def mock_settings_repo() -> MagicMock:
-    """Return a MagicMock for SettingsRepository."""
     from runtime.db.repos.settings_repo import SettingsRepository
-
     repo = MagicMock(spec=SettingsRepository)
     repo.get_all.return_value = {
-        "CIRCUIT_BREAKER_ENABLED": "true",
-        "CIRCUIT_BREAKER_MANUAL_MODE": "AUTO",
+        "CIRCUIT_BREAKER_ENABLED": "true", "CIRCUIT_BREAKER_MANUAL_MODE": "AUTO",
         "CIRCUIT_BREAKER_LOOKBACK_TRADES": "10",
         "CIRCUIT_BREAKER_MAX_CONSECUTIVE_LOSSES": "5",
         "CIRCUIT_BREAKER_MAX_FAILURE_RATE_PCT": "70.0",
@@ -186,9 +162,7 @@ def mock_settings_repo() -> MagicMock:
 
 @pytest.fixture
 def scan_control_service(mock_state_repo: MagicMock) -> Any:
-    """Return a ScanControlService wired with a mocked StateRepository."""
     from runtime.runtime.scan_control import ScanControlService
-
     svc = ScanControlService(state_repo=mock_state_repo)
     return svc
 
@@ -198,35 +172,20 @@ def scan_control_service(mock_state_repo: MagicMock) -> Any:
 # ---------------------------------------------------------------------------
 
 def make_signal(
-    symbol: str = "BTCUSDT",
-    interval: str = "4h",
-    mode: str = "SWING",
-    direction: str = "LONG",
-    confidence: float = 0.75,
-    entry: float = 50000.0,
-    sl: float | None = None,
-    tp: float | None = None,
+    symbol: str = "BTCUSDT", interval: str = "4h", mode: str = "SWING",
+    direction: str = "LONG", confidence: float = 0.75, entry: float = 50000.0,
+    sl: float | None = None, tp: float | None = None,
 ) -> dict[str, Any]:
-    """Build a minimal signal dict suitable for execution tests."""
     return {
-        "symbol": symbol,
-        "interval": interval,
-        "mode": mode,
-        "direction": direction,
-        "confidence": confidence,
-        "entry": entry,
+        "symbol": symbol, "interval": interval, "mode": mode,
+        "direction": direction, "confidence": confidence, "entry": entry,
         "sl": sl if sl is not None else entry * 0.98,
         "tp": tp if tp is not None else entry * 1.04,
         "stop_loss": sl if sl is not None else entry * 0.98,
         "take_profit": tp if tp is not None else entry * 1.04,
-        "risk_reward": 2.0,
-        "entry_r_multiple": 1.0,
-        "signal_id": "sig-test-001",
-        "decision_id": "dec-test-001",
-        "decision_event_id": "dce-test-001",
-        "request_id": "req-test-001",
-        "run_id": "run-test-001",
-        "trace_id": "trace-test-001",
-        "source": "TEST",
-        "origin": "AUTO",
+        "risk_reward": 2.0, "entry_r_multiple": 1.0,
+        "signal_id": "sig-test-001", "decision_id": "dec-test-001",
+        "decision_event_id": "dce-test-001", "request_id": "req-test-001",
+        "run_id": "run-test-001", "trace_id": "trace-test-001",
+        "source": "TEST", "origin": "AUTO",
     }

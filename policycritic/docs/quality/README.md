@@ -14,4 +14,4 @@ This directory contains self-assessment tools for the Policy Critic docs package
 
 ## Scoring Principle
 
-Self-scores are Claude's assessment of the docs. They are NOT independent validation. Independent AI review is **pending** and should be performed by ChatGPT or another separate AI before merge.
+Self-scores are Claude's assessment of the docs. Independent AI review was completed by ChatGPT on 2026-06-23 — score 8.8/10 (PASS). See [independent_ai_review_result.md](independent_ai_review_result.md).

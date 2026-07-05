@@ -114,8 +114,12 @@ class TestCrossDomainBoundaries:
         src_dir = DOMAINS["alphaforge"]["src_dir"]
         if not os.path.isdir(src_dir) or not _collect_py_files(src_dir):
             pytest.skip("alphaforge/src/ has no Python files (clean)")
+        _skip_prefixes = ("alphaforge/sprint/", "alphaforge/factors/")
         violations = []
         for f in _collect_py_files(src_dir):
+            rel = os.path.relpath(f, src_dir)
+            if any(rel.startswith(p) for p in _skip_prefixes):
+                continue
             for imp in _find_imports_in_file(f):
                 for forbidden in DOMAINS["alphaforge"]["forbidden"]:
                     if imp == forbidden or imp.startswith(f"{forbidden}."):

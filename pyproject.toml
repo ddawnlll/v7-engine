@@ -10,30 +10,45 @@ requires-python = ">=3.12"
 authors = [{name = "Erfolg", email = "mail@erfolg.tech"}]
 license = {text = "Proprietary"}
 dependencies = [
-    "scikit-learn",
-    "optuna",
-    "fastapi",
+    "sqlalchemy>=2.0",
+    "requests>=2.31",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "xgboost>=2.0",
+    "scikit-learn>=1.3",
+    "optuna>=3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.1",
+    "mypy>=1.0",
+]
+interface = [
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+    "psycopg2-binary>=2.9",
+    "alembic>=1.12",
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = [
-    "lib*", "cli*", "runtime*", "simulation*",
-    "v7*", "integration*", "configs*",
+    "lib*", "simulation*", "alphaforge*", "v6*", "v7*",
+    "runtime*", "integration*", "policycritic*",
 ]
 
 [tool.setuptools.package-dir]
 alphaforge = "alphaforge/src/alphaforge"
+v7 = "v7/src/v7"
 
 [tool.pytest.ini_options]
-pythonpath = ["alphaforge/src"]
+pythonpath = ["alphaforge/src", "v7/src"]
 testpaths = [
-    "lib/tests",
-    "integration/tests",
-    "simulation/tests",
-    "runtime/tests",
-    "v7/tests",
-    "alphaforge/tests",
+    "lib/tests", "integration/tests", "simulation/tests",
+    "runtime/tests", "v7/tests", "alphaforge/tests", "policycritic/tests",
 ]
 norecursedirs = [
     "node_modules", "interface", "data", "data_lake",
@@ -41,9 +56,6 @@ norecursedirs = [
 ]
 filterwarnings = ["ignore::DeprecationWarning"]
 timeout = 10
-
-# Fast local test: `pytest` — skips 13 slow integration files with 10s timeout
-# Full suite:     `pytest --ignore=''` — runs everything
 addopts = "-v --ignore=alphaforge/tests/test_real_data_gate.py --ignore=alphaforge/tests/test_ablation.py --ignore=alphaforge/tests/test_ablation_tuned.py --ignore=alphaforge/tests/test_autotune.py --ignore=alphaforge/tests/test_collapse_detector.py --ignore=alphaforge/tests/test_mode_specific_walk_forward.py --ignore=alphaforge/tests/test_nested_wfv.py --ignore=alphaforge/tests/test_optuna_tuner.py --ignore=alphaforge/tests/test_search_space.py --ignore=alphaforge/tests/test_walk_forward_runner.py --ignore=alphaforge/tests/test_walk_forward_validator.py --ignore=alphaforge/tests/test_wfv.py --ignore=alphaforge/tests/test_xgb_trainer.py"
 
 [tool.ruff]
