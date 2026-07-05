@@ -1,0 +1,16 @@
+strategist:
+  provider: anthropic_compatible
+  base_url: "http://127.0.0.1:1234"
+  model: "deepseek-v4-flash"
+  temperature: 0.2
+  max_tokens: 4096
+worker:
+  command: "claude"
+  output_format: "stream-json"
+  timeout_seconds: 300
+gate:
+  test_command: ""
+  required_files: []
+  metrics_file: ""
+  check_git_clean: false
+  git_allowed_prefixes: []
