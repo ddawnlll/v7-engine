@@ -821,11 +821,20 @@ def compute_overfit_gap(wfv_results: List[dict]) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Sharpe ratio (simplified OOS R-expectancy Sharpe)
+# Inter-fold consistency (n-fold avg_net_R consistency, NOT per-trade Sharpe)
 # ---------------------------------------------------------------------------
 
-def compute_oos_sharpe(wfv_results: List[dict]) -> float:
-    """Compute OOS Sharpe ratio from per-fold active-trade net R values."""
+def compute_inter_fold_consistency(wfv_results: List[dict]) -> float:
+    """Compute inter-fold consistency from per-fold active-trade net R values.
+    
+    This is NOT a Sharpe ratio. It measures how consistent the per-fold
+    average net R is across folds: mean(fold_avg_R) / std(fold_avg_R) * sqrt(n).
+    A high value means all folds produced similar average R.
+    A low value means fold outcomes were inconsistent.
+    
+    For real risk-adjusted return metrics, compute per-trade Sharpe from
+    the trade-level R series instead.
+    """
     r_exps = []
     for r in wfv_results:
         active_metrics = r.get("active_metrics") or {}
@@ -840,8 +849,8 @@ def compute_oos_sharpe(wfv_results: List[dict]) -> float:
     std_r = float(np.std(r_exps, ddof=1))
     if std_r < 1e-12:
         return 0.0
-    sharpe = mean_r / std_r * np.sqrt(len(r_exps))
-    return round(float(sharpe), 4)
+    consistency = mean_r / std_r * np.sqrt(len(r_exps))
+    return round(float(consistency), 4)
 
 
 # ---------------------------------------------------------------------------
@@ -863,7 +872,7 @@ def collect_metrics(
     stability = _compute_stability(val_accs)
 
     overfit = compute_overfit_gap(wfv_results)
-    net_sharpe = compute_oos_sharpe(wfv_results)
+    inter_fold_consistency = compute_inter_fold_consistency(wfv_results)
     round_trip_cost_r = fee_pct  # authority: 8 bps in fractional return space
 
     from alphaforge.reports.metrics import compute_oos_metrics
@@ -902,7 +911,6 @@ def collect_metrics(
         exposure_pct = (total_active / total_decisions * 100) if total_decisions > 0 else 0.0
         total_gross_r = sum((r.get("active_metrics", {}) or {}).get("total_gross_R", 0.0) for r in wfv_results)
         total_net_r = sum((r.get("active_metrics", {}) or {}).get("total_net_R", 0.0) for r in wfv_results)
-    net_sharpe_ratio = net_sharpe
 
     # Confidence threshold metrics
     low_conf_counts = [r.get("low_conf_count", 0) for r in wfv_results]
@@ -918,8 +926,7 @@ def collect_metrics(
         "accuracy": round(accuracy, 4),
         "train_accuracy": round(train_accuracy, 4),
         "accuracy_stability": round(stability, 4),
-        "sharpe_ratio": net_sharpe_ratio,
-        "net_sharpe_ratio": net_sharpe_ratio,
+        "inter_fold_consistency": inter_fold_consistency,
         "net_expectancy_r": round(net_expectancy_r, 6),
         "gross_expectancy_r": round(gross_expectancy_r, 6),
         "total_gross_R": round(total_gross_r, 6),
@@ -1241,7 +1248,7 @@ def main():
     print(f"  Accuracy (OOS):              {metrics['accuracy']:.4f}")
     print(f"  Train Accuracy:              {metrics['train_accuracy']:.4f}")
     print(f"  Accuracy Stability:          {metrics['accuracy_stability']:.4f}")
-    print(f"  Sharpe Ratio (OOS R-exp):    {metrics['sharpe_ratio']:.4f}")
+    print(f"  Inter-fold consistency:    {metrics['inter_fold_consistency']:.4f}")
     print(f"  Overfit Gap:                 {metrics['overfit_gap']:.4f}")
     print(f"  Train-OOS Correlation:       {metrics['train_oos_correlation']:.4f}")
     print(f"  PBO Risk:                    {metrics['pbo_risk']}")
@@ -1290,7 +1297,7 @@ if __name__ == "__main__":
     print(json.dumps({
         "status": "PASS",
         "accuracy": metrics["accuracy"],
-        "sharpe_ratio": metrics["sharpe_ratio"],
+        "inter_fold_consistency": metrics["inter_fold_consistency"],
         "overfit_gap": metrics["overfit_gap"],
         "feature_count": metrics["feature_count"],
     }, indent=2))
