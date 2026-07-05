@@ -53,6 +53,12 @@ services:
       - ./config:/app/config:ro
     networks:
       - v7-net
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/api/v3/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,6 +74,12 @@ services:
       - "${FRONTEND_PORT:-5173}:80"
     networks:
       - v7-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
     depends_on:
       - backend
 

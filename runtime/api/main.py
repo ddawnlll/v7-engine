@@ -18,6 +18,7 @@ from time import time
 from fastapi import FastAPI, Request
 from lib.config import config, validate_required_secrets
 from runtime.db.repos.runtime_profile_repo import RuntimeProfileRepository
+from runtime.services.secrets import validate_credentials as validate_secrets
 from runtime.db.session import (
     check_database_connection,
     configure_engine,
@@ -106,9 +107,22 @@ async def lifespan(app: FastAPI):
         f" db_connected={db_connected}"
         f" db_status={db_status}"
     )
+    log_health_event(
+        "runtime.startup_complete",
+        status="info",
+        component="runtime",
+        message="Runtime API started successfully",
+        db_connected=db_connected,
+    )
     try:
         yield
     finally:
+        log_health_event(
+            "runtime.shutdown",
+            status="info",
+            component="runtime",
+            message="Runtime API shutting down",
+        )
         stop_websocket_owner()
         stop_learning_loop()
         stop_self_learning_loop()
@@ -116,34 +130,41 @@ async def lifespan(app: FastAPI):
 
 
 logger = logging.getLogger(__name__)
+from runtime.logging_config import log_health_event
 
 
 def _install_request_logging(app: FastAPI) -> None:
+    """Install request logging middleware.
+
+    Logs every request at INFO level with method, path, status, duration,
+    and client IP. Errors are escalated to WARNING (4xx) or ERROR (5xx).
+    """
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
         started_at = time()
+        client_host = request.client.host if request.client else "unknown"
         try:
             response = await call_next(request)
         except Exception:
-            logger.exception("api request failed method=%s path=%s", request.method, request.url.path)
+            logger.exception(
+                "api request failed method=%s path=%s client=%s",
+                request.method, request.url.path, client_host,
+            )
             raise
         elapsed_ms = (time() - started_at) * 1000
+        log_data = {
+            "method": request.method,
+            "path": request.url.path,
+            "status": response.status_code,
+            "elapsed_ms": f"{elapsed_ms:.1f}",
+            "client": client_host,
+        }
         if response.status_code >= 500:
-            logger.error(
-                "api request returned server error method=%s path=%s status=%s elapsed_ms=%.1f",
-                request.method,
-                request.url.path,
-                response.status_code,
-                elapsed_ms,
-            )
+            logger.error("api request %(method)s %(path)s status=%(status)s elapsed_ms=%(elapsed_ms)s client=%(client)s", log_data)
         elif response.status_code >= 400:
-            logger.warning(
-                "api request returned client error method=%s path=%s status=%s elapsed_ms=%.1f",
-                request.method,
-                request.url.path,
-                response.status_code,
-                elapsed_ms,
-            )
+            logger.warning("api request %(method)s %(path)s status=%(status)s elapsed_ms=%(elapsed_ms)s client=%(client)s", log_data)
+        else:
+            logger.info("api request %(method)s %(path)s status=%(status)s elapsed_ms=%(elapsed_ms)s client=%(client)s", log_data)
         return response
 
 
@@ -155,6 +176,10 @@ def create_app(
 ) -> FastAPI:
     """Create the runtime FastAPI application."""
     _load_environment()
+    # Validate credentials (non-blocking, logs warnings)
+    cred_report = validate_secrets()
+    if cred_report["missing"]:
+        logger.warning("Missing credentials on app creation: %s", cred_report["missing"])
     validate_required_secrets()
     if database_url:
         configure_engine(database_url)
@@ -197,6 +222,7 @@ def create_app(
     from runtime.api.routes.runtime_profiles import router as runtime_profiles_router
     from runtime.api.routes.phase7_review import router as phase7_review_router
     from runtime.api.routes.phase7_operate import router as phase7_operate_router
+    from runtime.api.routes.metrics import router as metrics_router
 
     app.include_router(health_router)
     app.include_router(analyzer_router)
@@ -225,6 +251,7 @@ def create_app(
     app.include_router(runtime_profiles_router)
     app.include_router(phase7_review_router)
     app.include_router(phase7_operate_router)
+    app.include_router(metrics_router)
     if include_scans:
         from runtime.api.routes.scans import router as scans_router
 

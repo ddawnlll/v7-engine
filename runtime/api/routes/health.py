@@ -23,6 +23,7 @@ from runtime.services.trace_service import TraceService
 from runtime.services.simulation_service import SimulationService
 from runtime.services.binance_usdm_reconciliation_service import BinanceUsdmReconciliationError, BinanceUsdmReconciliationService
 from runtime.services.binance_usdm_user_data_stream_service import BinanceUsdmUserDataStreamService
+from runtime.services.health_service import HealthService
 from runtime.services.runtime_profile_service import RuntimeProfileNotFoundError, RuntimeProfileService
 from v6.runtime.runtime_status import describe_runtime_status
 
@@ -41,6 +42,7 @@ scan_control_service = ScanControlService()
 universe_filter_service = UniverseFilterService()
 self_learning_registry_service = SelfLearningModelRegistryService()
 analyzer_registry_service = AnalyzerEngineRegistryService()
+health_service = HealthService()
 
 
 def _is_current_runtime_error(last_error: object) -> bool:
@@ -59,6 +61,28 @@ def _is_current_runtime_error(last_error: object) -> bool:
     except ValueError:
         return True
     return (datetime.now(timezone.utc) - error_at).total_seconds() <= 900
+
+
+@router.get("/api/v3/health/liveness")
+def liveness():
+    """Lightweight liveness probe — returns 200 if process is alive.
+
+    Used by Kubernetes, Docker, and orchestrators to determine if the
+    process should be restarted. Does NOT check dependencies.
+    """
+    return health_service.check_liveness()
+
+
+@router.get("/api/v3/health/readiness")
+def readiness():
+    """Readiness probe — returns 200 if app can serve requests.
+
+    Checks database connectivity. Used by orchestrators to determine
+    if the service should receive traffic.
+    """
+    result = health_service.check_readiness()
+    from fastapi.responses import JSONResponse
+    return JSONResponse(content=result, status_code=200 if result["ready"] else 503)
 
 
 class AlertSummaryResponse(BaseModel):
@@ -92,6 +116,7 @@ class HealthResponse(BaseModel):
     stream: dict | None = None
     reconciliation: dict | None = None
     alert_summary: AlertSummaryResponse
+    components: dict | None = None
 
 
 @router.get("/api/v3/health", response_model=HealthResponse)
@@ -168,7 +193,9 @@ def get_health(request: Request, profile_id: str = PAPER_PROFILE_ID) -> HealthRe
         exchange_status = "degraded"
         if degraded_reason is None:
             degraded_reason = "reconciliation_degraded"
+    components = health_service.check_components()
     return HealthResponse(
+        components=components["components"],
         status=status,
         uptime_seconds=max(0, int(time() - started_at)),
         db_status=db_detail,

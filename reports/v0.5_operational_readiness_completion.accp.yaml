@@ -1,0 +1,63 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task: "v0.5 — Operational Readiness Milestone Completion"
+result: "PASS"
+scope_confirmation:
+  milestone: "v0.5 — Operational Readiness"
+  description: "Logging, monitoring, retry/circuit breaker, containerization, deployment, secret management, health checks. Production infrastructure hardening."
+  status: "COMPLETE"
+  closed_issues: 3
+  completed_items: 7
+
+files_changed:
+  created:
+    - runtime/services/retry.py
+    - runtime/services/secrets.py
+    - runtime/services/observability.py
+    - runtime/services/health_service.py
+    - runtime/api/routes/metrics.py
+    - runtime/tests/test_retry.py
+    - scripts/start.sh
+    - scripts/stop.sh
+    - scripts/status.sh
+    - scripts/deploy.sh
+  modified:
+    - runtime/api/main.py
+    - runtime/api/routes/health.py
+    - runtime/logging_config.py
+    - Dockerfile.backend
+    - Dockerfile.frontend
+    - docker-compose.yml
+    - .env.example
+    - plans/v0.5-operational-readiness.md
+
+decisions_locked:
+  - "T1 — Retry utility: retry_with_backoff + async_retry_with_backoff with exponential backoff, jitter, configurable retryable exceptions"
+  - "T2 — Secret management: validate_credentials, mask_secret, get_credential_report, wired into create_app()"
+  - "T3 — Deployment scripts: start.sh, stop.sh, status.sh, deploy.sh with health checks and rollback support"
+  - "T4 — Containerization: HEALTHCHECK in Dockerfile.backend (curl), Dockerfile.frontend (wget), docker-compose healthchecks"
+  - "T5 — Monitoring: MetricsCollector (counters/gauges/timers) + /api/v3/metrics endpoint"
+  - "T6 — Health checks: /api/v3/health/liveness, /api/v3/health/readiness, HealthService with component breakdown"
+  - "T7 — Logging: log_health_event, log_health_summary, enhanced request logging middleware, startup/shutdown events"
+
+remaining_holds:
+  - "Full integration test requiring PostgreSQL connection (circuit_breaker health check shows 'error' without DB)"
+  - "Frontend Dockerfile multi-stage build uses npm install rather than a lockfile — add package-lock.json for reproducible builds"
+  - "Prometheus endpoint integration deferred — current /api/v3/metrics provides JSON metrics, Prometheus format can be added later"
+
+safe_next_step: "Deploy to staging and verify end-to-end with docker-compose up"
+commands_run:
+  - "PYTHONPATH=alphaforge/src:v7/src python3 -m pytest runtime/tests/test_retry.py -v → 9/9 PASS"
+  - "PYTHONPATH=alphaforge/src:v7/src python3 -m pytest runtime/tests/ -v → 441/441 PASS"
+  - "PYTHONPATH=alphaforge/src:v7/src python3 -m pytest runtime/tests/test_circuit_breaker_service.py runtime/tests/test_alert_service.py -v → 45/45 PASS"
+  - "PYTHONPATH=alphaforge/src:v7/src python3 -c 'from runtime.services.secrets import *; from runtime.services.observability import *; from runtime.services.health_service import *; print(\"All imports OK\")'"
+  - "chmod +x scripts/start.sh scripts/stop.sh scripts/status.sh scripts/deploy.sh"
+
+evidence:
+  - "Retry utility: 9/9 tests pass (sync, async, backoff, jitter, non-retryable, logging)"
+  - "Secrets: validate_credentials reports present/missing, mask_secret works, get_credential_report returns all 6 credentials"
+  - "Metrics: MetricsCollector supports counters, gauges, timers, tags, thread-safe; /api/v3/metrics endpoint registered"
+  - "Health: liveness returns 'alive'; readiness checks DB; components breakdown for db + circuit_breaker"
+  - "Logging: log_health_event emits structured JSON; log_health_summary for periodic pulses; enhanced request middleware logs all requests"
+  - "Docker: HEALTHCHECK added to backend (curl /api/v3/health) and frontend (wget nginx); compose healthchecks wired"
+  - "Deployment: 4 scripts created with proper error handling, dry-run mode, and rollback capability"

@@ -326,3 +326,70 @@ def configure_logging() -> None:
         log_dir,
         int(elapsed * 1000),
     )
+
+
+# ---------------------------------------------------------------------------
+# Structured health-event logging
+# ---------------------------------------------------------------------------
+
+
+def log_health_event(
+    event: str,
+    *,
+    status: str = "info",
+    component: str = "system",
+    message: str = "",
+    **fields: object,
+) -> None:
+    """Log a structured health-relevant event.
+
+    Examples::
+
+        log_health_event("circuit_breaker_opened", status="warning",
+                         component="circuit_breaker",
+                         message="Max consecutive losses reached")
+        log_health_event("startup_complete", status="info",
+                         component="runtime",
+                         message="All services started")
+
+    Args:
+        event: Dot-separated event name.
+        status: Severity (info, warning, error, critical).
+        component: System component name.
+        message: Human-readable description.
+        **fields: Additional structured fields.
+    """
+    logger = logging.getLogger("runtime.health")
+    payload = {
+        "event": event,
+        "status": status,
+        "component": component,
+        "message": message,
+    }
+    payload.update(fields)
+
+    level = logging.INFO
+    if status == "warning":
+        level = logging.WARNING
+    elif status == "error":
+        level = logging.ERROR
+    elif status == "critical":
+        level = logging.CRITICAL
+
+    logger.log(level, "%s", json.dumps(payload, default=str))
+
+
+def log_health_summary(extra_fields: dict | None = None) -> None:
+    """Emit a periodic health summary log line.
+
+    Called by the runtime scheduler to provide a regular health pulse.
+    """
+    logger = logging.getLogger("runtime.health")
+    fields: dict[str, object] = {
+        "event": "health_summary",
+        "status": "info",
+        "component": "runtime",
+    }
+    if extra_fields:
+        fields.update(extra_fields)
+    logger.info("health summary %s", json.dumps(fields, default=str))

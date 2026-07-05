@@ -1,4 +1,4 @@
-﻿# V7 Roadmap
+# V7 Roadmap
 
 ## Purpose
 
@@ -110,6 +110,72 @@ That means the next work should be implementation-led, not more concept inventio
 **Design lock score:** N/A â€” operational UX/harness repair only.
 
 **Evidence:** Menu workflows exercised non-interactively (quick synthetic pipeline, guided download preview, guided health check, tests, reports, advanced candidate preview). Make command audit covered install, help, checks, validate, smoke backfill, scoped data-health, pipeline synthetic, pipeline-v0.2 dry-run, download dry-run, diagnostic, train/WFV gates, report, lint, and typecheck. Focused tests: 87 passed. Local suite: 792 passed, 2 skipped. System/contracts/boundaries pass.
+
+---
+
+## v0.5 — Operational Readiness (2026-07-05)
+
+**Milestone:** #7 — Logging, monitoring, retry/circuit breaker, containerization, deployment, secret management, health checks. Production infrastructure hardening.
+
+**What changed (7 work items completed in parallel):**
+
+### T1 — Retry Utility
+- Created `runtime/services/retry.py` with `retry_with_backoff()` and `async_retry_with_backoff()`
+- Exponential backoff with jitter (0-100ms), configurable max_delay, retryable exception filtering
+- 9/9 comprehensive tests (sync, async, backoff verification, logging, exhaustion, non-retryable)
+
+### T2 — Secret Management
+- Created `runtime/services/secrets.py` with `validate_credentials()`, `mask_secret()`, `get_credential_report()`
+- Canonical REQUIRED_CREDENTIALS registry (6 credentials: Binance API/secret, profile-specific, Anthropic, DB)
+- Wired into `create_app()` for non-blocking startup validation, logs warnings for missing credentials
+- Updated `.env.example` with required credentials documentation
+
+### T3 — Deployment Infrastructure
+- Created `scripts/start.sh` — start services with health check validation
+- Created `scripts/stop.sh` — graceful docker-compose shutdown with 30s timeout
+- Created `scripts/status.sh` — comprehensive status (Docker, API health, DB, disk)
+- Created `scripts/deploy.sh` — pull → build → deploy → health check with dry-run support
+
+### T4 — Containerization Hardening
+- `Dockerfile.backend`: Added curl installation + HEALTHCHECK (curl /api/v3/health)
+- `Dockerfile.frontend`: Added HEALTHCHECK (wget nginx status)
+- `docker-compose.yml`: Added healthcheck sections for backend and frontend services
+- Nginx config already proxies /health correctly (verified)
+
+### T5 — Monitoring / Metrics
+- Enhanced `runtime/services/observability.py` with `MetricsCollector` class (counters, gauges, timers, tags, thread-safe)
+- Module-level singleton via `get_metrics()`
+- Created `runtime/api/routes/metrics.py` with `GET /api/v3/metrics` endpoint
+- Wired metrics router into `create_app()`
+
+### T6 — Health Check Enhancements
+- Created `runtime/services/health_service.py` with `HealthService` (liveness, readiness, component breakdown)
+- Added `GET /api/v3/health/liveness` — lightweight process-alive probe
+- Added `GET /api/v3/health/readiness` — DB-dependent probe, returns 503 if not ready
+- Enhanced existing `GET /api/v3/health` with component-level breakdown (database + circuit_breaker)
+- `components` field added to `HealthResponse` model
+
+### T7 — Logging Enhancements
+- Added `log_health_event()` to `runtime/logging_config.py` — structured health event logging with severity levels
+- Added `log_health_summary()` for periodic health pulses
+- Enhanced request logging middleware: logs ALL requests (not just errors), includes client IP, uses %-formatting
+- Wired `log_health_event` into lifespan (startup_complete + shutdown events)
+- Secrets validation warning logged at app creation
+
+**Lock status:** LOCKED for operational infrastructure. No trading thresholds, mode authority, or live promotion semantics changed.
+
+**Remaining holds:**
+- Full integration test requiring PostgreSQL connection (circuit_breaker health varies without DB)
+- Frontend Dockerfile needs package-lock.json for reproducible builds (npm ci without lockfile)
+- Prometheus metrics format deferred (current /api/v3/metrics is JSON; Prometheus scrape endpoint can be added later)
+
+**Evidence:**
+- Retry tests: 9/9 PASS
+- Full runtime suite: 441/441 PASS (no regressions)
+- Circuit breaker + alert tests: 45/45 PASS
+- All new modules import cleanly
+- Docker HEALTHCHECK instructions verified in all three layers
+- ACCP report: `reports/v0.5_operational_readiness_completion.accp.yaml`
 
 ---
 
