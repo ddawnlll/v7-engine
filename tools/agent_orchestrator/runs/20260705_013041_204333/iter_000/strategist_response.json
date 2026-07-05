@@ -1,0 +1,14 @@
+{
+  "worker_task": "In the existing project, create a simple deterministic alpha factor named 'volume_trend_factor' in a new file alpha_volume_trend.py. The factor should compute the 5-day rolling average of volume divided by the 20-day rolling average of volume (volume ratio) for each stock, then rank-normalize the result across all stocks each day. Write a test script test_alpha_volume_trend.py that loads sample price/volume data (use a small built-in dataset like yfinance for AAPL and MSFT over 2023-01-01 to 2023-06-01), computes the factor, and prints the daily cross-sectional IC (information coefficient) between the factor rank and the next-day forward return rank. Ensure the test script outputs the required report fields: train_start (2023-01-01), train_end (2023-04-01), test_start (2023-04-02), test_end (2023-06-01), n_combinations (1, since this is a single factor), and metric (the average IC over the test period). Do not modify any protected files (evaluation.py, factors.py, simulation_adapter.py, fast_simulator.py, authority_map.md).",
+  "rationale": "This is a small, safe, reversible change that introduces a single deterministic alpha factor and validates its predictive power via cross-sectional IC. It follows the AlphaForge pattern of creating and testing a candidate without any complex dependencies or modifications to existing infrastructure.",
+  "expected_artifacts": [
+    "alpha_volume_trend.py",
+    "test_alpha_volume_trend.py"
+  ],
+  "success_criteria": [
+    "alpha_volume_trend.py exists and defines a function that computes the volume ratio factor",
+    "test_alpha_volume_trend.py runs without errors and prints the required report fields",
+    "The average IC metric is a valid number between -1 and 1"
+  ],
+  "risk_notes": "No risk to protected files. The only risk is if yfinance is not installed or data download fails, but the task can fall back to synthetic data if needed. The factor is simple and reversible."
+}

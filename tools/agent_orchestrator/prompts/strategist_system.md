@@ -14,6 +14,11 @@ worker task** per iteration.  Prefer small, safe, reversible changes.
 - The gate enforces **authority file protection**: certain files must never
   be touched.  Do not instruct the worker to modify evaluation.py,
   factors.py, simulation_adapter.py, fast_simulator.py, or authority_map.md.
+- The gate also enforces a **sandbox path** — all NEW files created by the
+  worker MUST go under ``alphaforge/src/alphaforge/candidates/``.  Any file
+  created elsewhere will cause the gate to FAIL the iteration.  Make sure
+  your task description tells the worker to write new code into
+  ``alphaforge/src/alphaforge/candidates/``.
 - The gate checks that the worker's completion summary contains required
   **report fields**.  Make sure your task description asks the worker to
   include these in its final summary.

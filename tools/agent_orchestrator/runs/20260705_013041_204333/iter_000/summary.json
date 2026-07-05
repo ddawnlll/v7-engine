@@ -1,0 +1,17 @@
+{
+  "iteration": 1,
+  "goal": "Create and test one deterministic AlphaForge alpha candidate",
+  "strategist_task": "In the existing project, create a simple deterministic alpha factor named 'volume_trend_factor' in a new file alpha_volume_trend.py. The factor should compute the 5-day rolling average of volume divided by the 20-day rolling average of volume (volume ratio) for each stock, then rank-normalize the result across all stocks each day. Write a test script test_alpha_volume_trend.py that loads sample price/volume data (use a small built-in dataset like yfinance for AAPL and MSFT over 2023-01-01 to 2023-06-01), computes the factor, and prints the daily cross-sectional IC (information coefficient) between the factor rank and the next-day forward return rank. Ensure the test script outputs the required report fields: train_start (2023-01-01), train_end (2023-04-01), test_start (2023-04-02), test_end (2023-06-01), n_combinations (1, since this is a single factor), and metric (the average IC over the test period). Do not modify any protected files (evaluation.py, factors.py, simulation_adapter.py, fast_simulator.py, authority_map.md).",
+  "worker_exit_code": -1,
+  "gate_verdict": "FAIL",
+  "gate_reasons": [
+    "Worker exited with code -1",
+    "Worker log exists (95464 bytes)",
+    "Git HEAD: 247aae837c0b",
+    "No tracked files modified",
+    "Changes outside allowed paths:\n?? alphaforge/src/alphaforge/factors/results/\n?? alphaforge/src/alphaforge/factors/vwap_momentum_factor.py\n?? tools/momentum_factor_research/",
+    "No authority files touched",
+    "Report missing required fields: train_start, train_end, test_start, test_end, n_combinations, metric"
+  ],
+  "overall_status": "FAIL"
+}
