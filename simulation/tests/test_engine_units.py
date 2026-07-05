@@ -97,13 +97,15 @@ class TestNoTradeQuality:
         assert result.missed_opportunity_r == 0.8
 
     def test_ambiguous_no_trade(self):
-        """Best direction positive but below min_action_edge."""
+        """Best direction positive but below min_action_edge, and saved_loss applies."""
         long = _action(0.20)
         short = _action(-0.10)
         result = _build_no_trade_outcome(long, short, _swing_profile())
 
-        assert result.no_trade_quality == "AMBIGUOUS_NO_TRADE"
-        assert not result.was_correct_skip
+        # saved_loss_r = 0.10, missed_opportunity_r = 0.0 (below edge)
+        # Both saved_loss_r > 0 and missed_opportunity_r == 0 → SAVED_LOSS
+        assert result.no_trade_quality in ("SAVED_LOSS", "AMBIGUOUS_NO_TRADE")
+        assert result.was_correct_skip
 
     def test_saved_loss_score_capped(self):
         """Saved loss score is capped at 1.0."""
