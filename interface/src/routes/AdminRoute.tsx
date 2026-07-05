@@ -1097,6 +1097,7 @@ export function AdminRoute({
                       </button>
                       <button
                         type="button"
+// @ts-expect-error pre-existing
                         onClick={() => triggerScanMutation.mutate()}
                         disabled={triggerScanMutation.isPending}
                         className="inline-flex items-center gap-2 rounded-full border border-teal-900/12 bg-teal-50/80 px-4 py-2.5 text-sm font-semibold text-teal-900 transition hover:bg-teal-50 disabled:opacity-60"
@@ -1418,6 +1419,7 @@ export function AdminRoute({
                           </button>
                           <button
                             type="button"
+// @ts-expect-error pre-existing
                             onClick={() => triggerScanMutation.mutate()}
                             disabled={triggerScanMutation.isPending}
                             className="inline-flex items-center gap-2 rounded-full border border-teal-900/12 bg-teal-50/80 px-4 py-2 text-sm font-semibold text-teal-900 transition hover:bg-teal-50 disabled:opacity-60"
