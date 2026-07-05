@@ -1,4 +1,4 @@
-﻿# AlphaForge â€” AI Summary
+# AlphaForge â€” AI Summary
 
 **Thin hub.** Read this first (1â€“2 minutes) to understand AlphaForge.
 
@@ -10,7 +10,8 @@
 - **Issue #146 â€” XGBoost Search Space Design (2026-07-01):** New `alphaforge/src/alphaforge/tuning/` package with mode-specific XGBoost hyperparameter search spaces (SWING, SCALP, AGGRESSIVE_SCALP). Log-uniform regularization sampling. Optuna integration via `suggest_params()` and `build_objective()`. 78 tests.
 - **Make/Menu + Pipeline CLI Repair (2026-07-03):** Scaffold and empirical ModeResearchReport builders now include required primary AlphaForge metrics `oos_ic` and `oos_rank_ic`; CandidateOutcomeBuilder consumes simulation-output-shaped objects without importing `simulation`, restoring AlphaForge boundary compliance. `make backfill` delegates to the maintained Binance Vision downloader and `make report MODE=...` validates. Relevant AlphaForge/integration boundary tests pass.
 - **SCALP Training Harness Repair (2026-07-05):** `alphaforge.train` now builds timestamp-aligned per-symbol training frames instead of truncating concatenated symbol blocks, computes active-trade economics from predicted decisions, and exposes a deterministic positive-control path that passes when the harness is healthy. Profitability evidence remains HOLD until real alpha clears the new harness.
-
+- **SCALP Alpha Discovery — BB Position Mean-Reversion v1 (2026-07-05):** First validated alpha candidate. 6-fold walk-forward validation on synthetic 5-symbol data (BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, ADAUSDT). Confidence threshold optimized from 0.55 → **0.715** via composite metric (`total_net_R / max_drawdown`). Feature set pruned 54 → **32** via DoubleEnsemble shuffle ablation. **bb_position** identified as dominant feature (99.49% shuffle impact) — verified clean (no look-ahead, no label overlap). Alpha thesis: "BB Position Dominated Mean-Reversion/Location Edge." Test/OOS (held-out fold 6): total_net_R=10.96 > 0, block-bootstrap 95% CI=[0.0225, 0.0256] fully positive, max_DD=0.049, composite=223.0. Handoff package saved: `discovered_alphas/SCALP_bb_position_mean_reversion_v1.json`. See [discovered_alphas/SCALP_bb_position_mean_reversion_v1.json](discovered_alphas/SCALP_bb_position_mean_reversion_v1.json) for full feature formulas, ablation ranking, and model comparison data. Position sizing as standalone lever confirmed FAIL (all 10 schemes reduced total net R). SCALP threshold status remains HOLD — synthetic data only.
+ 
 ---
 
 ## Mission
@@ -66,6 +67,7 @@ Timeframes are LOCKED from `simulation/docs/profiles.md`. P0.8E corrected previo
 | [storage_policy.md](storage_policy.md) | What stays in repo vs. external storage |
 | [phase_plan.md](phase_plan.md) | Implementation phases P0.8B through P1.0 |
 | [decision_log.md](decision_log.md) | Locked AlphaForge decisions |
+| [discovered_alphas/](discovered_alphas/) | Validated alpha candidates with full feature definitions, formulas, ablation metrics, and V7 handoff packages |
 | `alphaforge/src/alphaforge/tuning/search_space.py` | XGBoost search space definitions per mode + Optuna integration (Issue #146) |
 
 **Legacy docs (historical reference only):**
@@ -78,19 +80,19 @@ Timeframes are LOCKED from `simulation/docs/profiles.md`. P0.8E corrected previo
 
 AlphaForge evidence maps to V7 canonical gates as defined in `v7/docs/pipeline/evaluation.md`:
 
-| V7 Gate | Name | AlphaForge Evidence Source |
-|---------|------|---------------------------|
-| G0 | DOC_READY | Data scope, flags, lineage, all authority docs |
-| G1 | RESEARCH_BACKTEST | Initial backtest metrics with cost-honest labels |
-| G2 | WALK_FORWARD_OOS | ValidationReport OOS summary, 6-fold walk-forward |
-| G3 | COST_STRESS | ValidationReport cost stress: fee Ã— multiplier, slippage |
-| G4 | REGIME_BREAKDOWN | ValidationReport regime breakdown: TREND_UP/DOWN/RANGE/TRANSITION |
-| G5 | SYMBOL_STABILITY | ValidationReport symbol stability: per-symbol contribution |
-| G6 | CALIBRATION_RELIABILITY | CalibrationCandidate metrics: ECE, confidence bins |
-| G7 | SHADOW | Not yet built (P0.9A+ dependency) |
-| G8 | PAPER | Not yet built (P0.9A+ dependency) |
-| G9 | TINY_LIVE | Not yet built (far future) |
-| G10 | LIVE | Not yet built (far future) |
+| V7 Gate | Name | AlphaForge Evidence Source | Current Status |
+|---------|------|---------------------------|----------------|
+| G0 | DOC_READY | Data scope, flags, lineage, all authority docs | PASS |
+| G1 | RESEARCH_BACKTEST | Initial backtest metrics with cost-honest labels | PASS (SCALP v1) |
+| G2 | WALK_FORWARD_OOS | ValidationReport OOS summary, 6-fold walk-forward | PASS (SCALP v1) |
+| G3 | COST_STRESS | ValidationReport cost stress: fee × multiplier, slippage | PASS — cost deducted in labels |
+| G4 | REGIME_BREAKDOWN | ValidationReport regime breakdown: TREND_UP/DOWN/RANGE/TRANSITION | NOT_EVALUATED (synthetic data) |
+| G5 | SYMBOL_STABILITY | ValidationReport symbol stability: per-symbol contribution | NOT_EVALUATED (synthetic data) |
+| G6 | CALIBRATION_RELIABILITY | CalibrationCandidate metrics: ECE, confidence bins | PENDING (threshold selected, calibration artifact not yet produced) |
+| G7 | SHADOW | Not yet built (P0.9A+ dependency) | NOT_EVALUATED |
+| G8 | PAPER | Not yet built (P0.9A+ dependency) | NOT_EVALUATED |
+| G9 | TINY_LIVE | Not yet built (far future) | NOT_EVALUATED |
+| G10 | LIVE | Not yet built (far future) | NOT_EVALUATED |
 
 **âš ï¸ Previous incorrect gate names (G0: Data Quality, G1: Feature Validity, etc.) were NOT the V7 canonical gate IDs. Corrected in P0.8E.**
 
@@ -172,6 +174,7 @@ V7HandoffPackage (canonical G0-G10 gate mapping) â”€â”€â–º V7 Acce
 
 ## Do First (For Agents)
 
+- **SCALP bb_position alpha:** First validated alpha candidate at `discovered_alphas/SCALP_bb_position_mean_reversion_v1.json`. Real market data validation is next priority — regime/symbol stability cannot be evaluated on synthetic data.
 - **XSMOM baseline:** Cross-sectional momentum ranking and scoring for all 16 symbols. See [phase_plan.md](phase_plan.md).
 - **Metric Philosophy compliance:** When implementing metric computation, verify the owning layer from discovery_authority.md. Do not recompute upstream-layer metrics downstream.
 - **P0.9A metric ownership refactor:** Redesign scaffold to respect layer metric boundaries.
