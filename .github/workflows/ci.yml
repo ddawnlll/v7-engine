@@ -20,8 +20,8 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      - name: Install dependencies
-        run: python -m pip install pytest requests
+      - name: Install package with dev dependencies
+        run: python -m pip install -e ".[dev]"
 
       - name: Show Python version
         run: python --version
@@ -33,10 +33,10 @@ jobs:
         run: make check-boundaries
 
       - name: Run lib + integration + simulation tests
-        run: PYTHONPATH=alphaforge/src:. python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q
+        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q
 
       - name: Run runtime tests
-        run: PYTHONPATH=. python -m pytest runtime/tests/ -q
+        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest runtime/tests/ -q
 
-      - name: Run v7 tests
-        run: PYTHONPATH=. python -m pytest v7/tests/ -q
+      - name: Run alphaforge + v7 + policycritic tests
+        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest alphaforge/tests/ v7/tests/ policycritic/tests/ -q

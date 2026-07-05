@@ -47,11 +47,13 @@ install:
 	$(PYTHON) -m pip --version >/dev/null 2>&1 || $(PYTHON) -m ensurepip --upgrade
 	$(PYTHON) -m pip install -q -U pip pytest requests mypy ruff numpy pandas pyarrow aiohttp tqdm jsonschema jinja2 optuna
 
+PYTHONPATH_V7 := alphaforge/src:v7/src
+
 test:
 ifdef file
-	$(PYTHON) -m pytest $(file) -v
+	PYTHONPATH=$(PYTHONPATH_V7) $(PYTHON) -m pytest $(file) -v
 else
-	$(PYTHON) -m pytest lib/tests/ -v
+	PYTHONPATH=$(PYTHONPATH_V7) $(PYTHON) -m pytest lib/tests/ simulation/tests/ integration/tests/ runtime/tests/ v7/tests/ alphaforge/tests/ policycritic/tests/ -v
 endif
 
 check-lib-boundaries:
@@ -85,10 +87,10 @@ test-system:
 	@echo "  System tests complete ok"
 
 test-all:
-	@echo "=== Running all local tests (lib + integration + simulation) ==="
-	@PYTHONPATH=. $(PYTHON) -m pytest lib/tests/ integration/tests/ simulation/tests/ -q --ignore=lib/tests/test_market_data_binance.py
+	@echo "=== Running all tests ==="
+	@PYTHONPATH=$(PYTHONPATH_V7) $(PYTHON) -m pytest lib/tests/ simulation/tests/ integration/tests/ runtime/tests/ v7/tests/ alphaforge/tests/ policycritic/tests/ -q 2>&1
 	@echo ""
-	@echo "  All tests complete ok"
+	@echo "  All tests complete ✓"
 
 clean:
 	-rm -rf .pytest_cache
