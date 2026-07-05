@@ -62,6 +62,204 @@ from lib.indicators.microstructure import amihud_illiquidity, dollar_volume, rol
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# Fast rolling helpers (O(n) cumsum-based, replaces for+np.mean/std/sum)
+# ---------------------------------------------------------------------------
+
+
+@njit
+def _njit_rolling_mean(
+    csum: np.ndarray, nan_csum: np.ndarray, window: int, min_periods: int
+) -> np.ndarray:
+    """Numba-accelerated rolling mean from precomputed cumsum arrays."""
+    n = len(csum) - 1
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(window - 1, n):
+        count = window - (nan_csum[i + 1] - nan_csum[i - window + 1])
+        if count >= min_periods:
+            result[i] = (csum[i + 1] - csum[i - window + 1]) / count
+    return result
+
+
+@njit
+def _njit_rolling_std(
+    csum: np.ndarray, csum2: np.ndarray, nan_csum: np.ndarray,
+    window: int, min_periods: int, ddof: int
+) -> np.ndarray:
+    """Numba-accelerated rolling std from precomputed cumsum arrays."""
+    n = len(csum) - 1
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(window - 1, n):
+        count = window - (nan_csum[i + 1] - nan_csum[i - window + 1])
+        if count >= min_periods:
+            s = csum[i + 1] - csum[i - window + 1]
+            s2 = csum2[i + 1] - csum2[i - window + 1]
+            var = s2 / count - (s / count) ** 2
+            if var < 0:
+                var = 0.0
+            if ddof == 1 and count > 1:
+                var = var * count / (count - 1)
+            result[i] = np.sqrt(var)
+    return result
+
+
+@njit
+def _njit_rolling_sum(csum: np.ndarray, window: int) -> np.ndarray:
+    """Numba-accelerated rolling sum from precomputed cumsum."""
+    n = len(csum) - 1
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(window - 1, n):
+        result[i] = csum[i + 1] - csum[i - window + 1]
+    return result
+
+
+@njit
+def _njit_rolling_var(
+    csum: np.ndarray, csum2: np.ndarray, nan_csum: np.ndarray,
+    window: int, min_periods: int, ddof: int
+) -> np.ndarray:
+    """Numba-accelerated rolling variance from precomputed cumsum."""
+    n = len(csum) - 1
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(window - 1, n):
+        count = window - (nan_csum[i + 1] - nan_csum[i - window + 1])
+        if count >= min_periods:
+            s = csum[i + 1] - csum[i - window + 1]
+            s2 = csum2[i + 1] - csum2[i - window + 1]
+            var = s2 / count - (s / count) ** 2
+            if var < 0:
+                var = 0.0
+            if ddof == 1 and count > 1:
+                var = var * count / (count - 1)
+            result[i] = var
+    return result
+
+
+@njit
+def _njit_rolling_cov(
+    csum1: np.ndarray, csum2: np.ndarray, csum12: np.ndarray,
+    nan_csum: np.ndarray, window: int, min_periods: int, ddof: int
+) -> np.ndarray:
+    """Numba-accelerated rolling covariance from precomputed cumsum."""
+    n = len(csum1) - 1
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(window - 1, n):
+        count = window - (nan_csum[i + 1] - nan_csum[i - window + 1])
+        if count >= min_periods:
+            s1 = csum1[i + 1] - csum1[i - window + 1]
+            s2 = csum2[i + 1] - csum2[i - window + 1]
+            s12 = csum12[i + 1] - csum12[i - window + 1]
+            cov = (s12 - s1 * s2 / count) / (count - ddof) if count > ddof else 0.0
+            result[i] = cov
+    return result
+
+
+def _rolling_mean(arr: np.ndarray, window: int, min_periods: int = 2) -> np.ndarray:
+    """O(n) rolling mean via np.convolve (fast C implementation).
+
+    NaN-safe: detects NaN and falls back to cumsum+numba if present.
+    """
+    n = len(arr)
+    if n < min_periods or window < 1:
+        return np.full(n, np.nan, dtype=np.float64)
+    if np.isnan(arr).any():
+        # NaN path: cumsum + numba loop
+        nan_mask = np.isnan(arr)
+        clean = np.where(nan_mask, 0.0, arr)
+        csum = np.cumsum(np.insert(clean, 0, 0))
+        nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+        return _njit_rolling_mean(csum, nan_csum, window, min_periods)
+    # Fast path: no NaN, use np.convolve
+    kernel = np.ones(window, dtype=np.float64) / window
+    result = np.convolve(arr, kernel, mode='same')
+    result[:window - 1] = np.nan
+    return result
+
+
+def _rolling_sum(arr: np.ndarray, window: int, min_periods: int = 1) -> np.ndarray:
+    """O(n) rolling sum via np.convolve (fast C implementation).
+
+    NaN-safe: detects NaN and falls back to cumsum+numba if present.
+    """
+    n = len(arr)
+    if n < 1 or window < 1:
+        return np.full(n, np.nan, dtype=np.float64)
+    if np.isnan(arr).any():
+        csum = np.cumsum(np.insert(np.where(np.isnan(arr), 0.0, arr), 0, 0))
+        return _njit_rolling_sum(csum, window)
+    kernel = np.ones(window, dtype=np.float64)
+    result = np.convolve(arr, kernel, mode='same')
+    result[:window - 1] = np.nan
+    return result
+
+
+def _rolling_std(arr: np.ndarray, window: int, min_periods: int = 2, ddof: int = 0) -> np.ndarray:
+    """O(n) rolling std via cumsum + numba loop (needs variance)."""
+    n = len(arr)
+    if n < min_periods or window < 1:
+        return np.full(n, np.nan, dtype=np.float64)
+    nan_mask = np.isnan(arr)
+    clean = np.where(nan_mask, 0.0, arr)
+    csum = np.cumsum(np.insert(clean, 0, 0))
+    csum2 = np.cumsum(np.insert(clean * clean, 0, 0))
+    nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    return _njit_rolling_std(csum, csum2, nan_csum, window, min_periods, ddof)
+
+
+# Fast path for std when no NaN (avoids nan_mask overhead)
+@njit
+def _njit_rolling_std_nonan(clean: np.ndarray, window: int, ddof: int) -> np.ndarray:
+    """Numba rolling std for arrays without NaN."""
+    n = len(clean)
+    csum = np.cumsum(clean)
+    csum2 = np.cumsum(clean * clean)
+    result = np.full(n, np.nan, dtype=np.float64)
+    adj = 1 if ddof == 1 else 0
+    for i in range(window - 1, n):
+        count = window
+        s = csum[i] - (csum[i - window] if i >= window else 0.0)
+        s2 = csum2[i] - (csum2[i - window] if i >= window else 0.0)
+        var = s2 / count - (s / count) ** 2
+        if var < 0:
+            var = 0.0
+        if ddof == 1 and count > 1:
+            var = var * count / (count - 1)
+        result[i] = np.sqrt(var)
+    return result
+
+
+def _rolling_cov(
+    arr1: np.ndarray, arr2: np.ndarray, window: int, min_periods: int = 2, ddof: int = 0
+) -> np.ndarray:
+    """O(n) rolling covariance via cumulative sums + numba loop."""
+    n = len(arr1)
+    if n < min_periods or window < 1:
+        return np.full(n, np.nan, dtype=np.float64)
+    nan_mask = np.isnan(arr1) | np.isnan(arr2)
+    clean1 = np.where(nan_mask, 0.0, arr1)
+    clean2 = np.where(nan_mask, 0.0, arr2)
+    csum1 = np.cumsum(np.insert(clean1, 0, 0))
+    csum2 = np.cumsum(np.insert(clean2, 0, 0))
+    csum12 = np.cumsum(np.insert(clean1 * clean2, 0, 0))
+    nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    return _njit_rolling_cov(csum1, csum2, csum12, nan_csum, window, min_periods, ddof)
+
+
+def _rolling_var(
+    arr: np.ndarray, window: int, min_periods: int = 2, ddof: int = 0
+) -> np.ndarray:
+    """O(n) rolling variance via cumulative sum + numba loop."""
+    n = len(arr)
+    if n < min_periods or window < 1:
+        return np.full(n, np.nan, dtype=np.float64)
+    nan_mask = np.isnan(arr)
+    clean = np.where(nan_mask, 0.0, arr)
+    csum = np.cumsum(np.insert(clean, 0, 0))
+    csum2 = np.cumsum(np.insert(clean * clean, 0, 0))
+    nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    return _njit_rolling_var(csum, csum2, nan_csum, window, min_periods, ddof)
+
+
+# ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
@@ -199,10 +397,8 @@ def compute_spread_pct(
         Values are in [0, +inf) as fractions (e.g., 0.001 = 0.1% spread).
     """
     n = len(high)
-    result = np.full(n, np.nan, dtype=np.float64)
-
     if n < window:
-        return result
+        return np.full(n, np.nan, dtype=np.float64)
 
     # Per-bar raw spread (NaN-safe: skip bars where close <= 0)
     raw_spread = np.full(n, np.nan, dtype=np.float64)
@@ -210,13 +406,8 @@ def compute_spread_pct(
     with np.errstate(divide="ignore", invalid="ignore"):
         raw_spread[valid_close] = (high[valid_close] - low[valid_close]) / close[valid_close]
 
-    # Rolling mean over valid raw_spread values
-    for i in range(window - 1, n):
-        seg = raw_spread[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) >= 2:
-            result[i] = np.mean(seg_clean)
-        # else: result[i] stays NaN
+    # O(n) rolling mean over valid raw_spread values
+    result = _rolling_mean(raw_spread, window, min_periods=2)
 
     return result
 
@@ -230,6 +421,8 @@ def compute_volume_imbalance(
     close: np.ndarray,
     volume: np.ndarray,
     window: int = DEFAULT_ORDERBOOK_WINDOW,
+    up_vol: np.ndarray = None,
+    down_vol: np.ndarray = None,
 ) -> np.ndarray:
     """Compute rolling volume imbalance: (up_volume - down_volume) / total_volume.
 
@@ -247,27 +440,32 @@ def compute_volume_imbalance(
         close: Close prices.
         volume: Volume (base asset).
         window: Rolling window (default 10).
+        up_vol: Precomputed up volume (optional).
+        down_vol: Precomputed down volume (optional).
 
     Returns:
         numpy array of volume imbalance values (same length as input).
         First `window-1` values are NaN.
     """
     n = len(volume)
-    result = np.full(n, np.nan, dtype=np.float64)
-
     if n < window:
-        return result
+        return np.full(n, np.nan, dtype=np.float64)
 
-    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+    if up_vol is None or down_vol is None:
+        up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
 
+    # O(n) rolling imbalance via cumulative sum
+    up_csum = np.cumsum(np.insert(up_vol, 0, 0))
+    down_csum = np.cumsum(np.insert(down_vol, 0, 0))
+    result = np.full(n, np.nan, dtype=np.float64)
     for i in range(window - 1, n):
-        seg_up = up_vol[i - window + 1 : i + 1]
-        seg_down = down_vol[i - window + 1 : i + 1]
-        total = np.sum(seg_up) + np.sum(seg_down)
+        up_sum = up_csum[i + 1] - up_csum[i - window + 1]
+        down_sum = down_csum[i + 1] - down_csum[i - window + 1]
+        total = up_sum + down_sum
         if total > 0:
-            result[i] = (np.sum(seg_up) - np.sum(seg_down)) / total
+            result[i] = (up_sum - down_sum) / total
         else:
-            result[i] = 0.0  # zero volume window -> balanced
+            result[i] = 0.0
 
     return result
 
@@ -306,10 +504,8 @@ def compute_trade_intensity(
         First `window-1` values are NaN.
     """
     n = len(high)
-    result = np.full(n, np.nan, dtype=np.float64)
-
     if n < window:
-        return result
+        return np.full(n, np.nan, dtype=np.float64)
 
     # Per-bar raw intensity: volume * (high-low) / close
     raw_intensity = np.full(n, np.nan, dtype=np.float64)
@@ -319,16 +515,11 @@ def compute_trade_intensity(
             volume[valid_close] * (high[valid_close] - low[valid_close]) / close[valid_close]
         )
 
-    # Normalize by rolling mean
-    for i in range(window - 1, n):
-        seg = raw_intensity[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) >= 2 and np.mean(seg_clean) > 0:
-            current = raw_intensity[i]
-            if not np.isnan(current) and current >= 0:
-                mu = np.mean(seg_clean)
-                result[i] = current / mu if mu > 0 else np.nan
-        # else: result[i] stays NaN
+    # O(n) normalization by rolling mean
+    rolling_mu = _rolling_mean(raw_intensity, window, min_periods=2)
+    mask = (rolling_mu > 0) & ~np.isnan(raw_intensity) & (raw_intensity >= 0)
+    result = np.full(n, np.nan, dtype=np.float64)
+    result[mask] = raw_intensity[mask] / rolling_mu[mask]
 
     return result
 
@@ -401,15 +592,7 @@ def compute_roll_spread(
 
     S = 2 * sqrt(max(0, -covariance(delta_p_t, delta_p_{t-1})))
 
-    where the covariance of sequential price changes is computed over a
-    rolling window. A negative serial covariance in price changes is
-    interpreted as bid-ask bounce, from which the effective spread is inferred.
-
-    Higher values indicate wider effective spreads (higher transaction costs).
-    Zero when the serial covariance is non-negative (no detectable bounce).
-
-    This bridges the list-based lib/indicators.microstructure.roll_spread_estimator
-    to the numpy pipeline.
+    O(n) vectorized via cumsum.
 
     Args:
         close: Close prices.
@@ -417,22 +600,44 @@ def compute_roll_spread(
 
     Returns:
         numpy array of Roll spread estimates (same length as input).
-        First `window` values are NaN (need window+1 prices for window
-        price changes).
-        Values are in price units (same as close prices).
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
-
     if n < window + 1:
-        return result
+        return np.full(n, np.nan, dtype=np.float64)
 
-    # Bridge: convert close to list for the lib function, then back to numpy
-    close_list = close.tolist()
-    spread_list = roll_spread_estimator(close_list, period=window)
+    # Price changes (1-bar deltas)
+    deltas = np.full(n, np.nan, dtype=np.float64)
+    deltas[1:] = close[1:] - close[:-1]
 
-    # Convert back to numpy array
-    result = np.array(spread_list, dtype=np.float64)
+    # Only use pairs where both delta[j] and delta[j-1] are valid
+    valid = ~(np.isnan(deltas) | np.isnan(np.roll(deltas, 1)))
+    valid[0] = False
+
+    # Clean arrays: NaN → 0 for cumsum math
+    clean_d = np.where(valid, deltas, 0.0)
+    clean_d_lag = np.where(valid, np.roll(deltas, 1), 0.0)
+
+    # Cumsum-based rolling covariance
+    cs_d = np.cumsum(np.insert(clean_d, 0, 0))
+    cs_dl = np.cumsum(np.insert(clean_d_lag, 0, 0))
+    cs_ddl = np.cumsum(np.insert(clean_d * clean_d_lag, 0, 0))
+    cs_valid = np.cumsum(np.insert(valid.astype(np.float64), 0, 0))
+
+    result = np.full(n, np.nan, dtype=np.float64)
+    w = window
+    for i in range(w, n):
+        start = i - w + 1
+        nv = cs_valid[i + 1] - cs_valid[start]
+        if nv < 3:
+            continue
+
+        sum_d = cs_d[i + 1] - cs_d[start]
+        sum_dl = cs_dl[i + 1] - cs_dl[start]
+        sum_ddl = cs_ddl[i + 1] - cs_ddl[start]
+
+        # cov(delta, delta_lag) = (n*sum(d*dl) - sum(d)*sum(dl)) / (n*(n-1))
+        cov = (nv * sum_ddl - sum_d * sum_dl) / (nv * (nv - 1))
+        result[i] = 2.0 * math.sqrt(max(0.0, -cov))
 
     return result
 
@@ -487,42 +692,31 @@ def compute_microstructure_noise(
         Values near 1 = random-walk-like. > 1 = noisy. < 1 = trending.
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
-
     if n < window + 1:
-        return result
+        return np.full(n, np.nan, dtype=np.float64)
 
     log_ret_1 = _compute_log_return_1(close)
 
-    for i in range(window, n):
-        # 1-bar returns over [i-window+1 .. i]
-        seg_1 = log_ret_1[i - window + 1 : i + 1]
-        seg_1_clean = seg_1[~np.isnan(seg_1)]
+    # O(n) microstructure noise via variance ratio
+    # noise[t] = sqrt(window) * std(r_1[..]) / std(r_window[..])
+    #
+    # r_window[j] = ln(close[j] / close[j-window]) = sum of window consecutive r_1
+    # Precompute all r_window at once using cumsum of r_1
+    cs = np.cumsum(np.insert(np.where(np.isnan(log_ret_1), 0.0, log_ret_1), 0, 0))
+    r_window_vals = np.full(n, np.nan, dtype=np.float64)
+    r_window_vals[window:] = cs[window + 1:] - cs[1: n - window + 1]
 
-        # Window-bar return at i: ln(close[i] / close[i-window])
-        r_window = math.log(close[i] / close[i - window])
+    # Rolling std of r_1 (1-bar returns) over window
+    std_1 = _rolling_std(log_ret_1, window, min_periods=3, ddof=1)
 
-        if len(seg_1_clean) < 3:
-            continue
+    # Rolling std of window-bar returns over the same window
+    std_window = _rolling_std(r_window_vals, window, min_periods=3, ddof=1)
 
-        std_1 = float(np.std(seg_1_clean, ddof=1))
-        if std_1 > 1e-14:
-            # Compute std of window-bar returns over the same window
-            # We need a second moment: for overlapping windows we use
-            # the window-bar return at each step
-            r_w = np.full(window, np.nan, dtype=np.float64)
-            for j in range(window):
-                # r_window at index i-window+1+j
-                idx = i - window + 1 + j
-                if idx >= window:
-                    r_w[j] = math.log(close[idx] / close[idx - window])
-            r_w_clean = r_w[~np.isnan(r_w)]
-            if len(r_w_clean) < 3:
-                continue
-            std_window = float(np.std(r_w_clean, ddof=1))
-            if std_window > 1e-14:
-                noise = math.sqrt(window) * std_1 / std_window
-                result[i] = float(np.clip(noise, 0.01, 10.0))
+    # Compute noise ratio
+    result = np.full(n, np.nan, dtype=np.float64)
+    mask = (std_1 > 1e-14) & (std_window > 1e-14)
+    result[mask] = np.sqrt(float(window)) * std_1[mask] / std_window[mask]
+    result = np.clip(result, 0.01, 10.0)
 
     return result
 
@@ -562,43 +756,69 @@ def compute_serial_correlation(
         NaN also when insufficient valid pairs exist.
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
-
     if n < window + 2:  # need window+2 bars for window+1 returns
-        return result
+        return np.full(n, np.nan, dtype=np.float64)
 
     log_ret = _compute_log_return_1(close)
 
-    for i in range(window + 1, n):
-        # Returns at [i-window .. i] (window+1 values)
-        seg = log_ret[i - window : i + 1]
-        valid = seg[~np.isnan(seg)]
-        if len(valid) < window + 1:
-            # Too many NaN values — skip
-            n_nan = int(np.sum(np.isnan(seg)))
-            if n_nan > 0:
-                seg = seg[~np.isnan(seg)]
-            n_valid = len(seg)
-        else:
-            n_valid = len(seg)
+    # O(n) rolling serial correlation via cumulative sums
+    clean = np.where(np.isnan(log_ret), 0.0, log_ret)
+    nan_mask = np.isnan(log_ret)
 
+    csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    # x: indices [i-window .. i-1], y: indices [i-window+1 .. i]
+    # xy pairs: (j, j+1) for j in [i-window .. i-1]
+    # cumsum over data
+    cs_data = np.cumsum(np.insert(clean, 0, 0))
+    cs_data2 = np.cumsum(np.insert(clean * clean, 0, 0))
+    cs_xy = np.cumsum(np.insert(clean[1:] * clean[:-1], 0, 0))
+    cs_y = cs_data  # y = x[1:] just like data shifted by 1
+    cs_y2 = cs_data2  # y^2 = x[1:]^2
+
+    result = np.full(n, np.nan, dtype=np.float64)
+    w = window
+    for i in range(w + 1, n):
+        # x indices: [i-w .. i-1]
+        x_start = i - w
+        x_end = i  # exclusive
+
+        # NaN count in x segment
+        nan_x = csum[x_end] - csum[x_start]
+        n_valid = w - nan_x
         if n_valid < 4:
             continue
 
-        x = seg[:-1]  # r[t-window .. t-1]
-        y = seg[1:]   # r[t-window+1 .. t]
+        # x stats
+        sum_x = cs_data[x_end] - cs_data[x_start]
+        sum_x2 = cs_data2[x_end] - cs_data2[x_start]
 
-        # Pearson correlation
-        dx = x - np.mean(x)
-        dy = y - np.mean(y)
-        cov = np.sum(dx * dy)
-        std_x = np.sqrt(np.sum(dx ** 2))
-        std_y = np.sqrt(np.sum(dy ** 2))
+        # y indices: [i-w+1 .. i]
+        # y uses the same cumsum arrays but shifted by 1
+        y_start = i - w + 1
+        y_end = i + 1
 
-        if std_x < 1e-14 or std_y < 1e-14:
+        # y stats (using cumsum at y_start and y_end)
+        sum_y = cs_data[y_end] - cs_data[y_start]
+        sum_y2 = cs_data2[y_end] - cs_data2[y_start]
+
+        # xy pairs: sum(x[j] * y[j]) for j in [i-w .. i-1]
+        # = sum(log_ret[j] * log_ret[j+1]) for j in [i-w .. i-1]
+        # cs_xy at idx k = sum_{j<k} log_ret[j] * log_ret[j+1]
+        sum_xy = cs_xy[x_end] - cs_xy[x_start]
+
+        # Pearson correlation (computational formula)
+        cov = n_valid * sum_xy - sum_x * sum_y
+        var_x = n_valid * sum_x2 - sum_x * sum_x
+        var_y = n_valid * sum_y2 - sum_y * sum_y
+
+        if var_x < 1e-14 or var_y < 1e-14:
             continue
 
-        corr = cov / (std_x * std_y)
+        denom = np.sqrt(var_x * var_y)
+        if denom < 1e-14:
+            continue
+
+        corr = cov / denom
         result[i] = float(np.clip(corr, -1.0, 1.0))
 
     return result
@@ -613,6 +833,8 @@ def compute_vpin(
     close: np.ndarray,
     volume: np.ndarray,
     window: int = DEFAULT_VPIN_WINDOW,
+    up_vol: np.ndarray = None,
+    down_vol: np.ndarray = None,
 ) -> np.ndarray:
     """Compute VPIN-inspired order flow toxicity proxy.
 
@@ -641,27 +863,28 @@ def compute_vpin(
         volume: Volume (base asset).
         window: Rolling window in bars (default 50). Larger windows
             provide more stable estimates.
+        up_vol: Precomputed up volume (optional).
+        down_vol: Precomputed down volume (optional).
 
     Returns:
         numpy array of VPIN values in [0, 1] (same length as input).
         First `window-1` values are NaN.
     """
     n = len(volume)
-    result = np.full(n, np.nan, dtype=np.float64)
-
     if n < window:
-        return result
+        return np.full(n, np.nan, dtype=np.float64)
 
-    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+    if up_vol is None or down_vol is None:
+        up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
 
+    # O(n) rolling VPIN via cumulative sums
+    vol_csum = np.cumsum(np.insert(up_vol + down_vol, 0, 0))
+    abs_diff_csum = np.cumsum(np.insert(np.abs(up_vol - down_vol), 0, 0))
+    result = np.full(n, np.nan, dtype=np.float64)
     for i in range(window - 1, n):
-        seg_up = up_vol[i - window + 1 : i + 1]
-        seg_down = down_vol[i - window + 1 : i + 1]
-        total_vol = np.sum(seg_up) + np.sum(seg_down)
-
+        total_vol = vol_csum[i + 1] - vol_csum[i - window + 1]
         if total_vol > 0:
-            abs_imbalance = np.sum(np.abs(seg_up - seg_down))
-            result[i] = abs_imbalance / total_vol
+            result[i] = (abs_diff_csum[i + 1] - abs_diff_csum[i - window + 1]) / total_vol
         else:
             result[i] = 0.0
 
@@ -679,6 +902,8 @@ def compute_price_impact_slope(
     close: np.ndarray,
     volume: np.ndarray,
     window: int = DEFAULT_PRICE_IMPACT_WINDOW,
+    up_vol: np.ndarray = None,
+    down_vol: np.ndarray = None,
 ) -> np.ndarray:
     """Compute Kyle's lambda proxy: regression of returns on signed order flow.
 
@@ -705,6 +930,8 @@ def compute_price_impact_slope(
         close: Close prices.
         volume: Volume (base asset).
         window: Rolling window for regression (default 15).
+        up_vol: Precomputed up volume (optional).
+        down_vol: Precomputed down volume (optional).
 
     Returns:
         numpy array of price impact slope values (same length as input).
@@ -713,51 +940,56 @@ def compute_price_impact_slope(
         NaN also when variance of signed flow is too small.
     """
     log_ret = _compute_log_return_1(close)
-    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+    if up_vol is None or down_vol is None:
+        up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
     signed_flow = up_vol - down_vol
-    return _price_impact_slope_numba(log_ret, signed_flow, window)
+    return _price_impact_slope_vectorized(log_ret, signed_flow, window)
 
 
-@njit
-def _price_impact_slope_numba(
+def _price_impact_slope_vectorized(
     log_ret: np.ndarray,
     signed_flow: np.ndarray,
     window: int,
 ) -> np.ndarray:
-    """Numba-accelerated rolling regression for Kyle's lambda (price impact slope)."""
+    """Vectorized rolling regression for Kyle's lambda via cumsum (no for-loop per bar).
+
+    slope = (n*sum(rf) - sum(r)*sum(f)) / (n*sum(f^2) - sum(f)^2)
+    """
     n = len(log_ret)
     result = np.full(n, np.nan, dtype=np.float64)
-
     if n < window + 1:
         return result
 
+    # Only use pairs where both r and f are valid
+    valid = ~(np.isnan(log_ret) | np.isnan(signed_flow))
+    clean_r = np.where(valid, log_ret, 0.0)
+    clean_f = np.where(valid, signed_flow, 0.0)
+
+    # Cumsum arrays for O(1) rolling window queries
+    cs_r = np.cumsum(np.insert(clean_r, 0, 0))
+    cs_f = np.cumsum(np.insert(clean_f, 0, 0))
+    cs_rf = np.cumsum(np.insert(clean_r * clean_f, 0, 0))
+    cs_f2 = np.cumsum(np.insert(clean_f * clean_f, 0, 0))
+    cs_valid = np.cumsum(np.insert(valid.astype(np.float64), 0, 0))
+
     for i in range(window, n):
-        # Returns at [i-window+1 .. i] (window values)
-        r_seg = log_ret[i - window + 1 : i + 1]
-        # Signed flow at [i-window+1 .. i]
-        f_seg = signed_flow[i - window + 1 : i + 1]
-
-        # Filter to non-NaN pairs
-        valid = ~np.isnan(r_seg) & ~np.isnan(f_seg)
-        n_valid = int(np.sum(valid))
-
+        start = i - window + 1
+        n_valid = cs_valid[i + 1] - cs_valid[start]
         if n_valid < 3:
             continue
 
-        r_v = r_seg[valid].astype(np.float64)
-        f_v = f_seg[valid].astype(np.float64)
+        sum_r = cs_r[i + 1] - cs_r[start]
+        sum_f = cs_f[i + 1] - cs_f[start]
+        sum_rf = cs_rf[i + 1] - cs_rf[start]
+        sum_f2 = cs_f2[i + 1] - cs_f2[start]
 
-        # Covariance and variance of signed flow
-        r_mean = np.mean(r_v)
-        f_mean = np.mean(f_v)
-
-        cov = np.sum((r_v - r_mean) * (f_v - f_mean))
-        var_f = np.sum((f_v - f_mean) ** 2)
-
-        if var_f < 1e-14:
+        # slope = (n*sum(rf) - sum(r)*sum(f)) / (n*sum(f^2) - sum(f)^2)
+        numer = n_valid * sum_rf - sum_r * sum_f
+        denom = n_valid * sum_f2 - sum_f * sum_f
+        if abs(denom) < 1e-14:
             continue
 
-        result[i] = cov / var_f
+        result[i] = numer / denom
 
     return result
 
@@ -773,6 +1005,8 @@ def compute_microprice(
     close: np.ndarray,
     volume: np.ndarray,
     window: int = DEFAULT_MICROPRICE_WINDOW,
+    up_vol: np.ndarray = None,
+    down_vol: np.ndarray = None,
 ) -> np.ndarray:
     """Estimate microprice (true price between bid/ask) from OHLCV.
 
@@ -808,25 +1042,23 @@ def compute_microprice(
     if n < window:
         return result
 
-    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+    if up_vol is None or down_vol is None:
+        up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
     total = up_vol + down_vol
 
     # Per-bar raw microprice: low * (1 - up_weight) + high * up_weight
+    # Vectorized: avoid per-bar Python loop
     raw_mp = np.full(n, np.nan, dtype=np.float64)
-    for i in range(n):
-        if total[i] > 0:
-            weight_up = up_vol[i] / total[i]
-            raw_mp[i] = low[i] * (1.0 - weight_up) + high[i] * weight_up
-        else:
-            raw_mp[i] = (high[i] + low[i]) * 0.5
+    nonzero = total > 0
+    if np.any(nonzero):
+        weight_up = np.divide(up_vol[nonzero], total[nonzero], dtype=np.float64)
+        raw_mp[nonzero] = low[nonzero] * (1.0 - weight_up) + high[nonzero] * weight_up
+    zero_total = ~nonzero
+    if np.any(zero_total):
+        raw_mp[zero_total] = (high[zero_total] + low[zero_total]) * 0.5
 
-    # Smooth with rolling mean
-    for i in range(window - 1, n):
-        seg = raw_mp[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) >= 2:
-            result[i] = np.mean(seg_clean)
-
+    # O(n) rolling mean
+    result = _rolling_mean(raw_mp, window, min_periods=2)
     return result
 
 
@@ -835,17 +1067,8 @@ def compute_microprice(
 # ===========================================================================
 
 def _rolling_mean_nan_safe(arr: np.ndarray, window: int) -> np.ndarray:
-    """Compute rolling mean (causal, NaN-safe). Same pattern as pipeline."""
-    n = len(arr)
-    result = np.full(n, np.nan, dtype=np.float64)
-    if n < window:
-        return result
-    for i in range(window - 1, n):
-        seg = arr[i - window + 1 : i + 1]
-        valid = seg[~np.isnan(seg)]
-        if len(valid) >= 2:
-            result[i] = np.mean(valid.astype(np.float64))
-    return result
+    """Compute rolling mean (causal, NaN-safe). Uses O(n) cumsum."""
+    return _rolling_mean(arr, window, min_periods=2)
 
 
 def compute_liquidity_vacuum(
@@ -934,6 +1157,8 @@ def compute_depth_ratio(
     close: np.ndarray,
     volume: np.ndarray,
     window: int = DEFAULT_DEPTH_RATIO_WINDOW,
+    up_vol: np.ndarray = None,
+    down_vol: np.ndarray = None,
 ) -> np.ndarray:
     """Estimate bid/ask depth ratio from volume classification.
 
@@ -959,6 +1184,8 @@ def compute_depth_ratio(
         close: Close prices.
         volume: Volume (base asset).
         window: Smoothing window in bars (default 5).
+        up_vol: Precomputed up volume (optional).
+        down_vol: Precomputed down volume (optional).
 
     Returns:
         numpy array of depth ratio estimates >= 0, same length as input.
@@ -969,21 +1196,16 @@ def compute_depth_ratio(
     if n < window:
         return result
 
-    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+    if up_vol is None or down_vol is None:
+        up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
 
-    # Per-bar depth ratio (with epsilon to avoid division by zero)
+    # Per-bar depth ratio (vectorized: avoid per-bar Python loop)
     per_bar = np.full(n, np.nan, dtype=np.float64)
-    for i in range(n):
-        short = max(down_vol[i], 1e-10)
-        per_bar[i] = up_vol[i] / short
+    short = np.maximum(down_vol, 1e-10)
+    per_bar = np.divide(up_vol, short, dtype=np.float64)
 
-    # Smooth with rolling mean
-    for i in range(window - 1, n):
-        seg = per_bar[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) >= 2:
-            result[i] = np.mean(seg_clean)
-
+    # O(n) rolling mean
+    result = _rolling_mean(per_bar, window, min_periods=2)
     return result
 
 
@@ -995,6 +1217,8 @@ def compute_orderbook_imbalance(
     open_arr: np.ndarray,
     close: np.ndarray,
     volume: np.ndarray,
+    up_vol: np.ndarray = None,
+    down_vol: np.ndarray = None,
 ) -> np.ndarray:
     """Compute per-bar Level 1 Order Book Imbalance (L1 OBI) from OHLCV.
 
@@ -1023,13 +1247,16 @@ def compute_orderbook_imbalance(
         open_arr: Open prices.
         close: Close prices.
         volume: Volume (base asset).
+        up_vol: Precomputed up volume (optional).
+        down_vol: Precomputed down volume (optional).
 
     Returns:
         numpy array of OBI values in [-1, +1], same length as input.
         No NaN values ever (zero-volume bars return 0.0).
     """
     n = len(volume)
-    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+    if up_vol is None or down_vol is None:
+        up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
     total = up_vol + down_vol
 
     result = np.zeros(n, dtype=np.float64)
@@ -1050,6 +1277,9 @@ def compute_multi_level_obi(
     n_levels: int = DEFAULT_MULTI_LEVEL_OBI_N,
     step: int = DEFAULT_MULTI_LEVEL_OBI_STEP,
     decay: float = DEFAULT_MULTI_LEVEL_OBI_DECAY,
+    obi: np.ndarray = None,
+    up_vol: np.ndarray = None,
+    down_vol: np.ndarray = None,
 ) -> np.ndarray:
     """Compute multi-level Order Book Imbalance with depth-decaying weights.
 
@@ -1088,6 +1318,9 @@ def compute_multi_level_obi(
         step: Lookback step between levels in bars (default 3).
         decay: Exponential decay factor for level weights (default 0.8).
             Higher values discount deeper levels more aggressively.
+        obi: Precomputed per-bar OBI (optional).
+        up_vol: Precomputed up volume (optional).
+        down_vol: Precomputed down volume (optional).
 
     Returns:
         numpy array of multi-level OBI values in [-1, +1], same length
@@ -1101,7 +1334,8 @@ def compute_multi_level_obi(
         return result
 
     # Per-bar raw OBI
-    obi = compute_orderbook_imbalance(open_arr, close, volume)
+    if obi is None:
+        obi = compute_orderbook_imbalance(open_arr, close, volume, up_vol=up_vol, down_vol=down_vol)
 
     # Pre-compute level weights: exponential decay with depth
     weights = np.array(
@@ -1110,23 +1344,22 @@ def compute_multi_level_obi(
     )
     total_weight = np.sum(weights)
 
-    # Pre-compute rolling means at each window size
-    rolling_means: List[np.ndarray] = []
-    for k in range(n_levels):
-        w = (k + 1) * step
-        rolling_means.append(_rolling_mean_nan_safe(obi, w))
+    # Single cumsum for obi (obi has no NaN — zero-volume bars return 0.0)
+    # Use this for all window sizes instead of recomputing cumsum per level
+    csum = np.cumsum(np.insert(obi, 0, 0))
 
-    # Combine levels with weights
+    # For each level, compute rolling mean via vectorized cumsum slice:
+    # mean_k[i] = (csum[i+1] - csum[i-w+1]) / w   for i >= w-1
+    # Store partial sum per level, combine in second pass
+    result = np.full(n, np.nan, dtype=np.float64)
     for i in range(max_window - 1, n):
         val_sum = 0.0
-        w_sum = 0.0
         for k in range(n_levels):
-            rm_val = rolling_means[k][i]
-            if not np.isnan(rm_val):
-                val_sum += rm_val * weights[k]
-                w_sum += weights[k]
-        if w_sum > 0:
-            result[i] = val_sum / w_sum
+            w = (k + 1) * step
+            start = i - w + 1
+            mean = (csum[i + 1] - csum[start]) / w
+            val_sum += mean * weights[k]
+        result[i] = val_sum / total_weight
 
     return result
 
@@ -1142,6 +1375,8 @@ def compute_micro_price(
     close: np.ndarray,
     volume: np.ndarray,
     window: int = DEFAULT_STOIKOV_MICRO_PRICE_WINDOW,
+    up_vol: np.ndarray = None,
+    down_vol: np.ndarray = None,
 ) -> np.ndarray:
     """Compute Stoikov micro-price estimate from OHLCV.
 
@@ -1184,6 +1419,8 @@ def compute_micro_price(
         close: Close prices.
         volume: Volume (base asset).
         window: Smoothing window in bars (default 5).
+        up_vol: Precomputed up volume (optional).
+        down_vol: Precomputed down volume (optional).
 
     Returns:
         numpy array of Stoikov micro-price estimates, same length as
@@ -1196,26 +1433,22 @@ def compute_micro_price(
     if n < window:
         return result
 
-    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+    if up_vol is None or down_vol is None:
+        up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
     total = up_vol + down_vol
 
-    # Per-bar raw Stoikov micro-price
+    # Per-bar raw Stoikov micro-price (vectorized)
     # raw_mp = (low * up_vol + high * down_vol) / total
-    # When total == 0: use midpoint = (high + low) / 2
     raw_mp = np.full(n, np.nan, dtype=np.float64)
-    for i in range(n):
-        if total[i] > 0:
-            raw_mp[i] = (low[i] * up_vol[i] + high[i] * down_vol[i]) / total[i]
-        else:
-            raw_mp[i] = (high[i] + low[i]) * 0.5
+    nonzero = total > 0
+    if np.any(nonzero):
+        raw_mp[nonzero] = (low[nonzero] * up_vol[nonzero] + high[nonzero] * down_vol[nonzero]) / total[nonzero]
+    zero_total = ~nonzero
+    if np.any(zero_total):
+        raw_mp[zero_total] = (high[zero_total] + low[zero_total]) * 0.5
 
-    # Smooth with rolling mean
-    for i in range(window - 1, n):
-        seg = raw_mp[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) >= 2:
-            result[i] = np.mean(seg_clean)
-
+    # O(n) rolling mean
+    result = _rolling_mean(raw_mp, window, min_periods=2)
     return result
 
 
@@ -1228,6 +1461,8 @@ def compute_ofi(
     close: np.ndarray,
     volume: np.ndarray,
     window: int = DEFAULT_OFI_WINDOW,
+    up_vol: np.ndarray = None,
+    down_vol: np.ndarray = None,
 ) -> np.ndarray:
     """Compute Order Flow Imbalance proxy from OHLCV (Cont-Kukanov-Stoikov style).
 
@@ -1257,6 +1492,8 @@ def compute_ofi(
         close: Close prices.
         volume: Volume (base asset).
         window: Rolling window for smoothing (default 10).
+        up_vol: Precomputed up volume (optional).
+        down_vol: Precomputed down volume (optional).
 
     Returns:
         numpy array of OFI values in [-1, 1] (same length as input).
@@ -1269,25 +1506,19 @@ def compute_ofi(
     if n < window:
         return result
 
-    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+    if up_vol is None or down_vol is None:
+        up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
     total_vol = up_vol + down_vol
 
-    # Per-bar raw OFI
-    raw_ofi = np.full(n, np.nan, dtype=np.float64)
-    for i in range(n):
-        if total_vol[i] > 1e-12:
-            raw_ofi[i] = (up_vol[i] - down_vol[i]) / total_vol[i]
-        else:
-            raw_ofi[i] = 0.0  # zero volume -> balanced
+    # Per-bar raw OFI (vectorized)
+    raw_ofi = np.zeros(n, dtype=np.float64)
+    nonzero = total_vol > 1e-12
+    if np.any(nonzero):
+        raw_ofi[nonzero] = (up_vol[nonzero] - down_vol[nonzero]) / total_vol[nonzero]
+    # zero volume bars already 0.0
 
-    # Rolling mean of per-bar ratios
-    for i in range(window - 1, n):
-        seg = raw_ofi[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) >= 2:
-            result[i] = float(np.mean(seg_clean))
-        # else: result[i] stays NaN
-
+    # O(n) rolling mean
+    result = _rolling_mean(raw_ofi, window, min_periods=2)
     return result
 
 
@@ -1349,26 +1580,32 @@ def compute_vamp(
     # Per-bar midpoint
     mid = (high + low) * 0.5
 
-    # Volume-weighted rolling mean
+    # O(n) volume-weighted rolling mean via cumsum
+    # VAMP[t] = sum(mid * volume) / sum(volume) over rolling window
+    mid_v = mid.astype(np.float64)
+    vol_v = volume.astype(np.float64)
+    # NaN-safe: set NaN mid/vol to 0 for cumsum, track valid counts
+    mid_nan = np.isnan(mid_v)
+    vol_nan = np.isnan(vol_v) | (vol_v < 0)
+    invalid_mask = mid_nan | vol_nan
+    clean_mid = np.where(invalid_mask, 0.0, mid_v)
+    clean_vol = np.where(invalid_mask, 0.0, vol_v)
+    csum_midvol = np.cumsum(np.insert(clean_mid * clean_vol, 0, 0))
+    csum_vol = np.cumsum(np.insert(clean_vol, 0, 0))
+    csum_invalid = np.cumsum(np.insert(invalid_mask.astype(np.float64), 0, 0))
+    csum_mid = np.cumsum(np.insert(np.where(invalid_mask, 0.0, mid_v), 0, 0))
     for i in range(window - 1, n):
-        seg_mid = mid[i - window + 1 : i + 1]
-        seg_vol = volume[i - window + 1 : i + 1]
-
-        valid = ~np.isnan(seg_mid) & ~np.isnan(seg_vol) & (seg_vol >= 0)
-        n_valid = int(np.sum(valid))
-
-        if n_valid < 2:
+        count = window - (csum_invalid[i + 1] - csum_invalid[i - window + 1])
+        if count < 2:
             continue
-
-        s_mid = seg_mid[valid].astype(np.float64)
-        s_vol = seg_vol[valid].astype(np.float64)
-        vol_sum = float(np.sum(s_vol))
-
+        vol_sum = csum_vol[i + 1] - csum_vol[i - window + 1]
         if vol_sum > 1e-12:
-            result[i] = float(np.sum(s_mid * s_vol)) / vol_sum
+            pv_sum = csum_midvol[i + 1] - csum_midvol[i - window + 1]
+            result[i] = pv_sum / vol_sum
         else:
             # Fall back to simple mean when all volume is zero
-            result[i] = float(np.mean(s_mid))
+            mid_total = csum_mid[i + 1] - csum_mid[i - window + 1]
+            result[i] = mid_total / count
 
     return result
 
@@ -1427,13 +1664,8 @@ def compute_quoted_spread(
     with np.errstate(divide="ignore", invalid="ignore"):
         raw_spread[valid] = 2.0 * np.abs(close[valid] - mid[valid]) / mid[valid]
 
-    # Rolling mean with NaN-safe handling
-    for i in range(window - 1, n):
-        seg = raw_spread[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) >= 2:
-            result[i] = np.mean(seg_clean)
-
+    # O(n) rolling mean
+    result = _rolling_mean(raw_spread, window, min_periods=2)
     return result
 
 
@@ -1489,18 +1721,32 @@ def compute_vwap_to_mid_deviation(
     # Per-bar typical price for VWAP computation
     typical_price = (high + low + close) / 3.0
 
+    # O(n) via cumsum
+    tp_v = typical_price.astype(np.float64)
+    vol_v = volume.astype(np.float64)
+    mid = (high + low) * 0.5
+
+    # NaN-safe: set NaN to 0 for cumsum
+    tp_nan = np.isnan(tp_v)
+    vol_nan = np.isnan(vol_v) | (vol_v < 0)
+    invalid = tp_nan | vol_nan
+    clean_tp = np.where(invalid, 0.0, tp_v)
+    clean_vol = np.where(invalid, 0.0, vol_v)
+    csum_pv = np.cumsum(np.insert(clean_tp * clean_vol, 0, 0))
+    csum_vol = np.cumsum(np.insert(clean_vol, 0, 0))
+    csum_invalid = np.cumsum(np.insert(invalid.astype(np.float64), 0, 0))
+
     for i in range(window - 1, n):
-        seg_typical = typical_price[i - window + 1 : i + 1]
-        seg_volume = volume[i - window + 1 : i + 1]
-
-        total_pv = np.sum(seg_typical * seg_volume)
-        total_vol = np.sum(seg_volume)
-
-        if total_vol > 0 and not np.isnan(total_pv):
-            vwap = total_pv / total_vol
-            if vwap > 0:
-                mid = (high[i] + low[i]) * 0.5
-                result[i] = (mid - vwap) / vwap
+        count = window - (csum_invalid[i + 1] - csum_invalid[i - window + 1])
+        if count < 2:
+            continue
+        total_vol = csum_vol[i + 1] - csum_vol[i - window + 1]
+        if total_vol > 0:
+            total_pv = csum_pv[i + 1] - csum_pv[i - window + 1]
+            if not np.isnan(total_pv):
+                vwap = total_pv / total_vol
+                if vwap > 0:
+                    result[i] = (mid[i] - vwap) / vwap
 
     return result
 
@@ -1554,15 +1800,12 @@ def compute_trade_count(
     if n < window:
         return result
 
-    for i in range(window - 1, n):
-        seg = volume[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) < 3:
-            continue
-        mu = float(np.mean(seg_clean))
-        sigma = float(np.std(seg_clean, ddof=1))
-        if sigma > 1e-14 and not np.isnan(volume[i]):
-            result[i] = (volume[i] - mu) / sigma
+    # O(n) rolling z-score via cumsum mean + std
+    vol_mean = _rolling_mean(volume, window, min_periods=3)
+    vol_var = _rolling_var(volume, window, min_periods=3, ddof=1)
+    vol_std = np.sqrt(vol_var)
+    mask = (vol_std > 1e-14) & ~np.isnan(volume) & ~np.isnan(vol_mean)
+    result[mask] = (volume[mask] - vol_mean[mask]) / vol_std[mask]
 
     return result
 
@@ -1614,15 +1857,23 @@ def compute_volume_concentration_hhi(
     if n < window:
         return result
 
+    # O(n) rolling HHI via cumsum
+    vol_v = volume.astype(np.float64)
+    vol_nan = np.isnan(vol_v)
+    clean = np.where(vol_nan, 0.0, vol_v)
+    csum = np.cumsum(np.insert(clean, 0, 0))
+    csum2 = np.cumsum(np.insert(clean * clean, 0, 0))
+    csum_nan = np.cumsum(np.insert(vol_nan.astype(np.float64), 0, 0))
+
     for i in range(window - 1, n):
-        seg = volume[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) < 2:
+        count = window - (csum_nan[i + 1] - csum_nan[i - window + 1])
+        if count < 2:
             continue
-        total = float(np.sum(seg_clean))
+        total = csum[i + 1] - csum[i - window + 1]
         if total > 0:
-            shares = seg_clean / total
-            result[i] = float(np.sum(shares ** 2))
+            # HHI = sum((v_i / total)^2) = sum(v_i^2) / total^2
+            sum_sq = csum2[i + 1] - csum2[i - window + 1]
+            result[i] = sum_sq / (total * total)
         else:
             result[i] = 0.0
 
@@ -1718,29 +1969,35 @@ def compute_orderbook_group(
     Returns:
         Dict mapping feature name to numpy array of shape (n_bars,).
     """
+    # Precompute shared intermediates once (saves ~12 redundant calls)
+    up_vol, down_vol = _classify_volume_direction(open_arr, close, volume)
+    obi = compute_orderbook_imbalance(open_arr, close, volume, up_vol=up_vol, down_vol=down_vol)
+
     return {
         "spread_pct_N": compute_spread_pct(high, low, close, window),
-        "volume_imbalance_N": compute_volume_imbalance(open_arr, close, volume, window),
+        "volume_imbalance_N": compute_volume_imbalance(open_arr, close, volume, window, up_vol=up_vol, down_vol=down_vol),
         "trade_intensity_N": compute_trade_intensity(high, low, close, volume, window),
         "amihud_illiquidity_N": compute_amihud_illiquidity_numpy(close, volume, amihud_window),
         "roll_spread_N": compute_roll_spread(close, roll_spread_window),
         "microstructure_noise_N": compute_microstructure_noise(close, noise_window),
         "serial_correlation_N": compute_serial_correlation(close, serial_corr_window),
-        "vpin_N": compute_vpin(open_arr, close, volume, vpin_window),
+        "vpin_N": compute_vpin(open_arr, close, volume, vpin_window, up_vol=up_vol, down_vol=down_vol),
         "price_impact_slope_N": compute_price_impact_slope(
             open_arr, high, low, close, volume, price_impact_window,
+            up_vol=up_vol, down_vol=down_vol,
         ),
-        "microprice_N": compute_microprice(high, low, open_arr, close, volume, microprice_window),
+        "microprice_N": compute_microprice(high, low, open_arr, close, volume, microprice_window, up_vol=up_vol, down_vol=down_vol),
         "liquidity_vacuum_N": compute_liquidity_vacuum(high, low, close, volume, liquidity_vacuum_window),
-        "depth_ratio_N": compute_depth_ratio(open_arr, close, volume, depth_ratio_window),
-        "obi": compute_orderbook_imbalance(open_arr, close, volume),
+        "depth_ratio_N": compute_depth_ratio(open_arr, close, volume, depth_ratio_window, up_vol=up_vol, down_vol=down_vol),
+        "obi": obi,
         "multi_level_obi_N": compute_multi_level_obi(
             open_arr, close, volume,
             n_levels=multi_level_obi_n,
             step=multi_level_obi_step,
             decay=multi_level_obi_decay,
+            obi=obi, up_vol=up_vol, down_vol=down_vol,
         ),
-        "ofi_N": compute_ofi(open_arr, close, volume, window=ofi_window),
+        "ofi_N": compute_ofi(open_arr, close, volume, window=ofi_window, up_vol=up_vol, down_vol=down_vol),
         "quoted_spread_N": compute_quoted_spread(high, low, close, window=quoted_spread_window),
         "vwap_mid_deviation_N": compute_vwap_to_mid_deviation(
             high, low, close, volume, window=vwap_mid_window,

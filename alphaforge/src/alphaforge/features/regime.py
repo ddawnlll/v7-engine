@@ -649,31 +649,62 @@ def compute_hmm_vol_state(
 # ===========================================================================
 
 
-@njit
-def _njit_vol_regime_loop(
+def _vectorized_vol_regime(
     log_ret: np.ndarray,
     window: int,
     low_percentile: float,
     high_percentile: float,
 ) -> np.ndarray:
-    """Numba JIT helper: volatility regime loop body."""
+    """Vectorized volatility regime using sliding_window_view + np.sort.
+
+    Normalizes log_ret to fill NaN with 0, then uses sliding_window_view
+    to get all windows at once. Sorts each window via np.sort along the
+    last axis and picks the threshold at the appropriate percentile index.
+    """
+    from numpy.lib.stride_tricks import sliding_window_view
+
     n = len(log_ret)
     result = np.full(n, np.nan, dtype=np.float64)
-    for i in range(window, n):
-        seg = log_ret[i - window + 1 : i + 1]
-        valid = seg[~np.isnan(seg)]
-        if len(valid) < 5:
-            continue
-        abs_ret = np.abs(valid)
-        low_thresh = np.percentile(abs_ret, low_percentile)
-        high_thresh = np.percentile(abs_ret, high_percentile)
-        current_abs = abs_ret[-1]
-        if current_abs <= low_thresh:
-            result[i] = 0.0
-        elif current_abs >= high_thresh:
-            result[i] = 2.0
-        else:
-            result[i] = 1.0
+    if n < window:
+        return result
+
+    # log_ret[0] is always NaN (no prior bar for return), so we skip the first
+    # window that contains it. Valid windows start at position 1.
+    clean = np.abs(np.where(np.isnan(log_ret), 0.0, log_ret))
+
+    # All windows as a view; skip the first window (contains position 0 = NaN return)
+    abs_windows = sliding_window_view(clean, window)[1:]
+    n_windows = n - window  # = len(abs_windows)
+
+    if n_windows < 1:
+        return result
+
+    # Count valid (non-NaN) entries per window (first window had log_ret[0]=NaN)
+    nan_mask = np.isnan(log_ret)
+    nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    n_valid = window - (nan_csum[window + 1:] - nan_csum[1:n_windows + 1])
+    valid_mask = n_valid >= 5
+
+    # Compute percentile thresholds via np.sort + index
+    k_low = max(0, min(window - 1, int(np.ceil(low_percentile / 100.0 * window) - 1)))
+    k_high = max(0, min(window - 1, int(np.ceil(high_percentile / 100.0 * window) - 1)))
+
+    low_thresh = np.full(n_windows, np.nan, dtype=np.float64)
+    high_thresh = np.full(n_windows, np.nan, dtype=np.float64)
+
+    if valid_mask.any():
+        sorted_windows = np.sort(abs_windows[valid_mask], axis=-1)
+        low_thresh[valid_mask] = sorted_windows[:, k_low]
+        high_thresh[valid_mask] = sorted_windows[:, k_high]
+
+    current_abs = np.abs(log_ret[window:])
+
+    # Classify at positions [window, ..., n-1]
+    result[window:] = np.where(
+        current_abs <= low_thresh, 0.0,
+        np.where(current_abs >= high_thresh, 2.0, 1.0)
+    )
+
     return result
 
 
@@ -709,7 +740,7 @@ def compute_volatility_regime(
         return np.full(n, np.nan, dtype=np.float64)
 
     log_ret = _compute_log_return(close)
-    return _njit_vol_regime_loop(log_ret, window, low_percentile, high_percentile)
+    return _vectorized_vol_regime(log_ret, window, low_percentile, high_percentile)
 
 
 # ===========================================================================

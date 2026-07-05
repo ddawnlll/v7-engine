@@ -220,19 +220,17 @@ def _consecutive_down(close: np.ndarray, open_arr: np.ndarray) -> np.ndarray:
 # Rolling helpers
 # ---------------------------------------------------------------------------
 
-@njit
 def _rolling_fraction(mask: np.ndarray, window: int) -> np.ndarray:
     """Rolling fraction of True values in mask over window bars.
-
-    NaN for t < window-1. Fraction = count(True) / window.
+    O(n) via cumsum. NaN for t < window-1.
     """
     n = len(mask)
-    result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
-        return result
+        return np.full(n, np.nan, dtype=np.float64)
+    csum = np.cumsum(np.insert(mask.astype(np.float64), 0, 0))
+    result = np.full(n, np.nan, dtype=np.float64)
     for i in range(window - 1, n):
-        seg = mask[i - window + 1 : i + 1]
-        result[i] = float(np.sum(seg)) / float(window)
+        result[i] = (csum[i + 1] - csum[i - window + 1]) / float(window)
     return result
 
 

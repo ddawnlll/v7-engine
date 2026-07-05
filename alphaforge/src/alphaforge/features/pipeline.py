@@ -566,8 +566,77 @@ def _validate_ohlcv_data(ohlcv_data: dict) -> None:
             logger.warning(f"Column '{col}' contains {nan_count} NaN values — these will propagate")
 
 
+@njit
+def _p_njit_rolling_mean(
+    csum: np.ndarray, nan_csum: np.ndarray, window: int
+) -> np.ndarray:
+    """Numba-accelerated rolling mean from precomputed cumsum arrays."""
+    n = len(csum) - 1
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(window - 1, n):
+        count = window - (nan_csum[i + 1] - nan_csum[i - window + 1])
+        if count >= 2:
+            result[i] = (csum[i + 1] - csum[i - window + 1]) / count
+    return result
+
+
+@njit
+def _p_njit_rolling_sum(csum: np.ndarray, window: int) -> np.ndarray:
+    """Numba-accelerated rolling sum."""
+    n = len(csum) - 1
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(window - 1, n):
+        result[i] = csum[i + 1] - csum[i - window + 1]
+    return result
+
+
+@njit
+def _p_njit_rolling_std(
+    csum: np.ndarray, csum2: np.ndarray, nan_csum: np.ndarray,
+    window: int, ddof: int
+) -> np.ndarray:
+    """Numba-accelerated rolling std."""
+    n = len(csum) - 1
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(window - 1, n):
+        count = window - (nan_csum[i + 1] - nan_csum[i - window + 1])
+        if count >= 2:
+            s = csum[i + 1] - csum[i - window + 1]
+            s2 = csum2[i + 1] - csum2[i - window + 1]
+            var = s2 / count - (s / count) ** 2
+            if var < 0:
+                var = 0.0
+            if ddof == 1 and count > 1:
+                var = var * count / (count - 1)
+            if var >= 0:
+                result[i] = np.sqrt(var)
+    return result
+
+
+@njit
+def _p_njit_rolling_var(
+    csum: np.ndarray, csum2: np.ndarray, nan_csum: np.ndarray,
+    window: int, ddof: int
+) -> np.ndarray:
+    """Numba-accelerated rolling variance."""
+    n = len(csum) - 1
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(window - 1, n):
+        count = window - (nan_csum[i + 1] - nan_csum[i - window + 1])
+        if count >= 2:
+            s = csum[i + 1] - csum[i - window + 1]
+            s2 = csum2[i + 1] - csum2[i - window + 1]
+            var = s2 / count - (s / count) ** 2
+            if var < 0:
+                var = 0.0
+            if ddof == 1 and count > 1:
+                var = var * count / (count - 1)
+            result[i] = var
+    return result
+
+
 def _rolling_mean(arr: np.ndarray, window: int) -> np.ndarray:
-    """Compute rolling mean over `window` bars (NaN-safe).
+    """Compute rolling mean over `window` bars (O(n) via np.convolve or cumsum).
 
     Result at index t uses arr[t-window+1 .. t] (causal).
     Returns NaN for t < window-1 or when the window contains insufficient
@@ -578,19 +647,38 @@ def _rolling_mean(arr: np.ndarray, window: int) -> np.ndarray:
     result is NaN.
     """
     n = len(arr)
-    result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
-        return result
-    for i in range(window - 1, n):
-        seg = arr[i - window + 1 : i + 1]
-        valid = seg[~np.isnan(seg)]
-        if len(valid) >= 2:
-            result[i] = np.mean(valid.astype(np.float64))
+        return np.full(n, np.nan, dtype=np.float64)
+    if np.isnan(arr).any():
+        # NaN path: cumsum + numba
+        nan_mask = np.isnan(arr)
+        clean = np.where(nan_mask, 0.0, arr)
+        csum = np.cumsum(np.insert(clean, 0, 0))
+        nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+        return _p_njit_rolling_mean(csum, nan_csum, window)
+    # Fast path: no NaN, use np.convolve
+    kernel = np.ones(window, dtype=np.float64) / window
+    result = np.convolve(arr, kernel, mode='same')
+    result[:window - 1] = np.nan
+    return result
+
+
+def _rolling_sum(arr: np.ndarray, window: int) -> np.ndarray:
+    """Compute rolling sum over `window` bars (O(n) via np.convolve or cumsum)."""
+    n = len(arr)
+    if n < window:
+        return np.full(n, np.nan, dtype=np.float64)
+    if np.isnan(arr).any():
+        csum = np.cumsum(np.insert(np.where(np.isnan(arr), 0.0, arr), 0, 0))
+        return _p_njit_rolling_sum(csum, window)
+    kernel = np.ones(window, dtype=np.float64)
+    result = np.convolve(arr, kernel, mode='same')
+    result[:window - 1] = np.nan
     return result
 
 
 def _rolling_std(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
-    """Compute rolling standard deviation over `window` bars (NaN-safe).
+    """Compute rolling standard deviation over `window` bars (NaN-safe, O(n) cumsum + numba).
 
     Causal: std at index t uses arr[t-window+1 .. t].
     Returns NaN for t < window-1 or when fewer than 2 non-NaN values
@@ -599,36 +687,72 @@ def _rolling_std(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
     NaN values in the input are excluded (partial window std).
     """
     n = len(arr)
-    result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
-        return result
-    for i in range(window - 1, n):
-        seg = arr[i - window + 1 : i + 1]
-        valid = seg[~np.isnan(seg)]
-        if len(valid) >= 2:
-            result[i] = np.std(valid.astype(np.float64), ddof=ddof)
-    return result
+        return np.full(n, np.nan, dtype=np.float64)
+    nan_mask = np.isnan(arr)
+    clean = np.where(nan_mask, 0.0, arr)
+    csum = np.cumsum(np.insert(clean, 0, 0))
+    csum2 = np.cumsum(np.insert(clean * clean, 0, 0))
+    nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    return _p_njit_rolling_std(csum, csum2, nan_csum, window, ddof)
+
+
+def _rolling_var(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
+    """Compute rolling variance over `window` bars (NaN-safe, O(n) cumsum + numba).
+
+    Causal: var at index t uses arr[t-window+1 .. t].
+    Returns NaN for t < window-1 or when fewer than 2 non-NaN values.
+    """
+    n = len(arr)
+    if n < window:
+        return np.full(n, np.nan, dtype=np.float64)
+    nan_mask = np.isnan(arr)
+    clean = np.where(nan_mask, 0.0, arr)
+    csum = np.cumsum(np.insert(clean, 0, 0))
+    csum2 = np.cumsum(np.insert(clean * clean, 0, 0))
+    nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    return _p_njit_rolling_var(csum, csum2, nan_csum, window, ddof)
 
 
 def _rolling_max(arr: np.ndarray, window: int) -> np.ndarray:
-    """Compute rolling maximum over `window` bars (causal)."""
+    """Compute rolling maximum over `window` bars (O(n) via monotonic deque)."""
     n = len(arr)
-    result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
-        return result
-    for i in range(window - 1, n):
-        result[i] = np.max(arr[i - window + 1 : i + 1])
+        return np.full(n, np.nan, dtype=np.float64)
+    from collections import deque
+    dq: deque = deque()
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(n):
+        # Remove elements outside window
+        while dq and dq[0] <= i - window:
+            dq.popleft()
+        # Remove smaller elements (they'll never be max)
+        while dq and arr[dq[-1]] <= arr[i]:
+            dq.pop()
+        dq.append(i)
+        if i >= window - 1:
+            result[i] = arr[dq[0]]
     return result
 
 
 def _rolling_min(arr: np.ndarray, window: int) -> np.ndarray:
-    """Compute rolling minimum over `window` bars (causal)."""
+    """Compute rolling minimum over `window` bars (O(n) via monotonic deque)."""
     n = len(arr)
-    result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
-        return result
-    for i in range(window - 1, n):
-        result[i] = np.min(arr[i - window + 1 : i + 1])
+        return np.full(n, np.nan, dtype=np.float64)
+    from collections import deque
+    dq: deque = deque()
+    result = np.full(n, np.nan, dtype=np.float64)
+    for i in range(n):
+        # Remove elements outside window
+        while dq and dq[0] <= i - window:
+            dq.popleft()
+        # Remove larger elements (they'll never be min)
+        while dq and arr[dq[-1]] >= arr[i]:
+            dq.pop()
+        dq.append(i)
+        if i >= window - 1:
+            result[i] = arr[dq[0]]
     return result
 
 
@@ -733,21 +857,22 @@ def compute_return_zscore(returns: np.ndarray, window: int) -> np.ndarray:
     Causality: mean and std at t use only bars up to t.
     """
     n = len(returns)
-    result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
-        return result
-    for i in range(window - 1, n):
-        seg = returns[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) < 2:
-            result[i] = np.nan
-            continue
-        mu = np.mean(seg_clean)
-        sigma = np.std(seg_clean, ddof=1)
-        if sigma < 1e-12:
-            result[i] = 0.0
-        else:
-            result[i] = (returns[i] - mu) / sigma
+        return np.full(n, np.nan, dtype=np.float64)
+    # O(n) rolling z-score via cumsum
+    ret_mean = _rolling_mean(returns, window)
+    ret_var = _rolling_var(returns, window, ddof=1)
+    ret_std = np.sqrt(np.maximum(ret_var, 0.0))
+    result = np.full(n, np.nan, dtype=np.float64)
+    # Use adaptive threshold for near-zero std to handle cumsum floating-point error
+    # cumsum variance can produce 1e-20 for constant data; sqrt gives 1e-10
+    abs_mean = np.abs(ret_mean)
+    zero_threshold = np.where(abs_mean > 1e-12, abs_mean * 1e-6, 1e-10)
+    mask = ~np.isnan(ret_mean) & ~np.isnan(ret_std) & (ret_std > zero_threshold) & ~np.isnan(returns)
+    result[mask] = (returns[mask] - ret_mean[mask]) / ret_std[mask]
+    # When std is near-zero, z-score is 0 (no deviation)
+    zero_std = ~np.isnan(ret_mean) & ~np.isnan(ret_std) & (ret_std <= zero_threshold) & ~np.isnan(returns)
+    result[zero_std] = 0.0
     return result
 
 
@@ -821,17 +946,11 @@ def compute_high_low_range(
     Causality: at t uses bars [t-window+1 .. t].
     """
     n = len(high)
-    result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
-        return result
+        return np.full(n, np.nan, dtype=np.float64)
     with np.errstate(divide="ignore", invalid="ignore"):
         hl_ratio = (high - low) / np.where(close == 0, np.nan, close)
-    for i in range(window - 1, n):
-        seg = hl_ratio[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) > 0:
-            result[i] = np.mean(seg_clean)
-    return result
+    return _rolling_mean(hl_ratio, window)
 
 
 def compute_garman_klass_vol(
@@ -859,19 +978,22 @@ def compute_garman_klass_vol(
         hl_term = 0.5 * (np.log(high / low)) ** 2
         co_term = (2.0 * np.log(2.0) - 1.0) * (np.log(close / open_arr)) ** 2
 
+    gk = hl_term - co_term
+    # O(n) rolling sum via cumsum
+    gk_sum = _rolling_sum(gk, window)
+    # Count valid bars per window
+    nan_mask = np.isnan(gk)
+    csum_nan = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    result = np.full(n, np.nan, dtype=np.float64)
     for i in range(window - 1, n):
-        seg_hl = hl_term[i - window + 1 : i + 1]
-        seg_co = co_term[i - window + 1 : i + 1]
-        # Skip bars where either term is NaN
-        valid = ~(np.isnan(seg_hl) | np.isnan(seg_co))
-        if np.sum(valid) < 2:
+        count = window - (csum_nan[i + 1] - csum_nan[i - window + 1])
+        if count < 2:
             continue
-        gk_sum = np.sum(seg_hl[valid] - seg_co[valid])
-        if gk_sum < 0:
-            # Clamp to 0 — negative variance is invalid
+        s = gk_sum[i]
+        if s < 0 or np.isnan(s):
             result[i] = 0.0
         else:
-            result[i] = np.sqrt(gk_sum / np.sum(valid))
+            result[i] = np.sqrt(s / count)
     return result
 
 
@@ -897,12 +1019,18 @@ def compute_parkinson_vol(
         hl_sq = np.log(high / low) ** 2
 
     denom = 4.0 * np.log(2.0)  # constant factor
+    # O(n): sum of ln(H/L)^2 via rolling sum, divide by count, sqrt
+    roll_sum = _rolling_sum(hl_sq, window)
+    nan_mask = np.isnan(hl_sq)
+    csum_nan = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    result = np.full(n, np.nan, dtype=np.float64)
     for i in range(window - 1, n):
-        seg = hl_sq[i - window + 1 : i + 1]
-        seg_clean = seg[~np.isnan(seg)]
-        if len(seg_clean) < 2:
+        count = window - (csum_nan[i + 1] - csum_nan[i - window + 1])
+        if count < 2:
             continue
-        result[i] = np.sqrt(np.sum(seg_clean) / (denom * len(seg_clean)))
+        s = roll_sum[i]
+        if not np.isnan(s) and s > 0:
+            result[i] = np.sqrt(s / (denom * count))
     return result
 
 
@@ -1237,12 +1365,41 @@ def compute_volume_trend(
     Causality: at t uses volume bars up to t.
     """
     n = len(volume)
-    result = np.full(n, np.nan, dtype=np.float64)
     if n < window:
+        return np.full(n, np.nan, dtype=np.float64)
+
+    # O(n) rolling linear regression slope via cumsum of volume and idx*volume
+    # β = Σ(i - mean_i)(y_i - mean_y) / Σ(i - mean_i)²
+    #   = (Σ i*y_i - mean_i * Σ y_i) / denom  (since Σ(i - mean_i) = 0)
+    # where i = [0, 1, ..., window-1] within each window
+    # mean_i = (window-1)/2
+    # denom = window*(window²-1)/12
+    mid = (window - 1.0) * 0.5
+    denom = window * (window * window - 1.0) / 12.0
+
+    # Use global indices to compute rolling weighted sums
+    # For window ending at t, the local index i = global_idx - (t-window+1)
+    # β[t] = (Σ((j - (t-window+1) - mid) * y_j)) / denom  for j in [t-window+1, t]
+    #       = (Σ((j - mid) * y_j) - (t-window+1) * Σ y_j) / denom
+    # where y_j = volume[j]
+    clean = np.where(np.isnan(volume), 0.0, volume)
+    csum_y = np.cumsum(np.insert(clean, 0, 0))
+    # j * y_j where j is global index (0, 1, ..., n-1)
+    jy = np.arange(n, dtype=np.float64) * clean
+    csum_jy = np.cumsum(np.insert(jy, 0, 0))
+
+    result = np.full(n, np.nan, dtype=np.float64)
+    if denom == 0:
         return result
     for i in range(window - 1, n):
-        seg = volume[i - window + 1 : i + 1]
-        result[i] = _linear_regression_slope(seg)
+        start = i - window + 1
+        sum_y = csum_y[i + 1] - csum_y[start]
+        sum_jy = csum_jy[i + 1] - csum_jy[start]
+        # β = (Σ(j * y_j) - (start + (W-1)/2) * Σ y_j) / denom
+        # where start = t-W+1 and mid = (W-1)/2
+        # so start + mid = t - (W-1)/2 = offset correction
+        numer = sum_jy - (start + mid) * sum_y
+        result[i] = numer / denom
     return result
 
 
