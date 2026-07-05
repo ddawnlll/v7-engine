@@ -2,6 +2,8 @@
 Merged from PR + main branches.
 """
 
+from __future__ import annotations
+
 # === PR branch: calibration engine tests ===
 """Tests for alphaforge.calibration.engine — calibration + alpha scores."""
 
@@ -148,25 +150,7 @@ class TestPredictCalibrated:
 
 
 # === main branch: calibration metrics tests ===
-"""Tests for AlphaForge calibration module (Issue #136).
-
-Covers:
-- compute_confidence_bins: bin correctness, empty bins, edge bins
-- compute_ece / compute_mce: metric correctness on known distributions
-- compute_brier_score: multi-class Brier score
-- assign_calibration_status: threshold-based assignment
-- compute_calibration_metrics: end-to-end with validation
-- build_calibration_candidate: schema-compatible dict output
-- compute_per_fold_degradation: per-fold tracking
-- calibrate_model: one-shot convenience
-- Schema validation: CalibrationCandidate passes schema checks
-- Edge cases: perfect calibration, worst-case, single class, NaN guards,
-  empty arrays, mismatched shapes
-"""
-
-from __future__ import annotations
-
-from typing import Any, Dict, List
+"""Tests for AlphaForge calibration module (Issue #136)."""
 
 import numpy as np
 import pytest

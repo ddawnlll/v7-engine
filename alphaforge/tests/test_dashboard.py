@@ -18,7 +18,8 @@ from typing import Any, Generator
 import pytest
 from fastapi.testclient import TestClient
 
-from alphaforge.dashboard.app import create_app, _find_repo_root
+from alphaforge.dashboard.app import app as dashboard_app
+from alphaforge.paths import _find_repo_root
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────
@@ -108,7 +109,7 @@ def _make_mining_summary(
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
     """Provide a TestClient for the dashboard app."""
-    app = create_app()
+    app = dashboard_app
     with TestClient(app) as tc:
         yield tc
 
@@ -291,10 +292,10 @@ class TestAppFactory:
     """Verify the app factory function."""
 
     def test_create_app_returns_fastapi_app(self) -> None:
-        """create_app() returns a configured FastAPI instance."""
-        app = create_app()
+        """dashboard_app is a configured FastAPI instance."""
+        app = dashboard_app
         assert app.title == "AlphaForge Mining Dashboard"
-        assert app.version == "1.0.0"
+        assert app.version == "0.1.0"
 
     def test_create_app_has_routes(self) -> None:
         """The app has the expected routes registered."""

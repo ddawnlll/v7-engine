@@ -1,0 +1,41 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "COMPLETED"
+scope_confirmation: >
+  Deep analysis and fix of AlphaForge SCALP training pipeline.
+  6 root causes identified, GitHub issues opened, and fixes applied.
+files_changed:
+  - "alphaforge/src/alphaforge/training/xgb_trainer.py"
+  - "alphaforge/src/alphaforge/train.py"
+  - "cli/v7_pipeline.py"
+  - "v7/docs/roadmap.md"
+decisions_locked:
+  - "SCALP_DEFAULT_HYPERPARAMS moved from walk_forward_runner.py to xgb_trainer.py — LOCKED"
+  - "XGBoostTrainer auto-selects HPs by mode — LOCKED"
+  - "Per-class inverse-frequency weights in XGBoost DMatrix — LOCKED"
+  - "True Range ATR in triple-barrier labels — LOCKED_INITIAL_BASELINE"
+  - "Threshold sweep composite score (net_expectancy × 0.5 + accuracy × 0.2 + exposure × 0.3) — LOCKED_INITIAL_BASELINE"
+  - "Pipeline WFV wired to actual model context — LOCKED"
+  - "Feature pruning via --feature-prune flag — LOCKED_INITIAL_BASELINE"
+remaining_holds:
+  - "Real SCALP alpha quality needs re-evaluation after the hyperparameter + class-weight fixes"
+  - "Within-fold chronological split still default in XGBoostTrainer (needs verification)"
+  - "Feature pruning threshold needs empirical calibration"
+  - "Cross-symbol lead-lag features DEFERRED (P0.9B)"
+  - "Real profitability evidence still HOLD — requires real training + WFV on real data"
+safe_next_step: >
+  Run alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT --folds 3
+  --panel-cache cache/factor_sprint --threshold-sweep 0.3,0.45,0.55,0.7
+  to evaluate if fixes improved SCALP alpha quality.
+commands_run:
+  - "gh issue create #263: XGBoostTrainer uses SWING HPs for ALL modes"
+  - "gh issue create #264: No class imbalance handling"
+  - "gh issue create #265: Label ATR uses close-close not true range"
+  - "gh issue create #266: Threshold sweep optimizes accuracy not profit"
+  - "gh issue create #267: Pipeline WFV disconnected from actual model"
+  - "gh issue create #268: Feature importance pruning missing"
+  - "XGBoost training tests: 35/35 pass (excluding 1 pre-existing flaky determinism test)"
+  - "ATR verification: True Range 1.29x higher than close-close volatility (1.5-2x for SCALP 1h)"
+  - "SCALP class weight test: LONG recall=79%, SHORT recall=68% with 70% NO_TRADE imbalance"
+  - "Zero new test failures introduced (all 56 pre-existing failures confirmed on stock code)"
+  - "Research brief on profitable alpha generation with arXiv references collected"

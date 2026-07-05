@@ -228,7 +228,7 @@ def route_request(
         ValueError: If the request mode is not recognized, or if
                     validate_scope=True and scope compatibility fails.
     """
-    mode = request.get("mode", request.get("requested_trade_mode", ""))
+    mode = request.get("mode") or request.get("requested_trade_mode") or request.get("scope", {}).get("requested_trade_mode", "")
     if not mode:
         raise ValueError("AnalysisRequest is missing 'mode' field")
 

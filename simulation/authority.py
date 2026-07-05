@@ -10,7 +10,7 @@ This is the SINGLE authority module. Requirements:
     produces the same R as a direct simulation.engine call.
 
 Import boundary: authority.py may import from simulation.engine and simulation.contracts.
-Must NOT import v7, alphaforge, runtime, or interface.
+Must NOT import from other domain packages (v7/alphaforge/runtime/interface).
 """
 
 from __future__ import annotations

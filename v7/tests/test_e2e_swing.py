@@ -57,18 +57,19 @@ class TestSwingEndToEnd:
 
         # Step 4: Build AnalysisResult from policy output
         analysis_result = build_analysis_result(
-            request_id=request["request_id"],
-            decision=policy_result.decision,
+            request_id=request["identity"]["request_id"],
+            recommended_action=policy_result.decision,
             confidence=policy_result.confidence,
-            stop_loss_price=policy_result.stop_loss_price,
-            take_profit_price=policy_result.take_profit_price,
+            stop_loss=policy_result.stop_loss_price,
+            take_profit=policy_result.take_profit_price,
             entry_price=policy_result.entry_price,
-            position_size_pct=policy_result.position_size_pct,
-            reasoning=policy_result.reason,
-            model_signature="swing_v1@abc123",
-            mode="SWING",
-            symbol="BTCUSDT",
-            execution_eligibility=policy_result.gates,
+            size_multiplier=policy_result.position_size_pct,
+            decision_summary=policy_result.reason,
+            trade_mode="SWING",
+            is_actionable=True,
+            signal_status="SIGNAL",
+            decision_status="VALID",
+            expected_r=policy_result.expected_r,
         )
         assert validate_analysis_result(analysis_result) == []
 
@@ -106,18 +107,18 @@ class TestSwingEndToEnd:
 
         # HOLD decisions still produce valid AnalysisResult
         analysis_result = build_analysis_result(
-            request_id=request["request_id"],
-            decision="HOLD",
+            request_id=request["identity"]["request_id"],
+            recommended_action="NO_TRADE",
             confidence=0.30,
-            stop_loss_price=0.0,
-            take_profit_price=0.0,
+            stop_loss=0.0,
+            take_profit=0.0,
             entry_price=0.0,
-            position_size_pct=0.0,
-            reasoning=policy_result.reason,
-            model_signature="swing_v1@abc123",
-            mode="SWING",
-            symbol="ETHUSDT",
-            execution_eligibility=policy_result.gates,
+            size_multiplier=0.0,
+            decision_summary=policy_result.reason,
+            trade_mode="SWING",
+            is_actionable=False,
+            signal_status="FILTERED",
+            decision_status="VALID",
         )
         assert validate_analysis_result(analysis_result) == []
 
@@ -166,18 +167,40 @@ class TestSwingEndToEnd:
         )
 
         analysis_result = build_analysis_result(
-            request_id=request["request_id"],
-            decision=policy_result.decision,
+            request_id=request["identity"]["request_id"],
+            recommended_action=policy_result.decision,
             confidence=policy_result.confidence,
-            stop_loss_price=policy_result.stop_loss_price,
-            take_profit_price=policy_result.take_profit_price,
+            stop_loss=policy_result.stop_loss_price,
+            take_profit=policy_result.take_profit_price,
             entry_price=policy_result.entry_price,
-            position_size_pct=policy_result.position_size_pct,
-            reasoning=policy_result.reason,
-            model_signature="swing_v1@abc123",
-            mode="SWING",
-            symbol="BTCUSDT",
+            size_multiplier=policy_result.position_size_pct,
+            decision_summary=policy_result.reason,
+            trade_mode="SWING",
+            is_actionable=True,
+            signal_status="SIGNAL",
+            decision_status="VALID",
+            expected_r=policy_result.expected_r,
         )
+
+        candidate = {
+            "request_id": request["identity"]["request_id"],
+            "mode": "SWING",
+            "symbol": "BTCUSDT",
+            "model_scope": "swing_v1",
+        }
+        ctx = {
+            "expectancy_r": policy_result.expected_r,
+            "expected_r_net": policy_result.expected_r,
+            "expected_r_gross": 1.20,
+            "ece": 0.05,
+            "model_signature": "swing_v1@abc123",
+        }
+        gate_results = evaluate_candidate(candidate, ctx)
+        summary = get_promotion_summary(gate_results)
+        assert summary["passed"] is True
+        assert "PROMOTE" in summary["recommendation"]
+
+        # Schema validation on analysis_result
         jsonschema.validate(instance=analysis_result, schema=result_schema)
 
         event = build_decision_event(analysis_result=analysis_result)
@@ -222,7 +245,7 @@ class TestSwingEndToEnd:
         )
 
         candidate = {
-            "request_id": request["request_id"],
+            "request_id": request["identity"]["request_id"],
             "mode": "SWING",
             "symbol": "BTCUSDT",
             "model_scope": "swing_v1",

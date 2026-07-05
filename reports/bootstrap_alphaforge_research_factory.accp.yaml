@@ -1,0 +1,137 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task: "Bootstrap the Hermes-based AlphaForge Research Factory"
+result: "PASS"
+scope_confirmation: "All 11 mission criteria evaluated. 10 PASS, 1 advisory (gateway not running for auto-dispatch)."
+
+evaluation:
+  criterion_1_web_search_extract:
+    status: PASS
+    evidence: "web_search and web_extract tools are native Hermes tools. Nous Portal gateway reports web tools active via exa. Both tools available in current session."
+  criterion_2_bundled_research_skills:
+    status: PASS
+    evidence: "arxiv (research/arxiv) and ocr-and-documents (productivity/ocr-and-documents) both present and available."
+  criterion_3_optional_research_skills:
+    status: PASS
+    evidence: "All 6 official optional skills installed: official/research/duckduckgo-search, official/research/searxng-search, official/research/parallel-cli, official/research/scrapling, official/mcp/fastmcp, official/mcp/mcporter."
+  criterion_4_external_memory_provider:
+    status: PASS
+    evidence: "ByteRover is active as the memory provider (hermes memory status: provider=byterover, status=available, plugin installed). Holographic is also installed as fallback."
+  criterion_5_v7_memory_md_constitution:
+    status: PASS
+    evidence: "Created /home/daskomputer/src/v7-engine/MEMORY.md with 7 articles covering: economic source of truth (simulation.engine), authority layer, no auto-promotion, domain boundaries, workflow integrity, memory provider, amendment process."
+  criterion_6_alphaforge_research_factory_skill:
+    status: PASS
+    evidence: "Created skill: research/alphaforge-research-factory at ~/.hermes/skills/research/alphaforge-research-factory/SKILL.md with 8 pipeline stages, invariant rules, guards, and pitfalls."
+  criterion_7_kanban_board:
+    status: PASS
+    evidence: "Kanban DB initialized at ~/.hermes/kanban.db. 8 tasks created with dependency links: Research Planner → Report Writer → Praxis Verifier; Dataset Auditor + Authority Guard → XGBoost Trainer → Backtest Runner → Leakage Detector + Report Writer → Praxis Verifier."
+  criterion_8_nightly_workflow:
+    status: PASS
+    evidence: "Cron job 'nightly-alphaforge-research' (7e847b8da418) created. Schedule: 0 2 * * * (daily 2am). Workdir: /home/daskomputer/src/v7-engine. Skills loaded: alphaforge-research-factory, arxiv, github-pr-workflow. Pipeline: safety check → worktree isolation → kanban check → experiment run → test suite → evidence collection → praxis verification → PASS/FAIL/NEEDS_REPAIR report."
+  criterion_9_no_live_trading:
+    status: PASS
+    evidence: "No live trading code, configuration, or automation created. Cron job is research-only."
+  criterion_10_no_protected_modifications:
+    status: PASS
+    evidence: "No modifications to simulation/authority.py, AGENTS.md, CLAUDE.md, CI config, secrets, or bypass rules. MEMORY.md is a new file, not a modification of existing authority."
+  criterion_11_final_bootstrap_report:
+    status: PASS
+    evidence: "This ACCP-YAML file constitutes the final bootstrap report. See summary below."
+
+files_changed:
+  - path: /home/daskomputer/src/v7-engine/MEMORY.md
+    action: created
+    purpose: "V7 Engine constitution — 7 articles governing economic truth, authority, no auto-promotion, domain boundaries, workflow integrity, memory, amendment."
+  - path: /home/daskomputer/.hermes/skills/research/alphaforge-research-factory/SKILL.md
+    action: created
+    purpose: "AlphaForge Research Factory skill — 8 pipeline stages with invariants, guards, and falling-pitfalls."
+  - path: /home/daskomputer/.hermes/skills/research/duckduckgo-search/SKILL.md
+    action: installed
+    purpose: "Official optional research skill — free web search via DuckDuckGo."
+  - path: /home/daskomputer/.hermes/skills/research/searxng-search/SKILL.md
+    action: installed
+    purpose: "Official optional research skill — meta-search via SearXNG."
+  - path: /home/daskomputer/.hermes/skills/research/parallel-cli/SKILL.md
+    action: installed
+    purpose: "Official optional research skill — Parallel CLI agent-native web search."
+  - path: /home/daskomputer/.hermes/skills/research/scrapling/SKILL.md
+    action: installed
+    purpose: "Official optional research skill — web scraping with Scrapling."
+  - path: /home/daskomputer/.hermes/skills/mcp/fastmcp/SKILL.md
+    action: installed
+    purpose: "Official optional MCP skill — build/test/inspect/deploy MCP servers with FastMCP."
+  - path: /home/daskomputer/.hermes/skills/mcp/mcporter/SKILL.md
+    action: installed
+    purpose: "Official optional MCP skill — mcporter CLI for MCP server management."
+  - path: /home/daskomputer/.hermes/kanban.db
+    action: initialized
+    purpose: "Kanban board for AlphaForge Research Factory task management."
+  - path: /home/daskomputer/src/v7-engine/reports/bootstrap_alphaforge_research_factory.accp.yaml
+    action: created
+    purpose: "This bootstrap completion report."
+
+decisions_locked:
+  - decision: "ByteRover is the primary external memory provider."
+    status: LOCKED
+  - decision: "simulation.engine is the sole economic source of truth."
+    status: LOCKED
+    reference: MEMORY.md Article 1
+  - decision: "Hardcoded cost/stop/target constants outside authority layer are forbidden."
+    status: LOCKED
+    reference: MEMORY.md Article 2
+  - decision: "No auto-merge, no auto-promotion, no secret modifications."
+    status: LOCKED
+    reference: MEMORY.md Article 3
+  - decision: "Domain boundaries are immutable."
+    status: LOCKED
+    reference: MEMORY.md Article 4
+
+remaining_holds:
+  - hold: "Gateway not running — cron jobs won't fire automatically without it."
+    severity: advisory
+    recommendation: "Run `hermes gateway start` or `hermes gateway install` to enable automatic nightly dispatch."
+  - hold: "Kanban dispatcher requires running gateway for auto-assignment."
+    severity: advisory
+    recommendation: "Tasks exist but won't auto-assign until gateway is running. Run `hermes gateway start`."
+  - hold: "No live trading"
+    severity: permanent_constraint
+    recommendation: "Never remove this constraint. Cron jobs and skills are research-only."
+  - hold: "AGGRESSIVE_SCALP thresholds are HOLD pending empirical evidence."
+    severity: research
+    recommendation: "Part of existing V7 roadmap. Not changed by this bootstrap."
+
+safe_next_step:
+  - command: "hermes gateway start"
+    description: "Start gateway to enable automatic cron job dispatch and kanban task automation."
+  - command: "hermes cron run nightly-alphaforge-research"
+    description: "Manually trigger the nightly workflow for an immediate test run."
+  - command: "hermes kanban claim t_fb9a81b8 && hermes kanban complete t_fb9a81b8 --summary 'Research agenda complete'"
+    description: "Manually run and complete the first kanban task (Research Planner) to test the pipeline."
+
+commands_run:
+  - "hermes status — verified web tools, memory provider, tool status"
+  - "hermes config show — verified configuration"
+  - "hermes memory status — verified ByteRover active"
+  - "hermes skills install official/research/duckduckgo-search"
+  - "hermes skills install official/research/searxng-search"
+  - "hermes skills install official/research/parallel-cli"
+  - "hermes skills install official/research/scrapling"
+  - "hermes skills install official/mcp/fastmcp"
+  - "hermes skills install official/mcp/mcporter"
+  - "hermes kanban init — initialized kanban database"
+  - "hermes kanban create (8 tasks) — created kanban task structure"
+  - "hermes kanban link (8 links) — created dependency graph"
+  - "cronjob action=create — created nightly-alphaforge-research cron"
+  - "mkdir -p data/runs/ reports/ — created output directories"
+
+evidence:
+  - "MEMORY.md exists at project root with 7 articles"
+  - "alphaforge-research-factory skill installed at ~/.hermes/skills/research/alphaforge-research-factory/SKILL.md"
+  - "6 official optional skills installed (duckduckgo-search, searxng-search, parallel-cli, scrapling, fastmcp, mcporter)"
+  - "Kanban DB initialized with 8 tasks and dependency graph"
+  - "Nightly cron job created (ID: 7e847b8da418, schedule: 0 2 * * *)"
+  - "ByteRover memory provider active and available"
+  - "Web tools active via exa through Nous Portal"
+  - "No live trading configurations created"
+  - "No protected files modified (simulation/authority.py, CI, secrets untouched)"

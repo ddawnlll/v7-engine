@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AlphaForge Mining Dashboard", version="0.1.0")
 
+
+def create_app() -> FastAPI:
+    """Return the configured FastAPI app instance."""
+    return app
+
 # Templates
 _template_dir = Path(__file__).resolve().parent / "templates"
 _templates = Jinja2Templates(directory=str(_template_dir))
