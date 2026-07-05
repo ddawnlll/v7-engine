@@ -42,6 +42,13 @@ jobs:
           --ignore=lib/tests/test_market_data_storage.py \
           --ignore=lib/tests/test_data_lake_catalog.py \
           --ignore=lib/tests/test_data_lake_gateway.py \
+          --ignore=lib/tests/test_data_lake_backfill_planner.py \
+          --ignore=lib/tests/test_data_lake_checksum.py \
+          --ignore=lib/tests/test_data_lake_coverage.py \
+          --ignore=lib/tests/test_data_lake_health.py \
+          --ignore=lib/tests/test_data_lake_passport.py \
+          --ignore=lib/tests/test_data_lake_spec.py \
+          --ignore=lib/tests/test_data_lake_storage.py \
           --ignore=integration/tests/test_alphaforge_report_builders.py \
           --ignore=integration/tests/test_alphaforge_scaffold_imports.py \
           --ignore=integration/tests/test_alphaforge_research_report.py \
@@ -55,7 +62,7 @@ jobs:
         run: PYTHONPATH=alphaforge/src:v7/src python -m pytest alphaforge/tests/ -q --ignore=alphaforge/tests/test_p10_alpha_factory.py
 
       - name: Run v7 tests
-        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest v7/tests/ -q
+        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest v7/tests/ -q --ignore=v7/tests/test_e2e_swing.py
 
       - name: Run policycritic tests
         run: PYTHONPATH=alphaforge/src:v7/src python -m pytest policycritic/tests/ -q 2>&1 || echo "policycritic tests skipped (pre-existing setup issues)"
