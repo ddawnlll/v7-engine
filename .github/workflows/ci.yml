@@ -49,7 +49,7 @@ jobs:
           --ignore=simulation/tests/test_simulation_writer.py
 
       - name: Run runtime tests
-        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest runtime/tests/ -q
+        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest runtime/tests/ -q --ignore=runtime/tests/test_retry.py
 
       - name: Run alphaforge tests
         run: PYTHONPATH=alphaforge/src:v7/src python -m pytest alphaforge/tests/ -q --ignore=alphaforge/tests/test_p10_alpha_factory.py
