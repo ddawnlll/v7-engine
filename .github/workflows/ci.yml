@@ -40,3 +40,57 @@ jobs:
 
       - name: Run v7 tests
         run: PYTHONPATH=. python -m pytest v7/tests/ -q
+
+      - name: Gate check (self-validator)
+        run: |
+          # Create a test candidate with known passing metrics
+          cat > /tmp/gate-candidate.json << 'EOF'
+          {
+            "request_id": "ci_self_check",
+            "mode": "SWING",
+            "symbol": "BTCUSDT",
+            "model_scope": "swing_v1"
+          }
+          EOF
+
+          cat > /tmp/gate-context.json << 'EOF'
+          {
+            "expectancy_r": 0.50,
+            "expected_r_net": 0.25,
+            "ece": 0.05,
+            "oos_sharpe": 0.65,
+            "oos_trade_count": 200,
+            "fold_count": 6,
+            "win_rate": 0.55,
+            "profit_factor": 1.4,
+            "max_drawdown_r": -2.5
+          }
+          EOF
+
+          PYTHONPATH=. python -c "
+          import json, sys
+          from v7.gates.config import load_gate_config, DEFAULT_GATE_CONFIG
+          from v7.gates.runner import run_gates, to_json_report
+
+          with open('/tmp/gate-candidate.json') as f:
+              candidate = json.load(f)
+          with open('/tmp/gate-context.json') as f:
+              context = json.load(f)
+
+          results = run_gates(candidate, context, config=DEFAULT_GATE_CONFIG)
+          report = to_json_report(results)
+
+          print(json.dumps(report, indent=2))
+
+          if not results.get('passed'):
+              failed = [
+                  (gid, r['detail']) for gid, r in report.get('gate_results', {}).items()
+                  if r.get('status') == 'FAIL'
+              ]
+              print(f'\nGATE CHECK FAILED: {len(failed)} gates failed')
+              for gid, detail in failed:
+                  print(f'  {gid}: {detail}')
+              sys.exit(1)
+          else:
+              print(f'\nGATE CHECK PASSED — all enabled gates clear')
+          " 2>&1 | tail -30

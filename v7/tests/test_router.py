@@ -7,9 +7,12 @@ from v7.router import (
     LOCKED_INITIAL_BASELINE,
     MODE_PROFILES,
     RouteResult,
+    get_artifact_scope_tag,
     get_available_modes,
     get_mode_profile,
     route_request,
+    validate_model_scope,
+    validate_scope_compatibility,
 )
 
 
@@ -238,3 +241,182 @@ class TestModeProfiles:
         assert ag["stop_multiplier"] == 1.0
         assert ag["target_multiplier"] == 1.0
         assert ag["max_holding_bars"] == 5
+
+
+class TestValidateModelScope:
+    """Test model_scope validation."""
+
+    def test_swing_valid(self):
+        """swing_v1 should be valid for SWING."""
+        assert validate_model_scope("swing_v1", "SWING") is None
+
+    def test_scalp_valid(self):
+        """scalp_v1 should be valid for SCALP."""
+        assert validate_model_scope("scalp_v1", "SCALP") is None
+
+    def test_aggressive_scalp_valid(self):
+        """aggressive_scalp_v1 should be valid for AGGRESSIVE_SCALP."""
+        assert validate_model_scope("aggressive_scalp_v1", "AGGRESSIVE_SCALP") is None
+
+    def test_swing_with_scalp_mode_rejected(self):
+        """swing_v1 should be rejected for SCALP mode."""
+        err = validate_model_scope("swing_v1", "SCALP")
+        assert err is not None
+        assert "swing_" in err
+
+    def test_scalp_with_swing_mode_rejected(self):
+        """scalp_v1 should be rejected for SWING mode."""
+        err = validate_model_scope("scalp_v1", "SWING")
+        assert err is not None
+        assert "scalp_" in err
+
+    def test_aggressive_scalp_with_swing_rejected(self):
+        """aggressive_scalp_v1 should be rejected for SWING mode."""
+        err = validate_model_scope("aggressive_scalp_v1", "SWING")
+        assert err is not None
+        assert "aggressive_scalp_" in err
+
+    def test_empty_scope_rejected(self):
+        """Empty model_scope should be rejected."""
+        err = validate_model_scope("", "SWING")
+        assert err is not None
+
+    def test_unknown_mode(self):
+        """Unknown mode should return error message."""
+        err = validate_model_scope("swing_v1", "DAY_TRADING")
+        assert err is not None
+        assert "Unknown mode" in err
+
+
+class TestValidateScopeCompatibility:
+    """Test scope compatibility validation."""
+
+    def test_swing_compatible(self):
+        """SWING + swing_v1 should be compatible."""
+        assert validate_scope_compatibility("SWING", "swing_v1") is None
+
+    def test_scalp_compatible(self):
+        """SCALP + scalp_v1 should be compatible."""
+        assert validate_scope_compatibility("SCALP", "scalp_v1") is None
+
+    def test_aggressive_scalp_compatible(self):
+        """AGGRESSIVE_SCALP + aggressive_scalp_v1 should be compatible."""
+        assert validate_scope_compatibility("AGGRESSIVE_SCALP", "aggressive_scalp_v1") is None
+
+    def test_scope_mismatch(self):
+        """SCALP mode with swing_v1 should be a mismatch."""
+        err = validate_scope_compatibility("SCALP", "swing_v1")
+        assert err is not None
+
+    def test_unknown_mode(self):
+        """Unknown mode should return error."""
+        err = validate_scope_compatibility("INVALID", "swing_v1")
+        assert err is not None
+
+    def test_lowercase_mode_accepted(self):
+        """Lowercase mode should be case-insensitive."""
+        assert validate_scope_compatibility("scalp", "scalp_v1") is None
+
+
+class TestGetArtifactScopeTag:
+    """Test artifact scope tagging."""
+
+    def test_swing_tag(self):
+        """SWING should produce 'v7_swing' tag."""
+        assert get_artifact_scope_tag("SWING") == "v7_swing"
+
+    def test_scalp_tag(self):
+        """SCALP should produce 'v7_scalp' tag."""
+        assert get_artifact_scope_tag("SCALP") == "v7_scalp"
+
+    def test_aggressive_scalp_tag(self):
+        """AGGRESSIVE_SCALP should produce 'v7_aggressive_scalp' tag."""
+        assert get_artifact_scope_tag("AGGRESSIVE_SCALP") == "v7_aggressive_scalp"
+
+    def test_lowercase_accepted(self):
+        """Lowercase mode should be accepted."""
+        assert get_artifact_scope_tag("swing") == "v7_swing"
+
+    def test_unknown_mode_raises(self):
+        """Unknown mode should raise ValueError."""
+        with pytest.raises(ValueError, match="Unknown mode"):
+            get_artifact_scope_tag("INVALID")
+
+
+class TestRouteRequestWithScopeValidation:
+    """Test route_request with scope validation enabled."""
+
+    def test_swing_scope_valid(self):
+        """SWING with valid model_scope should pass scope check."""
+        request = {
+            "request_id": "req_001",
+            "mode": "SWING",
+            "symbol": "BTCUSDT",
+            "scope": {
+                "model_scope": "swing_v1",
+            },
+        }
+        result = route_request(request, validate_scope=True)
+        assert result.allowed is True
+        assert result.mode == "SWING"
+
+    def test_scalp_scope_mismatch_raises(self):
+        """SCALP with swing_v1 scope should raise ValueError."""
+        request = {
+            "request_id": "req_002",
+            "mode": "SCALP",
+            "symbol": "ETHUSDT",
+            "scope": {
+                "model_scope": "swing_v1",
+            },
+        }
+        with pytest.raises(ValueError, match="Scope mismatch"):
+            route_request(request, validate_scope=True)
+
+    def test_scope_validation_off_by_default(self):
+        """Default route_request should not validate scope."""
+        request = {
+            "request_id": "req_003",
+            "mode": "SCALP",
+            "symbol": "ETHUSDT",
+            "scope": {
+                "model_scope": "swing_v1",
+            },
+        }
+        # Should not raise even with mismatched scope
+        result = route_request(request, validate_scope=False)
+        assert result.allowed is False  # SCALP is HOLD
+
+    def test_scope_from_top_level_model_scope(self):
+        """route_request should read model_scope from top-level field."""
+        request = {
+            "request_id": "req_004",
+            "mode": "SWING",
+            "symbol": "BTCUSDT",
+            "model_scope": "swing_v1",
+        }
+        result = route_request(request, validate_scope=True)
+        assert result.allowed is True
+
+    def test_aggressive_scalp_scope_mismatch_raises(self):
+        """AGGRESSIVE_SCALP with scalp_v1 scope should raise."""
+        request = {
+            "request_id": "req_005",
+            "mode": "AGGRESSIVE_SCALP",
+            "symbol": "BTCUSDT",
+            "scope": {
+                "model_scope": "scalp_v1",
+            },
+        }
+        with pytest.raises(ValueError, match="Scope mismatch"):
+            route_request(request, validate_scope=True)
+
+    def test_missing_model_scope_with_validation(self):
+        """Missing model_scope with validate_scope=True should not error."""
+        request = {
+            "request_id": "req_006",
+            "mode": "SWING",
+            "symbol": "BTCUSDT",
+        }
+        result = route_request(request, validate_scope=True)
+        assert result.allowed is True

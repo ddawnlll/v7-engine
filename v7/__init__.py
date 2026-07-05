@@ -13,7 +13,17 @@ Modes (priority order per v7/docs/v7_mode_centric_architecture.md):
   - SWING:           SECONDARY_BASELINE, LOCKED_INITIAL_BASELINE
 
 Architecture:
-  AnalysisRequest -> builder -> router -> policy -> DecisionEvent
+  AnalysisRequest -> builder -> router -> policy -> portfolio -> risk -> DecisionEvent
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
+
+from v7.portfolio import PortfolioManager, PortfolioResult
+from v7.risk import RiskManager, RiskResult
+
+__all__ = [
+    "PortfolioManager",
+    "PortfolioResult",
+    "RiskManager",
+    "RiskResult",
+]

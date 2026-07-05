@@ -1,0 +1,124 @@
+# Reusable GitHub Action — G0-G10 Gate Evaluation
+#
+# Evaluates a candidate through configured promotion gates and produces
+# a JSON report. The action writes the report to a file and sets the
+# 'passed' and 'report_path' outputs.
+#
+# Inputs:
+#   candidate_path  — Path to JSON file containing the candidate dict
+#   context_path    — Path to JSON file containing the evaluation context
+#   config_path     — Path to YAML gate configuration file (optional)
+#                     Defaults to configs/gates.yaml
+#   report_path     — Path to write the output JSON report (optional)
+#                     Defaults to reports/gate-check-report.json
+#
+# Outputs:
+#   passed        — 'true' if all enabled gates passed, 'false' otherwise
+#   report_path   — Absolute path to the written report file
+
+name: "Gate Check"
+description: "Run G0-G10 promotion gate evaluation on a candidate"
+author: "V7 Engine"
+
+inputs:
+  candidate_path:
+    description: "Path to candidate JSON file"
+    required: true
+  context_path:
+    description: "Path to evaluation context JSON file"
+    required: true
+  config_path:
+    description: "Path to gate configuration YAML file"
+    required: false
+    default: "configs/gates.yaml"
+  report_path:
+    description: "Path to write the output JSON report"
+    required: false
+    default: "reports/gate-check-report.json"
+
+outputs:
+  passed:
+    description: "true if all enabled gates passed, false otherwise"
+    value: ${{ steps.run-gates.outputs.passed }}
+  report_path:
+    description: "Absolute path to the written report file"
+    value: ${{ steps.run-gates.outputs.report_path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate inputs
+      id: validate
+      shell: bash
+      run: |
+        if [ ! -f "${{ inputs.candidate_path }}" ]; then
+          echo "::error::candidate_path not found: ${{ inputs.candidate_path }}"
+          exit 1
+        fi
+        if [ ! -f "${{ inputs.context_path }}" ]; then
+          echo "::error::context_path not found: ${{ inputs.context_path }}"
+          exit 1
+        fi
+        echo "candidate_path=${{ inputs.candidate_path }}" >> $GITHUB_ENV
+        echo "context_path=${{ inputs.context_path }}" >> $GITHUB_ENV
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install pyyaml
+
+    - name: Run gate evaluation
+      id: run-gates
+      shell: bash
+      env:
+        CANDIDATE_PATH: ${{ inputs.candidate_path }}
+        CONTEXT_PATH: ${{ inputs.context_path }}
+        CONFIG_PATH: ${{ inputs.config_path }}
+        REPORT_PATH: ${{ inputs.report_path }}
+      run: |
+        python -c "
+import json, os, sys
+
+# Add project root to path
+sys.path.insert(0, os.getcwd())
+
+from v7.gates.config import load_gate_config
+from v7.gates.runner import run_gates, to_json_report, write_report
+
+candidate_path = os.environ['CANDIDATE_PATH']
+context_path   = os.environ['CONTEXT_PATH']
+config_path    = os.environ.get('CONFIG_PATH', 'configs/gates.yaml')
+report_path    = os.environ.get('REPORT_PATH', 'reports/gate-check-report.json')
+
+with open(candidate_path) as f:
+    candidate = json.load(f)
+with open(context_path) as f:
+    context = json.load(f)
+
+config = load_gate_config(config_path)
+results = run_gates(candidate, context, config=config)
+report = to_json_report(results)
+actual_path = write_report(report, report_path)
+
+passed = str(results.get('passed', False)).lower()
+print(f'passed={passed}')
+print(f'report_path={actual_path}')
+
+# Set GitHub Actions outputs
+with open(os.environ.get('GITHUB_OUTPUT', '/dev/null'), 'a') as gh:
+    print(f'passed={passed}', file=gh)
+    print(f'report_path={actual_path}', file=gh)
+"
+
+    - name: Upload gate report
+      uses: actions/upload-artifact@v4
+      with:
+        name: gate-check-report
+        path: ${{ inputs.report_path }}
+        if-no-files-found: warn

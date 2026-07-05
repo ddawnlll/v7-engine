@@ -1,0 +1,28 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Issue #91 -- PC Phase 1: Metrics pipeline. CriticMetrics dataclass + CriticMetricsPipeline with ingest/to_review_schema/validate + 23 tests. PolicyCriticReview already registered in contracts/registry.json."
+files_changed:
+  - "v7/policy_critic/metrics.py"            # new: CriticMetrics, CriticMetricsPipeline
+  - "v7/policy_critic/tests/test_metrics.py"  # new: 23 tests
+  - "v7/policy_critic/__init__.py"            # updated: version 0.2.0, submodule docs
+  - "v7/docs/policy_critic/ai_summary.md"     # updated: code locations, open holds
+  - "v7/docs/roadmap.md"                      # updated: issue entry
+  - "reports/accp/issue-91.yaml"              # this file
+decisions_locked:
+  - "CriticMetrics frozen dataclass fields (LOCKED_INITIAL_BASELINE)"
+  - "CriticMetricsPipeline.ingest/extract signature (LOCKED_INITIAL_BASELINE)"
+  - "to_review_schema output shapes match PolicyCriticReview contract (LOCKED)"
+  - "VALID_VERDICTS enum from contract schema (LOCKED)"
+remaining_holds:
+  - "IQL expectile tau numeric thresholds (HOLD -- requires empirical evidence)"
+  - "Conformal coverage numeric thresholds (HOLD -- requires empirical evidence)"
+  - "CriticMetrics values are shadow defaults until live critic integration (HOLD)"
+safe_next_step:
+  - "Issue #92 -- PC Phase 2: Shadow replay buffer (completed concurrently)"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest v7/policy_critic/tests/ -v"
+evidence:
+  - "23/23 metrics tests pass"
+  - "137/137 policy_critic tests pass"
+  - "PolicyCriticReview entry present in contracts/registry.json"

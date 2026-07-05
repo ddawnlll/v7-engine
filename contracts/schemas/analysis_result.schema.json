@@ -2,121 +2,456 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://v7-engine/contracts/schemas/analysis_result.schema.json",
   "title": "AnalysisResult",
-  "description": "Policy engine output containing a trade decision with confidence, price targets, and execution eligibility gates for a given AnalysisRequest.",
+  "description": "V7 AnalysisResult — atomic engine-to-runtime analysis output contract. Top-level shape: contract, identity, request_link, status, decision, scores, execution_guidance, uncertainty_and_quality, deterministic_interaction, fallback_and_degradation, observability, lineage.",
   "type": "object",
   "required": [
-    "analysis_result_id",
-    "request_id",
+    "contract",
+    "identity",
+    "status",
     "decision",
-    "confidence",
-    "stop_loss_price",
-    "take_profit_price",
-    "entry_price",
-    "position_size_pct",
-    "reasoning",
-    "model_signature",
-    "analysis_timestamp",
-    "execution_eligibility",
-    "mode",
-    "symbol"
+    "scores",
+    "fallback_and_degradation"
   ],
   "properties": {
-    "analysis_result_id": {
-      "type": "string",
-      "description": "Unique identifier for this analysis result, assigned by the policy engine."
-    },
-    "request_id": {
-      "type": "string",
-      "description": "The request_id of the AnalysisRequest that triggered this result."
-    },
-    "decision": {
-      "type": "string",
-      "enum": ["ENTER_LONG", "ENTER_SHORT", "EXIT_LONG", "EXIT_SHORT", "HOLD"],
-      "description": "The trade decision produced by the policy engine."
-    },
-    "confidence": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1,
-      "description": "Model confidence score for this decision, normalized 0-1."
-    },
-    "stop_loss_price": {
-      "type": "number",
-      "description": "Recommended stop-loss price level."
-    },
-    "take_profit_price": {
-      "type": "number",
-      "description": "Recommended take-profit price level."
-    },
-    "entry_price": {
-      "type": "number",
-      "description": "Recommended entry price level."
-    },
-    "position_size_pct": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Recommended position size as a percentage of portfolio (0-100)."
-    },
-    "reasoning": {
-      "type": "string",
-      "description": "Human-readable or machine-parsable reasoning for the decision."
-    },
-    "model_signature": {
-      "type": "string",
-      "description": "Identifier for the model and version that produced this result, e.g. 'swing_v1@abc123'."
-    },
-    "analysis_timestamp": {
-      "type": "string",
-      "format": "date-time",
-      "description": "UTC timestamp when the analysis was completed."
-    },
-    "execution_eligibility": {
+    "contract": {
       "type": "object",
-      "description": "Gate results indicating whether the decision is eligible for live or paper execution.",
+      "description": "Versioned result contract artifact.",
       "required": [
-        "confidence_gate",
-        "risk_gate",
-        "regime_gate",
-        "cost_gate",
-        "overall_eligible"
+        "contract_version",
+        "response_schema_version",
+        "engine_output_version"
       ],
       "properties": {
-        "confidence_gate": {
-          "type": "boolean",
-          "description": "Confidence score meets the minimum threshold for this mode."
+        "contract_version": {
+          "type": "string",
+          "description": "Result contract version, e.g. 'v7-0.3'."
         },
-        "risk_gate": {
-          "type": "boolean",
-          "description": "Risk checks (position size, exposure) are satisfied."
+        "response_schema_version": {
+          "type": "string",
+          "description": "Response schema version, e.g. 'result-0.3'."
         },
-        "regime_gate": {
-          "type": "boolean",
-          "description": "Market regime is compatible with the decision direction."
-        },
-        "cost_gate": {
-          "type": "boolean",
-          "description": "Estimated costs (fee + slippage) do not consume expected edge."
-        },
-        "overall_eligible": {
-          "type": "boolean",
-          "description": "True if all individual gates passed; the decision is eligible for execution."
-        },
-        "gate_details": {
-          "type": "object",
-          "description": "Optional per-gate detail with scores and thresholds.",
-          "additionalProperties": true
+        "engine_output_version": {
+          "type": "string",
+          "description": "Engine output version, e.g. 'engine-out-0.3'."
         }
       },
       "additionalProperties": false
     },
-    "mode": {
-      "type": "string",
-      "enum": ["SCALP", "AGGRESSIVE_SCALP", "SWING"],
-      "description": "The trading mode under which this result was produced."
+    "identity": {
+      "type": "object",
+      "description": "Engine identity and result instance identification.",
+      "required": [
+        "request_id",
+        "engine_name",
+        "engine_version",
+        "timestamp_utc"
+      ],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "description": "The request_id of the AnalysisRequest that triggered this result."
+        },
+        "engine_name": {
+          "type": "string",
+          "description": "Engine name, e.g. 'v7'."
+        },
+        "engine_version": {
+          "type": "string",
+          "description": "Engine version, e.g. '0.3.0'."
+        },
+        "timestamp_utc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC timestamp when the analysis was completed."
+        },
+        "run_id": {
+          "type": "string",
+          "description": "Optional scan-run or evaluation-run identifier."
+        },
+        "trace_id": {
+          "type": "string",
+          "description": "Optional distributed tracing identifier."
+        },
+        "model_scope": {
+          "type": "string",
+          "description": "Model scope that produced this result, e.g. 'swing_v1'."
+        },
+        "trade_mode": {
+          "type": "string",
+          "enum": ["SWING", "SCALP", "AGGRESSIVE_SCALP"],
+          "description": "Trade mode under which this result was produced."
+        },
+        "artifact_id": {
+          "type": "string",
+          "description": "Model artifact identifier."
+        },
+        "model_artifact_version": {
+          "type": "string",
+          "description": "Model artifact version."
+        },
+        "calibration_artifact_version": {
+          "type": "string",
+          "description": "Calibration artifact version."
+        },
+        "calibration_artifact_id": {
+          "type": "string",
+          "description": "Calibration artifact identifier."
+        },
+        "policy_artifact_version": {
+          "type": "string",
+          "description": "Policy artifact version."
+        }
+      },
+      "additionalProperties": false
     },
-    "symbol": {
-      "type": "string",
-      "description": "Trading symbol, e.g. 'BTCUSDT'."
+    "request_link": {
+      "type": "object",
+      "description": "Links result back to originating request fields for consistency verification.",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Should match request.scope.symbol."
+        },
+        "model_scope": {
+          "type": "string",
+          "description": "Should match request.scope.model_scope."
+        },
+        "trade_mode": {
+          "type": "string",
+          "enum": ["SWING", "SCALP", "AGGRESSIVE_SCALP"],
+          "description": "Should match request.scope.requested_trade_mode."
+        },
+        "primary_interval": {
+          "type": "string",
+          "description": "Should match request.scope.primary_interval."
+        },
+        "context_intervals": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Should match request.scope.context_intervals."
+        },
+        "label_horizon_family": {
+          "type": "string",
+          "description": "Should match request scope's label_horizon_family."
+        },
+        "request_contract_version": {
+          "type": "string",
+          "description": "Should match request.contract.contract_version."
+        },
+        "request_kind_seen": {
+          "type": "string",
+          "description": "Should match request.contract.request_kind."
+        }
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "object",
+      "description": "Signal and decision status for this result.",
+      "required": ["signal_status", "decision_status", "is_actionable"],
+      "properties": {
+        "signal_status": {
+          "type": "string",
+          "enum": ["SIGNAL", "NO_TRADE", "FILTERED", "DEGRADED", "ERROR"],
+          "description": "Signal presence and quality."
+        },
+        "decision_status": {
+          "type": "string",
+          "enum": ["VALID", "LOW_CONFIDENCE", "BLOCKED", "DEGRADED", "FAILED"],
+          "description": "Decision validity and confidence status."
+        },
+        "is_actionable": {
+          "type": "boolean",
+          "description": "True if the result is eligible for execution consideration."
+        }
+      },
+      "additionalProperties": false
+    },
+    "decision": {
+      "type": "object",
+      "description": "Engine decision output with recommended action and direction.",
+      "required": ["recommended_action", "direction", "decision_summary"],
+      "properties": {
+        "recommended_action": {
+          "type": "string",
+          "enum": ["LONG_NOW", "SHORT_NOW", "NO_TRADE"],
+          "description": "V7 recommended action: LONG_NOW, SHORT_NOW, or NO_TRADE."
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["LONG", "SHORT", "NONE"],
+          "description": "Trade direction: LONG, SHORT, or NONE for no-trade."
+        },
+        "decision_summary": {
+          "type": "string",
+          "description": "Human-readable or machine-parsable decision summary."
+        }
+      },
+      "additionalProperties": false
+    },
+    "scores": {
+      "type": "object",
+      "description": "Model scores and economic estimates.",
+      "required": ["confidence", "confidence_kind", "expected_r"],
+      "properties": {
+        "confidence": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Model confidence score, normalized 0-1."
+        },
+        "confidence_kind": {
+          "type": "string",
+          "description": "Kind of confidence: RAW, CALIBRATED, ENSEMBLE, etc."
+        },
+        "expected_r": {
+          "type": "number",
+          "description": "Expected R-multiple (economic quality) for the recommended action."
+        },
+        "probability": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Action probability estimate."
+        },
+        "expected_drawdown": {
+          "type": "number",
+          "description": "Expected adverse drawdown in R."
+        },
+        "risk_reward_estimate": {
+          "type": "number",
+          "description": "Risk/reward ratio estimate."
+        },
+        "decision_margin": {
+          "type": "number",
+          "description": "Margin between top action and next best action."
+        },
+        "long_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Score for LONG action."
+        },
+        "short_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Score for SHORT action."
+        },
+        "no_trade_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Score for NO_TRADE action."
+        }
+      },
+      "additionalProperties": false
+    },
+    "execution_guidance": {
+      "type": "object",
+      "description": "Execution-relevant guidance including entry, stop, take-profit, and timing.",
+      "properties": {
+        "entry_price": {
+          "type": "number",
+          "description": "Recommended entry price."
+        },
+        "entry_zone": {
+          "type": "array",
+          "items": {"type": "number"},
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Entry zone as [low, high]."
+        },
+        "stop_loss": {
+          "type": "number",
+          "description": "Recommended stop-loss price."
+        },
+        "take_profit": {
+          "type": "number",
+          "description": "Recommended take-profit price."
+        },
+        "time_sensitivity": {
+          "type": "string",
+          "enum": ["IMMEDIATE", "STANDARD", "CAN_WAIT", "EXPIRING_SOON"],
+          "description": "Entry timing urgency."
+        },
+        "entry_readiness": {
+          "type": "string",
+          "enum": ["READY_NOW", "WAIT", "CHASING", "EXPIRING", "MISSED", "NOT_APPLICABLE"],
+          "description": "Current entry readiness."
+        },
+        "entry_valid_for_bars": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Expected number of bars the entry thesis remains valid (0-5)."
+        },
+        "size_multiplier": {
+          "type": "number",
+          "description": "Position size multiplier recommendation (0-1 range)."
+        },
+        "risk_expression": {
+          "type": "string",
+          "description": "Risk expression: LOW, MEDIUM, HIGH, etc."
+        },
+        "execution_notes": {
+          "type": "string",
+          "description": "Free-form execution notes."
+        },
+        "entry_expiry_utc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional entry expiry timestamp."
+        }
+      },
+      "additionalProperties": false
+    },
+    "uncertainty_and_quality": {
+      "type": "object",
+      "description": "Uncertainty and decision quality metadata.",
+      "properties": {
+        "uncertainty_score": {
+          "type": "number",
+          "description": "Overall uncertainty score (0=low, 1=high)."
+        },
+        "uncertainty_type": {
+          "type": "string",
+          "description": "Type: EPISTEMIC, ALEATORIC, MIXED."
+        },
+        "decision_quality": {
+          "type": "string",
+          "description": "Decision quality: HIGH, MEDIUM, LOW."
+        },
+        "path_quality_expectation": {
+          "type": "string",
+          "description": "Expected path quality."
+        },
+        "is_ambiguous": {
+          "type": "boolean",
+          "description": "True if result is ambiguous."
+        },
+        "quality_flags": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Quality flags."
+        }
+      },
+      "additionalProperties": false
+    },
+    "deterministic_interaction": {
+      "type": "object",
+      "description": "Deterministic rule interaction with model output.",
+      "properties": {
+        "deterministic_alignment": {
+          "type": "string",
+          "description": "ALIGNED, NEUTRAL, CONFLICTING."
+        },
+        "deterministic_warning": {
+          "description": "Warning message from deterministic layer."
+        },
+        "deterministic_block": {
+          "type": "boolean",
+          "description": "True if deterministic layer blocks action."
+        },
+        "deterministic_disagreement_reason": {
+          "description": "Reason for deterministic disagreement."
+        },
+        "regime_transition_risk": {
+          "type": "number",
+          "description": "Regime transition risk score."
+        },
+        "constraint_level": {
+          "type": "string",
+          "description": "Constraint level: NONE, ADVISORY, HARD."
+        }
+      },
+      "additionalProperties": false
+    },
+    "fallback_and_degradation": {
+      "type": "object",
+      "description": "Fallback and degradation visibility.",
+      "required": ["fallback_used", "degraded_reason"],
+      "properties": {
+        "fallback_used": {
+          "type": "boolean",
+          "description": "True if any fallback path was used."
+        },
+        "degraded_reason": {
+          "description": "Reason for degradation (null if none)."
+        },
+        "fallback_reason": {
+          "description": "Reason for fallback."
+        },
+        "fallback_source": {
+          "description": "Source component of fallback."
+        },
+        "runtime_safe_action": {
+          "description": "Safe action for runtime to take."
+        },
+        "is_timeout_fallback": {
+          "type": "boolean",
+          "description": "True if fallback due to timeout."
+        },
+        "is_schema_fallback": {
+          "type": "boolean",
+          "description": "True if fallback due to schema version mismatch."
+        }
+      },
+      "additionalProperties": false
+    },
+    "observability": {
+      "type": "object",
+      "description": "Observability and review metadata.",
+      "properties": {
+        "analysis_latency_ms": {
+          "type": "number",
+          "description": "Analysis latency in milliseconds."
+        },
+        "reason_summary": {
+          "type": "string",
+          "description": "Short human-readable reason summary."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Warning messages."
+        },
+        "top_feature_groups": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Top contributing feature groups."
+        },
+        "review_tags": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Tags for review and filtering."
+        },
+        "contract_strictness_used": {
+          "type": "string",
+          "enum": ["STRICT", "DEGRADED_ALLOWED", "SHADOW_RELAXED"],
+          "description": "Contract strictness mode used."
+        }
+      },
+      "additionalProperties": false
+    },
+    "lineage": {
+      "type": "object",
+      "description": "Batch/session lineage.",
+      "properties": {
+        "analysis_batch_id": {
+          "type": "string",
+          "description": "Batch identifier."
+        },
+        "decision_session_id": {
+          "type": "string",
+          "description": "Session identifier."
+        },
+        "batch_rank": {
+          "type": "integer",
+          "description": "Optional rank within batch."
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

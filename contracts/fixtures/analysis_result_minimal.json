@@ -1,22 +1,53 @@
 {
-  "analysis_result_id": "ar_001",
-  "request_id": "req_001",
-  "decision": "ENTER_LONG",
-  "confidence": 0.78,
-  "stop_loss_price": 62100.00,
-  "take_profit_price": 67800.00,
-  "entry_price": 64300.00,
-  "position_size_pct": 5.0,
-  "reasoning": "Bullish breakout with volume confirmation",
-  "model_signature": "swing_v1@abc123",
-  "analysis_timestamp": "2026-06-01T12:00:05Z",
-  "execution_eligibility": {
-    "confidence_gate": true,
-    "risk_gate": true,
-    "regime_gate": true,
-    "cost_gate": true,
-    "overall_eligible": true
+  "contract": {
+    "contract_version": "v7-0.3",
+    "response_schema_version": "result-0.3",
+    "engine_output_version": "engine-out-0.3"
   },
-  "mode": "SWING",
-  "symbol": "BTCUSDT"
+  "identity": {
+    "request_id": "req_001",
+    "engine_name": "v7",
+    "engine_version": "0.3.0",
+    "timestamp_utc": "2026-07-05T12:00:01Z",
+    "model_scope": "swing_v1",
+    "trade_mode": "SWING"
+  },
+  "request_link": {
+    "symbol": "BTCUSDT",
+    "model_scope": "swing_v1",
+    "trade_mode": "SWING",
+    "primary_interval": "4h",
+    "request_contract_version": "v7-0.2",
+    "request_kind_seen": "live_scan"
+  },
+  "status": {
+    "signal_status": "SIGNAL",
+    "decision_status": "VALID",
+    "is_actionable": true
+  },
+  "decision": {
+    "recommended_action": "LONG_NOW",
+    "direction": "LONG",
+    "decision_summary": "Bullish breakout with volume confirmation."
+  },
+  "scores": {
+    "confidence": 0.78,
+    "confidence_kind": "CALIBRATED",
+    "expected_r": 1.35,
+    "long_score": 0.81,
+    "short_score": 0.10,
+    "no_trade_score": 0.18
+  },
+  "execution_guidance": {
+    "entry_price": 64300.0,
+    "stop_loss": 62100.0,
+    "take_profit": 67800.0,
+    "time_sensitivity": "STANDARD",
+    "entry_readiness": "READY_NOW",
+    "entry_valid_for_bars": 3
+  },
+  "fallback_and_degradation": {
+    "fallback_used": false,
+    "degraded_reason": null
+  }
 }

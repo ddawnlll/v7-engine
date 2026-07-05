@@ -1,9 +1,69 @@
 {
-  "request_id": "req_001",
-  "mode": "SWING",
-  "symbol": "BTCUSDT",
-  "timestamp": "2026-06-01T12:00:00Z",
-  "requested_trade_mode": "SWING",
-  "model_scope": "swing_v1",
-  "caller": "v7_runtime"
+  "contract": {
+    "contract_version": "v7-0.2",
+    "state_schema_version": "state-0.2",
+    "snapshot_builder_version": "snapshot-0.2",
+    "request_kind": "live_scan"
+  },
+  "identity": {
+    "request_id": "req_001",
+    "timestamp_utc": "2026-07-05T12:00:00Z"
+  },
+  "scope": {
+    "symbol": "BTCUSDT",
+    "requested_trade_mode": "SWING",
+    "model_scope": "swing_v1",
+    "primary_interval": "4h",
+    "analysis_mode": "live",
+    "exchange": "BINANCE",
+    "market_type": "PERP"
+  },
+  "canonical_state": {
+    "raw_window": {
+      "window_length": 100,
+      "window_start_utc": "2026-06-28T12:00:00Z",
+      "window_end_utc": "2026-07-05T12:00:00Z",
+      "candles": [
+        {
+          "open": 60000.0,
+          "high": 61000.0,
+          "low": 59500.0,
+          "close": 60500.0,
+          "volume": 1200.0,
+          "close_time_utc": "2026-07-05T08:00:00Z"
+        }
+      ]
+    },
+    "derived_state": {
+      "indicator_state": {},
+      "volatility_state": {},
+      "structure_state": {}
+    },
+    "context": {
+      "higher_timeframe": {
+        "interval": "1d",
+        "bias": "BULLISH",
+        "trend_strength": 0.65,
+        "freshness": "FRESH"
+      },
+      "regime_context": {
+        "regime_label": "TRENDING",
+        "volatility_bucket": "MEDIUM"
+      }
+    },
+    "quality": {
+      "stale_flag": false,
+      "data_source": "fresh_exchange",
+      "data_quality_flags": [],
+      "snapshot_validity": "VALID",
+      "partial_state_flag": false
+    },
+    "metadata": {
+      "symbol": "BTCUSDT",
+      "primary_interval": "4h",
+      "state_timestamp_utc": "2026-07-05T12:00:00Z",
+      "snapshot_builder_version_seen": "snapshot-0.2",
+      "state_schema_version_seen": "state-0.2"
+    }
+  }
 }

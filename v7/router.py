@@ -21,6 +21,14 @@ SWING mode configuration (LOCKED_INITIAL_BASELINE):
   - target_multiplier: 2.5 (ATR)
   - ambiguity_margin_r: 0.20
   - min_action_edge_r: 0.35
+
+Scope/model_scope compatibility rules per v7/docs/contracts/analysis_request.md:
+  - SWING             model_scope must start with 'swing_'
+  - SCALP             model_scope must start with 'scalp_'
+  - AGGRESSIVE_SCALP  model_scope must start with 'aggressive_scalp_'
+
+A request with requested_trade_mode='SCALP' and model_scope='swing_v1' is a
+scope_mismatch and must not be routed silently to either artifact family.
 """
 
 from __future__ import annotations
@@ -31,6 +39,13 @@ from typing import Any
 # Mode lock status
 LOCKED_INITIAL_BASELINE = "LOCKED_INITIAL_BASELINE"
 HOLD = "HOLD"
+
+# Valid model_scope prefixes per mode
+_MODEL_SCOPE_PREFIXES: dict[str, str] = {
+    "SWING": "swing_",
+    "SCALP": "scalp_",
+    "AGGRESSIVE_SCALP": "aggressive_scalp_",
+}
 
 # Mode configuration profiles (matches v7_mode_centric_architecture.md table)
 MODE_PROFILES: dict[str, dict[str, Any]] = {
@@ -112,8 +127,95 @@ class RouteResult:
     block_reason: str = ""
 
 
-def route_request(request: dict[str, Any]) -> RouteResult:
+def validate_model_scope(model_scope: str, mode: str) -> str | None:
+    """Validate that model_scope prefix matches the given trading mode.
+
+    Args:
+        model_scope: The model scope identifier, e.g. 'swing_v1'.
+        mode: The trading mode, e.g. 'SWING'.
+
+    Returns:
+        An error message string if invalid, or None if valid.
+    """
+    mode = mode.upper()
+    if mode not in _MODEL_SCOPE_PREFIXES:
+        return f"Unknown mode '{mode}' for model_scope validation"
+
+    expected_prefix = _MODEL_SCOPE_PREFIXES[mode]
+    if not model_scope or not isinstance(model_scope, str):
+        return "model_scope must be a non-empty string"
+
+    if not model_scope.startswith(expected_prefix):
+        return (
+            f"model_scope '{model_scope}' does not match mode '{mode}': "
+            f"expected prefix '{expected_prefix}', "
+            f"e.g. '{expected_prefix}v1'"
+        )
+    return None
+
+
+def validate_scope_compatibility(
+    requested_trade_mode: str,
+    model_scope: str,
+) -> str | None:
+    """Validate that a requested_trade_mode and model_scope are compatible.
+
+    Per the V7 contract authority docs:
+    "A request with requested_trade_mode='SCALP' and model_scope='swing_v1'
+     is a scope_mismatch and must not be routed silently."
+
+    Args:
+        requested_trade_mode: The trade mode, e.g. 'SWING'.
+        model_scope: The model scope identifier, e.g. 'swing_v1'.
+
+    Returns:
+        An error message string if scope mismatch, or None if compatible.
+    """
+    mode = requested_trade_mode.upper()
+
+    if mode not in _MODEL_SCOPE_PREFIXES:
+        return f"Unknown requested_trade_mode '{requested_trade_mode}'"
+
+    return validate_model_scope(model_scope, mode)
+
+
+def get_artifact_scope_tag(mode: str) -> str:
+    """Return the artifact scope tag for a given trading mode.
+
+    The artifact scope tag is used to identify which model artifacts
+    are applicable to a given mode, e.g. 'swing' -> 'v7_swing'.
+
+    Args:
+        mode: The trading mode, e.g. 'SWING', 'SCALP', 'AGGRESSIVE_SCALP'.
+
+    Returns:
+        Artifact scope tag string, e.g. 'v7_swing'.
+
+    Raises:
+        ValueError: If the mode is not recognized.
+    """
+    mode = mode.upper()
+    if mode not in _MODEL_SCOPE_PREFIXES:
+        raise ValueError(
+            f"Unknown mode '{mode}'. Valid modes: {sorted(_MODEL_SCOPE_PREFIXES.keys())}"
+        )
+    prefix = _MODEL_SCOPE_PREFIXES[mode]
+    # Strip trailing underscore for artifact tag
+    scope_name = prefix.rstrip("_")
+    return f"v7_{scope_name}"
+
+
+def route_request(
+    request: dict[str, Any],
+    validate_scope: bool = False,
+) -> RouteResult:
     """Route an AnalysisRequest to its mode pipeline.
+
+    Args:
+        request: The AnalysisRequest dict to route.
+        validate_scope: If True, also validate model_scope compatibility
+                        with requested_trade_mode. Raises ValueError on
+                        scope mismatch.
 
     Returns a RouteResult indicating whether the mode is allowed and its
     configuration profile.
@@ -123,7 +225,8 @@ def route_request(request: dict[str, Any]) -> RouteResult:
     diagnostic block_reason.
 
     Raises:
-        ValueError: If the request mode is not recognized.
+        ValueError: If the request mode is not recognized, or if
+                    validate_scope=True and scope compatibility fails.
     """
     mode = request.get("mode", request.get("requested_trade_mode", ""))
     if not mode:
@@ -135,6 +238,14 @@ def route_request(request: dict[str, Any]) -> RouteResult:
         raise ValueError(
             f"Unknown mode '{mode}'. Valid modes: {sorted(MODE_PROFILES.keys())}"
         )
+
+    # Optional scope compatibility validation
+    if validate_scope:
+        model_scope = request.get("model_scope", request.get("scope", {}).get("model_scope", ""))
+        if model_scope:
+            err = validate_scope_compatibility(mode, model_scope)
+            if err is not None:
+                raise ValueError(f"Scope mismatch: {err}")
 
     status = profile.get("status", HOLD)
     if status == LOCKED_INITIAL_BASELINE:

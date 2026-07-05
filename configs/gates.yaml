@@ -1,0 +1,54 @@
+# Gate Configuration — G0-G10 Promotion Gate Evaluation
+# Version-controlled gate defaults used by .github/actions/gate-check/
+# and v7/gates/config.py (load_gate_config).
+#
+# Only enabled gates are evaluated. G7-G10 are disabled by default
+# (infrastructure not yet built).
+#
+# Override threshold to override the gate's internal default.
+# Set stop_on_fail=True to abort evaluation on first failure.
+
+gates:
+  - gate_id: G0
+    enabled: true
+    stop_on_fail: true
+
+  - gate_id: G1
+    enabled: true
+    stop_on_fail: false
+
+  - gate_id: G2
+    enabled: true
+    stop_on_fail: false
+
+  - gate_id: G3
+    enabled: true
+    stop_on_fail: false
+
+  - gate_id: G4
+    enabled: true
+    stop_on_fail: false
+
+  - gate_id: G5
+    enabled: true
+    stop_on_fail: false
+
+  - gate_id: G6
+    enabled: true
+    stop_on_fail: false
+
+  - gate_id: G7
+    enabled: false
+    stop_on_fail: false
+
+  - gate_id: G8
+    enabled: false
+    stop_on_fail: false
+
+  - gate_id: G9
+    enabled: false
+    stop_on_fail: false
+
+  - gate_id: G10
+    enabled: false
+    stop_on_fail: false
