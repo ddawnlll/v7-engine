@@ -1661,7 +1661,7 @@ def compute_orderbook_group(
     trade_count_window: int = DEFAULT_TRADE_COUNT_WINDOW,
     volume_concentration_window: int = DEFAULT_VOLUME_CONCENTRATION_WINDOW,
 ) -> Dict[str, np.ndarray]:
-    """Compute all OrderBook microstructure proxy features (21 total).
+    """Compute all OrderBook microstructure proxy features (19 total).
 
     Returns dict with keys:
       - spread_pct_N: rolling mean of (high-low)/close
@@ -1678,13 +1678,14 @@ def compute_orderbook_group(
       - depth_ratio_N: buy/sell depth ratio from volume classification (#119)
       - obi: per-bar Level 1 order book imbalance (#154)
       - multi_level_obi_N: multi-level OBI with depth decay (#165)
-      - stoikov_micro_price_N: Stoikov contrarian micro-price (#170)
       - ofi_N: per-bar equally-weighted order flow imbalance
-      - vamp_N: volume-adjusted mid price
       - quoted_spread_N: effective quoted spread proxy
       - vwap_mid_deviation_N: rolling VWAP deviation from midpoint
       - trade_count_N: trade count proxy (volume z-score)
       - volume_concentration_hhi_N: Herfindahl-Hirschman Index of volume
+
+    stoikov_micro_price_N and vamp_N are removed because they produce
+    identical values to microprice_N on OHLCV-only data (r=1.0).
 
     All arrays are same length as input. NaN at start for insufficient
     lookback windows.
@@ -1708,9 +1709,7 @@ def compute_orderbook_group(
         multi_level_obi_n: Number of depth levels for multi-level OBI (default 5).
         multi_level_obi_step: Lookback step between OBI levels (default 3).
         multi_level_obi_decay: Exponential decay for level weights (default 0.8).
-        stoikov_micro_price_window: Smoothing window for Stoikov micro-price (default 5).
         ofi_window: Window for order flow imbalance (default 10).
-        vamp_window: Window for volume-adjusted mid price (default 5).
         quoted_spread_window: Window for quoted spread (default 10).
         vwap_mid_window: Window for VWAP-mid deviation (default 10).
         trade_count_window: Window for trade count proxy (default 20).
@@ -1734,7 +1733,6 @@ def compute_orderbook_group(
         "microprice_N": compute_microprice(high, low, open_arr, close, volume, microprice_window),
         "liquidity_vacuum_N": compute_liquidity_vacuum(high, low, close, volume, liquidity_vacuum_window),
         "depth_ratio_N": compute_depth_ratio(open_arr, close, volume, depth_ratio_window),
-        # New features: L1 OBI, Multi-level OBI, Stoikov micro-price
         "obi": compute_orderbook_imbalance(open_arr, close, volume),
         "multi_level_obi_N": compute_multi_level_obi(
             open_arr, close, volume,
@@ -1742,18 +1740,11 @@ def compute_orderbook_group(
             step=multi_level_obi_step,
             decay=multi_level_obi_decay,
         ),
-        "stoikov_micro_price_N": compute_micro_price(
-            high, low, open_arr, close, volume,
-            window=stoikov_micro_price_window,
-        ),
-        # New features: OFI, VAMP, Quoted spread, VWAP-mid deviation
         "ofi_N": compute_ofi(open_arr, close, volume, window=ofi_window),
-        "vamp_N": compute_vamp(high, low, open_arr, close, volume, window=vamp_window),
         "quoted_spread_N": compute_quoted_spread(high, low, close, window=quoted_spread_window),
         "vwap_mid_deviation_N": compute_vwap_to_mid_deviation(
             high, low, close, volume, window=vwap_mid_window,
         ),
-        # New features: Trade count, Volume concentration HHI
         "trade_count_N": compute_trade_count(volume, window=trade_count_window),
         "volume_concentration_hhi_N": compute_volume_concentration_hhi(
             volume, window=volume_concentration_window,

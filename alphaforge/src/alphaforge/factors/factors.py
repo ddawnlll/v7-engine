@@ -573,44 +573,62 @@ FACTOR_REGISTRY: dict[str, tuple[str, callable]] = {
     # direction: "long" = high score = long bias
     #            "short" = low score = short bias
     #            "agnostic" = direction unclear
+    #            "unstable" = direction flips across time windows (low confidence)
+    #
+    # Direction validated via walk-forward sign stability (3 windows, 1y data, 10 symbols).
+    # See: scripts/factor_sprint.py --walkforward
+    # STABLE = same sign in all 3 windows
+    # FLIP = sign changes between windows
 
     # ── Original factors (price/volume only) ──
-    "ret_1h_rank": ("long", ret_1h_rank),
-    "ret_4h_rank": ("long", ret_4h_rank),
-    "ret_12h_rank": ("long", ret_12h_rank),
-    "ret_24h_rank": ("long", ret_24h_rank),
+    # ret_*_rank: STABLE negative — high rank = momentum, followed by reversal
+    "ret_1h_rank": ("short", ret_1h_rank),
+    "ret_4h_rank": ("short", ret_4h_rank),
+    "ret_12h_rank": ("short", ret_12h_rank),
+    "ret_24h_rank": ("short", ret_24h_rank),
+    # reversal_*_zscore: STABLE positive — buy weakness, sell strength ✓
     "reversal_1h_zscore": ("long", reversal_1h_zscore),
     "reversal_4h_zscore": ("long", reversal_4h_zscore),
-    "volume_zscore": ("long", volume_zscore),
+    # volume_zscore: STABLE negative — high vol predicts negative returns
+    "volume_zscore": ("short", volume_zscore),
+    # range_zscore: STABLE positive — expanding range predicts positive returns ✓
     "range_zscore": ("long", range_zscore),
-    "breakout_n_high": ("long", breakout_n_high),
-    "breakdown_n_low": ("short", breakdown_n_low),
-    "trend_pullback_ema": ("long", trend_pullback_ema),
+    # breakout_n_high: MILD — W1/W2 positive, W3 negative (UNSTABLE)
+    "breakout_n_high": ("unstable", breakout_n_high),
+    # breakdown_n_low: STABLE positive — breakdowns followed by recovery
+    "breakdown_n_low": ("long", breakdown_n_low),
+    # trend_pullback_ema: FLIP — W1/W2 negative, W3 positive
+    "trend_pullback_ema": ("unstable", trend_pullback_ema),
+    # compression_expansion: direction-agnostic by design
     "compression_expansion": ("agnostic", compression_expansion),
 
-    # ── Funding rate factors (new) ──
+    # ── Funding rate factors (DEPRECATED - empty on all symbols) ──
     "funding_extreme_short": ("short", funding_extreme_short),
     "funding_extreme_long": ("long", funding_extreme_long),
     "funding_momentum_fade": ("long", funding_momentum_fade),
 
-    # ── Volume climax factors (new) ──
-    "volume_climax_reversal_short": ("short", volume_climax_reversal_short),
-    "volume_climax_reversal_long": ("long", volume_climax_reversal_long),
+    # ── Volume climax factors (FLIP — direction unreliable) ──
+    "volume_climax_reversal_short": ("unstable", volume_climax_reversal_short),
+    "volume_climax_reversal_long": ("unstable", volume_climax_reversal_long),
 
-    # ── BTC benchmark factors (new) ──
+    # ── BTC benchmark factors ──
+    # btc_downtrend_breakdown_short: STABLE negative — breakdown during BTC downturn ✓
     "btc_downtrend_breakdown_short": ("short", btc_downtrend_breakdown_short),
+    # btc_uptrend_pullback_long: STABLE positive — pullback in BTC uptrend ✓
     "btc_uptrend_pullback_long": ("long", btc_uptrend_pullback_long),
-    "btc_lead_lag_alt_long": ("long", btc_lead_lag_alt_long),
-    "btc_lead_lag_alt_short": ("short", btc_lead_lag_alt_short),
-    "compression_breakout_regime": ("long", compression_breakout_regime),
+    # btc_lead_lag_alt_long/short: FLIP — unreliable
+    "btc_lead_lag_alt_long": ("unstable", btc_lead_lag_alt_long),
+    "btc_lead_lag_alt_short": ("unstable", btc_lead_lag_alt_short),
+    # compression_breakout_regime: FLIP
+    "compression_breakout_regime": ("unstable", compression_breakout_regime),
 
     # ── Microstructure factors (candle-derived, research-backed) ──
-    # Corwin-Schultz spread proxy: strongest predictor (0.79 selection prob)
-    "corwin_schultz_spread_proxy": ("long", corwin_schultz_spread_proxy),
-    # Spread contraction: breakout imminent when spread narrows
+    # corwin_schultz_spread_proxy: STABLE negative — high spread = illiquid = bad
+    "corwin_schultz_spread_proxy": ("short", corwin_schultz_spread_proxy),
+    # spread_contraction_signal: STABLE positive — narrowing spread = breakout imminent ✓
     "spread_contraction_signal": ("long", spread_contraction_signal),
-    # Session volatility regime: MEDIUM vol = best risk-adjusted returns
-    "session_volatility_regime": ("long", session_volatility_regime),
+    # session_volatility_regime: FLIP — medium vol signal not stable
+    "session_volatility_regime": ("unstable", session_volatility_regime),
 }
 
 

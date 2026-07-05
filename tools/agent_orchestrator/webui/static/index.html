@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Orchestrator UI</title>
+<style>
+  :root {
+    --bg: #0e0e12;
+    --surface: #1a1a22;
+    --border: #2a2a36;
+    --text: #d0d0d8;
+    --text-dim: #606078;
+    --accent: #3b82f6;
+    --pass: #22c55e;
+    --fail: #ef4444;
+    --running: #f59e0b;
+    --stopped: #8b5cf6;
+    --font: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 300px;
+    min-width: 300px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #sidebar h1 {
+    font-size: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  #sidebar h1 small {
+    color: var(--text-dim);
+    font-weight: 400;
+    font-size: 11px;
+    display: block;
+    margin-top: 2px;
+  }
+  #run-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .run-entry {
+    padding: 10px 16px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+    position: relative;
+  }
+  .run-entry:hover { background: #22222e; }
+  .run-entry.active {
+    background: #1e1e30;
+    border-left-color: var(--accent);
+  }
+  .run-entry .goal {
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
+  }
+  .run-entry .meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-PASS { background: #064e3b; color: var(--pass); }
+  .badge-FAIL { background: #450a0a; color: var(--fail); }
+  .badge-RUNNING { background: #451a03; color: var(--running); }
+  .badge-STOPPED { background: #2e1065; color: var(--stopped); }
+
+  /* ── Main area ── */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 15px;
+    text-align: center;
+    line-height: 1.8;
+  }
+  #placeholder strong { color: var(--text); }
+
+  /* Run detail panels */
+  #detail { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  #detail.visible { display: flex; }
+
+  #detail-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  #detail-header .goal { font-size: 14px; font-weight: 500; flex: 1; }
+  #detail-header .run-id { font-size: 11px; color: var(--text-dim); }
+  #detail-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+  #detail-body .panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #detail-body .panel + .panel { border-left: 1px solid var(--border); }
+
+  .panel-header {
+    padding: 8px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  /* ── Log panel ── */
+  #log-viewer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+  #log-viewer .panel-content {
+    font-family: var(--font);
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 8px 12px;
+  }
+  #log-content { margin: 0; }
+  #log-content .line-json { color: #7dd3fc; }
+  #log-content .line-text { color: var(--text); }
+  #log-content .line-error { color: var(--fail); }
+  #log-content .line-waiting { color: var(--text-dim); font-style: italic; }
+
+  /* ── Gate panel ── */
+  #gate-panel { min-width: 320px; max-width: 400px; }
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+  }
+  .check-row .icon { font-size: 14px; width: 20px; text-align: center; }
+  .check-row .icon.pass { color: var(--pass); }
+  .check-row .icon.fail { color: var(--fail); }
+  .check-row .label { color: var(--text-dim); font-size: 11px; }
+
+  .reason-list { margin-top: 4px; }
+  .reason-list li {
+    list-style: none;
+    padding: 2px 0;
+    font-size: 11px;
+    color: var(--text-dim);
+    border-bottom: 1px solid #1a1a22;
+  }
+
+  /* ── Bottom controls ── */
+  #controls {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  #controls input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: var(--font);
+    font-size: 12px;
+  }
+  #controls input::placeholder { color: var(--text-dim); }
+  btn, .btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 12px;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  btn:hover, .btn:hover { background: #2a2a36; }
+  btn.primary, .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  btn.primary:hover, .btn.primary:hover { background: #2563eb; }
+  btn.danger, .btn.danger { background: #7f1d1d; border-color: var(--fail); color: #fca5a5; }
+  btn.danger:hover, .btn.danger:hover { background: #991b1b; }
+  btn:disabled, .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── misc ── */
+  .flex { display: flex; }
+  .gap-8 { gap: 8px; }
+  .items-center { align-items: center; }
+  .text-dim { color: var(--text-dim); }
+  .text-sm { font-size: 11px; }
+  .mt-4 { margin-top: 4px; }
+  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .iter-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px 8px;
+    overflow-x: auto;
+  }
+  .iter-tab {
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .iter-tab.active { border-color: var(--accent); color: var(--accent); }
+  .iter-tab.fail { border-color: var(--fail); color: var(--fail); }
+  .iter-tab.pass { border-color: var(--pass); color: var(--pass); }
+  .iter-tab:hover { background: #22222e; }
+
+  #snackbar {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  #snackbar.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <h1>🧠 Agent Orchestrator
+    <small>v7-engine · <span id="run-count">0</span> runs</small>
+  </h1>
+  <div id="run-list"></div>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div id="placeholder">
+    <div>
+      <strong>Bir run seç</strong><br>
+      Sol panelden bir orchestrator run'ına tıkla<br>
+      Canlı log akışını izle, müdahale et veya durdur
+    </div>
+  </div>
+
+  <div id="detail">
+    <div id="detail-header">
+      <span class="goal" id="detail-goal"></span>
+      <span class="badge" id="detail-badge"></span>
+      <span class="run-id" id="detail-id"></span>
+    </div>
+
+    <div id="detail-body">
+      <!-- Log panel (center, largest) -->
+      <div id="log-viewer" class="panel">
+        <div class="panel-header">📡 Canlı Log</div>
+        <div class="panel-content" id="log-content"></div>
+      </div>
+
+      <!-- Gate / Info panel (right) -->
+      <div id="gate-panel" class="panel">
+        <div class="panel-header">🔍 Gate Sonucu</div>
+        <div class="panel-content" id="gate-content">
+          <div class="text-dim">Iterasyon seçilmedi</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom controls -->
+    <div id="controls">
+      <div id="iter-tabs" class="iter-tabs"></div>
+      <input type="text" id="inject-input" placeholder="Strategist'e mesaj gönder (sonraki iterasyon)...">
+      <button class="btn primary" id="btn-inject" disabled>Gönder</button>
+      <button class="btn danger" id="btn-stop" disabled>⏹ DURDUR</button>
+    </div>
+  </div>
+</div>
+
+<div id="snackbar"></div>
+
+<script>
+// ── State ──
+let state = {
+  runs: [],
+  selectedRunId: null,
+  selectedIter: 0,
+  eventSource: null,
+  runDetails: null,
+};
+
+// ── DOM refs ──
+const $ = id => document.getElementById(id);
+const runList = $('run-list');
+const detail = $('detail');
+const placeholder = $('placeholder');
+const detailGoal = $('detail-goal');
+const detailBadge = $('detail-badge');
+const detailId = $('detail-id');
+const logContent = $('log-content');
+const gateContent = $('gate-content');
+const iterTabs = $('iter-tabs');
+const injectInput = $('inject-input');
+const btnInject = $('btn-inject');
+const btnStop = $('btn-stop');
+const runCount = $('run-count');
+const snackbar = $('snackbar');
+
+let snackTimer = null;
+function snack(msg) {
+  snackbar.textContent = msg;
+  snackbar.classList.add('show');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(() => snackbar.classList.remove('show'), 3000);
+}
+
+// ── API helpers ──
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Accept': 'application/json' } };
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const r = await fetch(path, opts);
+  if (!r.ok) { const e = await r.text().catch(() => ''); throw new Error(`${r.status} ${e}`); }
+  return r.json();
+}
+
+// ── Run list ──
+async function refreshRuns() {
+  try {
+    state.runs = await api('GET', '/api/runs');
+  } catch (e) {
+    state.runs = [];
+  }
+  renderRunList();
+}
+
+function renderRunList() {
+  runCount.textContent = state.runs.length;
+  runList.innerHTML = '';
+  for (const r of state.runs) {
+    const div = document.createElement('div');
+    div.className = 'run-entry' + (r.id === state.selectedRunId ? ' active' : '');
+    const verdict = r.verdict === 'RUNNING' ? 'RUNNING' : r.verdict;
+    div.innerHTML = `
+      <div class="goal">${esc(r.goal) || '(no goal)'}</div>
+      <div class="meta">
+        <span class="badge badge-${verdict}">${verdict}</span>
+        <span>${esc(r.id)}</span>
+        <span>${r.iterations}/${r.max_iters}</span>
+      </div>
+    `;
+    div.onclick = () => selectRun(r.id);
+    runList.appendChild(div);
+  }
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+// ── Select run ──
+async function selectRun(runId) {
+  // Close previous SSE
+  if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
+
+  state.selectedRunId = runId;
+  state.selectedIter = 0;
+
+  // Update sidebar
+  document.querySelectorAll('.run-entry').forEach(e => e.classList.remove('active'));
+  const entry = document.querySelector(`.run-entry:nth-child(${state.runs.findIndex(r => r.id === runId) + 1})`);
+  if (entry) entry.classList.add('active');
+
+  // Show detail panel
+  placeholder.style.display = 'none';
+  detail.classList.add('visible');
+
+  // Load run details
+  try {
+    state.runDetails = await api('GET', `/api/runs/${runId}`);
+  } catch (e) {
+    snack(`Error loading run: ${e.message}`);
+    return;
+  }
+
+  const rd = state.runDetails;
+  detailGoal.textContent = rd.goal?.goal || rd.summary?.goal || '(no goal)';
+  detailBadge.className = `badge badge-${rd.summary?.final_verdict || 'RUNNING'}`;
+  detailBadge.textContent = rd.summary?.final_verdict || 'RUNNING';
+  detailId.textContent = `# ${runId}`;
+
+  // Render iteration tabs
+  renderIterTabs(rd);
+  if (rd.iterations.length > 0) {
+    selectIter(rd.iterations.length - 1);  // latest
+  } else {
+    gateContent.innerHTML = '<div class="text-dim">İlk iterasyon bekleniyor...</div>';
+    logContent.textContent = 'Log bekleniyor...';
+  }
+
+  // Enable controls
+  btnInject.disabled = false;
+  btnStop.disabled = false;
+
+  // Start SSE
+  startSSE(runId);
+}
+
+function renderIterTabs(rd) {
+  iterTabs.innerHTML = '';
+  for (let i = 0; i < (rd.iterations?.length || 0); i++) {
+    const it = rd.iterations[i];
+    const tab = document.createElement('span');
+    const verdict = it.gate_result?.verdict || '';
+    tab.className = 'iter-tab' + (i === state.selectedIter ? ' active' : '') + (verdict === 'FAIL' ? ' fail' : verdict === 'PASS' ? ' pass' : '');
+    tab.textContent = it.name;
+    tab.onclick = () => selectIter(i);
+    iterTabs.appendChild(tab);
+  }
+}
+
+function selectIter(idx) {
+  state.selectedIter = idx;
+  const rd = state.runDetails;
+  if (!rd || !rd.iterations[idx]) return;
+
+  // Update tabs
+  document.querySelectorAll('.iter-tab').forEach((t, i) => {
+    t.className = 'iter-tab' + (i === idx ? ' active' : '') + 
+      (rd.iterations[i]?.gate_result?.verdict === 'FAIL' ? ' fail' : 
+       rd.iterations[i]?.gate_result?.verdict === 'PASS' ? ' pass' : '');
+  });
+
+  const it = rd.iterations[idx];
+
+  // Gate result
+  const g = it.gate_result || {};
+  const checks = g.check_results || {};
+  const reasons = g.reasons || [];
+  let html = '';
+  if (g.verdict) {
+    html += `<div style="margin-bottom:8px"><strong style="color:${g.verdict === 'PASS' ? 'var(--pass)' : 'var(--fail)'}">${g.verdict}</strong></div>`;
+  }
+  // Check list
+  for (const [key, val] of Object.entries(checks)) {
+    const ok = val === true;
+    html += `<div class="check-row">
+      <span class="icon ${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✗'}</span>
+      <span class="label">${key}</span>
+    </div>`;
+  }
+  // Reasons
+  if (reasons.length > 0) {
+    html += '<ul class="reason-list">';
+    for (const r of reasons.slice(0, 15)) {
+      html += `<li>${esc(r)}</li>`;
+    }
+    if (reasons.length > 15) html += `<li class="text-dim">… +${reasons.length - 15} more</li>`;
+    html += '</ul>';
+  }
+  // Strategist response
+  const sr = it.strategist_response || {};
+  if (sr.worker_task) {
+    html += `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div class="text-dim text-sm">Strategist Task:</div>
+      <div style="font-size:11px;margin-top:4px">${esc(sr.worker_task.slice(0, 500))}</div>
+    </div>`;
+  }
+  if (!html) html = '<div class="text-dim">Henüz gate sonucu yok</div>';
+  gateContent.innerHTML = html;
+
+}
+
+// ── SSE log streaming ──
+function startSSE(runId) {
+  if (state.eventSource) state.eventSource.close();
+
+  // Clear log with connecting message
+  logContent.textContent = '🟢 SSE bağlanıyor...\n';
+
+  const es = new EventSource(`/api/runs/${runId}/log`);
+  state.eventSource = es;
+
+  // ── connected: initial state + all existing log ──
+  es.addEventListener('connected', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.iter) {
+        logContent.textContent = `🟢 ${data.iter} — ${data.log_size} bytes log bulundu\n`;
+      } else {
+        logContent.textContent = '🟢 Bağlandı, log bekleniyor...\n';
+      }
+    } catch (err) {
+      logContent.textContent = '🟢 Bağlandı\n';
+    }
+  });
+
+  // ── log: new chunk of log data ──
+  es.addEventListener('log', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      const chunk = data.chunk || '';
+      const iter = data.iter || '';
+
+      const MAX_LOG = 100000;
+      if (logContent.textContent.length > MAX_LOG) {
+        logContent.textContent = logContent.textContent.slice(-60000) + chunk;
+      } else {
+        logContent.textContent += chunk;
+      }
+      // Auto-scroll to bottom
+      logContent.scrollTop = logContent.scrollHeight;
+    } catch (err) {
+      // ignore parse errors
+    }
+  });
+
+  // ── new_iter: a new iteration directory appeared ──
+  es.addEventListener('new_iter', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      logContent.textContent += `\n─── YENI ITERASYON: ${data.iter} ───\n`;
+      logContent.scrollTop = logContent.scrollHeight;
+      // Refresh run details to update iteration tabs
+      refreshRunDetails(runId);
+    } catch (err) {}
+  });
+
+  // ── switch: we switched to a different iter's log ──
+  es.addEventListener('switch', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      logContent.textContent = `🟢 ${data.iter} — ${data.log_size} bytes log\n`;
+      logContent.scrollTop = logContent.scrollHeight;
+      // Update iteration tabs to reflect new iter
+      refreshRunDetails(runId);
+    } catch (err) {}
+  });
+
+  // ── waiting: heartbeat when no log exists yet ──
+  es.addEventListener('waiting', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      // Only show if log is empty
+      if (logContent.textContent.trim() === '' || logContent.textContent.includes('bekleniyor')) {
+        logContent.textContent = `⏳ ${data.msg || 'bekleniyor...'}\n`;
+      }
+    } catch (err) {}
+  });
+
+  // ── error ──
+  es.addEventListener('error', () => {
+    // EventSource auto-reconnects
+    if (logContent.textContent.length < 200) {
+      logContent.textContent += '\n⚠️ Bağlantı hatası, yeniden bağlanılıyor...\n';
+    }
+  });
+}
+
+async function refreshRunDetails(runId) {
+  try {
+    state.runDetails = await api('GET', `/api/runs/${runId}`);
+  } catch (e) { return; }
+  renderIterTabs(state.runDetails);
+}
+
+// ── Commands ──
+btnInject.onclick = async () => {
+  const msg = injectInput.value.trim();
+  if (!msg || !state.selectedRunId) return;
+  try {
+    await api('POST', `/api/runs/${state.selectedRunId}/inject`, { message: msg });
+    snack('✅ Mesaj strategist\'e iletilecek');
+    injectInput.value = '';
+  } catch (e) {
+    snack(`❌ Hata: ${e.message}`);
+  }
+};
+
+btnStop.onclick = async () => {
+  if (!state.selectedRunId) return;
+  if (!confirm('Orchestrator\'ı durdurmak istediğine emin misin?')) return;
+  try {
+    await api('POST', `/api/runs/${state.selectedRunId}/stop`);
+    snack('⏹ Durdurma sinyali gönderildi');
+    btnStop.disabled = true;
+  } catch (e) {
+    snack(`❌ Hata: ${e.message}`);
+  }
+};
+
+// Enter key on inject input
+injectInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') btnInject.click();
+});
+
+// ── Poll runs periodically ──
+refreshRuns();
+setInterval(refreshRuns, 5000);
+
+// Also auto-refresh selected run details periodically
+setInterval(() => {
+  if (state.selectedRunId) {
+    refreshRunDetails(state.selectedRunId);
+  }
+}, 3000);
+</script>
+</body>
+</html>

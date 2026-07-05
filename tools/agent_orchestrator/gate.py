@@ -6,7 +6,7 @@ Three layers:
   C. Research discipline— report fields, synthetic signal test
 """
 from __future__ import annotations
-import json, os, re, subprocess
+import json, os, re, subprocess, sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -78,8 +78,7 @@ def run_gate(
         if af:
             evidence.extend(str(root / p) for p in config.required_files)
     else:
-        checks["required_files_exist"] = True
-
+        checks["required_files_exist"] = None
     # 4: test command
     if config.test_command:
         try:
@@ -92,7 +91,7 @@ def run_gate(
         except FileNotFoundError:
             checks["test_command_ok"] = False; reasons.append("Test command not found")
     else:
-        checks["test_command_ok"] = True
+        checks["test_command_ok"] = None
 
     # 5: metrics
     if config.metrics_file:
@@ -109,8 +108,7 @@ def run_gate(
         else:
             checks["metrics_file_exists"] = False; checks["metrics_file_valid"] = False; reasons.append("Metrics file not found")
     else:
-        checks["metrics_file_exists"] = True; checks["metrics_file_valid"] = True
-
+        checks["metrics_file_exists"] = None; checks["metrics_file_valid"] = None
     # ── Layer B ──────────────────────────────────────────────────────────
 
     # 6: git head saved
@@ -120,7 +118,7 @@ def run_gate(
         if git_head_before.strip():
             evidence.append(f"HEAD={git_head_before[:12]}")
     else:
-        checks["git_head_saved"] = True
+        checks["git_head_saved"] = None
 
     # 7: git working-tree discipline
     porcelain_lines: list[str] = []
@@ -136,9 +134,9 @@ def run_gate(
             checks["git_changes_in_allowed_paths"] = len(viol) == 0
             reasons.append("All changes in allowed paths" if len(viol)==0 else f"Changes outside allowed paths:\n"+"\n".join(viol[:10]))
         else:
-            checks["git_changes_in_allowed_paths"] = True
+            checks["git_changes_in_allowed_paths"] = None
     else:
-        checks["git_no_tracked_mods"] = True; checks["git_changes_in_allowed_paths"] = True
+        checks["git_no_tracked_mods"] = None; checks["git_changes_in_allowed_paths"] = None
 
     # 8: git denied paths — authority file protection
     if config.git_denied_paths:
@@ -149,9 +147,19 @@ def run_gate(
         else:
             reasons.append(f"Authority files modified — denied paths violated:\n" + "\n".join(viol[:5]))
     else:
-        checks["git_no_denied_touches"] = True
-
+        checks["git_no_denied_touches"] = None
     # ── Layer C ──────────────────────────────────────────────────────────
+
+    # Fallback: if worker_summary is empty, try reading from worker_output.json
+    if not worker_summary.strip():
+        worker_log_dir = Path(worker_log_path).parent
+        worker_output_file = worker_log_dir / "worker_output.json"
+        if worker_output_file.exists():
+            try:
+                data = json.loads(worker_output_file.read_text(encoding="utf-8"))
+                worker_summary = json.dumps(data, indent=2)
+            except (json.JSONDecodeError, OSError):
+                pass
 
     # 9: required report fields in worker summary
     if config.check_report_fields and config.report_required_fields:
@@ -170,7 +178,7 @@ def run_gate(
         else:
             reasons.append(f"Report missing required fields: {', '.join(missing)}")
     else:
-        checks["report_fields_ok"] = True
+        checks["report_fields_ok"] = None
 
     # 10: synthetic signal test passfile
     if config.synthetic_test_passfile:
@@ -182,13 +190,19 @@ def run_gate(
         else:
             reasons.append(f"Synthetic signal test passfile not found: {config.synthetic_test_passfile}")
     else:
-        checks["synthetic_test_passed"] = True
-
+        checks["synthetic_test_passed"] = None
     # ── Verdict ──────────────────────────────────────────────────────────
 
-    verdict = "PASS" if all(checks.values()) else "FAIL"
-    return GateResult(verdict=verdict, check_results=checks, reasons=reasons, evidence_paths=evidence)
+    applied = [v for v in checks.values() if v is not None]
+    verdict = "PASS" if applied and all(applied) else "FAIL"
 
+    # ── Decision breakdown (stderr) ──────────────────────────────────────
+
+    for name, result in checks.items():
+        status = "PASS" if result is True else ("FAIL" if result is False else "SKIPPED")
+        print(f"[GATE] {name}: {status}", file=sys.stderr)
+
+    return GateResult(verdict=verdict, check_results=checks, reasons=reasons, evidence_paths=evidence)
 
 # ── git helpers ──────────────────────────────────────────────────────────
 
@@ -196,29 +210,47 @@ def _run_git_diff(r: Path) -> str:
     try:
         p = subprocess.run(["git","diff","--stat"], capture_output=True, text=True, timeout=15, cwd=str(r))
         return p.stdout.strip() if p.returncode == 0 else ""
-    except: return ""
+    except Exception: return ""
 
 def _run_git_porcelain(r: Path) -> list[str]:
     try:
         p = subprocess.run(["git","status","--porcelain"], capture_output=True, text=True, timeout=15, cwd=str(r))
         return [l.strip() for l in p.stdout.strip().splitlines() if l.strip()] if p.returncode == 0 else []
-    except: return []
+    except Exception: return []
 
 def _check_allowed_prefixes(lines: list[str], prefixes: list[str]) -> list[str]:
+    """Return porcelain lines whose path is outside every allowed prefix.
+
+    For rename (``R``) entries the *destination* path (the part after
+    `` -> ``) is used for the prefix check.
+    """
     viol = []
     for l in lines:
-        if len(l) < 4: continue
-        path = l[3:].strip()
+        if len(l) < 4:
+            continue
+        if l[0] == "R" and " -> " in l:
+            path = l.split(" -> ", 1)[1].strip()
+        else:
+            path = l[3:].strip()
         if not any(path.startswith(p) for p in prefixes):
             viol.append(l)
     return viol
 
+
 def _check_denied_paths(lines: list[str], denied: list[str]) -> list[str]:
-    """Return porcelain lines that touch any denied path prefix."""
+    """Return porcelain lines that touch a denied path prefix.
+
+    For rename (``R``) entries the *destination* path (the part after
+    `` -> ``) is used for the prefix check.
+    """
     viol = []
     for l in lines:
-        if len(l) < 4: continue
-        path = l[3:].strip()
+        if len(l) < 4:
+            continue
+        if l[0] == "R" and " -> " in l:
+            path = l.split(" -> ", 1)[1].strip()
+        else:
+            path = l[3:].strip()
         if any(path.startswith(p) for p in denied):
             viol.append(l)
     return viol

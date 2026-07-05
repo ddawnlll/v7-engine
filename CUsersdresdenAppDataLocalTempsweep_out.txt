@@ -1,0 +1,82 @@
+
+============================================================
+  AlphaForge Training Pipeline
+  Mode: SCALP | Interval: 1h | Symbols: 3
+  Features: all | WFV Folds: 3
+============================================================
+
+[1/6] Loading OHLCV data...
+  72288 total bars, 3 symbols
+
+[2/6] Generating triple-barrier labels...
+
+[3/6] Computing features...
+  54 feature columns, 72288 rows
+  After label alignment: 72249 samples
+  After NaN removal: 70701 valid samples (1548 dropped)
+
+[4/6] Walk-forward validation (3 folds, anchored expanding)...
+  3 folds completed in 6.3s
+
+============================================================
+  THRESHOLD SWEEP — 4 thresholds
+============================================================
+Threshold   OOS Acc   Trades      Exposure    No-trade  
+--------------------------------------------------
+0.30      0.4201    19876       99.96    %  8         
+0.45      0.3301    12806       64.40    %  7078      
+0.55      0.2507    6247        31.42    %  13637     
+0.70      0.1993    2352        11.83    %  17532     
+--------------------------------------------------
+  Suggested threshold: 0.30 (acc=0.4201, exposure=100.0%)
+============================================================
+
+
+[5/6] Training final model on all data...
+  Final model accuracy: 0.4682
+
+  Top-10 Feature Importance (gain):
+    f9                                       5.9920
+    f34                                      5.9908
+    f52                                      5.7475
+    f32                                      5.6265
+    f26                                      5.6169
+    f11                                      5.5576
+    f1                                       5.5142
+    f38                                      5.4833
+    f0                                       5.4429
+    f24                                      5.4405
+    (remaining 41 features)                  193.1832
+
+[6/6] Collecting metrics...
+
+============================================================
+  TRAINING RESULTS — SCALP
+============================================================
+  Accuracy (OOS):              0.2507
+  Train Accuracy:              0.5981
+  Accuracy Stability:          0.4881
+  Sharpe Ratio (OOS R-exp):    4.2491
+  Overfit Gap:                 0.3474
+  Train-OOS Correlation:       0.9642
+  PBO Risk:                    HIGH
+  Feature Count:               54
+  Total Samples:               70701
+  Walk-Forward Folds:          3
+  Active Trades:               6247
+  LONG / SHORT / NO_TRADE:     5807 / 440 / 13637
+  Exposure %:                  31.4%
+  Confidence Threshold:        0.55
+  Low Confidence Rate:         68.6%
+  Fee (bps):                   0.04 (0.08 bps round-trip)
+============================================================
+
+
+---STRUCTURED_RESULTS---
+{
+  "status": "PASS",
+  "accuracy": 0.2507,
+  "sharpe_ratio": 4.2491,
+  "overfit_gap": 0.3474,
+  "feature_count": 54
+}

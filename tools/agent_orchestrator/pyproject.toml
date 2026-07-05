@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends_legacy"
+
+[project]
+name = "v7-agent-orchestrator"
+version = "0.1.0"
+description = "Strategist to Worker to Gate loop for autonomous alpha research"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["agent_orchestrator*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

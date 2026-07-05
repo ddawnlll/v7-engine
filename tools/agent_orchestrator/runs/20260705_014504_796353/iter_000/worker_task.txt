@@ -1,0 +1,34 @@
+Implement the requested task below.
+
+## Task
+
+Create a new alpha candidate file in alphaforge/src/alphaforge/candidates/ named momentum_alpha.py that implements a simple 20-day momentum factor (close(0)/close(20) - 1). The file should contain a class `MomentumAlpha` with a `generate_signals(data)` method that takes a DataFrame with a 'close' column and returns a Series of signals. Also create a companion test script in the same directory called test_momentum_alpha.py that loads sample price data (use synthetic data or a small CSV), runs the alpha, and prints the IC (information coefficient) and Sharpe ratio of the signals over a training period (train_start='2020-01-01', train_end='2022-12-31') and a test period (test_start='2023-01-01', test_end='2023-12-31'). The test script must output the required report fields: train_start, train_end, test_start, test_end, n_combinations (set to 1 since this is a single parameter), and metric (report the IC value for the test period). Ensure both files are created under alphaforge/src/alphaforge/candidates/ only. After running the test, include the completion summary with the required fields.
+
+## Rules
+
+- Implement only what is requested. Do not over-engineer.
+- If the task asks for code changes, run relevant tests/checks afterward.
+- Do NOT modify these authority files: evaluation.py, factors.py,
+  simulation_adapter.py, fast_simulator.py, authority_map.md
+- Never claim success without evidence.
+
+## Required — Completion Summary
+
+Your final output MUST include a completion summary with these fields:
+
+```
+## Completion Summary
+- Files changed: [...]
+- Commands run: [...]
+- train_start: <date>
+- train_end: <date>
+- test_start: <date>
+- test_end: <date>
+- n_combinations: <number of trials>
+- metric: <key metric value>
+- Results: [...]
+- Status: SUCCESS | FAILURE | BLOCKED
+```
+
+The gate checks for these fields. If they are missing, the iteration FAILs
+and your work may be discarded.

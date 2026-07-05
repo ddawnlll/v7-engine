@@ -14,3 +14,12 @@ gate:
   metrics_file: ""
   check_git_clean: false
   git_allowed_prefixes: []
+  git_denied_paths: []
+  check_report_fields: false
+  report_required_fields: []
+  synthetic_test_passfile: ""
+retry:
+  exit_codes: [-1]
+  max_retries_per_iter: 2
+cleanup:
+  keep_last_runs: 20

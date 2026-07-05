@@ -101,6 +101,57 @@ def generate_synthetic_ohlcv(
 # Data loading
 # ---------------------------------------------------------------------------
 
+def _load_panel_data(cache_dir: str, symbols: list[str]) -> dict | None:
+    """Load OHLCV data from factor_sprint panel cache, aligned to common date range."""
+    import pandas as pd
+    cache = Path(cache_dir)
+    close_path = sorted(cache.glob("panel_*_close.parquet"))
+    if not close_path:
+        logger.error("No panel cache found in %s", cache_dir)
+        return None
+    prefix = close_path[0].stem.rsplit("_", 1)[0]
+    symbol_set = set(s.upper() for s in symbols)
+    # Load close to find common range
+    close_df = pd.read_parquet(cache / f"{prefix}_close.parquet")
+    avail = [c for c in close_df.columns if c.upper() in symbol_set]
+    if not avail:
+        logger.error("No requested symbols found in panel cache")
+        return None
+    # Find common non-NaN range across all selected symbols
+    valid_idx = close_df[avail].notna().all(axis=1)
+    if not valid_idx.any():
+        logger.error("No overlapping date range for requested symbols")
+        return None
+    # Find first/last contiguous valid block
+    valid_starts = valid_idx[valid_idx].index
+    first_valid = valid_starts[0]
+    last_valid = valid_starts[-1]
+    logger.info("  Panel date range: %s to %s (%d rows)", first_valid, last_valid, len(close_df.loc[first_valid:last_valid]))
+    # Slice all OHLCV to common range and ffill any remaining gaps
+    dfs = {}
+    for key in ["close", "high", "low", "open", "volume"]:
+        df = pd.read_parquet(cache / f"{prefix}_{key}.parquet")
+        df = df.loc[first_valid:last_valid, avail].ffill().bfill()
+        dfs[key] = df
+    closes, highs, lows, opens, volumes, symbols_out = [], [], [], [], [], []
+    for col in avail:
+        n = len(dfs["close"])
+        closes.append(dfs["close"][col].values.astype(np.float64))
+        highs.append(dfs["high"][col].values.astype(np.float64))
+        lows.append(dfs["low"][col].values.astype(np.float64))
+        opens.append(dfs["open"][col].values.astype(np.float64))
+        volumes.append(dfs["volume"][col].values.astype(np.float64))
+        symbols_out.extend([col] * n)
+    return {
+        "close": np.concatenate(closes),
+        "high": np.concatenate(highs),
+        "low": np.concatenate(lows),
+        "open": np.concatenate(opens),
+        "volume": np.concatenate(volumes),
+        "symbol": symbols_out,
+    }
+
+
 def load_cached_data(
     symbols: List[str],
     interval: str,
@@ -169,8 +220,13 @@ def load_cached_data(
 
 
 @njit
-def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n):
-    """Numba-accelerated triple-barrier label generation. No Python overhead."""
+def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n,
+                            min_edge_r=0.15, ambiguity_margin_r=0.10):
+    """Numba-accelerated triple-barrier label generation.
+
+    Uses min_edge_r to filter out economically insignificant edges.
+    Uses ambiguity_margin_r to force NO_TRADE when LONG vs SHORT is within margin.
+    """
     ints_list = np.empty(n - max_hold - 1, dtype=np.int32)
     gross_r_vals = np.empty(n - max_hold - 1, dtype=np.float64)
     net_r_vals = np.empty(n - max_hold - 1, dtype=np.float64)
@@ -228,11 +284,25 @@ def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n
         net_long = long_gross - round_trip_cost_r
         net_short = short_gross - round_trip_cost_r
 
-        if net_long > net_short and net_long > 0.0:
+        # Convert to R-multiple: net_return / risk_amount
+        risk_r = stop_dist / entry_price  # fraction of entry price at risk
+        if risk_r > 1e-12:
+            long_r_mult = net_long / risk_r
+            short_r_mult = net_short / risk_r
+        else:
+            long_r_mult = 0.0
+            short_r_mult = 0.0
+
+        # Ambiguity check: if both sides are within margin, it's NO_TRADE
+        if abs(long_r_mult - short_r_mult) <= ambiguity_margin_r:
+            ints_list[i] = 2
+            gross_r_vals[i] = 0.0
+            net_r_vals[i] = 0.0
+        elif long_r_mult > short_r_mult and long_r_mult > min_edge_r:
             ints_list[i] = 0
             gross_r_vals[i] = long_gross
             net_r_vals[i] = net_long
-        elif net_short > net_long and net_short > 0.0:
+        elif short_r_mult > long_r_mult and short_r_mult > min_edge_r:
             ints_list[i] = 1
             gross_r_vals[i] = short_gross
             net_r_vals[i] = net_short
@@ -252,19 +322,41 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
     and net_R is exported for downstream economic metrics.
     """
     cfg = MODE_CONFIG[mode]
-    n = len(ohlcv["close"])
     max_hold = cfg["max_hold"]
     stop_mult = cfg["stop_mult"]
     target_mult = cfg["target_mult"]
-    label_map = {"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}
-    ints_arr, gross_r_arr, net_r_arr = _generate_labels_numba(
-        ohlcv["close"].astype(np.float64),
-        ohlcv["high"].astype(np.float64),
-        ohlcv["low"].astype(np.float64),
-        max_hold, stop_mult, target_mult, n
-    )
+    min_edge_r = cfg.get("min_edge_r", 0.15)
+    ambiguity_margin_r = cfg.get("ambiguity_margin_r", 0.10)
 
-    # Build label names
+    # Split by symbol to prevent cross-symbol contamination
+    close_arr = ohlcv["close"].astype(np.float64)
+    high_arr = ohlcv["high"].astype(np.float64)
+    low_arr = ohlcv["low"].astype(np.float64)
+    symbols = np.array(ohlcv.get("symbol", ["" for _ in range(len(close_arr))]))
+    unique_syms = np.unique(symbols)
+
+    all_ints, all_gross, all_net = [], [], []
+    for sym in unique_syms:
+        mask = symbols == sym
+        sym_close = close_arr[mask]
+        sym_high = high_arr[mask]
+        sym_low = low_arr[mask]
+        n_sym = len(sym_close)
+        if n_sym <= max_hold + 1:
+            continue
+        ints_s, gross_s, net_s = _generate_labels_numba(
+            sym_close, sym_high, sym_low,
+            max_hold, stop_mult, target_mult, n_sym,
+            min_edge_r, ambiguity_margin_r,
+        )
+        all_ints.append(ints_s)
+        all_gross.append(gross_s)
+        all_net.append(net_s)
+
+    ints_arr = np.concatenate(all_ints) if all_ints else np.array([], dtype=np.int32)
+    gross_r_arr = np.concatenate(all_gross) if all_gross else np.array([], dtype=np.float64)
+    net_r_arr = np.concatenate(all_net) if all_net else np.array([], dtype=np.float64)
+
     rev_label_map = {0: "LONG_NOW", 1: "SHORT_NOW", 2: "NO_TRADE"}
     labels_list = [rev_label_map[i] for i in ints_arr.tolist()]
 
@@ -282,38 +374,45 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
 # ---------------------------------------------------------------------------
 
 def compute_all_features(ohlcv: dict, mode: str) -> Tuple[np.ndarray, List[str]]:
-    """Compute all feature groups and return (X, feature_names)."""
-    from alphaforge.features.pipeline import compute_features
-
-    fm = compute_features(ohlcv, mode=mode)
-    # Exclude funding_rate proxy (OHLCV-derived proxy is in orderbook group)
-    feat_names = sorted(fm.features.keys())
-    X = np.column_stack([fm.features[k] for k in feat_names])
-    logger.info("Features: %d columns from %d groups", X.shape[1], len(fm.feature_group_ids))
-    return X, feat_names
+    """Compute all feature groups per-symbol to avoid cross-symbol contamination."""
+    return compute_features_selected(ohlcv, mode)
 
 
 def compute_features_selected(ohlcv: dict, mode: str, feature_groups: Optional[List[str]] = None) -> Tuple[np.ndarray, List[str]]:
-    """Compute selected feature groups.
-
-    Args:
-        ohlcv: OHLCV data dict.
-        mode: Trading mode.
-        feature_groups: List of group names (e.g. ["returns", "volatility", "atr", "momentum", "breakout"]).
-            If None or ["all"], compute all groups.
-
-    Returns (X, feature_names).
-    """
+    """Compute selected feature groups, per-symbol to avoid cross-symbol contamination."""
     from alphaforge.features.pipeline import compute_features
 
-    if feature_groups is None or feature_groups == ["all"]:
-        fm = compute_features(ohlcv, mode=mode)
-    else:
-        fm = compute_features(ohlcv, mode=mode, feature_groups=feature_groups)
-    feat_names = sorted(fm.features.keys())
-    X = np.column_stack([fm.features[k] for k in feat_names])
-    logger.info("Features: %d columns from mode=%s groups=%s", X.shape[1], mode, feature_groups or "all")
-    return X, feat_names
+    symbols = np.array(ohlcv.get("symbol", ["" for _ in range(len(ohlcv["close"]))]))
+    unique_syms = []
+    seen = set()
+    for s in symbols:
+        if s not in seen:
+            seen.add(s)
+            unique_syms.append(s)
+
+    all_X, feat_names = [], None
+    for sym in unique_syms:
+        mask = symbols == sym
+        sym_ohlcv = {
+            "close": ohlcv["close"][mask],
+            "high": ohlcv["high"][mask],
+            "low": ohlcv["low"][mask],
+            "open": ohlcv["open"][mask],
+            "volume": ohlcv["volume"][mask],
+        }
+        if feature_groups is None or feature_groups == ["all"]:
+            fm = compute_features(sym_ohlcv, mode=mode)
+        else:
+            fm = compute_features(sym_ohlcv, mode=mode, feature_groups=feature_groups)
+        fn = sorted(fm.features.keys())
+        if feat_names is None:
+            feat_names = fn
+        Xs = np.column_stack([fm.features[k] for k in fn])
+        all_X.append(Xs)
+
+    X = np.vstack(all_X) if all_X else np.empty((0, len(feat_names or [])))
+    logger.info("Features: %d columns from mode=%s groups=%s (per-symbol)", X.shape[1], mode, feature_groups or "all")
+    return X, feat_names or []
 
 
 # ---------------------------------------------------------------------------
@@ -338,6 +437,8 @@ def walk_forward_validate(
     net_r_values: np.ndarray,
     mode: str,
     min_folds: int = 6,
+    dump_softmax_path: str | None = None,
+    threshold: float | None = None,
 ) -> List[dict]:
     """6-fold anchored expanding walk-forward validation.
 
@@ -390,9 +491,16 @@ def walk_forward_validate(
         y_pred = np.argmax(y_pred_prob, axis=1)
 
         # Apply confidence threshold: force NO_TRADE when model is uncertain
-        low_conf_count = int(np.sum(y_pred_prob_max < CONFIDENCE_THRESHOLD))
+        _threshold = threshold if threshold is not None else float(CONFIDENCE_THRESHOLD)
+        low_conf_count = int(np.sum(y_pred_prob_max < _threshold))
         low_conf_pct = float(low_conf_count / len(y_pred_prob_max) * 100)
-        y_pred[y_pred_prob_max < CONFIDENCE_THRESHOLD] = 2  # NO_TRADE
+        y_pred[y_pred_prob_max < _threshold] = 2  # NO_TRADE
+
+        # Accumulate softmax probs for distribution dump
+        if dump_softmax_path:
+            if not hasattr(walk_forward_validate, '_softmax_bins'):
+                walk_forward_validate._softmax_bins = []
+            walk_forward_validate._softmax_bins.append(y_pred_prob_max)
 
         val_accuracy = float(np.mean(y_pred == y_val))
         train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
@@ -441,6 +549,13 @@ def walk_forward_validate(
             fold + 1, min_folds, results[-1]["n_train"], results[-1]["n_val"],
             val_accuracy, active_trade_count,
         )
+
+    # Save softmax distribution dump if requested
+    if dump_softmax_path and hasattr(walk_forward_validate, '_softmax_bins'):
+        all_probs = np.concatenate(walk_forward_validate._softmax_bins)
+        np.save(dump_softmax_path, all_probs)
+        logger.info("Saved %d softmax probs to %s", len(all_probs), dump_softmax_path)
+        del walk_forward_validate._softmax_bins
 
     return results
 
@@ -588,6 +703,13 @@ def main():
     parser.add_argument("--synthetic", action="store_true", help="Force synthetic data")
     parser.add_argument("--folds", type=int, default=6, help="WFV folds")
     parser.add_argument("--output", default=None, help="Output report path")
+    parser.add_argument("--dump-softmax", default=None, help="Dump softmax probs to .npy")
+    parser.add_argument("--panel-cache", default=None, help="Path to factor_sprint panel cache directory")
+    parser.add_argument("--dump-features", default=None, help="Dump X_clean + feat_names to .npy/.txt")
+    parser.add_argument("--positive-control", action="store_true", help="Replace labels with synthetic feature-based signal for pipeline validation")
+    parser.add_argument("--threshold-sweep", default=None,
+                        help="Comma-separated threshold values to sweep (e.g., '0.1,0.3,0.45,0.55,0.7'). "
+                             "Reports accuracy-exposure tradeoff for each.")
     args = parser.parse_args()
 
     global mode
@@ -605,7 +727,9 @@ def main():
     # Step 1: Load data
     print("[1/6] Loading OHLCV data...")
     ohlcv = None
-    if not args.synthetic:
+    if args.panel_cache:
+        ohlcv = _load_panel_data(args.panel_cache, symbols)
+    elif not args.synthetic:
         ohlcv = load_cached_data(symbols, interval)
     if ohlcv is None:
         logger.info("Falling back to synthetic data")
@@ -643,6 +767,37 @@ def main():
     y_clean = y_int[~nan_mask]
     r_clean = r_vals[~nan_mask]
     print(f"  After NaN removal: {len(X_clean)} valid samples ({int(nan_mask.sum())} dropped)")
+    
+    # Feature dump for correlation analysis
+    if args.dump_features:
+        np.save(args.dump_features, X_clean)
+        with open(args.dump_features.replace('.npy', '_names.txt'), 'w') as f:
+            for name in feat_names:
+                f.write(name + '\n')
+        print(f"  Feature matrix saved: {X_clean.shape}")
+
+    # Positive control: replace labels with synthetic feature-based signal
+    if args.positive_control:
+        rng = np.random.RandomState(42)
+        feat_idx = 22  # log_return_1 — non-duplicate feature
+        feat_vals = X_clean[:, feat_idx].copy()
+        feat_norm = (feat_vals - np.mean(feat_vals)) / max(np.std(feat_vals), 1e-12)
+        noise_std = 5.0  # 5x normalized feature std — hard
+        signal = feat_norm + rng.normal(0, noise_std, size=len(feat_norm))
+        y_new = np.full(len(signal), 2, dtype=np.int32)
+        y_new[signal > 0.5] = 0   # LONG
+        y_new[signal < -0.5] = 1  # SHORT
+        long_c = int(np.sum(y_new == 0))
+        short_c = int(np.sum(y_new == 1))
+        notrade_c = int(np.sum(y_new == 2))
+        print(f"\n  {'='*50}")
+        print(f"  POSITIVE CONTROL TEST")
+        print(f"  Feature: {feat_names[feat_idx]} (idx={feat_idx})")
+        print(f"  Noise: N(0,{noise_std}) — label = sign(feature[t] + noise)")
+        print(f"  Dist: LONG={long_c}, SHORT={short_c}, NO_TRADE={notrade_c}")
+        print(f"  Baseline (NO_TRADE-guess): {max(notrade_c,long_c,short_c)/len(y_new):.3f}")
+        y_clean = y_new
+        r_clean = np.where(y_new == 0, 0.02, np.where(y_new == 1, 0.02, 0.0)).astype(np.float64)
 
     if len(X_clean) < 100:
         print("  ERROR: Insufficient clean samples for training")
@@ -653,9 +808,58 @@ def main():
     t0 = time.time()
     wfv_results = walk_forward_validate(
         X_clean, y_clean, r_clean, mode, min_folds=args.folds,
+        dump_softmax_path=args.dump_softmax,
     )
     wfv_duration = time.time() - t0
     print(f"  {len(wfv_results)} folds completed in {wfv_duration:.1f}s")
+
+    # ── Threshold Sweep ────────────────────────────────────────────
+    if args.threshold_sweep:
+        thresholds = [float(t.strip()) for t in args.threshold_sweep.split(",")]
+        thresholds = sorted(set(thresholds))
+        print(f"\n{'='*60}")
+        print(f"  THRESHOLD SWEEP — {len(thresholds)} thresholds")
+        print(f"{'='*60}")
+        print(f"{"Threshold":10s}  {"OOS Acc":8s}  {"Trades":10s}  {"Exposure":10s}  {"No-trade":10s}")
+        print(f"{'-'*50}")
+
+        sweep_results = []
+        for thresh in thresholds:
+            swfv = walk_forward_validate(
+                X_clean, y_clean, r_clean, mode, min_folds=args.folds,
+                threshold=thresh,
+            )
+            val_accs = [r["val_accuracy"] for r in swfv if r["val_accuracy"] is not None]
+            active_trades = sum(r.get("active_trade_count", 0) for r in swfv)
+            no_trade = sum(r.get("no_trade_count", 0) for r in swfv)
+            total_preds = active_trades + no_trade
+            exposure = 100.0 * active_trades / total_preds if total_preds else 0.0
+            avg_acc = float(np.mean(val_accs)) if val_accs else 0.0
+
+            line = f"{thresh:<8.2f}  {avg_acc:<8.4f}  {active_trades:<10d}  {exposure:<9.2f}%  {no_trade:<10d}"
+            print(line)
+            sweep_results.append({
+                "threshold": thresh,
+                "oos_accuracy": round(avg_acc, 4),
+                "active_trades": active_trades,
+                "exposure_pct": round(exposure, 2),
+                "no_trade_count": no_trade,
+            })
+
+        # Suggest best
+        print(f"{'-'*50}")
+        # Pareto: max accuracy at min threshold drop
+        # Prefer highest accuracy among thresholds with >10% exposure
+        viable = [r for r in sweep_results if r["exposure_pct"] > 10.0]
+        if viable:
+            best = max(viable, key=lambda r: r["oos_accuracy"])
+            print(f"  Suggested threshold: {best['threshold']:.2f} "
+                  f"(acc={best['oos_accuracy']:.4f}, "
+                  f"exposure={best['exposure_pct']:.1f}%)")
+        else:
+            print(f"  No threshold achieves >10% exposure — model may need tuning")
+        print(f"{'='*60}")
+        print()
 
     # Step 5: Train final model
     print("\n[5/6] Training final model on all data...")
@@ -665,6 +869,26 @@ def main():
     final_result = final_trainer.train(X_clean, y_clean)
     final_acc = float(final_result.val_metrics.get("accuracy", 0))
     print(f"  Final model accuracy: {final_acc:.4f}")
+    
+    # Feature importance
+    try:
+        bst = final_result.model
+        if hasattr(bst, 'get_score'):
+            imp = bst.get_score(importance_type='gain')
+        elif hasattr(bst, 'feature_importances_'):
+            imp = dict(zip(feat_names, bst.feature_importances_))
+        else:
+            imp = {}
+        if imp:
+            sorted_imp = sorted(imp.items(), key=lambda x: -x[1])
+            print(f"\n  Top-10 Feature Importance (gain):")
+            for name, val in sorted_imp[:10]:
+                print(f"    {name:40s} {val:.4f}")
+            if len(sorted_imp) > 10:
+                others = sum(v for _, v in sorted_imp[10:])
+                print(f"    {'(remaining ' + str(len(sorted_imp)-10) + ' features)':40s} {others:.4f}")
+    except Exception as e:
+        logger.warning("Could not extract feature importance: %s", e)
 
     # Step 6: Collect metrics
     print("\n[6/6] Collecting metrics...")

@@ -209,38 +209,16 @@ def evaluate_factor(
         ic_series = compute_cross_sectional_ic(factor_scores, fwd_ret)
         spread_series = compute_top_bottom_spread(factor_scores, fwd_ret)
 
-        # ── Cost-aware execution filter (Bysik & Slepaczuk 2026) ──
-        # Research finding: "The main barrier is how forecasts are converted
-        # into trades, not weak predictability."
-        #
-        # Filter rule: only consider timestamps where the cross-sectional
-        # IC spread (signal strength) exceeds the cost threshold.
-        # This blocks trades where edge < friction.
-        #
-        # Cost threshold: 2 × total_friction_cost ≈ 2 × 0.089R = 0.178R
-        # (taker: 0.04% entry + 0.04% exit + 0.01% slippage = 0.09% round-trip)
-        # (maker: 0.02% entry + 0.02% exit + 0.01% slippage = 0.05% round-trip)
-        #
-        # Signal strength: |mean_ic| × (spread_std / n_symbols^0.5)
-        # Simple proxy: |ic_series| > cost_threshold
-        cost_threshold = 0.05  # R-multiples, maker fee assumption
-
-        # Apply filter: keep only timestamps where |IC| > threshold
-        ic_filtered = ic_series[ic_series.abs() > cost_threshold]
-        spread_filtered = spread_series.loc[ic_filtered.index] if not ic_filtered.empty else pd.Series(dtype=float)
-
-        # Filter valid IC values
-        valid_ic = ic_filtered.dropna()
-        valid_spread = spread_filtered.dropna()
+        # Valid IC/spread/turnover — no cost filter applied to IC.
+        # Cost filter belongs on expected spread (R-multiples), not on
+        # IC (korelasyon katsayısı, -1..+1). Filtering IC by cost creates
+        # selection bias and breaks the integrity of IC as a signal metric.
+        valid_ic = ic_series.dropna()
+        valid_spread = spread_series.dropna()
         valid_turnover = turnover_series.dropna()
 
         n_timestamps = len(valid_ic)
         n_symbols = len(factor_scores.columns)
-
-        # Track filter impact
-        n_raw = len(ic_series.dropna())
-        n_filtered = n_timestamps
-        filter_rate = (n_raw - n_filtered) / n_raw * 100 if n_raw > 0 else 0
 
         if n_timestamps == 0:
             results.append({
@@ -258,7 +236,7 @@ def evaluate_factor(
                 "start_ts": "",
                 "end_ts": "",
                 "pass_fail": "FAIL",
-                "notes": f"no valid IC samples (filter={filter_rate:.0f}% blocked)",
+                "notes": "no valid IC samples",
             })
             continue
 
@@ -268,8 +246,13 @@ def evaluate_factor(
 
         # Direction-adjusted IC: for "short" factors, flip the sign so that
         # positive adjusted IC = good (predicts returns in the right direction).
-        # This makes all downstream logic (pass/fail, display) consistent.
-        direction_sign = 1.0 if direction == "long" else -1.0
+        # "unstable" and "agnostic" factors use raw IC (no sign adjustment).
+        if direction == "long":
+            direction_sign = 1.0
+        elif direction == "short":
+            direction_sign = -1.0
+        else:
+            direction_sign = 1.0  # unstable/agnostic → no adjustment
         adj_ic = raw_ic * direction_sign
         adj_median_ic = median_ic * direction_sign
         # When ic_std = 0 (all IC values identical, e.g. perfect signal),

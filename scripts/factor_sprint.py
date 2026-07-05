@@ -67,6 +67,7 @@ import psutil
 import os
 from tqdm import tqdm
 
+import numpy as np
 import pandas as pd
 
 # ----------------------------------------------------------------------
@@ -76,6 +77,8 @@ parser = argparse.ArgumentParser(description="FACTOR SPRINT – deterministic al
 parser.add_argument("--gpu", action="store_true", help="Use ROCm GPU (cuDF) for data loading (fallback to CPU if cuDF unavailable)")
 parser.add_argument("--parallel", action="store_true", help="Evaluate factors in parallel using threads")
 parser.add_argument("--test", action="store_true", help="Run in test mode with limited symbols and one‑year data")
+parser.add_argument("--walkforward", action="store_true", help="Run walk-forward sign stability check instead of full evaluation")
+parser.add_argument("--windows", type=int, default=3, help="Number of time windows for sign stability (default: 3)")
 args = parser.parse_args()
 # When GPU flag is set, we no longer enforce test mode automatically.
 # Users can combine --gpu with --test explicitly if they want a quick test run.
@@ -88,6 +91,128 @@ args = parser.parse_args()
 # CPU‑only; if you want a full GPU pipeline you’ll need to port the
 # evaluation logic (see README.md for guidance).
 # ----------------------------------------------------------------------
+
+def run_walkforward_sign_stability(
+    factor_scores: dict[str, pd.DataFrame],
+    fwd_returns: dict[int, pd.DataFrame],
+    full_index: pd.Index,
+    n_windows: int = 3,
+) -> None:
+    """Walk-forward sign stability check for deterministic factors.
+
+    Splits the time series into N equal windows, evaluates IC per factor×horizon
+    in each window, and reports whether the direction sign is stable.
+
+    Results:
+        STABLE  — same sign in all windows
+        MILD    — same sign in >= 2/3 of windows
+        FLIP    — sign changes between windows (unreliable)
+    """
+    from alphaforge.factors.evaluation import evaluate_factor
+    from alphaforge.factors.factors import FACTOR_REGISTRY
+
+    # Split index into N equal chunks
+    n_total = len(full_index)
+    window_size = n_total // n_windows
+    windows = []
+    for w in range(n_windows):
+        start = w * window_size
+        end = n_total if w == n_windows - 1 else (w + 1) * window_size
+        windows.append((start, end, full_index[start:end]))
+
+    labels = [f"W{w+1}" for w in range(n_windows)]
+
+    print(f"  Splitting {n_total} bars into {n_windows} windows (~{window_size} bars each)")
+    for w, (s, e, idx) in enumerate(windows):
+        print(f"    W{w+1}: {idx[0]} to {idx[-1]} ({len(idx)} bars)")
+
+    # Collect IC signs per factor × horizon × window
+    # Structure: results[factor_name][horizon] = [ic_sign_W1, ic_sign_W2, ...]
+    results: dict[str, dict[int, list[float]]] = {}
+
+    for factor_name, scores in factor_scores.items():
+        if factor_name not in FACTOR_REGISTRY:
+            continue
+        direction, _ = FACTOR_REGISTRY[factor_name]
+
+        for horizon, fwd in fwd_returns.items():
+            window_signs = []
+            for w, (s, e, idx) in enumerate(windows):
+                # Slice data for this window
+                scores_w = scores.loc[idx]
+                fwd_w = fwd.loc[idx]
+
+                # Compute IC
+                ic_results = evaluate_factor(
+                    factor_name, scores_w, {horizon: fwd_w}, direction
+                )
+
+                # Get the IC sign for this horizon
+                found = False
+                for r in ic_results:
+                    if r["horizon"] == horizon and not np.isnan(r.get("mean_rank_ic", np.nan)):
+                        window_signs.append(np.sign(r["mean_rank_ic"]))
+                        found = True
+                        break
+                if not found:
+                    window_signs.append(0.0)
+
+            # Store
+            if factor_name not in results:
+                results[factor_name] = {}
+            results[factor_name][horizon] = window_signs
+
+    # ── REPORT ─────────────────────────────────────────────────────
+    print()
+    print("=" * 80)
+    print("WALK-FORWARD SIGN STABILITY REPORT")
+    print("=" * 80)
+    print(f"{"Factor":25s}  {"Horizon":8s}  {"Window Signs":30s}  {"Status":10s}  {"Verdict"}")
+    print("-" * 80)
+
+    flips = 0
+    total = 0
+    for factor_name in sorted(results.keys()):
+        for horizon in sorted(results[factor_name].keys()):
+            signs = results[factor_name][horizon]
+            # Skip windows with nan (all zero signs)
+            active_signs = [s for s in signs if s != 0.0]
+            if len(active_signs) < 2:
+                continue
+            total += 1
+
+            # Check stability
+            positive = sum(1 for s in active_signs if s > 0)
+            negative = sum(1 for s in active_signs if s < 0)
+
+            if positive == len(active_signs) or negative == len(active_signs):
+                status = "STABLE"
+                verdict = "✓"
+            elif positive >= len(active_signs) * 2 / 3 or negative >= len(active_signs) * 2 / 3:
+                status = "MILD"
+                verdict = "∼"
+            else:
+                status = "FLIP"
+                verdict = "✗"
+                flips += 1
+
+            sign_str = "".join(["+" if s > 0 else ("-" if s < 0 else "0") for s in signs])
+            print(f"  {factor_name:23s}  {horizon:2d}h{'':5s}  {sign_str:30s}  {status:10s}  {verdict}")
+
+    print("-" * 80)
+    if total > 0:
+        print(f"  Total: {total} factor×horizon combos | STABLE: {total - flips} | FLIP: {flips} ({100*flips/total:.1f}%)")
+        print()
+
+        if flips / total > 0.3:
+            print("  WARNING: High flip rate — direction assignments may not be reliable.")
+            print("  Consider walk-forward sign validation before locking direction.")
+        else:
+            print("  Direction signs are reliable for most factors.")
+
+    print("=" * 80)
+
+
 
 def main() -> None:
     print("=" * 60)
@@ -195,7 +320,13 @@ def main() -> None:
         total = scores.shape[0] * scores.shape[1]
         print(f"  {name}: {valid}/{total} valid values ({100*valid/total:.1f}%)")
 
-    # ── STEP 5: Evaluate all factors ───────────────────────────────
+    # ── WALK-FORWARD SIGN STABILITY ───────────────────────────────
+    if args.walkforward:
+        print("\n[6/6] Walk-forward sign stability check...")
+        run_walkforward_sign_stability(factor_scores, fwd_returns, close.index, n_windows=args.windows)
+        return
+
+    # ── STEP 6: Evaluate all factors ───────────────────────────────
     print("\n[6/6] Evaluating factors across horizons...")
     all_results = []
 
@@ -268,7 +399,7 @@ def main() -> None:
     mem_mb = proc.memory_info().rss / (1024 * 1024)
     cpu_pct = psutil.cpu_percent(interval=0.1)
     print("\n=== PERFORMANCE DIAGNOSTICS ===")
-    print(f"Total wall‑clock time: {total_time:.2f}s")
+    print(f"Total wall-clock time: {total_time:.2f}s")
     print(f"Peak RAM usage: {mem_mb:.1f} MiB")
     print(f"CPU % (instant): {cpu_pct:.1f}%")
 

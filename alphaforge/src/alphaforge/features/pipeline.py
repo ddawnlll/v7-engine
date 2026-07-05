@@ -915,12 +915,12 @@ def compute_volatility_group(
 ) -> Dict[str, np.ndarray]:
     """Compute all Volatility group features.
 
-    Returns dict with keys: realized_volatility_N, high_low_range_N,
-    garman_klass_vol_N, parkinson_vol_N.
+    Returns dict with keys: high_low_range_N, garman_klass_vol_N, parkinson_vol_N.
+    realized_volatility_N removed because it is identical (r=1.0) to
+    return_volatility_N (computed in the returns group).
     All arrays same length as input. NaN at start for insufficient lookback.
     """
     return {
-        "realized_volatility_N": compute_realized_volatility(close, window),
         "high_low_range_N": compute_high_low_range(high, low, close, window),
         "garman_klass_vol_N": compute_garman_klass_vol(open_arr, high, low, close, window),
         "parkinson_vol_N": compute_parkinson_vol(high, low, window),
@@ -1184,13 +1184,13 @@ def compute_momentum_group(
 ) -> Dict[str, np.ndarray]:
     """Compute all Momentum group features.
 
-    Returns dict with keys: momentum_N, roc_N, rsi_N, macd, macd_signal, macd_histogram.
+    Returns dict with keys: momentum_N, rsi_N, macd, macd_signal, macd_histogram.
+    roc_N removed because it is redundant with log_return_N (r=0.999).
     All arrays same length as input. NaN at start.
     """
     macd_result = compute_macd(close, macd_fast, macd_slow, macd_signal)
     return {
         "momentum_N": compute_momentum_N(close, n),
-        "roc_N": compute_roc_N(close, n),
         "rsi_N": compute_rsi(close, rsi_window),
         "macd": macd_result["macd"],
         "macd_signal": macd_result["macd_signal"],
@@ -1451,15 +1451,15 @@ def compute_breakout_group(
 ) -> Dict[str, np.ndarray]:
     """Compute all Breakout group features.
 
-    Returns dict with keys: bb_position, bb_width, highest_N, lowest_N, range_breakout_N.
+    Returns dict with keys: bb_position, bb_width, range_breakout_N.
+    highest_N and lowest_N are internal (used by range_breakout_N) but not exported
+    to avoid near-perfect multicollinearity with microprice_N.
     All arrays same length as input. NaN at start.
     """
     upper, middle, lower = compute_bollinger_bands(close, bb_window, bb_num_std)
     return {
         "bb_position": compute_bb_position(close, upper, middle, lower),
         "bb_width": compute_bb_width(upper, middle, lower),
-        "highest_N": compute_highest(high, window),
-        "lowest_N": compute_lowest(low, window),
         "range_breakout_N": compute_range_breakout(close, high, low, window),
     }
 
@@ -1625,7 +1625,7 @@ def compute_features(
             Informational only — does not affect computation.
 
     Returns:
-        FeatureMatrix with features dict containing ~57 feature arrays
+        FeatureMatrix with features dict containing ~54 feature arrays
         (35 core + 9 OrderBook extended + 6 Regime + 7 Candle Pattern),
         each of shape (n_bars,). No Lead-Lag columns present.
 
@@ -1790,15 +1790,12 @@ def compute_features(
             "parkinson_vol": "volatility",
             "atr_": "atr",
             "momentum_": "momentum",
-            "roc_": "momentum",
             "rsi_": "momentum",
             "macd": "momentum",
             "volume_": "volume",
             "vwap_": "volume",
             "obv_": "volume",
             "bb_": "breakout",
-            "highest_": "breakout",
-            "lowest_": "breakout",
             "range_": "breakout",
             "spread_": "orderbook",
             "volume_imbalance": "orderbook",
@@ -1813,9 +1810,7 @@ def compute_features(
             "liquidity_vacuum": "orderbook",
             "depth_ratio": "orderbook",
             "obi": "orderbook",
-            "stoikov": "orderbook",
             "ofi": "orderbook",
-            "vamp": "orderbook",
             "quoted_spread": "orderbook",
             "vwap_mid": "orderbook",
             "trade_count": "orderbook",
