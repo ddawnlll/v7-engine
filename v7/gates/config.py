@@ -51,10 +51,10 @@ DEFAULT_GATE_CONFIG: list[GateConfig] = [
     GateConfig("G4", enabled=True,  stop_on_fail=False),  # REGIME_BREAKDOWN
     GateConfig("G5", enabled=True,  stop_on_fail=False),  # SYMBOL_STABILITY
     GateConfig("G6", enabled=True,  stop_on_fail=False),  # CALIBRATION_RELIABILITY
-    GateConfig("G7", enabled=False, stop_on_fail=False),  # SHADOW (infra not built)
-    GateConfig("G8", enabled=False, stop_on_fail=False),  # PAPER (infra not built)
-    GateConfig("G9", enabled=False, stop_on_fail=False),  # TINY_LIVE (infra not built)
-    GateConfig("G10", enabled=False, stop_on_fail=False), # LIVE (infra not built)
+    GateConfig("G7", enabled=True,  stop_on_fail=False),  # SHADOW
+    GateConfig("G8", enabled=True,  stop_on_fail=False),  # PAPER
+    GateConfig("G9", enabled=True,  stop_on_fail=False),  # TINY_LIVE
+    GateConfig("G10", enabled=True, stop_on_fail=False),  # LIVE
 ]
 
 

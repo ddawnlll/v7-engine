@@ -40,6 +40,14 @@ def passing_context():
         "win_rate": 0.55,
         "profit_factor": 1.4,
         "max_drawdown_r": -2.5,
+        "shadow_pipeline_ready": True,
+        "shadow_duration_days": 28,
+        "shadow_trade_count": 50,
+        "paper_adapter_ready": True,
+        "paper_duration_days": 28,
+        "paper_trade_count": 100,
+        "kill_switch_configured": True,
+        "all_prior_gates_passed": True,
     }
 
 
@@ -105,11 +113,11 @@ class TestDefaultGateConfig:
         g0 = next(cfg for cfg in DEFAULT_GATE_CONFIG if cfg.gate_id == "G0")
         assert g0.stop_on_fail is True
 
-    def test_g7_g10_disabled(self):
-        """G7-G10 should be disabled (infrastructure not built)."""
+    def test_g7_g10_enabled_by_default(self):
+        """G7-G10 should be enabled by default."""
         for gate_id in ("G7", "G8", "G9", "G10"):
             cfg = next(c for c in DEFAULT_GATE_CONFIG if c.gate_id == gate_id)
-            assert cfg.enabled is False, f"{gate_id} should be disabled"
+            assert cfg.enabled is True, f"{gate_id} should be enabled"
 
     def test_g0_g6_enabled(self):
         """G0-G6 should be enabled."""
@@ -250,8 +258,8 @@ class TestRunGates:
         assert results["passed"] is True
         summary = results["summary"]
         assert "PROMOTE" in summary["recommendation"]
-        # G0-G6 pass; G7-G10 are disabled in DEFAULT_GATE_CONFIG and filtered out
-        expected_passed = {f"G{i}" for i in range(7)}
+        # G0-G10 all pass
+        expected_passed = {f"G{i}" for i in range(11)}
         assert set(summary["passed_gates"]) == expected_passed, (
             f"Expected passed gates {expected_passed}, got {summary['passed_gates']}"
         )
@@ -278,11 +286,9 @@ class TestRunGates:
         """Results should contain gate_results with all enabled gates."""
         results = run_gates(swing_candidate, passing_context)
         gate_results = results["gate_results"]
-        # G0-G6 should be present (enabled); G7-G10 should be filtered out
-        for i in range(7):
+        # G0-G10 should all be present (all enabled)
+        for i in range(11):
             assert f"G{i}" in gate_results, f"G{i} should be in results"
-        for i in range(7, 11):
-            assert f"G{i}" not in gate_results, f"G{i} should be filtered out (disabled)"
 
     def test_label_in_meta(self, swing_candidate, passing_context):
         """candidate_label should appear in meta when provided."""

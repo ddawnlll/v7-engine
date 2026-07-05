@@ -201,33 +201,87 @@ class TestEvaluateGate:
         assert result.status == GateStatus.PASS
         assert result.score == 1.0
 
-    # ── G7/G8/G9/G10: infrastructure gates ─────────────────────────
+    # ── G7/G8/G9/G10: pipeline gates ────────────────────────────────
 
-    def test_g7_shadow_na(self):
-        """G7 SHADOW should return NOT_APPLICABLE (infra not built)."""
+    def test_g7_shadow_fails_without_flag(self):
+        """G7 SHADOW should FAIL when shadow_pipeline_ready is missing."""
         candidate = self._swing_candidate()
         result = evaluate_gate("G7", candidate)
-        assert result.status == GateStatus.NOT_APPLICABLE
+        assert result.status == GateStatus.FAIL
         assert result.name == "SHADOW"
+        assert "not ready" in result.detail.lower()
 
-    def test_g8_paper_na(self):
-        """G8 PAPER should return NOT_APPLICABLE (infra not built)."""
+    def test_g7_shadow_passes_with_ready(self):
+        """G7 SHADOW should PASS when shadow pipeline is ready."""
+        candidate = self._swing_candidate()
+        ctx = {"shadow_pipeline_ready": True, "shadow_duration_days": 28, "shadow_trade_count": 50}
+        result = evaluate_gate("G7", candidate, ctx)
+        assert result.status == GateStatus.PASS
+        assert result.score == 1.0
+
+    def test_g7_shadow_fails_short_duration(self):
+        """G7 SHADOW should FAIL when shadow duration is too short."""
+        candidate = self._swing_candidate()
+        ctx = {"shadow_pipeline_ready": True, "shadow_duration_days": 7, "shadow_trade_count": 5}
+        result = evaluate_gate("G7", candidate, ctx)
+        assert result.status == GateStatus.FAIL
+        assert "duration" in result.detail.lower()
+
+    def test_g8_paper_fails_without_flag(self):
+        """G8 PAPER should FAIL when paper_adapter_ready is missing."""
         candidate = self._swing_candidate()
         result = evaluate_gate("G8", candidate)
-        assert result.status == GateStatus.NOT_APPLICABLE
+        assert result.status == GateStatus.FAIL
+        assert result.name == "PAPER"
 
-    def test_g9_tiny_live_na(self):
-        """G9 TINY_LIVE should return NOT_APPLICABLE (infra not built)."""
+    def test_g8_paper_passes_with_ready(self):
+        """G8 PAPER should PASS when paper adapter is ready."""
+        candidate = self._swing_candidate()
+        ctx = {"paper_adapter_ready": True, "paper_duration_days": 28, "paper_trade_count": 100}
+        result = evaluate_gate("G8", candidate, ctx)
+        assert result.status == GateStatus.PASS
+        assert result.score == 1.0
+
+    def test_g9_tiny_live_fails_without_flag(self):
+        """G9 TINY_LIVE should FAIL when kill_switch_configured is missing."""
         candidate = self._swing_candidate()
         result = evaluate_gate("G9", candidate)
-        assert result.status == GateStatus.NOT_APPLICABLE
+        assert result.status == GateStatus.FAIL
 
-    def test_g10_live_na(self):
-        """G10 LIVE should return NOT_APPLICABLE for baseline."""
+    def test_g9_tiny_live_passes_with_switch(self):
+        """G9 TINY_LIVE should PASS with kill switch configured."""
+        candidate = self._swing_candidate()
+        ctx = {"kill_switch_configured": True}
+        result = evaluate_gate("G9", candidate, ctx)
+        assert result.status == GateStatus.PASS
+        assert result.score == 1.0
+
+    def test_g9_tiny_live_fails_risk_limits(self):
+        """G9 TINY_LIVE should FAIL when risk limits exceeded."""
+        candidate = self._swing_candidate()
+        ctx = {
+            "kill_switch_configured": True,
+            "tiny_live_risk_per_trade_pct": 1.0,
+            "tiny_live_daily_loss_pct": 10.0,
+        }
+        result = evaluate_gate("G9", candidate, ctx)
+        assert result.status == GateStatus.FAIL
+        assert "risk" in result.detail.lower()
+
+    def test_g10_live_fails_without_flag(self):
+        """G10 LIVE should FAIL when all_prior_gates_passed is missing."""
         candidate = self._swing_candidate()
         result = evaluate_gate("G10", candidate)
-        assert result.status == GateStatus.NOT_APPLICABLE
+        assert result.status == GateStatus.FAIL
         assert result.name == "LIVE"
+
+    def test_g10_live_passes(self):
+        """G10 LIVE should PASS when all prior gates passed."""
+        candidate = self._swing_candidate()
+        ctx = {"all_prior_gates_passed": True}
+        result = evaluate_gate("G10", candidate, ctx)
+        assert result.status == GateStatus.PASS
+        assert result.score == 1.0
 
     # ── Canonical gate enforcement ─────────────────────────────────
 
@@ -295,7 +349,7 @@ class TestEvaluateCandidate:
             assert gate_id in results, f"Missing gate {gate_id}"
 
     def test_strong_candidate_passes_all_applicable(self):
-        """Strong candidate should pass all applicable gates (G0-G6)."""
+        """Strong candidate should pass all gates (G0-G10) when context provided."""
         candidate = self._swing_candidate()
         ctx = {
             "expectancy_r": 1.2,
@@ -303,16 +357,24 @@ class TestEvaluateCandidate:
             "ece": 0.03,
             "model_signature": "swing_v1@abc123",
             "g1_research_backtest_pass": True,
+            "shadow_pipeline_ready": True,
+            "shadow_duration_days": 28,
+            "shadow_trade_count": 50,
+            "paper_adapter_ready": True,
+            "paper_duration_days": 28,
+            "paper_trade_count": 100,
+            "kill_switch_configured": True,
+            "all_prior_gates_passed": True,
         }
         results = evaluate_candidate(candidate, ctx)
         summary = get_promotion_summary(results)
-        # G7-G10 are NOT_APPLICABLE for baseline, G0-G6 should PASS
+        # G0-G10 should all PASS
         assert summary["passed"] is True
         assert "PROMOTE" in summary["recommendation"]
-        assert "G7" in summary["na_gates"]
-        assert "G8" in summary["na_gates"]
-        assert "G9" in summary["na_gates"]
-        assert "G10" in summary["na_gates"]
+        # No gates should be NOT_APPLICABLE
+        assert len(summary["na_gates"]) == 0
+        # All 11 gates should be in passed_gates
+        assert len(summary["passed_gates"]) == 11
 
     def test_weak_candidate_fails_g2_walk_forward(self):
         """Weak expectancy R candidate should fail G2 WALK_FORWARD_OOS."""

@@ -27,10 +27,26 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+# ── Performance guard: ensure numba is available ──────────────────────────
+# The mining pipeline uses numba-JITed kernels for 50-150x speedup.
+# Without numba, bar-by-bar simulation (millions of iterations) is unusably slow.
+_NUMBA_OK = False
 try:
-    from numba import njit
+    from numba import njit  # noqa: F401
+    _NUMBA_OK = True
 except ImportError:
-    njit = lambda f: f
+    pass
+
+if not _NUMBA_OK:
+    print(
+        "FATAL: numba is required for the mining pipeline.\n"
+        "  The hot simulation kernels need JIT compilation for 50-150x speedup.\n"
+        "  Install it:  pip install numba\n"
+        "  Or activate the .venv:  source .venv/bin/activate",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+# ──────────────────────────────────────────────────────────────────────────
 
 # Ensure repo root is on path
 REPO_ROOT = Path(__file__).resolve().parent.parent

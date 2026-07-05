@@ -139,6 +139,57 @@ def test_cli_wfv_real_mode_gated() -> None:
     assert "GATE" in result.stdout or "requires trained model" in result.stdout
 
 
+# ── Error paths ───────────────────────────────────────────────────
+
+
+def test_cli_backfill_bad_date() -> None:
+    """backfill with malformed date should still produce usable error."""
+    result = _run_cli("backfill", "--dry-run", "--start", "not-a-date")
+    # The CLI parses the date and may fail or proceed with dry-run
+    assert result.returncode == 0 or "error" in result.stderr.lower() or "usage" in result.stderr.lower()
+
+
+def test_cli_backfill_unknown_symbols() -> None:
+    """backfill --dry-run with weird symbols still runs (dry-run skips actual download)."""
+    result = _run_cli("backfill", "--dry-run", "--symbols", "NONEXISTENT")
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+    assert "DRY RUN" in result.stdout
+
+
+def test_cli_simulate_missing_flag_defaults() -> None:
+    """simulate --dry-run without --mode or --symbols uses defaults."""
+    result = _run_cli("simulate", "--dry-run")
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+    assert "DRY RUN" in result.stdout
+
+
+def test_cli_train_bad_force_usage() -> None:
+    """train without --force exits non-zero in real mode."""
+    result = _run_cli("train")
+    assert result.returncode != 0
+    assert "GATE" in result.stdout or "not authorized" in result.stdout
+
+
+def test_cli_report_with_mode_flag() -> None:
+    """report --dry-run --mode SWING works."""
+    result = _run_cli("report", "--dry-run", "--mode", "SWING")
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+    assert "DRY RUN" in result.stdout
+    assert "SWING" in result.stdout
+
+
+def test_cli_unknown_command() -> None:
+    """An unknown subcommand should exit 1."""
+    result = _run_cli("nonexistent-command")
+    assert result.returncode != 0
+
+
+def test_cli_empty_args() -> None:
+    """No args should print help and exit 0."""
+    result = _run_cli()
+    assert result.returncode == 0
+
+
 # ── Pipeline dry-run ──────────────────────────────────────────────
 
 

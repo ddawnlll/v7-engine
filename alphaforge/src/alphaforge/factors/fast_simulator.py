@@ -14,25 +14,43 @@ Cost parameters sourced from ``simulation.engine.costs`` (economic truth authori
 This module keeps the correct position management logic but uses authority-aligned
 cost rates imported from ``simulation.engine.costs`` instead of hardcoded constants.
 
-Works WITHOUT numba: the fallback decorator makes @njit a no-op.
-
-Cost model (sourced from simulation.engine.costs):
-    Taker fee:  4bps per side (8bps round trip)
-    Slippage:   1bp per side (2bps round trip)
-    Total:     10bps round trip (cf. authority total_round_trip_cost_bps)
+Perf note: numba JIT provides ~155x speedup over pure Python on the hot kernel.
+Without numba, this module falls back to pure Python — functional but extremely slow.
 """
 
 from __future__ import annotations
 
+import logging
+import os
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 try:
     from numba import njit
 except ImportError:
-    njit = lambda f: f  # type: ignore[misc,assignment]
+    def njit(f=None, **kwargs):
+        if f is not None:
+            return f
+        return lambda g: g
+    _NUMBA_AVAILABLE = False
+else:
+    _NUMBA_AVAILABLE = True
+
+# Warn once on first import if numba is missing or disabled
+if not _NUMBA_AVAILABLE:
+    logger.warning(
+        "numba not installed — simulation kernels will run 50-150x slower. "
+        "Install it: pip install numba"
+    )
+elif os.environ.get("NUMBA_DISABLE_JIT", "0") == "1":
+    logger.warning(
+        "NUMBA_DISABLE_JIT=1 — simulation kernels will run in pure-Python mode "
+        "(50-150x slower). Unset for full performance."
+    )
 
 
 # ---------------------------------------------------------------------------

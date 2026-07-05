@@ -35,6 +35,10 @@ try:
 
     _HAS_NUMBA = True
 except ImportError:
+    logger.warning(
+        "numba not installed — bitset mining Level 2 will run without "
+        "parallel JIT acceleration (50-100x slower). Install it: pip install numba"
+    )
 
     def njit(*args, **kwargs):  # type: ignore[misc]
         """No-op decorator when Numba is not installed."""

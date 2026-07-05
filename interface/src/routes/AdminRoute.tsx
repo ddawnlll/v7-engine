@@ -23,6 +23,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { ScanJobForm } from '../components/forms/ScanJobForm'
+import { KpiCardSimple } from '../components/KpiCard'
 import { AnimatedRoute } from '../components/ui/AnimatedRoute'
 import { EmptyState } from '../components/ui/EmptyState'
 import { StatusBadge } from '../components/ui/StatusBadge'
@@ -1031,17 +1032,13 @@ export function AdminRoute({
               <>
                 <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   {queueStats.map((item) => (
-                    <div
+                    <KpiCardSimple
                       key={item.label}
-                      className="rounded-[1.4rem] border border-stone-900/8 bg-white/86 p-4 shadow-[0_16px_30px_rgba(77,62,40,0.05)]"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-[0.72rem] uppercase tracking-[0.18em] text-stone-500">{item.label}</p>
-                        <item.icon className="h-4 w-4 text-teal-800" strokeWidth={1.8} />
-                      </div>
-                      <p className={`mt-3 text-3xl font-semibold tracking-[-0.06em] ${item.accent}`}>{item.value}</p>
-                      <p className="mt-2 text-sm leading-6 text-stone-500">{item.note}</p>
-                    </div>
+                      label={item.label}
+                      value={item.value}
+                      detail={item.note}
+                      accent={item.accent}
+                    />
                   ))}
                 </section>
 
@@ -1125,12 +1122,12 @@ export function AdminRoute({
             </div>
             <div className="grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
               <div className="grid gap-3">
-                {runtimeOverview.map(([label, value]) => (
-                  <div key={label} className="rounded-[1.3rem] bg-stone-950/[0.03] p-4">
-                    <p className="text-[0.72rem] uppercase tracking-[0.18em] text-stone-500">{label}</p>
-                    <p className="mt-2 text-sm font-semibold leading-6 text-stone-950">{value}</p>
-                  </div>
-                ))}
+                  {runtimeOverview.map(([label, value]) => (
+                    <div key={label} className="rounded-[1.3rem] bg-stone-950/[0.03] p-4">
+                      <p className="text-[0.72rem] uppercase tracking-[0.18em] text-stone-500">{label}</p>
+                      <p className="mt-2 text-sm font-semibold leading-6 text-stone-950">{value}</p>
+                    </div>
+                  ))}
               </div>
 
               <div className="grid gap-3">
@@ -1357,11 +1354,12 @@ export function AdminRoute({
                     <div className="grid gap-4">
                       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                         {queueOverviewStats.map(([label, value, note]) => (
-                          <div key={label} className="rounded-[1.2rem] border border-stone-900/8 bg-white/90 p-4">
-                            <p className="text-[0.72rem] uppercase tracking-[0.18em] text-stone-500">{label}</p>
-                            <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-stone-950">{value}</p>
-                            <p className="mt-2 text-sm leading-6 text-stone-500">{note}</p>
-                          </div>
+                          <KpiCardSimple
+                            key={label}
+                            label={label}
+                            value={value}
+                            detail={note}
+                          />
                         ))}
                       </div>
 
@@ -1613,11 +1611,7 @@ export function AdminRoute({
                     ['Avg Confidence', formatNumber((toNumber(failureSummary.summary?.average_confidence) * 100), 1) + '%', 'Classifier confidence across failures.'],
                     ['Top Weakness', `${String(failureSummary.summary?.top_weakness?.failure_source ?? '--')} / ${String(failureSummary.summary?.top_weakness?.blamed_component ?? '--')}`, 'Most frequent weakness pair by count.'],
                   ].map(([label, value, note]) => (
-                    <div key={label} className="rounded-[1.3rem] border border-stone-900/8 bg-white/90 p-4">
-                      <p className="text-[0.72rem] uppercase tracking-[0.18em] text-stone-500">{label}</p>
-                      <p className="mt-2 text-lg font-semibold leading-6 text-stone-950">{value}</p>
-                      <p className="mt-2 text-sm leading-6 text-stone-500">{note}</p>
-                    </div>
+                    <KpiCardSimple key={label} label={label} value={value} detail={note} />
                   ))}
                 </div>
 
@@ -1753,11 +1747,7 @@ export function AdminRoute({
               ['Manual Mode', String(circuitState.manual_mode ?? 'AUTO'), 'AUTO evaluates recent results. FORCE_OPEN and FORCE_CLOSED override runtime safety state.'],
               ['Enabled', Boolean(circuitState.enabled ?? true) ? 'Yes' : 'No', 'If disabled, the breaker does not block autonomous scans at all.'],
             ].map(([label, value, note]) => (
-              <div key={label} className="rounded-[1.3rem] border border-stone-900/8 bg-white/90 p-4">
-                <p className="text-[0.72rem] uppercase tracking-[0.18em] text-stone-500">{label}</p>
-                <p className="mt-2 text-lg font-semibold leading-6 text-stone-950">{value}</p>
-                <p className="mt-2 text-sm leading-6 text-stone-500">{note}</p>
-              </div>
+              <KpiCardSimple key={label} label={label} value={value} detail={note} />
             ))}
           </div>
           <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">

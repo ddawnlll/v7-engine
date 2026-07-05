@@ -348,3 +348,58 @@ class V7PromotionEngine:
         """
         artifact_id = f"v7art-{uuid.uuid4().hex[:12]}"
         return artifact_id
+
+    def detect_rollback(
+        self,
+        current_artifact_id: str,
+        previous_artifact_id: str | None,
+        current_gates: dict[str, Any],
+        previous_gates: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Detect rollback by comparing current vs previous gate results.
+
+        A rollback is detected when the current artifact has lower gate
+        scores than the previous artifact for critical gates (G2, G6, G7).
+
+        Args:
+            current_artifact_id: The current artifact's ID.
+            previous_artifact_id: The previous artifact's ID (None if none).
+            current_gates: Current artifact's gate results dict.
+            previous_gates: Previous artifact's gate results dict (None if none).
+
+        Returns:
+            Dict with rollback_detected (bool), detail, and scored_deltas.
+        """
+        if not previous_artifact_id or not previous_gates:
+            return {
+                "rollback_detected": False,
+                "detail": "No previous artifact to compare against",
+                "scored_deltas": {},
+            }
+
+        CRITICAL_GATES = {"G2", "G6", "G7"}
+        deltas: dict[str, float] = {}
+        significant_regression = False
+
+        for gate_id in CRITICAL_GATES:
+            curr = current_gates.get(gate_id, {})
+            prev = previous_gates.get(gate_id, {})
+
+            if isinstance(curr, dict) and isinstance(prev, dict):
+                curr_score = curr.get("score", 0.0)
+                prev_score = prev.get("score", 0.0)
+                delta = curr_score - prev_score
+                deltas[gate_id] = round(delta, 4)
+                if delta < -0.1:
+                    significant_regression = True
+
+        return {
+            "rollback_detected": significant_regression,
+            "detail": (
+                f"Rollback detected vs {previous_artifact_id}: "
+                + "; ".join(f"{g}: {d:+.4f}" for g, d in deltas.items())
+                if significant_regression
+                else "No significant regression vs previous artifact"
+            ),
+            "scored_deltas": deltas,
+        }

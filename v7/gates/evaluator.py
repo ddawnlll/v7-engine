@@ -421,64 +421,203 @@ def _gate_g6_calibration_reliability(candidate: dict[str, Any], ctx: dict[str, A
 def _gate_g7_shadow(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
     """G7 SHADOW: Live-market observation without order placement.
 
-    Infrastructure placeholder — requires P0.9A+ infrastructure
-    (shadow observation pipeline, no order placement).
+    Checks context for shadow_pipeline_ready flag and validates
+    shadow duration against mode-specific minimum.
     """
+    shadow_ready = ctx.get("shadow_pipeline_ready", False)
+    mode = candidate.get("mode", "SWING")
+    profile = get_mode_profile(mode)
+    min_duration = profile.get("min_shadow_duration_days", 28)
+
+    if not shadow_ready:
+        return GateResult(
+            gate_id="G7",
+            name="SHADOW",
+            status=GateStatus.FAIL,
+            score=0.0,
+            threshold=1.0,
+            detail="Shadow pipeline not ready — shadow_pipeline_ready flag missing or False",
+        )
+
+    shadow_duration = ctx.get("shadow_duration_days", 0)
+    if shadow_duration < min_duration:
+        return GateResult(
+            gate_id="G7",
+            name="SHADOW",
+            status=GateStatus.FAIL,
+            score=min(1.0, shadow_duration / max(min_duration, 1)),
+            threshold=1.0,
+            detail=f"Shadow duration {shadow_duration}d < minimum {min_duration}d for {mode}",
+        )
+
+    min_trades = profile.get("min_shadow_trades", 20)
+    shadow_trade_count = ctx.get("shadow_trade_count", 0)
+    if shadow_trade_count < min_trades:
+        return GateResult(
+            gate_id="G7",
+            name="SHADOW",
+            status=GateStatus.FAIL,
+            score=max(0.0, min(1.0, shadow_trade_count / max(min_trades, 1))),
+            threshold=1.0,
+            detail=f"Shadow trade count {shadow_trade_count} < minimum {min_trades} for {mode}",
+        )
+
     return GateResult(
         gate_id="G7",
         name="SHADOW",
-        status=GateStatus.NOT_APPLICABLE,
-        score=0.0,
+        status=GateStatus.PASS,
+        score=1.0,
         threshold=1.0,
-        detail="Shadow mode not applicable — infrastructure not yet built (P0.9A+)",
+        detail=f"Shadow mode complete: {shadow_duration}d, {shadow_trade_count} trades, mode={mode}",
     )
 
 
 def _gate_g8_paper(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
     """G8 PAPER: Paper forward simulation with full trade lifecycle.
 
-    Infrastructure placeholder — requires P0.9A+ runtime simulation
-    adapter with paper execution mode.
+    Checks context for paper_adapter_ready flag and validates
+    paper trade count against mode-specific minimum.
     """
+    paper_ready = ctx.get("paper_adapter_ready", False)
+    mode = candidate.get("mode", "SWING")
+    profile = get_mode_profile(mode)
+    min_duration = profile.get("min_paper_duration_days", 28)
+
+    if not paper_ready:
+        return GateResult(
+            gate_id="G8",
+            name="PAPER",
+            status=GateStatus.FAIL,
+            score=0.0,
+            threshold=1.0,
+            detail="Paper adapter not ready — paper_adapter_ready flag missing or False",
+        )
+
+    paper_duration = ctx.get("paper_duration_days", 0)
+    if paper_duration < min_duration:
+        return GateResult(
+            gate_id="G8",
+            name="PAPER",
+            status=GateStatus.FAIL,
+            score=min(1.0, paper_duration / max(min_duration, 1)),
+            threshold=1.0,
+            detail=f"Paper duration {paper_duration}d < minimum {min_duration}d for {mode}",
+        )
+
+    min_trades = profile.get("min_paper_trades", 50)
+    paper_trade_count = ctx.get("paper_trade_count", 0)
+    if paper_trade_count < min_trades:
+        return GateResult(
+            gate_id="G8",
+            name="PAPER",
+            status=GateStatus.FAIL,
+            score=max(0.0, min(1.0, paper_trade_count / max(min_trades, 1))),
+            threshold=1.0,
+            detail=f"Paper trade count {paper_trade_count} < minimum {min_trades} for {mode}",
+        )
+
     return GateResult(
         gate_id="G8",
         name="PAPER",
-        status=GateStatus.NOT_APPLICABLE,
-        score=0.0,
+        status=GateStatus.PASS,
+        score=1.0,
         threshold=1.0,
-        detail="Paper trading not applicable — infrastructure not yet built (P0.9A+)",
+        detail=f"Paper mode complete: {paper_duration}d, {paper_trade_count} trades, mode={mode}",
     )
 
 
 def _gate_g9_tiny_live(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
     """G9 TINY_LIVE: Small real-capital validation with strict kill switches.
 
-    Infrastructure placeholder — requires far-future live execution
-    infrastructure with kill-switch integration.
+    Checks context for kill_switch_configured flag and validates
+    tiny-live risk limits against mode-specific thresholds.
     """
+    kill_switch_ready = ctx.get("kill_switch_configured", False)
+    mode = candidate.get("mode", "SWING")
+    profile = get_mode_profile(mode)
+
+    if not kill_switch_ready:
+        return GateResult(
+            gate_id="G9",
+            name="TINY_LIVE",
+            status=GateStatus.FAIL,
+            score=0.0,
+            threshold=1.0,
+            detail="Kill switch not configured — kill_switch_configured flag missing or False",
+        )
+
+    # Validate mode-specific tiny-live risk limits
+    max_risk_per_trade = profile.get("max_tiny_live_risk_per_trade_pct", 0.5)
+    max_daily_loss = profile.get("max_tiny_live_daily_loss_pct", 5.0)
+    max_cumulative_loss = profile.get("max_tiny_live_cumulative_loss_pct", 10.0)
+
+    issues: list[str] = []
+    risk_per_trade = ctx.get("tiny_live_risk_per_trade_pct", 0)
+    if risk_per_trade > max_risk_per_trade:
+        issues.append(f"risk_per_trade={risk_per_trade}% > {max_risk_per_trade}%")
+
+    daily_loss = ctx.get("tiny_live_daily_loss_pct", 0)
+    if daily_loss > max_daily_loss:
+        issues.append(f"daily_loss={daily_loss}% > {max_daily_loss}%")
+
+    cumulative_loss = ctx.get("tiny_live_cumulative_loss_pct", 0)
+    if cumulative_loss > max_cumulative_loss:
+        issues.append(f"cumulative_loss={cumulative_loss}% > {max_cumulative_loss}%")
+
+    if issues:
+        return GateResult(
+            gate_id="G9",
+            name="TINY_LIVE",
+            status=GateStatus.FAIL,
+            score=max(0.0, 1.0 - len(issues) / 3.0),
+            threshold=1.0,
+            detail="; ".join(issues),
+        )
+
     return GateResult(
         gate_id="G9",
         name="TINY_LIVE",
-        status=GateStatus.NOT_APPLICABLE,
-        score=0.0,
+        status=GateStatus.PASS,
+        score=1.0,
         threshold=1.0,
-        detail="Tiny-live not applicable — infrastructure not yet built (far future)",
+        detail=f"Tiny-live kill switches active and within limits for {mode}",
     )
 
 
 def _gate_g10_live(candidate: dict[str, Any], ctx: dict[str, Any]) -> GateResult:
     """G10 LIVE: Production-eligible — all prior gates passed.
 
-    This gate is NOT_APPLICABLE for initial baseline — it gates
-    live execution eligibility, not evaluation promotion.
+    Checks that all_prior_gates_passed flag is True in context.
+    This flag must be set by the caller after verifying G0-G9 all passed.
     """
+    all_passed = ctx.get("all_prior_gates_passed", False)
+    mode = candidate.get("mode", "SWING")
+
+    if not all_passed:
+        # Report which prior gates failed for diagnostic clarity
+        failed = ctx.get("failed_prior_gates", [])
+        detail = (
+            f"All prior gates not passed for {mode}"
+            + (f" — failed: {', '.join(failed)}" if failed else "")
+            if not all_passed
+            else ""
+        )
+        return GateResult(
+            gate_id="G10",
+            name="LIVE",
+            status=GateStatus.FAIL,
+            score=0.0,
+            threshold=1.0,
+            detail=detail or "Not all prior gates passed — all_prior_gates_passed flag is False",
+        )
+
     return GateResult(
         gate_id="G10",
         name="LIVE",
-        status=GateStatus.NOT_APPLICABLE,
-        score=0.0,
+        status=GateStatus.PASS,
+        score=1.0,
         threshold=1.0,
-        detail="Live readiness not applicable for initial baseline (paper/shadow only)",
+        detail=f"All prior gates passed — {mode} is production-eligible",
     )
 
 

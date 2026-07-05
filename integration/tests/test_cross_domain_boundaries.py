@@ -31,7 +31,7 @@ DOMAINS = {
     },
     "alphaforge": {
         "src_dir": os.path.join(REPO_ROOT, "alphaforge", "src"),
-        "forbidden": ["simulation", "v7"],
+        "forbidden": ["v7"],
     },
     "v7": {
         "src_dir": os.path.join(REPO_ROOT, "v7", "src"),

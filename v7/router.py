@@ -63,6 +63,13 @@ MODE_PROFILES: dict[str, dict[str, Any]] = {
         "max_holding_bars": 30,
         "mae_penalty_weight": "medium",
         "cost_penalty_weight": "medium",
+        "min_shadow_duration_days": 28,
+        "min_shadow_trades": 20,
+        "min_paper_duration_days": 28,
+        "min_paper_trades": 50,
+        "max_tiny_live_risk_per_trade_pct": 0.5,
+        "max_tiny_live_daily_loss_pct": 5.0,
+        "max_tiny_live_cumulative_loss_pct": 10.0,
     },
     "SCALP": {
         "status": HOLD,
@@ -78,6 +85,13 @@ MODE_PROFILES: dict[str, dict[str, Any]] = {
         "max_holding_bars": 12,
         "mae_penalty_weight": "high",
         "cost_penalty_weight": "very_high",
+        "min_shadow_duration_days": 21,
+        "min_shadow_trades": 50,
+        "min_paper_duration_days": 28,
+        "min_paper_trades": 100,
+        "max_tiny_live_risk_per_trade_pct": 0.25,
+        "max_tiny_live_daily_loss_pct": 3.0,
+        "max_tiny_live_cumulative_loss_pct": 7.0,
         "hold_reason": (
             "SCALP mode requires empirical evidence: "
             "walk-forward OOS expectancy R > 0, fee/slippage/latency stress "
@@ -99,6 +113,13 @@ MODE_PROFILES: dict[str, dict[str, Any]] = {
         "max_holding_bars": 5,
         "mae_penalty_weight": "very_high",
         "cost_penalty_weight": "very_high",
+        "min_shadow_duration_days": 14,
+        "min_shadow_trades": 100,
+        "min_paper_duration_days": 21,
+        "min_paper_trades": 200,
+        "max_tiny_live_risk_per_trade_pct": 0.1,
+        "max_tiny_live_daily_loss_pct": 2.0,
+        "max_tiny_live_cumulative_loss_pct": 5.0,
         "hold_reason": (
             "AGGRESSIVE_SCALP mode requires empirical evidence: "
             "cost-adjusted expectancy positive after realistic fees/slippage, "

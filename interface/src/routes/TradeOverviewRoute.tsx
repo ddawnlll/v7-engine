@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 
+import { KpiCard } from '../components/KpiCard'
 import { ProfileScopeBar } from '../components/profile/ProfileScopeBar'
 import { AnimatedRoute } from '../components/ui/AnimatedRoute'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -69,44 +70,44 @@ export function TradeOverviewRoute() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-[1.4rem] border border-stone-900/8 bg-white/84 p-4">
-            <div className="text-sm text-stone-500">Active engine</div>
-            <div className="mt-2 text-xl font-semibold text-stone-950">{String(readiness?.active_engine ?? health?.analyzer?.active_engine ?? overview?.engine?.active_engine ?? '--')}</div>
-            <div className="mt-1 text-sm text-stone-500">Champion: {String(readiness?.champion_version ?? health?.analyzer?.active_engine_version ?? '--')}</div>
-          </div>
-          <div className="rounded-[1.4rem] border border-stone-900/8 bg-white/84 p-4">
-            <div className="text-sm text-stone-500">Runtime state</div>
-            <div className="mt-2 text-xl font-semibold text-stone-950">{String(readiness?.runtime_state ?? health?.runtime_status ?? 'UNKNOWN')}</div>
-            <div className="mt-1 text-sm text-stone-500">Fallback active: {readiness?.fallback_active ? 'Yes' : 'No'}</div>
-          </div>
-          <div className="rounded-[1.4rem] border border-stone-900/8 bg-white/84 p-4">
-            <div className="text-sm text-stone-500">Open trade count</div>
-            <div className="mt-2 text-xl font-semibold text-stone-950">{formatNumber(openTradeCount, 0)}</div>
-            <div className="mt-1 text-sm text-stone-500">Pending jobs: {formatNumber(jobs?.pending ?? 0, 0)}</div>
-          </div>
-          <div className="rounded-[1.4rem] border border-stone-900/8 bg-white/84 p-4">
-            <div className="text-sm text-stone-500">Refresh cadence</div>
-            <div className="mt-2 text-xl font-semibold text-stone-950">{formatNumber(overview?.summary?.refresh_seconds ?? 30, 0)}s</div>
-            <div className="mt-1 text-sm text-stone-500">Shadow: {String(readiness?.shadow_status?.active ? readiness.shadow_status.engine_name ?? readiness.shadow_status.selected_engine ?? '--' : 'Disabled')}</div>
-          </div>
+          <KpiCard
+            label="Active engine"
+            value={String(readiness?.active_engine ?? health?.analyzer?.active_engine ?? overview?.engine?.active_engine ?? '--')}
+            detail={`Champion: ${String(readiness?.champion_version ?? health?.analyzer?.active_engine_version ?? '--')}`}
+          />
+          <KpiCard
+            label="Runtime state"
+            value={String(readiness?.runtime_state ?? health?.runtime_status ?? 'UNKNOWN')}
+            detail={`Fallback active: ${readiness?.fallback_active ? 'Yes' : 'No'}`}
+          />
+          <KpiCard
+            label="Open trade count"
+            value={formatNumber(openTradeCount, 0)}
+            detail={`Pending jobs: ${formatNumber(jobs?.pending ?? 0, 0)}`}
+          />
+          <KpiCard
+            label="Refresh cadence"
+            value={`${formatNumber(overview?.summary?.refresh_seconds ?? 30, 0)}s`}
+            detail={`Shadow: ${String(readiness?.shadow_status?.active ? readiness.shadow_status.engine_name ?? readiness.shadow_status.selected_engine ?? '--' : 'Disabled')}`}
+          />
         </section>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-[1.4rem] border border-stone-900/8 bg-white/84 p-4">
-            <div className="text-sm text-stone-500">Selected profile</div>
-            <div className="mt-2 text-xl font-semibold text-stone-950">{resolvedProfileId}</div>
-            <div className="mt-1 text-sm text-stone-500">Account: {resolvedAccountId}</div>
-          </div>
-          <div className="rounded-[1.4rem] border border-stone-900/8 bg-white/84 p-4">
-            <div className="text-sm text-stone-500">Execution identity</div>
-            <div className="mt-2 text-xl font-semibold text-stone-950">{executionMode}</div>
-            <div className="mt-1 text-sm text-stone-500">Venue: {venue}</div>
-          </div>
-          <div className="rounded-[1.4rem] border border-stone-900/8 bg-white/84 p-4">
-            <div className="text-sm text-stone-500">Profile portfolio posture</div>
-            <div className="mt-2 text-xl font-semibold text-stone-950">{formatNumber(scopedBalance, 2)}</div>
-            <div className="mt-1 text-sm text-stone-500">Available balance in selected scope</div>
-          </div>
+          <KpiCard
+            label="Selected profile"
+            value={resolvedProfileId}
+            detail={`Account: ${resolvedAccountId}`}
+          />
+          <KpiCard
+            label="Execution identity"
+            value={executionMode}
+            detail={`Venue: ${venue}`}
+          />
+          <KpiCard
+            label="Profile portfolio posture"
+            value={formatNumber(scopedBalance, 2)}
+            detail="Available balance in selected scope"
+          />
         </section>
       </div>
     </AnimatedRoute>

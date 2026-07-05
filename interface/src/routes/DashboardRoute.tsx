@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import { KpiCard } from '../components/KpiCard'
 import { AnimatedRoute } from '../components/ui/AnimatedRoute'
 import { EmptyState } from '../components/ui/EmptyState'
 import { StatusBadge } from '../components/ui/StatusBadge'
@@ -312,11 +313,13 @@ export function DashboardRoute() {
         <section className={heroStripClass}>
           <div className="grid gap-3 lg:grid-cols-4">
             {heroVitals.map((item) => (
-              <div key={item.label} className={heroCardClass}>
-                <p className="text-[0.72rem] uppercase tracking-[0.18em] text-stone-500">{item.label}</p>
-                <p className={`mt-2 text-3xl font-semibold tracking-[-0.05em] ${isDark ? 'text-slate-50' : 'text-stone-950'}`}>{item.value}</p>
-                <p className="mt-2 text-sm text-stone-600">{item.detail}</p>
-              </div>
+              <KpiCard
+                key={item.label}
+                label={item.label}
+                value={item.value}
+                detail={item.detail}
+                className={heroCardClass}
+              />
             ))}
           </div>
         </section>

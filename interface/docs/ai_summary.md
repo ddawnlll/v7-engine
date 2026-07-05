@@ -384,3 +384,119 @@ This document contains the complete lossless synthesis of every documentation fi
 - interface/INTERFACE_MAP_proposed.md
 - interface/INTERFACE_MAP proposed.phase21.md
 - interface/interface-current-state-report.md
+
+---
+
+## I.12 Metric Ownership Audit
+
+### Audit Methodology
+
+Every backend API field consumed by the interface was traced to the frontend page(s) that render it. Overlapping ownership was flagged. The canonical owner is the page whose **primary question** best matches the metric's purpose.
+
+### Canonical Metric Ownership Table
+
+| Backend Field | API Source | Pages Consuming | Canonical Owner | Overlap? |
+|---|---|---|---|---|
+| `engine_health.status` | GET /api/v3/health | App shell (Navbar), AdminRoute, DashboardRoute, TradeOverviewRoute | App shell (Navbar) — global status ribbon | YES: Admin + Dashboard also show it |
+| `engine_health.uptime_seconds` | GET /api/v3/health | App shell (Navbar), AdminRoute | App shell (Navbar) | YES: Admin duplicates |
+| `engine_health.db_status` | GET /api/v3/health | AdminRoute, App shell | AdminRoute (Operate Control) | YES |
+| `engine_health.runtime_status` | GET /api/v3/health | AdminRoute, TradeOverviewRoute | AdminRoute | YES |
+| `engine_health.analyzer.*` | GET /api/v3/health | App shell (Navbar), AdminRoute | App shell (Navbar) | YES |
+| `engine_health.alert_summary.*` | GET /api/v3/health | App shell, AdminRoute, DashboardRoute | App shell (badge count) | YES |
+| `engine_health.scan_control.*` | GET /api/v3/health | App shell, AdminRoute, ScansRoute | OperateControlRoute | YES: scattered across 3 pages |
+| `engine_health.symbol_throttle.*` | GET /api/v3/health | AdminRoute, App shell (Navbar) | AdminRoute | YES |
+| `engine_health.next_scan_at_utc` | GET /api/v3/health | App shell (Navbar) | App shell (Navbar) | No |
+| `engine_health.stream.*` | GET /api/v3/health | AdminRoute, App shell | AdminRoute (Operate Control) | YES |
+| `engine_health.self_learning.*` | GET /api/v3/health | App shell (Navbar) | App shell (Navbar) | No |
+| `job_queue.pending` | GET /api/v3/scans | App shell, AdminRoute, DashboardRoute, ScansRoute, TradeOverviewRoute | OperateControlRoute | YES: 5 pages! |
+| `job_queue.running` | GET /api/v3/scans | App shell, AdminRoute, DashboardRoute, ScansRoute | OperateControlRoute | YES |
+| `job_queue.completed` | GET /api/v3/scans | App shell, AdminRoute, DashboardRoute, ScansRoute | OperateControlRoute | YES |
+| `job_queue.failed` | GET /api/v3/scans | App shell, AdminRoute, DashboardRoute, ScansRoute | OperateControlRoute | YES |
+| `portfolio.summary.net_r` | GET /api/v3/portfolio | App shell (Navbar), PortfolioRoute | PortfolioRoute | YES: Navbar shows thumbnail |
+| `portfolio.summary.expected_net_r` | GET /api/v3/portfolio | App shell (Navbar), PortfolioRoute | PortfolioRoute | YES |
+| `runtime_settings.*` | GET /api/v3/settings | App shell, AdminRoute, OperateConfigRoute, ScansRoute | OperateConfigRoute | YES |
+| `circuit_breaker.state.*` | GET /api/v3/circuit-breaker/state | App shell, AdminRoute | OperateControlRoute | YES |
+| `operator_alerts.items[]` | GET /api/v3/alerts | App shell, AdminRoute | App shell (Navbar badge + alerts panel) | YES |
+| `dashboard.*` | GET /api/v3/dashboard | DashboardRoute only | DashboardRoute | No |
+| `failures.*` | GET /api/v3/failures | AdminRoute, FailureAnalyticsRoute | FailureAnalyticsRoute | YES |
+| `failure_summary.*` | GET /api/v3/failures/summary | AdminRoute | FailureAnalyticsRoute | YES (Admin accesses failure data it should not own) |
+| `weakness_profile.*` | GET /api/v3/failures/weakness-profile | AdminRoute, FailureAnalyticsRoute | FailureAnalyticsRoute | YES |
+| `learning_profile.*` | GET /api/v3/learning/profile | AdminRoute, ReviewLearningPage | ReviewLearningPage | YES |
+| `learning_effectiveness.*` | GET /api/v3/learning/effectiveness | AdminRoute, ReviewLearningPage | ReviewLearningPage | YES |
+| `calibration_status.*` | GET /api/v3/calibration/status | AdminRoute, ReviewLearningPage | ReviewLearningPage | YES |
+| `paper_balance.*` | GET /api/v3/paper/balance | AdminRoute, TradeOverviewRoute | OperateControlRoute (Paper Budget tab) | YES |
+| `trade_overview.*` | GET /api/v3/trade/overview | TradeOverviewRoute only | TradeOverviewRoute | No |
+| `symbols` | GET /api/symbols | App shell, AdminRoute, ScansRoute, TradeOverviewRoute | App shell (shared via Navbar) | YES |
+| `v5_overview.*` | GET /api/v3/v5/overview | AdminRoute only | AdminRoute (will move to OperateControlRoute) | No |
+| `v5_comparison.*` | GET /api/v3/v5/comparison | AdminRoute only | AdminRoute | No |
+| `v5_readiness.*` | GET /api/v3/v5/readiness | AdminRoute only | AdminRoute | No |
+
+### Key Findings
+
+1. **`job_queue.*` is the most duplicated field family** — pending/running/completed/failed appears on 5 pages (App shell, AdminRoute, DashboardRoute, ScansRoute, TradeOverviewRoute). This is the highest priority deduplication target.
+
+2. **AdminRoute is the largest overconsumer** — it fetches 18+ distinct API endpoints including failures, learning, calibration, and paper balance that belong to other pages. The Admin "overview" tab is effectively a second dashboard.
+
+3. **DashboardRoute overlaps with AdminRoute** — queue pressure metrics, engine status, and event logs appear on both. DashboardRoute should be the operator snapshot and AdminRoute the detailed control surface.
+
+4. **App shell (Navbar) over-consumes** — it shows queue metrics, portfolio net R, engine analyzer details, and fallback counters that should live in page-level data.
+
+5. **Failure analytics split** — failure data flows to both AdminRoute and FailureAnalyticsRoute. The AdminRoute failure tab pre-dates the dedicated FailureAnalyticsRoute and should be removed once that route is stable.
+
+---
+
+## I.13 Route Ownership Map
+
+### Current Route Structure (interface/src/routes/)
+
+| Route File | Page Path(s) | Responsibility | Status |
+|---|---|---|---|
+| `AdminRoute.tsx` | `/operations/admin` | Mixed: runtime cockpit + settings + budget + diagnostics | HOLD — split into OperateControl + OperateConfig |
+| `TradeOverviewRoute.tsx` | `/trade/overview` | Live operator snapshot: engine state, profile, portfolio | LOCKABLE |
+| `DashboardRoute.tsx` | (legacy redirect to `/trade/overview`) | Legacy: queue pressure, event log, quick actions | DEFERRED — keep for backward compat |
+| `ScansRoute.tsx` | `/trade/scans` | Scan history, drill-down, signal trace, skip analysis | LOCKABLE |
+| `MarketsRoute.tsx` | `/trade/markets` | Market overview, symbols, signals | LOCKABLE |
+| `TradesRoute.tsx` | `/trade/trades` | Trade blotter, order history | LOCKABLE |
+| `PortfolioRoute.tsx` | `/trade/portfolio` | Portfolio posture, open positions, closed P&L | LOCKABLE |
+| `ManualOrderRoute.tsx` | `/trade/manual-order` | Manual order creation form | LOCKABLE |
+| `EnginePerformanceRoute.tsx` | `/review/engine/performance` | Cross-run decision quality, calibration, expectancy | LOCKABLE |
+| `EngineBehaviorRoute.tsx` | `/review/engine/behavior` | Mechanical correctness, fallback, timing | LOCKABLE |
+| `FailureAnalyticsRoute.tsx` | `/review/failures` | Failure analysis, weakness profiles | LOCKABLE |
+| `ReviewLearningPage.tsx` | `/review/learning` | Learning model quality, calibration | LOCKABLE |
+| `OperateControlRoute.tsx` | `/operate/control` | Scan control, queue, circuit breaker, paper budget | LOCKABLE |
+| `OperateControlPageRoute.tsx` | (alt version of control) | Duplicate — reconcile with OperateControlRoute | HOLD |
+| `RuntimeConfigRoute.tsx` | `/operate/config` | Runtime settings editor | LOCKABLE |
+| `AlertsRoute.tsx` | `/operate/alerts` | Operator alerts list | LOCKABLE |
+| `LoggingRoute.tsx` | `/operate/logs` | Engine log viewer | LOCKABLE |
+| `SettingsRoute.tsx` | `/system/preferences` | Local UI preferences (theme, terminology, format) | LOCKABLE |
+| `StorageRoute.tsx` | `/system/storage` | Data export/import/clear | LOCKABLE |
+| `SimulationsRoute.tsx` | `/system/simulations` | Simulation runs, presets, replay | LOCKABLE |
+| `SelfLearningRoute.tsx` | `/review/learning` (legacy) | Old self-learning page — pre-dates ReviewLearningPage | DEFERRED |
+| `AnalyticsRoute.tsx` | (legacy) | Old analytics — pre-dates EnginePerformance/Behavior split | DEFERRED |
+| `PerformanceRoute.tsx` | (legacy) | Old performance — pre-dates Review split | DEFERRED |
+| `ReviewEnginePerformanceRoute.tsx` | (alt version) | Duplicate — reconcile with EnginePerformanceRoute | HOLD |
+| `ReviewEngineBehaviorRoute.tsx` | (alt version) | Duplicate — reconcile with EngineBehaviorRoute | HOLD |
+| `OperateConfigPageRoute.tsx` | (alt version) | Duplicate — reconcile with RuntimeConfigRoute | HOLD |
+
+### Route Splitting Priority
+
+1. **AdminRoute.tsx** — highest priority split target (6 tabs, 18+ API calls, mixes control + config + budget + intelligence)
+2. **ScansRoute.tsx** — second priority (640+ lines, mixes scan list + detail + trace + signal analysis)
+3. **DashboardRoute.tsx** — low priority (being replaced by TradeOverviewRoute, keep for legacy redirects)
+4. **Duplicate route files** — `OperateControlPageRoute.tsx`, `ReviewEnginePerformanceRoute.tsx`, `ReviewEngineBehaviorRoute.tsx`, `OperateConfigPageRoute.tsx` should be reconciled or removed
+
+### Route File Composition Rules
+
+Route files should be **composition files, not implementation dumps**:
+- Read route params / search params
+- Assemble feature sections
+- Own page-level layout
+- Delegate business logic to hooks and sub-components
+
+### Recommended Actions
+
+- Extract `job_queue.*` consumption from all pages except OperateControlRoute and ScansRoute
+- Move failure/weakness/learning queries out of AdminRoute
+- Reduce App shell to: engine label/status, critical alert count, next scan timestamp, breaker state summary
+- Convert AdminRoute overview tab to a lightweight redirect to OperateControlRoute
+- Remove DashboardRoute queue pressure section (duplicated in AdminRoute queue tab)

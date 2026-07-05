@@ -29,12 +29,20 @@ def _load_fixture() -> dict:
 
 
 def _strong_context() -> dict:
-    """Return gate evaluation context that passes all pre-acceptance gates."""
+    """Return gate evaluation context that passes all gates G0-G10."""
     return {
         "expectancy_r": 1.2,       # G2: SWING threshold is 0.35
         "expected_r_net": 0.90,     # G3: must be > 0
         "ece": 0.03,                # G6: threshold is 0.10
         "g1_research_backtest_pass": True,
+        "shadow_pipeline_ready": True,
+        "shadow_duration_days": 28,
+        "shadow_trade_count": 50,
+        "paper_adapter_ready": True,
+        "paper_duration_days": 28,
+        "paper_trade_count": 100,
+        "kill_switch_configured": True,
+        "all_prior_gates_passed": True,
     }
 
 
@@ -83,14 +91,14 @@ class TestV7PromotionEngine:
                 f"Pre-acceptance gate {gid} failed: {pre_gates[gid].get('detail')}"
             )
 
-        # Post-acceptance gates (G5-G6 pass, G7-G10 NA)
+        # Post-acceptance gates (G5-G10) should all pass
         post_gates = result.post_acceptance.get("gates", {})
         assert post_gates["G5"]["status"] == "PASS"
         assert post_gates["G6"]["status"] == "PASS"
-        assert post_gates["G7"]["status"] == "NOT_APPLICABLE"
-        assert post_gates["G8"]["status"] == "NOT_APPLICABLE"
-        assert post_gates["G9"]["status"] == "NOT_APPLICABLE"
-        assert post_gates["G10"]["status"] == "NOT_APPLICABLE"
+        assert post_gates["G7"]["status"] == "PASS"
+        assert post_gates["G8"]["status"] == "PASS"
+        assert post_gates["G9"]["status"] == "PASS"
+        assert post_gates["G10"]["status"] == "PASS"
 
     def test_promote_successful_result_fields(self):
         """A successful promotion should have all expected fields."""
@@ -220,19 +228,28 @@ class TestV7PromotionEngine:
         result = engine.run_post_acceptance_gates(package)
         assert "G0" not in result["gates"]
 
-    def test_post_acceptance_g5_g6_pass_g7_g10_na(self):
-        """G5-G6 should PASS, G7-G10 should be NOT_APPLICABLE."""
+    def test_post_acceptance_g5_g10_pass_with_context(self):
+        """G5-G10 should all PASS when sufficient context is provided."""
         engine = V7PromotionEngine()
         package = _promotable_package()
-        result = engine.run_post_acceptance_gates(package)
+        result = engine.run_post_acceptance_gates(package, context={
+            "shadow_pipeline_ready": True,
+            "shadow_duration_days": 28,
+            "shadow_trade_count": 50,
+            "paper_adapter_ready": True,
+            "paper_duration_days": 28,
+            "paper_trade_count": 100,
+            "kill_switch_configured": True,
+            "all_prior_gates_passed": True,
+        })
 
         gates = result["gates"]
         assert gates["G5"]["status"] == "PASS"
         assert gates["G6"]["status"] == "PASS"
-        assert gates["G7"]["status"] == "NOT_APPLICABLE"
-        assert gates["G8"]["status"] == "NOT_APPLICABLE"
-        assert gates["G9"]["status"] == "NOT_APPLICABLE"
-        assert gates["G10"]["status"] == "NOT_APPLICABLE"
+        assert gates["G7"]["status"] == "PASS"
+        assert gates["G8"]["status"] == "PASS"
+        assert gates["G9"]["status"] == "PASS"
+        assert gates["G10"]["status"] == "PASS"
 
     # ── register_artifact ──────────────────────────────────────────────────
 
