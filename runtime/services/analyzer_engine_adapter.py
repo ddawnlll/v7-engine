@@ -157,7 +157,7 @@ class AnalyzerEngineAdapter:
         try:
             from v6.registry.model_registry import ModelRegistry
             self.engine_manager = EngineManager(ModelRegistry(), self.v6_config) if self._uses_default_registry_service else None
-        except Exception:
+        except ImportError:
             self.engine_manager = None
 
     def build_request(

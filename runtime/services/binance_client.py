@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Sequence
 
 import pandas as pd
 from datetime import datetime, timezone
 import requests
 from requests.adapters import HTTPAdapter
+
+logger = logging.getLogger(__name__)
 
 BINANCE_API_BASES = [
     "https://api.binance.com/api/v3",
@@ -293,8 +296,8 @@ def fetch_top_usdt_pairs(limit: int = 100) -> list[str]:
         pairs = sanitize_scan_symbols([symbol for _volume, symbol in ranked], limit=limit)
         if pairs:
             return pairs
-    except Exception:
-        pass
+    except (KeyError, ValueError, TypeError, requests.RequestException) as exc:
+        logger.warning("fetch_volume_ranked_tickers failed: %s", exc)
     return list(DEFAULT_SCAN_SYMBOLS[:limit])
 
 

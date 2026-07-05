@@ -123,7 +123,7 @@ class FailureClassifier:
             response = client.post("https://api.anthropic.com/v1/messages", headers=headers, json=body)
             response.raise_for_status()
             data = response.json()
-        except Exception:
+        except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError):
             return None
         finally:
             if close_client:
@@ -141,13 +141,13 @@ class FailureClassifier:
     def _extract_json_record(raw_text: str) -> dict[str, Any] | None:
         try:
             return json.loads(raw_text)
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             match = re.search(r"\{.*\}", raw_text, re.DOTALL)
             if not match:
                 return None
             try:
                 return json.loads(match.group(0))
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
                 return None
 
     def _heuristic_classification(
