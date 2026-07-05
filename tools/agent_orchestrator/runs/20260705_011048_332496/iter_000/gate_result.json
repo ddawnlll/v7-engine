@@ -1,0 +1,25 @@
+{
+  "verdict": "FAIL",
+  "check_results": {
+    "exit_code_ok": true,
+    "log_exists": true,
+    "required_files_exist": true,
+    "test_command_ok": true,
+    "metrics_file_exists": true,
+    "metrics_file_valid": true,
+    "git_head_saved": true,
+    "git_no_tracked_mods": true,
+    "git_changes_in_allowed_paths": false
+  },
+  "reasons": [
+    "Worker exited cleanly",
+    "Worker log exists (597739 bytes)",
+    "Git HEAD: 964e4a050de4",
+    "No tracked files modified",
+    "Changes outside allowed paths:\n?? alphaforge/src/alphaforge/alpha_candidate.py\n?? alphaforge/tests/test_alpha_candidate.py"
+  ],
+  "evidence_paths": [
+    "C:\\Users\\dresden\\Documents\\v7-engine\\tools\\agent_orchestrator\\runs\\20260705_011048_332496\\iter_000\\claude_stream.jsonl",
+    "HEAD=964e4a050de4"
+  ]
+}

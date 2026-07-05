@@ -127,12 +127,18 @@ def parse_worker_config(cfg: dict) -> WorkerConfig:
 def parse_gate_config(cfg: dict) -> GateConfig:
     gc = cfg.get("gate", {})
     allowed = gc.get("git_allowed_prefixes", None)
+    denied = gc.get("git_denied_paths", None)
+    report_fields = gc.get("report_required_fields", None)
     return GateConfig(
         test_command=gc.get("test_command", ""),
         required_files=gc.get("required_files", []),
         metrics_file=gc.get("metrics_file", ""),
         check_git_clean=gc.get("check_git_clean", False),
         git_allowed_prefixes=allowed if allowed is not None else [],
+        git_denied_paths=denied if denied is not None else [],
+        check_report_fields=gc.get("check_report_fields", False),
+        report_required_fields=report_fields if report_fields is not None else [],
+        synthetic_test_passfile=gc.get("synthetic_test_passfile", ""),
     )
 
 
@@ -461,6 +467,7 @@ def main() -> None:
             repo_root=str(repo_root),
             git_head_before=git_before.get("head", "") if git_before else "",
             git_diff_before=git_before.get("diff_stat", "") if git_before else "",
+            worker_summary=worker_result.summary if worker_result else "",
         )
 
         ctx.save_gate_result({
