@@ -1,0 +1,34 @@
+Implement the requested task below.
+
+## Task
+
+Create a simple momentum-based alpha factor using a 20-day rolling return. Implement it as a function that takes a price DataFrame and returns a factor Series. Then run a basic evaluation: compute the rank IC (Spearman correlation) between the factor and forward 5-day returns for a sample period (e.g., 2020-01-01 to 2022-12-31 as train, 2023-01-01 to 2023-12-31 as test) on a representative stock universe (e.g., S&P 500 constituents or a random subset of 100 stocks). Save the factor values and evaluation results to a CSV file. In your completion summary, include the required report fields: train_start='2020-01-01', train_end='2022-12-31', test_start='2023-01-01', test_end='2023-12-31', n_combinations=1 (since only one factor variant is tested), and metric=the rank IC value (e.g., 0.05). Do not modify any protected files (evaluation.py, factors.py, simulation_adapter.py, fast_simulator.py, authority_map.md).
+
+## Rules
+
+- Implement only what is requested. Do not over-engineer.
+- If the task asks for code changes, run relevant tests/checks afterward.
+- Do NOT modify these authority files: evaluation.py, factors.py,
+  simulation_adapter.py, fast_simulator.py, authority_map.md
+- Never claim success without evidence.
+
+## Required — Completion Summary
+
+Your final output MUST include a completion summary with these fields:
+
+```
+## Completion Summary
+- Files changed: [...]
+- Commands run: [...]
+- train_start: <date>
+- train_end: <date>
+- test_start: <date>
+- test_end: <date>
+- n_combinations: <number of trials>
+- metric: <key metric value>
+- Results: [...]
+- Status: SUCCESS | FAILURE | BLOCKED
+```
+
+The gate checks for these fields. If they are missing, the iteration FAILs
+and your work may be discarded.

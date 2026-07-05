@@ -1,0 +1,17 @@
+{
+  "iteration": 1,
+  "goal": "Create and test one deterministic AlphaForge alpha candidate",
+  "strategist_task": "Create a simple momentum-based alpha factor using a 20-day rolling return. Implement it as a function that takes a price DataFrame and returns a factor Series. Then run a basic evaluation: compute the rank IC (Spearman correlation) between the factor and forward 5-day returns for a sample period (e.g., 2020-01-01 to 2022-12-31 as train, 2023-01-01 to 2023-12-31 as test) on a representative stock universe (e.g., S&P 500 constituents or a random subset of 100 stocks). Save the factor values and evaluation results to a CSV file. In your completion summary, include the required report fields: train_start='2020-01-01', train_end='2022-12-31', test_start='2023-01-01', test_end='2023-12-31', n_combinations=1 (since only one factor variant is tested), and metric=the rank IC value (e.g., 0.05). Do not modify any protected files (evaluation.py, factors.py, simulation_adapter.py, fast_simulator.py, authority_map.md).",
+  "worker_exit_code": -1,
+  "gate_verdict": "FAIL",
+  "gate_reasons": [
+    "Worker exited with code -1",
+    "Worker log exists (231364 bytes)",
+    "Git HEAD: bc379fe713d8",
+    "No tracked files modified",
+    "Changes outside allowed paths:\n?? tools/agent_orchestrator/runs/20260705_011910_399999/",
+    "No authority files touched",
+    "Report missing required fields: train_start, train_end, test_start, test_end, n_combinations, metric"
+  ],
+  "overall_status": "FAIL"
+}
