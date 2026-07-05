@@ -168,24 +168,33 @@ class TestDeflatedSharpe:
 
         Sharpe=1.0, N=100, m=10
 
-        DSR = 1.0 * sqrt(99/100) * norm.ppf(1 - 0.5/10)
-            = sqrt(0.99) * norm.ppf(0.95)
-            = 0.994987... * 1.644853...
-            = 1.6366...
+        DSR = 1.0 * sqrt(99/100) - norm.ppf(1 - 0.5/10) / sqrt(100)
+            = sqrt(0.99) - 1.644853... / 10
+            = 0.994987... - 0.164485...
+            = 0.830502...
+
+        The DSR is LOWER than the input Sharpe (deflated), unlike the
+        old formula which multiplied by norm.ppf() and inflated.
         """
         sharpe = np.array([1.0], dtype=float)
         result = MultiTestingCorrector.deflated_sharpe(sharpe, N=100, m=10)
-        expected = math.sqrt(99 / 100) * norm.ppf(1 - 0.5 / 10)
+        expected = (
+            math.sqrt(99 / 100)
+            - norm.ppf(1 - 0.5 / 10) / math.sqrt(100)
+        )
         assert result[0] == pytest.approx(expected, abs=1e-10)
+        assert result[0] < 1.0  # deflated
 
     def test_vector_input(self):
-        """DSR: handles multiple Sharpe values."""
+        """DSR: handles multiple Sharpe values, preserves ranking."""
         sharpe = np.array([0.5, 1.0, 2.0], dtype=float)
         result = MultiTestingCorrector.deflated_sharpe(sharpe, N=250, m=20)
         assert len(result) == 3
-        # Ratio between outputs should match ratio between inputs
-        assert result[1] / result[0] == pytest.approx(2.0, abs=1e-10)
-        assert result[2] / result[1] == pytest.approx(2.0, abs=1e-10)
+        # DSR preserves ranking: higher input → higher DSR
+        assert result[0] < result[1] < result[2]
+        # All values are deflated (lower than the original Sharpe)
+        for i in range(3):
+            assert result[i] < sharpe[i]
 
     def test_invalid_N_returns_nan(self):
         """DSR: N <= 1 returns NaN."""

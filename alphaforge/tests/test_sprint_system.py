@@ -21,7 +21,6 @@ import tempfile
 from dataclasses import FrozenInstanceError
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -30,6 +29,7 @@ import pytest
 from alphaforge.sprint.config import SprintConfig
 from alphaforge.sprint.cost_sanity import CostSanityChecker, CostSanityReport
 from alphaforge.sprint.leaderboard import Leaderboard
+from alphaforge.sprint.eval_gate import EvalGateRunner
 from alphaforge.sprint.runner import FactorResult, FactorSprintRunner, SprintResult
 
 
@@ -250,15 +250,11 @@ class TestCostSanityReport:
 class TestCostSanityChecker:
     """Tests for CostSanityChecker.check().
 
-    We mock the underlying simulation cost functions because
-    cost_sanity.py calls them with an interface that may differ
-    from the current simulation.engine.costs signature. This
-    isolates the checker logic from the cost model internals.
+    Uses the real checker (no mocks) — the source now computes costs
+    inline rather than importing from simulation.engine.costs.
     """
 
-    @patch("alphaforge.sprint.cost_sanity.slippage_cost_r", return_value=0.001)
-    @patch("alphaforge.sprint.cost_sanity.fee_cost_r", return_value=0.005)
-    def test_positive_gross_reduced_net(self, _mock_fee, _mock_slip):
+    def test_positive_gross_reduced_net(self):
         """Positive gross return should be reduced by cost drag but stay positive."""
         # Arrange
         checker = CostSanityChecker()
@@ -273,9 +269,7 @@ class TestCostSanityChecker:
         assert report.net_return < report.gross_return, "net < gross"
         assert report.sanity_pass is True, "net positive -> sanity pass"
 
-    @patch("alphaforge.sprint.cost_sanity.slippage_cost_r", return_value=0.001)
-    @patch("alphaforge.sprint.cost_sanity.fee_cost_r", return_value=0.005)
-    def test_zero_gross_yields_negative_net(self, _mock_fee, _mock_slip):
+    def test_zero_gross_yields_negative_net(self):
         """Zero gross return with non-zero costs yields negative net."""
         # Arrange
         checker = CostSanityChecker()
@@ -290,9 +284,7 @@ class TestCostSanityChecker:
         assert report.net_return < 0, "net is negative when costs exceed zero gross"
         assert report.sanity_pass is False
 
-    @patch("alphaforge.sprint.cost_sanity.slippage_cost_r", return_value=0.5)
-    @patch("alphaforge.sprint.cost_sanity.fee_cost_r", return_value=0.5)
-    def test_very_small_gross_flips_sign(self, _mock_fee, _mock_slip):
+    def test_very_small_gross_flips_sign(self):
         """Very small gross return can flip sign under high costs (sanity_fail)."""
         # Arrange
         checker = CostSanityChecker()
@@ -321,9 +313,7 @@ class TestCostSanityChecker:
         assert report.cost_drag_pct == 0.0
         assert report.sanity_pass is False
 
-    @patch("alphaforge.sprint.cost_sanity.slippage_cost_r", return_value=0.01)
-    @patch("alphaforge.sprint.cost_sanity.fee_cost_r", return_value=0.02)
-    def test_cost_drag_pct_calculation(self, _mock_fee, _mock_slip):
+    def test_cost_drag_pct_calculation(self):
         """cost_drag_pct should be abs(cost_drag / gross_return) for nonzero gross."""
         # Arrange
         checker = CostSanityChecker()
@@ -332,8 +322,8 @@ class TestCostSanityChecker:
         # Act
         report = checker.check(gross)
 
-        # Assert
-        expected_pct = abs(report.cost_drag / report.gross_return)
+        # Assert — cost_drag_pct is cost_drag/gross_return * 100 (percentage)
+        expected_pct = abs(report.cost_drag / report.gross_return) * 100.0
         assert report.cost_drag_pct == pytest.approx(expected_pct)
 
 
@@ -672,41 +662,28 @@ class TestLeaderboard:
 class TestEvalGateLogic:
     """Tests for evaluation gate logic.
 
-    The sprint system applies multiple gates to determine pass/fail:
-      - MIN_TRADES: trade_count >= config.min_trades
-      - COST_SURVIVAL: net_return >= 0 (costs don't flip sign)
-      - PROFIT_FACTOR: profit_factor >= config.min_profit_factor
-      - MAX_DRAWDOWN: max_drawdown <= config.max_drawdown_pct
-
-    We test these by building FactorResult objects that satisfy/violate
-    each gate and verifying the pass_fail outcome through Leaderboard.build().
+    The sprint system applies multiple gates to determine pass/fail.
+    We test these by calling the real EvalGateRunner.evaluate() directly
+    with FactorResult objects that satisfy/violate each gate.
     """
 
     def test_all_gates_pass(self):
-        """All gates pass -> overall PASS."""
+        """All gates pass -> overall_pass True."""
         # Arrange
-        fr = _make_factor_result(
-            factor_name="winner",
-            pass_fail="PASS",
-            trade_count=500,
-            net_return=1.0,
-            profit_factor=3.0,
-            max_drawdown=0.05,
-        )
+        cfg = _make_sprint_config()
+        fr = _make_factor_result(factor_name="winner")
 
-        # Act — build leaderboard and check
-        sprint = SprintResult(factors=[fr], config=_make_sprint_config())
-        df = Leaderboard().build(sprint)
+        # Act
+        result = EvalGateRunner(cfg).evaluate(fr)
 
         # Assert
-        assert df.iloc[0]["pass_fail"] == "PASS"
+        assert result.overall_pass, f"Expected PASS, got: {result.summary}"
+        assert all(g.passed for g in result.gates)
 
     def test_min_trades_gate_fail(self):
-        """Trade count below minimum -> FAIL with trade_count note."""
-        # Arrange — Simulate the gate check the runner would do
+        """Trade count below minimum -> MIN_TRADES gate fails."""
+        # Arrange
         cfg = _make_sprint_config(min_trades=200)
-
-        # Factor has only 50 trades
         fr = _make_factor_result(
             factor_name="low_trades",
             trade_count=50,
@@ -714,49 +691,40 @@ class TestEvalGateLogic:
             profit_factor=3.0,
         )
 
-        # Simulate the gate check from FactorSprintRunner
-        notes = []
-        pass_fail = "PASS"
-        if fr.trade_count < cfg.min_trades:
-            pass_fail = "FAIL"
-            notes.append(f"trade_count {fr.trade_count} below minimum {cfg.min_trades}")
+        # Act
+        result = EvalGateRunner(cfg).evaluate(fr)
 
         # Assert
-        assert pass_fail == "FAIL"
-        assert any("trade_count" in n for n in notes)
-        assert any("below minimum" in n for n in notes)
+        assert not result.overall_pass
+        mt = next(g for g in result.gates if g.gate_name == "MIN_TRADES")
+        assert not mt.passed
+        assert mt.value == 50
+        assert mt.threshold == 200
 
-    def test_cost_survival_gate_fail(self):
-        """Net return negative -> FAIL (costs consumed gross)."""
+    def test_net_positive_gate_fail(self):
+        """Net return negative -> NET_POSITIVE gate fails."""
         # Arrange
-        cfg = _make_sprint_config(min_expectancy_r=0.0)
-        n_trades = 100
-
+        cfg = _make_sprint_config()
         fr = _make_factor_result(
             factor_name="cost_killed",
             net_return=-0.5,
-            expectancy_r=-0.005,
-            trade_count=n_trades,
             profit_factor=3.0,
         )
 
-        # Simulate the gate check
-        notes = []
-        pass_fail = "PASS"
-        if fr.net_return < cfg.min_expectancy_r * n_trades:
-            pass_fail = "FAIL"
-            notes.append(f"net_return {fr.net_return:.4f} below minimum expectancy")
+        # Act
+        result = EvalGateRunner(cfg).evaluate(fr)
 
         # Assert
-        assert pass_fail == "FAIL"
-        assert any("net_return" in n for n in notes)
-        assert any("below minimum" in n for n in notes)
+        assert not result.overall_pass
+        np_gate = next(g for g in result.gates if g.gate_name == "NET_POSITIVE")
+        assert not np_gate.passed
+        assert np_gate.value == -0.5
+        assert np_gate.threshold == 0.0
 
     def test_profit_factor_gate_fail(self):
-        """Profit factor below minimum -> FAIL."""
+        """Profit factor below minimum -> PROFIT_FACTOR gate fails."""
         # Arrange
         cfg = _make_sprint_config(min_profit_factor=1.10)
-
         fr = _make_factor_result(
             factor_name="low_pf",
             profit_factor=0.8,
@@ -764,24 +732,20 @@ class TestEvalGateLogic:
             net_return=0.5,
         )
 
-        # Simulate the gate check
-        notes = []
-        pass_fail = "PASS"
-        if fr.profit_factor < cfg.min_profit_factor:
-            pass_fail = "FAIL"
-            notes.append(
-                f"profit_factor {fr.profit_factor:.2f} below minimum {cfg.min_profit_factor}"
-            )
+        # Act
+        result = EvalGateRunner(cfg).evaluate(fr)
 
         # Assert
-        assert pass_fail == "FAIL"
-        assert any("profit_factor" in n for n in notes)
+        assert not result.overall_pass
+        pf = next(g for g in result.gates if g.gate_name == "PROFIT_FACTOR")
+        assert not pf.passed
+        assert pf.value == 0.8
+        assert pf.threshold == 1.10
 
     def test_max_drawdown_gate_fail(self):
-        """Drawdown exceeding maximum -> FAIL."""
+        """Drawdown exceeding maximum -> DRAWDOWN gate fails."""
         # Arrange
         cfg = _make_sprint_config(max_drawdown_pct=0.30)
-
         fr = _make_factor_result(
             factor_name="deep_dd",
             max_drawdown=0.45,
@@ -790,68 +754,43 @@ class TestEvalGateLogic:
             profit_factor=1.5,
         )
 
-        # Simulate the gate check
-        notes = []
-        pass_fail = "PASS"
-        if fr.max_drawdown > cfg.max_drawdown_pct:
-            pass_fail = "FAIL"
-            notes.append(
-                f"max_drawdown {fr.max_drawdown:.2%} exceeds maximum {cfg.max_drawdown_pct}"
-            )
+        # Act
+        result = EvalGateRunner(cfg).evaluate(fr)
 
         # Assert
-        assert pass_fail == "FAIL"
-        assert any("max_drawdown" in n for n in notes)
+        assert not result.overall_pass
+        dd = next(g for g in result.gates if g.gate_name == "DRAWDOWN")
+        assert not dd.passed
 
     def test_multiple_gates_fail_all_reported(self):
-        """Multiple simultaneous gate failures -> all failure notes present."""
+        """Multiple simultaneous gate failures -> all failing gates reported."""
         # Arrange
         cfg = _make_sprint_config(
             min_trades=200,
-            min_expectancy_r=0.0,
             min_profit_factor=1.10,
             max_drawdown_pct=0.30,
         )
-
-        # This factor fails ALL gates
         fr = _make_factor_result(
             factor_name="everything_wrong",
             trade_count=30,           # fails MIN_TRADES
-            net_return=-1.0,          # fails COST_SURVIVAL
-            expectancy_r=-0.05,
+            net_return=-1.0,          # fails NET_POSITIVE
             profit_factor=0.5,        # fails PROFIT_FACTOR
-            max_drawdown=0.50,        # fails MAX_DRAWDOWN
+            max_drawdown=0.50,        # fails DRAWDOWN
         )
 
-        # Simulate full gate check (mirrors FactorSprintRunner logic)
-        notes = []
-        pass_fail = "PASS"
-
-        n_trades = fr.trade_count
-        if fr.net_return < cfg.min_expectancy_r * n_trades:
-            pass_fail = "FAIL"
-            notes.append(f"net_return {fr.net_return:.4f} below minimum expectancy")
-        if fr.profit_factor < cfg.min_profit_factor:
-            pass_fail = "FAIL"
-            notes.append(
-                f"profit_factor {fr.profit_factor:.2f} below minimum {cfg.min_profit_factor}"
-            )
-        if n_trades < cfg.min_trades:
-            pass_fail = "FAIL"
-            notes.append(f"trade_count {n_trades} below minimum {cfg.min_trades}")
-        if fr.max_drawdown > cfg.max_drawdown_pct:
-            pass_fail = "FAIL"
-            notes.append(
-                f"max_drawdown {fr.max_drawdown:.2%} exceeds maximum {cfg.max_drawdown_pct}"
-            )
+        # Act
+        result = EvalGateRunner(cfg).evaluate(fr)
 
         # Assert
-        assert pass_fail == "FAIL"
-        assert len(notes) >= 3, f"Expected at least 3 failure notes, got {len(notes)}: {notes}"
-        assert any("trade_count" in n for n in notes)
-        assert any("net_return" in n for n in notes)
-        assert any("profit_factor" in n for n in notes)
-        assert any("max_drawdown" in n for n in notes)
+        assert not result.overall_pass
+        failed_names = {g.gate_name for g in result.gates if not g.passed}
+        assert "MIN_TRADES" in failed_names
+        assert "NET_POSITIVE" in failed_names
+        assert "PROFIT_FACTOR" in failed_names
+        assert "DRAWDOWN" in failed_names
+        assert len(failed_names) >= 3, (
+            f"Expected at least 3 failing gates, got: {failed_names}"
+        )
 
     def test_pass_factor_ends_up_first_in_leaderboard(self):
         """When mixing PASS/FAIL factors, PASS ranks higher in leaderboard."""

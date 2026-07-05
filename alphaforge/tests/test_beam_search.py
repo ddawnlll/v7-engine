@@ -255,12 +255,11 @@ class TestBeamSearchMinerSearch:
             max_depth=2,
         )
 
-        # The total results list may be larger (aggregated across depths),
-        # but at each depth we only keep beam_width. Since we don't expose
-        # per-depth intermediate state, we verify the top results are bounded.
-        # With 30 candidates per expansion and beam_width=5, it's a strong
-        # filter — we should still get results but far fewer than all combos.
-        assert len(results) <= 5 + 5 * 5  # rough upper bound
+        # The total results list aggregates across all depths:
+        #   Depth 1 (seed):  1 rule
+        #   Depth 2+: at most beam_width per expansion level
+        # For beam_width=5, max_depth=2: max = 1 + 5 = 6
+        assert len(results) <= 1 + 5  # seed + beam_width capped
 
     def test_empty_seed_rules_raises(self) -> None:
         """Empty seed_rules raises ValueError."""

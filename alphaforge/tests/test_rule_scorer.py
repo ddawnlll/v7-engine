@@ -617,8 +617,8 @@ class TestDeterminism:
             symbol_map=np.array(["A", "A", "B", "B"]),
             regime_map=np.array(["X", "Y", "Y", "X"]),
         )
-        # No losses → profit_factor = 0.0 (safe_div returns 0)
-        assert result["profit_factor"] == 0.0
+        # No losses → profit_factor = inf
+        assert result["profit_factor"] == float("inf")
 
     def test_profit_factor_no_gains(self):
         """Profit factor is 0 when no gains exist."""

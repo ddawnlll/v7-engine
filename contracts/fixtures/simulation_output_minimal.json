@@ -66,6 +66,7 @@
   "is_ambiguous": false,
   "lineage": {
     "simulation_family_version": "simfam-1.0.0",
+    "simulation_engine_version": "simfam-1.0.0",
     "simulation_profile_version": "swing_profile-1.0.0",
     "cost_model_version": "cost-1.0.0",
     "fee_model_version": "fee-1.0.0",

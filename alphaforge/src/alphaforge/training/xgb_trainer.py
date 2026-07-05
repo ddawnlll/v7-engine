@@ -746,8 +746,8 @@ class MetaLabelingTrainer:
             meta_hyperparams: Hyperparameters for the meta classifier.
                 If None, uses SWING_DEFAULT_HYPERPARAMS with binary objective.
         """
-        primary_hp = primary_hyperparams or SWING_DEFAULT_HYPERPARAMS.copy()
-        meta_hp = meta_hyperparams or SWING_DEFAULT_HYPERPARAMS.copy()
+        primary_hp = (primary_hyperparams or SWING_DEFAULT_HYPERPARAMS).copy()
+        meta_hp = (meta_hyperparams or SWING_DEFAULT_HYPERPARAMS).copy()
         meta_hp["objective"] = "binary:logistic"
         meta_hp.pop("num_class", None)
 

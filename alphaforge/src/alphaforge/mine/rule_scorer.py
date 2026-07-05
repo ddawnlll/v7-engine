@@ -49,8 +49,10 @@ def _safe_float(value: Any) -> float:
 
 
 def _safe_div(numerator: float, denominator: float) -> float:
-    """Safe division returning 0.0 on zero denominator."""
+    """Safe division returning 0.0 when both are zero, inf when only denominator is zero."""
     if abs(denominator) < 1e-12:
+        if numerator > 0:
+            return float("inf")
         return 0.0
     return numerator / denominator
 
@@ -362,7 +364,7 @@ class RuleScorer:
             "median_net_R": _safe_float(median_r),
             "positive_rate": _safe_float(positive_rate),
             "lift_over_base": _safe_float(lift),
-            "profit_factor": _safe_float(profit_factor),
+            "profit_factor": float(profit_factor),
             "sharpe": _safe_float(sharpe),
             "symbol_stability": symbol_stability,
             "regime_stability": regime_stability,
@@ -508,7 +510,7 @@ class RuleScorer:
             "median_net_R": _safe_float(median_r),
             "positive_rate": _safe_float(positive_rate),
             "lift_over_base": _safe_float(lift),
-            "profit_factor": _safe_float(profit_factor),
+            "profit_factor": float(profit_factor),
             "sharpe": _safe_float(sharpe),
             "symbol_stability": symbol_stability,
             "regime_stability": regime_stability,

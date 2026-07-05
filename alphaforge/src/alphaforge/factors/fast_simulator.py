@@ -119,6 +119,7 @@ def fast_simulate_factor(
     direction_int: int,          # 1 = long, -1 = short, 0 = agnostic
     min_quantile: float,         # e.g. 0.80 — top quantile triggers long entry
     max_quantile: float,         # e.g. 0.20 — bottom quantile triggers short entry
+    warmup: int = 15,            # bars to skip before entries (was hardcoded; now aligns w/ atr_period + 1)
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray,
            np.ndarray, np.ndarray, np.ndarray, np.ndarray,
            np.ndarray, np.ndarray, np.ndarray]:
@@ -130,13 +131,16 @@ def fast_simulate_factor(
     2. If no position is open for a symbol, evaluate the score against
        quantile thresholds to decide whether to open a new position.
 
+    Args:
+        warmup: Number of initial bars to skip before opening positions.
+            Should be at least ``atr_period + 1`` to ensure ATR is seeded.
+
     Returns a tuple of 1-D arrays (one element per completed trade):
         entry_idx,    exit_idx,     symbol_idx,  side,
         entry_price,  exit_price,   stop_price,  target_price,
         initial_risk, pnl,          R
     """
     n_ts, n_sym = scores_matrix.shape
-    warmup = 15  # ATR warmup (period=14 + 1 bar)
 
     # --- pre-compute quantile thresholds per bar ---------------------------
     high_thresh = np.empty(n_ts, dtype=np.float64)
@@ -504,6 +508,7 @@ def simulate_factor_fast(
         scores_np, close_np, high_np, low_np, atr_np,
         config_stop_mult, config_target_mult, config_max_hold,
         direction_int, min_score_quantile, max_score_quantile,
+        warmup=atr_period + 1,
     )
 
     if len(entry_idx) == 0:

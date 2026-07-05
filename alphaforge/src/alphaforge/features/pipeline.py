@@ -100,7 +100,7 @@ CACHE_DIR_DEFAULT: str = str(
 # Process-lifetime secret for cache integrity HMAC signing.
 # Generated once at import time — cache files from other processes or
 # tampered files are detected on read.
-_CACHE_INTEGRITY_SECRET: bytes = os.urandom(32)
+_CACHE_INTEGRITY_SECRET: bytes = hashlib.sha256(PIPELINE_VERSION.encode()).digest()
 
 # SWING mode defaults (4h primary bars)
 # periods_per_year for 4h bars: 365 days * 6 bars/day = 2190

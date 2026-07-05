@@ -281,19 +281,15 @@ class TestRollingCorrelationVsSeries:
         assert not np.isnan(result[9])
 
     def test_nan_in_input(self):
-        """NaN in either series propagates to NaN correlation."""
+        """NaN values are masked; result is NaN only when <min_valid remain."""
         n = 30
-        x = np.arange(n, dtype=np.float64).astype(np.float64)
-        y = np.arange(n, dtype=np.float64).astype(np.float64)
-        y[15] = np.nan  # Corrupt one value
+        x = np.arange(n, dtype=np.float64)
+        # Corrupt enough values in the window ending at 15 so valid pairs < MIN_VALID (5)
+        y = np.arange(n, dtype=np.float64)
+        y[10:16] = np.nan  # 6 NaNs in window [6..15] -> only 4 valid pairs -> NaN
         result = _rolling_correlation_vs_series(x, y, window=10)
-        # The window containing index 15 should be NaN
-        # Window starting at 15-10+1=6, ending at 15
-        for i in range(6, 16):
-            if i >= 9:  # Past initial NaN zone
-                pass
-        # At least the window containing bar 15 should be affected
-        assert np.isnan(result[15]) or not np.isnan(result[15])
+        # Window containing index 15 has <5 valid pairs -> NaN
+        assert np.isnan(result[15])
 
     def test_short_input(self):
         """Input shorter than window returns all NaN."""
@@ -366,13 +362,13 @@ class TestComputeCrossSectionalRankGroup:
     def test_nan_at_start(self, multi_ohlcv_3x200):
         """Initial bars should be NaN due to lookback windows."""
         result = compute_cross_sectional_rank_group(multi_ohlcv_3x200)
-        # First few bars of rank features should be NaN (need window+1 for volatility)
+        # At least first symbol's first bar should be NaN for rank features that
+        # require lookback (rank_volume is a simple cross-sectional rank at each
+        # bar and has no lookback, so bar 0 is valid)
         for key in result:
             arr = result[key]
-            # At least first symbol's first bar should be NaN for all features
-            if key.startswith("rank_"):
-                # Rank features need at least some lookback
-                pass
+            if key.startswith("rank_") and key != "rank_volume":
+                assert np.isnan(arr[0, 0]), f"{key}[0,0] should be NaN"
 
     def test_deterministic(self, multi_ohlcv_3x200):
         """Same input -> same output."""

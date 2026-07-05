@@ -83,6 +83,9 @@ class DefaultAssembler:
             return [], audit
 
         # --- Step 2: Inner join on (symbol, timestamp) -------------------------
+        # Capture original column names so _build_labeled_dataset_row can
+        # dynamically identify feature columns (fixes #258).
+        original_feature_columns = set(feature_df.columns)
         merged = feature_df.merge(
             valid_label_df,
             on=["symbol", "timestamp"],
@@ -128,25 +131,10 @@ class DefaultAssembler:
         joined_rows = len(merged)
 
         # --- Step 4: Compute unmatched counts ----------------------------------
-        joined_feature_indices = set()
-        joined_label_indices = set()
-        if joined_rows > 0:
-            # Track which rows made it through
-            feat_key_set = set()
-            lab_key_set = set()
-            for _, row in merged.iterrows():
-                feat_key_set.add((row["symbol"], row["timestamp"]))
-                lab_key_set.add((row["symbol"], row["timestamp"]))
-
-            for idx, row in feature_df.iterrows():
-                if (row["symbol"], row["timestamp"]) not in feat_key_set:
-                    joined_feature_indices.add(idx)
-            for idx, row in valid_label_df.iterrows():
-                if (row["symbol"], row["timestamp"]) not in lab_key_set:
-                    joined_label_indices.add(idx)
-
+        # Feature rows that found no matching VALID label.
         unmatched_feature_rows = total_feature_rows - joined_rows
-        unmatched_label_rows = total_label_rows - invalid_label_rows_dropped - joined_rows
+        # Valid label rows that found no matching feature.
+        unmatched_label_rows = len(valid_label_df) - joined_rows
 
         # --- Step 5: Construct LabeledDataset rows ------------------------------
         assembled_at = self._make_assembled_at(manifest_id)
@@ -164,6 +152,7 @@ class DefaultAssembler:
                 manifest_id=manifest_id,
                 label_timestamp=label_timestamp,
                 assembled_at=assembled_at,
+                original_feature_columns=original_feature_columns,
             )
             result.append(ld)
 
@@ -247,25 +236,32 @@ class DefaultAssembler:
         manifest_id: str,
         label_timestamp: str,
         assembled_at: str = "",
+        original_feature_columns: set = None,
     ) -> LabeledDataset:
-        """Construct one LabeledDataset from a merged row."""
+        """Construct one LabeledDataset from a merged row.
 
-        # Extract feature columns (everything not in the reserved label namespace)
-        reserved = {
-            "symbol", "timestamp", "label_timestamp",
-            "label_dataset_id", "label_checksum", "best_action_label",
-            "label_validity", "long_R_net", "short_R_net",
-            "no_trade_quality", "cost_impact_long", "cost_impact_short",
-            "long_R_gross", "short_R_gross",
-            "long_mfe_R", "short_mfe_R", "long_mae_R", "short_mae_R",
-            "saved_loss_score", "missed_opportunity_score",
-            "feature_set_id",
-        }
+        Feature columns are identified DYNAMICALLY using the original
+        feature_df column names — NOT a hardcoded reserve list (#258).
+        This prevents any label/simulation column from leaking into
+        the features dict even when column names do not collide.
+        """
 
-        feature_cols = {
-            c for c in row.index
-            if c not in reserved and not c.endswith("_feat") and not c.endswith("_label")
-        }
+        # After merge with suffixes ("_feat", "_label"):
+        #   - Columns unique to feature_df retain their name (no suffix).
+        #   - Columns that collided with label_df get a "_feat" suffix.
+        #   - Columns from label_df alone retain their name — they are
+        #     excluded because they are NOT in original_feature_columns.
+        #   - Collided label columns get a "_label" suffix.
+        #   - Join keys and metadata columns are always excluded.
+        skip_cols = {"symbol", "timestamp", "label_timestamp", "feature_set_id"}
+        feature_cols = set()
+        for c in row.index:
+            if c in skip_cols:
+                continue
+            if c in original_feature_columns:
+                feature_cols.add(c)
+            elif c.endswith("_feat") and c[:-5] in original_feature_columns:
+                feature_cols.add(c)
 
         features: Dict[str, float] = {}
         for col in sorted(feature_cols):
