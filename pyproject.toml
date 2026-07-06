@@ -35,14 +35,14 @@ interface = [
 
 [tool.setuptools.packages.find]
 where = ["."]
+namespaces = false
 include = [
-    "lib*", "simulation*", "alphaforge*", "v6*", "v7*",
+    "lib*", "simulation*", "v6*", "v7*",
     "runtime*", "integration*", "policycritic*",
 ]
 
 [tool.setuptools.package-dir]
 alphaforge = "alphaforge/src/alphaforge"
-v7 = "v7/src/v7"
 
 [tool.pytest.ini_options]
 pythonpath = ["alphaforge/src", "v7/src"]

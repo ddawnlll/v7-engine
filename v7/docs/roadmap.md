@@ -12,21 +12,6 @@ This is a sequencing document, not a second architecture document.
 
 ---
 
-## Core Position
-
-V7 should be built in layers:
-
-1. contract correctness
-2. truth-layer correctness
-3. dataset/model correctness
-4. calibration/policy correctness
-5. runtime integration correctness
-6. safety and rollout hardening
-
-Do not start with the hardest runtime or infra problems.
-
----
-
 ## Current State
 
 Documentation authority is largely complete for:
@@ -1273,4 +1258,3 @@ It is:
 
 ### Reports
 - `reports/accp-fix-rolling-mean-causal.yaml`
-
