@@ -1,0 +1,79 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS_WITH_LIMITATIONS"
+
+scope_confirmation: >
+  5+ profitable alpha bulma deneyi. SCALP modunda 10 farkli feature
+  kombinasyonu test edildi. Internet kaynaklari: webfetch (arxiv 429,
+  Semantic Scholar 429, Google Scholar blocked -> Binance API).
+  Izole worktreeler: 5 adet (v7-engine-alpha-1..5). Guard sistemi P0.9F/G.
+
+internet_resources_used:
+  - tool: webfetch
+    targets:
+      - arxiv API (rate-limited 429 -> basarisiz)
+      - Semantic Scholar API (rate-limited 429 -> basarisiz)
+      - Google Scholar (blocked -> basarisiz)
+      - Binance API (basarili -> funding rate verisi cekildi)
+
+profitable_alphas:
+  - name: multi_symbol_all_features
+    features: "all 54"
+    net_r: 0.006332
+    improvement_pct: 73.19
+    active_trades: 13537
+    exposure: 57.1%
+    guard_verified: true
+    status: "KARLI"
+  - name: momentum_spillover
+    features: "returns,momentum"
+    net_r: 0.006273
+    improvement_pct: 71.58
+    guard_verified: true
+    status: "KARLI"
+  - name: breakout_momentum
+    features: "breakout,momentum,returns"
+    net_r: 0.007840
+    improvement_pct: 114.4
+    active_trades: 9
+    exposure: "0.0%"
+    guard_verified: true
+    status: "SINIRLI (9 trade - istatistiksiz)"
+  - name: momentum_orderbook
+    features: "returns,momentum,orderbook"
+    net_r: 0.004937
+    improvement_pct: 35.0
+    active_trades: 15
+    exposure: "0.0%"
+    guard_verified: true
+    status: "SINIRLI (15 trade)"
+
+failed_alphas:
+  - name: momentum_volatility
+    net_r: -0.014745
+  - name: momentum_volume
+    net_r: -0.002517
+  - name: momentum_candle_regime
+    net_r: -0.006960
+  - name: momentum_funding_regime
+    net_r: -0.003631
+  - name: momentum_volume_breakout
+    net_r: -0.001004
+  - name: momentum_volume_regime
+    net_r: -0.001874
+
+key_finding: >
+  SCALP modunda sadece returns+momentum feature'lari pozitif edge uretiyor.
+  Diger tum feature gruplari (orderbook, volume, candle, regime, funding,
+  volatility, breakout) tek basina veya momentum ile kombine edildiginde
+  ya zararli ya da asiri dusuk trade sayisi nedeniyle istatistiksel olarak
+  anlamsiz. Bunun nedeni SCALP'in 1h zaman dilimindeki dusuk sinyal/gurultu
+  orani. 5+ profitable alpha bulmak su anki veri ve feature setiyle mumkun
+  degil. Oneri: SWING modunda (4h, daha yuksek sinyal) benzer bir kesif
+  yapilmali.
+
+limitations:
+  - Arxiv/Scholar API rate-limit: internet arastirmasi kisitli kaldi
+  - SCALP sinyali cok zayif: 1h zaman diliminde edge sadece momentumda
+  - Feature sayisi 54 olmasina ragmen sadece ~5-10 feature sinyal tasiyor
+  - 10+ kombinasyon denendi, sadece 2'si guvenilir sekilde karli
