@@ -15,6 +15,7 @@ from runtime.db.repos.simulation_decision_trace_repo import SimulationDecisionTr
 from runtime.db.repos.simulation_repo import SimulationRepository
 from runtime.db.session import session_scope
 from runtime.services.historical_simulation_engine import HistoricalSimulationEngine
+from runtime.services.replay_backed_simulation_orchestrator import ReplayBackedSimulationOrchestrator
 from runtime.services.simulation_diagnostics_service import SimulationDiagnosticsService
 
 
@@ -65,7 +66,7 @@ class SimulationService:
         self.trace_repo = trace_repo or SimulationDecisionTraceRepository()
         self.diagnostics_service = SimulationDiagnosticsService(self.simulation_repo, self.trace_repo)
         self.failure_repo = FailureRepository()
-        self.engine = engine or HistoricalSimulationEngine()
+        self.engine = engine or ReplayBackedSimulationOrchestrator()
         self._stop_requested: set[int] = set()
         self._stop_lock = Lock()
         self.trace_hub = SimulationTraceHub()

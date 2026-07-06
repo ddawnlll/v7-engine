@@ -1,0 +1,18 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: success
+scope_confirmation: |
+  SimulationService default engine swapped from HistoricalSimulationEngine to ReplayBackedSimulationOrchestrator.
+  Deprecation warning added to HistoricalSimulationEngine.__init__.
+  HistoricalSimulationEngine preserved for backward compatibility.
+files_changed:
+  - runtime/services/simulation_service.py
+  - runtime/services/historical_simulation_engine.py
+decisions_locked: []
+remaining_holds: []
+safe_next_step: Sync worktrees to main
+commands_run:
+  - PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short
+evidence: |
+  459 tests passed in 1.81s (PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short)
+  No regressions detected from the engine swap.

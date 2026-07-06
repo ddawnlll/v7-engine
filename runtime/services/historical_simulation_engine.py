@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 import uuid
+import warnings
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -184,6 +185,11 @@ class HistoricalSimulationEngine:
         analyzer: Any | None = None,
         snapshot_builder: Callable[[pd.DataFrame], dict[str, Any]] | None = None,
     ) -> None:
+        warnings.warn(
+            'HistoricalSimulationEngine is deprecated. Use ReplayBackedSimulationOrchestrator instead.',
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.candle_loader = candle_loader or HistoricalCandleLoader()
         self.analyzer = analyzer
         self.snapshot_builder = snapshot_builder or build_indicator_snapshot
