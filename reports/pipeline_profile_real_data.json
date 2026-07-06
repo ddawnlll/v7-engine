@@ -1,0 +1,185 @@
+{
+  "date": "2026-07-06T20:58:58.868240+00:00",
+  "data": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT"
+    ],
+    "interval": "1h",
+    "n_bars": 122592,
+    "n_symbols": 4,
+    "date_range": "2023-01-01 to 2026-06-30"
+  },
+  "results": {
+    "SCALP": {
+      "mode": "SCALP",
+      "symbols": 4,
+      "bars": 122592,
+      "compute_features": 19.287,
+      "build_frame": 20.525,
+      "xgb_per_fold": [
+        {
+          "fold": 1,
+          "train_size": 13113,
+          "val_size": 6556,
+          "val_accuracy": 0.4134,
+          "training_seconds": 1.235
+        },
+        {
+          "fold": 2,
+          "train_size": 30596,
+          "val_size": 6556,
+          "val_accuracy": 0.3998,
+          "training_seconds": 1.083
+        },
+        {
+          "fold": 3,
+          "train_size": 48079,
+          "val_size": 6556,
+          "val_accuracy": 0.4233,
+          "training_seconds": 1.076
+        },
+        {
+          "fold": 4,
+          "train_size": 65562,
+          "val_size": 6556,
+          "val_accuracy": 0.4369,
+          "training_seconds": 1.152
+        },
+        {
+          "fold": 5,
+          "train_size": 83045,
+          "val_size": 6556,
+          "val_accuracy": 0.4202,
+          "training_seconds": 1.466
+        },
+        {
+          "fold": 6,
+          "train_size": 100528,
+          "val_size": 6556,
+          "val_accuracy": 0.3955,
+          "training_seconds": 1.274
+        }
+      ],
+      "xgb_total": 7.286,
+      "xgb_avg": 1.2144,
+      "total_train_rows": 340923,
+      "throughput_rows_per_sec": 46789,
+      "total_seconds": 47.098
+    },
+    "SWING": {
+      "mode": "SWING",
+      "symbols": 4,
+      "bars": 122592,
+      "compute_features": 19.052,
+      "build_frame": 17.505,
+      "xgb_per_fold": [
+        {
+          "fold": 1,
+          "train_size": 13104,
+          "val_size": 6552,
+          "val_accuracy": 0.4194,
+          "training_seconds": 0.825
+        },
+        {
+          "fold": 2,
+          "train_size": 30576,
+          "val_size": 6552,
+          "val_accuracy": 0.3779,
+          "training_seconds": 0.904
+        },
+        {
+          "fold": 3,
+          "train_size": 48048,
+          "val_size": 6552,
+          "val_accuracy": 0.4142,
+          "training_seconds": 1.079
+        },
+        {
+          "fold": 4,
+          "train_size": 65520,
+          "val_size": 6552,
+          "val_accuracy": 0.413,
+          "training_seconds": 1.058
+        },
+        {
+          "fold": 5,
+          "train_size": 82992,
+          "val_size": 6552,
+          "val_accuracy": 0.3829,
+          "training_seconds": 1.212
+        },
+        {
+          "fold": 6,
+          "train_size": 100464,
+          "val_size": 6552,
+          "val_accuracy": 0.3834,
+          "training_seconds": 1.26
+        }
+      ],
+      "xgb_total": 6.338,
+      "xgb_avg": 1.0564,
+      "total_train_rows": 340704,
+      "throughput_rows_per_sec": 53754,
+      "total_seconds": 42.895
+    },
+    "AGGRESSIVE_SCALP": {
+      "mode": "AGGRESSIVE_SCALP",
+      "symbols": 4,
+      "bars": 122592,
+      "compute_features": 17.996,
+      "build_frame": 17.785,
+      "xgb_per_fold": [
+        {
+          "fold": 1,
+          "train_size": 13111,
+          "val_size": 6555,
+          "val_accuracy": 0.3875,
+          "training_seconds": 0.793
+        },
+        {
+          "fold": 2,
+          "train_size": 30592,
+          "val_size": 6555,
+          "val_accuracy": 0.4038,
+          "training_seconds": 0.905
+        },
+        {
+          "fold": 3,
+          "train_size": 48073,
+          "val_size": 6555,
+          "val_accuracy": 0.4207,
+          "training_seconds": 0.989
+        },
+        {
+          "fold": 4,
+          "train_size": 65554,
+          "val_size": 6555,
+          "val_accuracy": 0.4354,
+          "training_seconds": 1.071
+        },
+        {
+          "fold": 5,
+          "train_size": 83035,
+          "val_size": 6555,
+          "val_accuracy": 0.4053,
+          "training_seconds": 1.581
+        },
+        {
+          "fold": 6,
+          "train_size": 100516,
+          "val_size": 6555,
+          "val_accuracy": 0.398,
+          "training_seconds": 1.495
+        }
+      ],
+      "xgb_total": 6.834,
+      "xgb_avg": 1.139,
+      "total_train_rows": 340881,
+      "throughput_rows_per_sec": 49881,
+      "total_seconds": 42.615
+    }
+  }
+}

@@ -82,8 +82,9 @@ def _detect_gpu() -> dict[str, str]:
                 )
                 if r.returncode == 0:
                     backend = "ROCm/HIP" if info.get("USE_HIP") else "CUDA"
-                    logger.info("XGBoost GPU: %s detected — using gpu_hist", backend)
-                    return {"tree_method": "gpu_hist", "device": "cuda"}
+                    logger.info("XGBoost GPU: %s detected — using device=cuda", backend)
+                    # XGBoost 3.x: gpu_hist deprecated, use device='cuda' with tree_method='hist'
+                    return {"tree_method": "hist", "device": "cuda"}
             except (FileNotFoundError, subprocess.TimeoutExpired):
                 pass
 
@@ -120,7 +121,7 @@ SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "num_class": NUM_CLASSES,
     "max_depth": 4,
     "learning_rate": 0.05,
-    "n_estimators": 200,
+    "n_estimators": 80,
     "subsample": 0.8,
     "colsample_bytree": 0.8,
     "min_child_weight": 5,

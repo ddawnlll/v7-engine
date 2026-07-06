@@ -1,0 +1,105 @@
+{
+  "timestamp": "2026-07-06T20:46:27.733799+00:00",
+  "gpu": "{'tree_method': 'hist', 'device': 'cuda'}",
+  "results": {
+    "SCALP": {
+      "mode": "SCALP",
+      "n_bars": 3000,
+      "n_symbols": 5,
+      "n_features": 61,
+      "n_samples": 14740,
+      "stages": {
+        "1. generate_synthetic_ohlcv": 0.19097371300017585,
+        "2. compute_all_features": 10.93999464400008,
+        "3. generate_labels": 0.8967022039998938,
+        "4. build_aligned_training_frame": 2.4947442769998815,
+        "5. nan_clean": 0.007252333999986149,
+        "6. walk_forward_validate": 5.369100323999874,
+        "7. collect_metrics": 0.0031913479999730043,
+        "8. overfit_detection": 0.00029500799996640126
+      },
+      "total_seconds": 19.90225385199983,
+      "per_fold_training_seconds": [
+        0.795600377000028,
+        0.6884827379999479,
+        0.7163331090000611,
+        0.7687255929999992,
+        0.814648084999817,
+        0.7385760270001356
+      ],
+      "metrics": {
+        "accuracy": 0.1362,
+        "net_expectancy_r": -0.002302,
+        "total_net_R": -0.791728,
+        "pbo_risk": "HIGH"
+      },
+      "n_folds": 6
+    },
+    "SWING": {
+      "mode": "SWING",
+      "n_bars": 3000,
+      "n_symbols": 5,
+      "n_features": 61,
+      "n_samples": 14640,
+      "stages": {
+        "1. generate_synthetic_ohlcv": 0.006707843999947727,
+        "2. compute_all_features": 2.111920428000076,
+        "3. generate_labels": 0.011203033000128926,
+        "4. build_aligned_training_frame": 2.4102681859999393,
+        "5. nan_clean": 0.0035871159998350777,
+        "6. walk_forward_validate": 5.055543042000181,
+        "7. collect_metrics": 0.0014707630000430072,
+        "8. overfit_detection": 0.00030535299993061926
+      },
+      "total_seconds": 9.601005765000082,
+      "per_fold_training_seconds": [
+        0.6611511660000815,
+        0.7386675430000196,
+        0.7099224179999055,
+        0.7346546109999963,
+        0.8191785550000077,
+        0.7956111620001138
+      ],
+      "metrics": {
+        "accuracy": 0.2113,
+        "net_expectancy_r": -0.001385,
+        "total_net_R": -0.90274,
+        "pbo_risk": "HIGH"
+      },
+      "n_folds": 6
+    },
+    "AGGRESSIVE_SCALP": {
+      "mode": "AGGRESSIVE_SCALP",
+      "n_bars": 3000,
+      "n_symbols": 5,
+      "n_features": 61,
+      "n_samples": 14725,
+      "stages": {
+        "1. generate_synthetic_ohlcv": 0.005604429999948479,
+        "2. compute_all_features": 2.068639284000028,
+        "3. generate_labels": 0.009796888999971998,
+        "4. build_aligned_training_frame": 2.8196367410000676,
+        "5. nan_clean": 0.0035399630000938487,
+        "6. walk_forward_validate": 4.848080003999939,
+        "7. collect_metrics": 0.0024934030000167695,
+        "8. overfit_detection": 0.00036792300011256884
+      },
+      "total_seconds": 9.758158637000179,
+      "per_fold_training_seconds": [
+        0.44522781500018027,
+        0.7087601840000843,
+        0.7104044140000951,
+        0.721928478000109,
+        0.8045149769998261,
+        0.9404300250000688
+      ],
+      "metrics": {
+        "accuracy": 0.1242,
+        "net_expectancy_r": -0.002755,
+        "total_net_R": -0.619899,
+        "pbo_risk": "HIGH"
+      },
+      "n_folds": 6
+    }
+  }
+}

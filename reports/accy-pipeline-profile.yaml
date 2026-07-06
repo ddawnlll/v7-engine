@@ -1,0 +1,85 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "completed"
+scope_confirmation: "Installed all Python libraries, ran AlphaForge pipeline on GPU (Tesla T4), profiled all 3 modes with per-stage and per-fold timing"
+
+files_changed:
+  - "alphaforge/src/alphaforge/training/xgb_trainer.py"  # Fixed GPU detection for XGBoost 3.x (gpu_hist → device=cuda)
+  - "alphaforge/scripts/profile_pipeline.py"             # New: comprehensive profiler
+  - "alphaforge/scripts/profile_detailed.py"             # New: per-fold XGBoost profiler
+  - "alphaforge/scripts/profile_final.py"                # New: JIT-warmed definitive profiler
+
+decisions_locked:
+  - id: "GPU_PARAMS_FIX_XGBOOST_3"
+    status: "LOCKED"
+    summary: "XGBoost 3.3.0 deprecated tree_method='gpu_hist'. GPU activation now uses tree_method='hist' with device='cuda'. Verified working on Tesla T4 with XGBoost 3.3.0."
+  - id: "JIT_FIRST_RUN_OVERHEAD"
+    status: "LOCKED"
+    summary: "First pipeline invocation incurs ~11-13s numba JIT compilation for @njit-decorated functions across features/*.py. Subsequent runs are 2-3× faster."
+
+remaining_holds:
+  - id: "REAL_DATA_PROFILE"
+    summary: "Profile used synthetic data only. Real data with different bar counts, symbol counts, and NaN distributions will change timing ratios."
+    condition: "Run profile on real market data when available"
+  - id: "SCALP_FEATURE_ANOMALY"
+    summary: "SCALP compute_features (3.26s post-JIT) is ~40% slower than SWING (2.28s) and AGGRESSIVE_SCALP (2.16s). May be due to mtf.py multi-timeframe resampling logic specific to SCALP intervals."
+    condition: "Investigate mtf.py resampling costs for SCALP primary=1h vs AGGRESSIVE_SCALP primary=15m"
+
+safe_next_step: "Profile with real market data (larger bar counts, more symbols) to validate scaling characteristics and identify further optimization opportunities"
+
+commands_run:
+  - "pip install -r requirements.txt"
+  - "python3 alphaforge/scripts/profile_pipeline.py"      # All 3 modes, initial run
+  - "python3 alphaforge/scripts/profile_detailed.py"       # Per-fold XGBoost + JIT warmup investigation  
+  - "python3 alphaforge/scripts/profile_final.py"          # Definitive JIT-warmed profile
+  - "nvidia-smi --query-gpu=utilization.gpu,utilization.memory,temperature.gpu,power.draw --format=csv"
+
+evidence:
+  hardware:
+    gpu: "NVIDIA Tesla T4 (15360 MiB)"
+    cuda_version: "12.9"
+    xgboost_version: "3.3.0"
+    xgboost_gpu_params: "{'tree_method': 'hist', 'device': 'cuda'}"
+    python: "3.12.11"
+  pipeline_timing_seconds:
+    description: "JIT-warmed, 3000 bars × 5 symbols, synthetic data, 6-fold WFV"
+    per_mode:
+      SCALP:
+        compute_features: 3.256
+        build_frame: 3.600
+        xgb_training_6_folds: 5.368
+        total: 13.119
+        gpu_throughput_rows_per_sec: 7647
+      SWING:
+        compute_features: 2.275
+        build_frame: 2.268
+        xgb_training_6_folds: 5.114
+        total: 10.509
+        gpu_throughput_rows_per_sec: 7974
+      AGGRESSIVE_SCALP:
+        compute_features: 2.163
+        build_frame: 1.995
+        xgb_training_6_folds: 4.783
+        total: 9.738
+        gpu_throughput_rows_per_sec: 8575
+  bottleneck_breakdown:
+    - rank: 1
+      stage: "XGBoost GPU training (6 folds)"
+      time: "~5.0s per mode"
+      percentage: "~50% of total"
+      detail: "0.5-1.0s per fold depending on training set size (1579→12104 rows). GPU utilization: 57%, power: 36W, memory: 2%."
+    - rank: 2
+      stage: "Feature computation"
+      time: "~2.2-3.3s per mode"
+      percentage: "~22% of total"
+      detail: "61 features across 5 symbols × 3000 bars. Numba-accelerated numpy operations. First run adds ~11s JIT compile overhead."
+    - rank: 3
+      stage: "Build aligned training frame"
+      time: "~2.0-3.6s per mode"
+      percentage: "~22% of total"
+      detail: "Includes per-symbol feature computation + numba triple-barrier label generation + timestamp alignment sorting."
+  xgb_per_fold_throughput:
+    small_1500_rows: "~1600 rows/s"
+    medium_5000_rows: "~7000 rows/s"
+    large_12000_rows: "~13000-13800 rows/s"
+    observation: "GPU throughput scales super-linearly with batch size, confirming GPU is underutilized for small folds"

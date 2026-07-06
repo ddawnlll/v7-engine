@@ -1,0 +1,90 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "completed"
+scope_confirmation: "Downloaded real 1h Binance data for 4 symbols (BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, 122,592 bars, 2023-01 to 2026-06), ran full AlphaForge pipeline on Tesla T4 GPU with per-stage profiling"
+
+files_changed:
+  - "alphaforge/scripts/profile_real_data.py"   # New: real-data profiler loading from data_lake/raw/binance/um/klines/
+  - "alphaforge/scripts/profile_pipeline.py"     # Updated synthetic profiler
+  - "alphaforge/scripts/profile_detailed.py"     # Updated detailed profiler
+  - "alphaforge/scripts/profile_final.py"        # Updated JIT-warmed profiler
+  - "data_lake/raw/binance/um/klines/"           # 168 parquet files (42/symbol × 4 symbols), 122,592 records
+
+decisions_locked:
+  - id: "REAL_DATA_PIPELINE_PROFILE"
+    status: "LOCKED"
+    summary: "With real 1h Binance data (122k bars, 4 symbols, 61 features), the pipeline takes ~44s/mode. Feature computation + build_frame dominate at ~84% of total time. XGBoost GPU training (6 folds) is only ~16%, with throughput of ~50k rows/s on Tesla T4."
+  - id: "FEATURE_COMPUTED_TWICE"
+    status: "LOCKED_INITIAL_BASELINE"
+    summary: "features are computed twice: once in compute_all_features (step 2) and again inside build_aligned_training_frame (step 4). This doubles the ~19s feature cost to ~38s combined. A refactor to compute features once and pass them through would cut ~19s per mode (43% of total)."
+
+remaining_holds:
+  - id: "SCALP_FEATURE_COST_REAL_DATA"
+    summary: "SCALP compute_features (19.29s) is slightly higher than SWING (19.05s) and AGGRESSIVE_SCALP (18.00s) on real data. The difference is smaller than on synthetic data. mtf.py multi-timeframe resampling cost should be investigated when mode-specific features differ more substantially."
+    condition: "Profile after feature engineering changes that differentiate modes"
+  - id: "FEATURE_DOUBLE_COMPUTE_OPTIMIZATION"
+    summary: "compute_all_features and build_aligned_training_frame both compute features per-symbol. This means feature computation happens 2× per mode. A cache or refactor could save ~19s per mode."
+    condition: "Refactor pipeline to share feature matrix between steps"
+
+safe_next_step: "Optimize pipeline by eliminating the double feature computation (compute_features called in both compute_all_features and build_aligned_training_frame). This could cut ~19s/mode (43% of total pipeline time)."
+
+commands_run:
+  - "python3 scripts/download_binance.py --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT --intervals 1h --start-year 2023 --start-month 1"
+  - "python3 alphaforge/scripts/profile_real_data.py"
+
+evidence:
+  data:
+    source: "Binance Futures (data.binance.vision)"
+    symbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"]
+    interval: "1h"
+    date_range: "2023-01-01 to 2026-06-30"
+    total_bars: 122592
+    files: "168 parquet files (42 per symbol × 4 symbols)"
+  hardware:
+    gpu: "NVIDIA Tesla T4 (15360 MiB)"
+    xgboost_version: "3.3.0"
+    xgboost_gpu_params: "{'tree_method': 'hist', 'device': 'cuda'}"
+    cuda_version: "12.9"
+    python: "3.12.11"
+  pipeline_timing_seconds:
+    description: "Real 1h Binance data, 122,592 bars × 4 symbols, 6-fold WFV, JIT-warmed, GPU-accelerated XGBoost"
+    per_mode:
+      SCALP:
+        compute_features: 19.287
+        build_frame: 20.525
+        xgb_training_6_folds: 7.286
+        total: 47.098
+        gpu_throughput_rows_per_sec: 46789
+      SWING:
+        compute_features: 19.052
+        build_frame: 17.505
+        xgb_training_6_folds: 6.338
+        total: 42.895
+        gpu_throughput_rows_per_sec: 53754
+      AGGRESSIVE_SCALP:
+        compute_features: 17.996
+        build_frame: 17.785
+        xgb_training_6_folds: 6.834
+        total: 42.615
+        gpu_throughput_rows_per_sec: 49881
+  bottleneck_breakdown:
+    - rank: 1
+      stage: "compute_features"
+      time: "~18.8s per mode (avg)"
+      percentage: "~42%"
+      detail: "61 features × 122k bars × 4 symbols, numpy/numba per-symbol computation. Called again inside build_frame (double compute)."
+    - rank: 2
+      stage: "build_aligned_training_frame"
+      time: "~18.6s per mode (avg)"
+      percentage: "~42%"
+      detail: "Includes per-symbol feature computation (duplicate of step 1) + numba triple-barrier label generation + timestamp-aligned sorting."
+    - rank: 3
+      stage: "XGBoost GPU training (6-fold WFV)"
+      time: "~6.8s per mode (avg)"
+      percentage: "~16%"
+      detail: "6 folds with expanding training windows (13k→100k rows). GPU throughput: ~50k rows/s. GPU well-utilized at this data scale."
+  profile_vs_synthetic:
+    synthetic_total: "~10-13s per mode"
+    real_data_total: "~42-47s per mode"
+    xgb_training_scale: "synthetic: 5s for 15k rows; real: 6.8s for 122k rows (1.4× time for 8× data)"
+    feature_cost_scale: "synthetic: 3s; real: 19s (6× time for 8× data) — feature computation is data-size bound"

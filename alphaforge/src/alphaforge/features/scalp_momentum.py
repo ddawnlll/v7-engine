@@ -1,18 +1,16 @@
-"""SCALP-specific momentum enhancement features.
+"""SCALP-specific momentum enhancement features (CUDA-accelerated).
 
 Designed to capture edge that generic returns/momentum features miss
 at the 1h timeframe. All features are causal (trailing window only).
 
 Feature list:
-  mom_quality        — momentum quality: abs(return) / recent_volatility (high = strong trend)
-  mom_acceleration   — change in momentum: current_return - prior_return
-  mom_consistency    — fraction of positive returns in window (0..1)
-  breakout_momentum  — return after a volatility contraction (bb_width < median)
-  vol_adaptive_mom   — momentum lookback = max(3, min(24, 60/vol_percentile))
-  range_expansion    — current range / median range (>1 = expanding)
-  micro_trend        — short-window (3 bar) vs long-window (12 bar) momentum ratio
-  volume_surge       — volume / median volume (>1.5 = surge)
-  momentum_divergence — price high vs momentum high misalignment
+  mom_quality         — momentum quality: abs(return) / recent_volatility
+  mom_acceleration    — change in momentum: current_return - prior_return
+  mom_consistency     — fraction of positive returns in window (0..1)
+  mom_range_expansion — current range / median range
+  mom_micro_trend     — short-window vs long-window momentum ratio
+  mom_volume_surge    — volume / median volume
+  mom_divergence      — price vs momentum divergence
 """
 
 from __future__ import annotations
@@ -21,13 +19,66 @@ from typing import Dict, Optional
 
 import numpy as np
 
+# CuPy GPU acceleration (optional — auto-falls back to numpy)
+try:
+    import cupy as cp
 
-def _rolling_std(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
-    """Rolling standard deviation (causal, trailing window)."""
+    _HAS_CUPY = True
+except ImportError:
+    cp = np
+    _HAS_CUPY = False
+
+
+def _rolling_std_cupy(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
+    """Rolling standard deviation via CuPy sliding_window_view (GPU)."""
     n = len(arr)
     result = np.full(n, np.nan, dtype=np.float64)
-    for i in range(window - 1, n):
-        result[i] = np.std(arr[i - window + 1:i + 1], ddof=ddof)
+    if n < window:
+        return result
+    # sliding_window_view on full array: shape (n - window + 1, window)
+    arr_g = cp.asarray(arr)
+    windows = cp.lib.stride_tricks.sliding_window_view(arr_g, window)
+    std_g = cp.std(windows, axis=1, ddof=ddof)
+    result[window - 1:] = cp.asnumpy(std_g)
+    return result
+
+
+def _rolling_median_cupy(arr: np.ndarray, window: int) -> np.ndarray:
+    """Rolling median via CuPy sliding_window_view (GPU)."""
+    n = len(arr)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < window:
+        return result
+    arr_g = cp.asarray(arr)
+    windows = cp.lib.stride_tricks.sliding_window_view(arr_g, window)
+    med_g = cp.median(windows, axis=1)
+    result[window - 1:] = cp.asnumpy(med_g)
+    return result
+
+
+def _rolling_mean_cupy(arr: np.ndarray, window: int) -> np.ndarray:
+    """Rolling mean (GPU)."""
+    n = len(arr)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < window:
+        return result
+    arr_g = cp.asarray(arr)
+    windows = cp.lib.stride_tricks.sliding_window_view(arr_g, window)
+    mean_g = cp.mean(windows, axis=1)
+    result[window - 1:] = cp.asnumpy(mean_g)
+    return result
+
+
+def _count_positive_cupy(arr: np.ndarray, window: int) -> np.ndarray:
+    """Rolling count of positive values (GPU)."""
+    n = len(arr)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < window:
+        return result
+    arr_g = cp.asarray(arr)
+    windows = cp.lib.stride_tricks.sliding_window_view(arr_g, window)
+    count_g = cp.sum(windows > 0, axis=1).astype(cp.float64)
+    result[window - 1:] = cp.asnumpy(count_g)
     return result
 
 
@@ -36,7 +87,7 @@ def compute_scalp_momentum_group(
     mode: str = "SCALP",
     **kwargs,
 ) -> Dict[str, np.ndarray]:
-    """Compute SCALP momentum enhancement features.
+    """Compute SCALP momentum enhancement features (CUDA-accelerated).
 
     Args:
         ohlcv_data: Dict with 'close', 'high', 'low', 'volume' arrays.
@@ -67,64 +118,81 @@ def compute_scalp_momentum_group(
     log_ret = np.full(n, np.nan, dtype=np.float64)
     log_ret[1:] = np.log(close_f[1:] / close_f[:-1])
 
-    # Rolling volatility (annualized, 12-bar)
-    vol_12 = _rolling_std(log_ret, N, ddof=1)
-    vol_6 = _rolling_std(log_ret, W, ddof=1)
+    # Rolling volatility (annualized, 12-bar) — GPU accelerated
+    vol_12 = _rolling_std_cupy(log_ret, N, ddof=1)
 
-    # 1. Momentum quality: abs(return) / vol (signal-to-noise ratio for momentum)
+    # 1. Momentum quality: abs(return) / vol
     mom_quality = np.full(n, np.nan, dtype=np.float64)
-    for i in range(N, n):
-        ret = log_ret[i]
-        v = vol_12[i]
-        mom_quality[i] = abs(ret) / v if v > 1e-10 else 0.0
+    mask = slice(N, n)
+    v12 = vol_12[mask]
+    mom_quality[mask] = np.where(
+        np.abs(v12) > 1e-10,
+        np.abs(log_ret[mask]) / v12,
+        0.0,
+    )
     results["mom_quality"] = mom_quality
-    # 2. Momentum acceleration
+
+    # 2. Momentum acceleration (simple diff)
     mom_acceleration = np.full(n, np.nan, dtype=np.float64)
-    for i in range(2, n):
-        mom_acceleration[i] = log_ret[i] - log_ret[i-1]
+    mom_acceleration[2:] = log_ret[2:] - log_ret[1:-1]
     results["mom_acceleration"] = mom_acceleration
 
-    # 3. Momentum consistency
-    mom_consistency = np.full(n, np.nan, dtype=np.float64)
-    for i in range(N, n):
-        window = log_ret[i-N+1:i+1]
-        mom_consistency[i] = np.sum(window > 0) / N
+    # 3. Momentum consistency — GPU accelerated
+    mom_consistency = _count_positive_cupy(log_ret, N) / N
     results["mom_consistency"] = mom_consistency
 
-    # 4. Range expansion
+    # 4. Range expansion — GPU accelerated
     ranges = high_f - low_f
-    range_median = np.full(n, np.nan, dtype=np.float64)
-    for i in range(N, n):
-        range_median[i] = np.median(ranges[i-N+1:i+1])
+    range_median_arr = _rolling_median_cupy(ranges, N)
     mom_range_expansion = np.full(n, np.nan, dtype=np.float64)
-    for i in range(N, n):
-        mom_range_expansion[i] = ranges[i] / range_median[i] if range_median[i] > 1e-10 else 1.0
+    rmed = range_median_arr[mask]
+    mom_range_expansion[mask] = np.where(
+        rmed > 1e-10,
+        ranges[mask] / rmed,
+        1.0,
+    )
     results["mom_range_expansion"] = mom_range_expansion
 
-    # 5. Micro-trend
-    mom_micro_trend = np.full(n, np.nan, dtype=np.float64)
-    for i in range(N, n):
-        short_ret = np.mean(log_ret[i-W+1:i+1]) if W > 0 else 0.0
-        long_ret = np.mean(log_ret[i-N+1:i+1])
-        mom_micro_trend[i] = short_ret - long_ret
-    results["mom_micro_trend"] = mom_micro_trend
+    # 5. Micro-trend — GPU accelerated (rolling means)
+    short_mean = _rolling_mean_cupy(log_ret, W)
+    long_mean = _rolling_mean_cupy(log_ret, N)
+    results["mom_micro_trend"] = short_mean - long_mean
 
-    # 6. Volume surge
-    vol_median = np.full(n, np.nan, dtype=np.float64)
-    for i in range(N, n):
-        vol_median[i] = np.median(vol_f[i-N+1:i+1])
+    # 6. Volume surge — GPU accelerated
+    vol_median_arr = _rolling_median_cupy(vol_f, N)
     mom_volume_surge = np.full(n, np.nan, dtype=np.float64)
-    for i in range(N, n):
-        mom_volume_surge[i] = vol_f[i] / vol_median[i] if vol_median[i] > 1e-10 else 1.0
+    vmed = vol_median_arr[mask]
+    mom_volume_surge[mask] = np.where(
+        vmed > 1e-10,
+        vol_f[mask] / vmed,
+        1.0,
+    )
     results["mom_volume_surge"] = mom_volume_surge
 
-    # 7. Momentum divergence
-    mom_divergence = np.full(n, np.nan, dtype=np.float64)
-    for i in range(N, n):
-        peak = np.max(close_f[i-N+1:i+1])
-        drawup = (close_f[i] / peak - 1.0)
-        recent_ret = log_ret[i]
-        mom_divergence[i] = abs(drawup) if recent_ret > 0 else -abs(drawup) if recent_ret < 0 else 0.0
-    results["mom_divergence"] = mom_divergence
+    # 7. Momentum divergence — vectorized with CuPy
+    if _HAS_CUPY and n > N:
+        close_g = cp.asarray(close_f)
+        log_ret_g = cp.asarray(log_ret)
+        windows_g = cp.lib.stride_tricks.sliding_window_view(close_g, N)
+        peak_g = cp.max(windows_g, axis=1)  # shape (n - N + 1,)
+        drawup_g = close_g[N - 1:] / peak_g - 1.0
+        recent_log_ret_g = log_ret_g[N - 1:]
+        div = cp.where(
+            recent_log_ret_g > 0, cp.abs(drawup_g),
+            cp.where(recent_log_ret_g < 0, -cp.abs(drawup_g), 0.0),
+        )
+        mom_div = np.full(n, np.nan, dtype=np.float64)
+        mom_div[N - 1:] = cp.asnumpy(div)
+    else:
+        mom_div = np.full(n, np.nan, dtype=np.float64)
+        for i in range(N, n):
+            peak = np.max(close_f[i - N + 1:i + 1])
+            drawup = close_f[i] / peak - 1.0
+            recent_ret = log_ret[i]
+            mom_div[i] = (
+                abs(drawup) if recent_ret > 0 else
+                -abs(drawup) if recent_ret < 0 else 0.0
+            )
+    results["mom_divergence"] = mom_div
 
     return results

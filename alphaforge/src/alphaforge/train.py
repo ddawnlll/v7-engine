@@ -454,12 +454,20 @@ def build_aligned_training_frame(
     ohlcv: dict,
     mode: str,
     feature_groups: Optional[List[str]] = None,
+    precomputed_features: Optional[dict[str, np.ndarray]] = None,
 ) -> dict:
     """Build a timestamp-aligned training frame.
 
     Rows are aligned per symbol first, then merged into a timestamp-major
     order so walk-forward validation can operate on chronological windows
     instead of flattened symbol blocks.
+
+    Args:
+        ohlcv: dict with OHLCV data arrays and 'symbol' list.
+        mode: Trading mode string.
+        feature_groups: Optional list of feature groups to compute.
+        precomputed_features: Optional dict mapping symbol -> (feature_matrix, feature_names).
+            When provided, skips feature re-computation (avoids double compute).
     """
     from alphaforge.features.pipeline import compute_features
 
@@ -508,22 +516,26 @@ def build_aligned_training_frame(
         if n_sym <= max_hold + 1:
             continue
 
-        fm = compute_features(
-            {
-                "close": sym_close,
-                "high": sym_high,
-                "low": sym_low,
-                "open": sym_open,
-                "volume": sym_volume,
-                "symbol": sym,
-            },
-            mode=mode,
-            feature_groups=feature_groups,
-        )
-        fn = sorted(fm.features.keys())
+        if precomputed_features is not None and sym in precomputed_features:
+            Xs, fn = precomputed_features[sym]
+        else:
+            fm = compute_features(
+                {
+                    "close": sym_close,
+                    "high": sym_high,
+                    "low": sym_low,
+                    "open": sym_open,
+                    "volume": sym_volume,
+                    "symbol": sym,
+                },
+                mode=mode,
+                feature_groups=feature_groups,
+            )
+            fn = sorted(fm.features.keys())
+            Xs = np.column_stack([fm.features[k] for k in fn]).astype(np.float64)
+
         if feat_names is None:
             feat_names = fn
-        Xs = np.column_stack([fm.features[k] for k in fn]).astype(np.float64)
 
         ints_s, gross_s, net_s, long_gross_s, short_gross_s, long_net_s, short_net_s = _generate_labels_numba(
             sym_close, sym_high, sym_low,

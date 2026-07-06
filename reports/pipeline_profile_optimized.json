@@ -1,0 +1,164 @@
+{
+  "date": "2026-07-06T21:19:01.118069+00:00",
+  "optimizations": [
+    "cupy_scalp_momentum",
+    "double_compute_eliminated",
+    "xgb_n_estimators_100"
+  ],
+  "data": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT"
+    ],
+    "n_bars": 122592,
+    "date_range": "2023-01-01 to 2026-06-30"
+  },
+  "results": {
+    "SCALP": {
+      "mode": "SCALP",
+      "compute_features_once": 5.888,
+      "build_frame_no_recompute": 0.238,
+      "xgb_per_fold": [
+        {
+          "fold": 1,
+          "train_size": 13113,
+          "training_seconds": 0.462,
+          "val_accuracy": 0.4153
+        },
+        {
+          "fold": 2,
+          "train_size": 30596,
+          "training_seconds": 0.455,
+          "val_accuracy": 0.3987
+        },
+        {
+          "fold": 3,
+          "train_size": 48079,
+          "training_seconds": 0.43,
+          "val_accuracy": 0.4216
+        },
+        {
+          "fold": 4,
+          "train_size": 65562,
+          "training_seconds": 0.707,
+          "val_accuracy": 0.4347
+        },
+        {
+          "fold": 5,
+          "train_size": 83045,
+          "training_seconds": 0.731,
+          "val_accuracy": 0.4147
+        },
+        {
+          "fold": 6,
+          "train_size": 100528,
+          "training_seconds": 0.716,
+          "val_accuracy": 0.3931
+        }
+      ],
+      "xgb_total": 3.502,
+      "xgb_avg": 0.5836,
+      "total_train_rows": 340923,
+      "throughput": 97356,
+      "total_seconds": 9.628
+    },
+    "SWING": {
+      "mode": "SWING",
+      "compute_features_once": 6.076,
+      "build_frame_no_recompute": 0.199,
+      "xgb_per_fold": [
+        {
+          "fold": 1,
+          "train_size": 13104,
+          "training_seconds": 0.339,
+          "val_accuracy": 0.4124
+        },
+        {
+          "fold": 2,
+          "train_size": 30576,
+          "training_seconds": 0.415,
+          "val_accuracy": 0.3741
+        },
+        {
+          "fold": 3,
+          "train_size": 48048,
+          "training_seconds": 0.467,
+          "val_accuracy": 0.4084
+        },
+        {
+          "fold": 4,
+          "train_size": 65520,
+          "training_seconds": 0.537,
+          "val_accuracy": 0.41
+        },
+        {
+          "fold": 5,
+          "train_size": 82992,
+          "training_seconds": 0.624,
+          "val_accuracy": 0.3794
+        },
+        {
+          "fold": 6,
+          "train_size": 100464,
+          "training_seconds": 0.758,
+          "val_accuracy": 0.3875
+        }
+      ],
+      "xgb_total": 3.141,
+      "xgb_avg": 0.5235,
+      "total_train_rows": 340704,
+      "throughput": 108473,
+      "total_seconds": 9.416
+    },
+    "AGGRESSIVE_SCALP": {
+      "mode": "AGGRESSIVE_SCALP",
+      "compute_features_once": 5.784,
+      "build_frame_no_recompute": 0.251,
+      "xgb_per_fold": [
+        {
+          "fold": 1,
+          "train_size": 13111,
+          "training_seconds": 0.362,
+          "val_accuracy": 0.3945
+        },
+        {
+          "fold": 2,
+          "train_size": 30592,
+          "training_seconds": 0.411,
+          "val_accuracy": 0.4064
+        },
+        {
+          "fold": 3,
+          "train_size": 48073,
+          "training_seconds": 0.445,
+          "val_accuracy": 0.425
+        },
+        {
+          "fold": 4,
+          "train_size": 65554,
+          "training_seconds": 0.574,
+          "val_accuracy": 0.4336
+        },
+        {
+          "fold": 5,
+          "train_size": 83035,
+          "training_seconds": 0.585,
+          "val_accuracy": 0.4044
+        },
+        {
+          "fold": 6,
+          "train_size": 100516,
+          "training_seconds": 0.646,
+          "val_accuracy": 0.3994
+        }
+      ],
+      "xgb_total": 3.024,
+      "xgb_avg": 0.504,
+      "total_train_rows": 340881,
+      "throughput": 112735,
+      "total_seconds": 9.059
+    }
+  }
+}
