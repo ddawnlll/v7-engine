@@ -656,9 +656,9 @@ def _rolling_mean(arr: np.ndarray, window: int) -> np.ndarray:
         csum = np.cumsum(np.insert(clean, 0, 0))
         nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
         return _p_njit_rolling_mean(csum, nan_csum, window)
-    # Fast path: no NaN, use np.convolve
+    # Fast path: no NaN, use np.convolve with trailing window
     kernel = np.ones(window, dtype=np.float64) / window
-    result = np.convolve(arr, kernel, mode='same')
+    result = np.convolve(arr, kernel, mode='full')[:n]
     result[:window - 1] = np.nan
     return result
 
@@ -672,7 +672,7 @@ def _rolling_sum(arr: np.ndarray, window: int) -> np.ndarray:
         csum = np.cumsum(np.insert(np.where(np.isnan(arr), 0.0, arr), 0, 0))
         return _p_njit_rolling_sum(csum, window)
     kernel = np.ones(window, dtype=np.float64)
-    result = np.convolve(arr, kernel, mode='same')
+    result = np.convolve(arr, kernel, mode='full')[:n]
     result[:window - 1] = np.nan
     return result
 
