@@ -1,0 +1,25 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: PASS
+scope_confirmation:
+  issue: 271
+  scope: "Implement replay-backed historical orchestrator without swapping SimulationService yet"
+files_changed:
+  - runtime/services/replay_backed_simulation_orchestrator.py
+  - runtime/tests/test_replay_backed_simulation_orchestrator.py
+  - runtime/services/historical_simulation_engine.py
+  - runtime/services/indicator_snapshot.py
+  - reports/phase4e_replay_backed_simulation_orchestrator.md
+  - reports/phase4e_replay_backed_simulation_orchestrator.accp.yaml
+decisions_locked:
+  - "Runtime replay orchestration stays in runtime; only the settlement step delegates to ReplayDriver"
+  - "Replay workers preserve the legacy run(payload, callbacks) contract while using SimulationOutput as the economic truth source"
+remaining_holds:
+  - "simulation_service.py still points to HistoricalSimulationEngine"
+  - "Legacy-vs-replay side-by-side integration diff is still pending"
+safe_next_step: "Swap SimulationService to ReplayBackedSimulationOrchestrator and run the full runtime simulation suite plus side-by-side diff"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest runtime/tests/test_replay_backed_simulation_orchestrator.py -q"
+evidence:
+  - "Acceptance test passed: 1 passed, 1 warning in 0.55s"
+  - "Parity harness confirmed orchestrator output matches the independently mapped ReplayDriver/materializer chain for one full replay window"
