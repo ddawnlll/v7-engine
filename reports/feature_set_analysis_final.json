@@ -1,0 +1,55 @@
+{
+  "conclusion": "SCALP 1h crypto: only 1 viable alpha (momentum), feature engineering cannot create more",
+  "evidence": {
+    "profitable_reliable": [
+      [
+        "multi_symbol_all_features",
+        0.006332,
+        13537,
+        true
+      ],
+      [
+        "momentum_spillover",
+        0.006273,
+        null,
+        true
+      ]
+    ],
+    "profitable_but_undertraded": [
+      [
+        "breakout_momentum",
+        0.00784,
+        9
+      ],
+      [
+        "momentum_orderbook",
+        0.004937,
+        15
+      ]
+    ],
+    "all_other_10_combos_negative": true,
+    "new_scalp_features": {
+      "returns+momentum+scalp_new": -0.004125,
+      "returns+scalp_new": -0.016277,
+      "single_returns+momentum_rerun": -0.001189
+    },
+    "modes_tested": [
+      "SCALP",
+      "SWING",
+      "AGGRESSIVE_SCALP"
+    ],
+    "total_wfv_runs": 18
+  },
+  "root_cause": "Crypto 1h Piyasasinin Sinyal/Gurultu Oran\u0131 \u00c7ok D\u00fc\u015f\u00fck",
+  "why": [
+    "Bitcoin/ETH 1h bar'da rastgele y\u00fcr\u00fcy\u00fc\u015fe \u00e7ok yak\u0131n",
+    "Orderbook feature'lar\u0131 1h'da anlams\u0131z (mikroyap\u0131 saniyelerde kaybolur)",
+    "Candle pattern'lar\u0131 1h'da istatistiksel edge \u00fcretmiyor",
+    "Funding rate 1h'da \u00e7ok yava\u015f de\u011fi\u015fiyor (8h periyot)",
+    "Regime classification 1h'da \u00e7ok g\u00fcr\u00fclt\u00fcl\u00fc",
+    "Sadece momentum (son birka\u00e7 bar'\u0131n getirisi) zay\u0131f da olsa edge \u00fcretiyor",
+    "Yeni feature'lar (kalite, h\u0131zlanma, tutarl\u0131l\u0131k) g\u00fcr\u00fclt\u00fc EKL\u0130YOR, sinyal de\u011fil"
+  ],
+  "recommendation": "SCALP 1h yerine tick/second verisi veya SWING 4h denenmeli",
+  "feature_set_verdict": "54 feature'dan sadece ~10 returns+momentum feature'\u0131 \u00e7al\u0131\u015f\u0131yor. Kalan 44 feature g\u00fcr\u00fclt\u00fc. Yeni feature eklemek modeli k\u00f6t\u00fcle\u015ftiriyor."
+}

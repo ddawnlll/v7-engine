@@ -76,6 +76,9 @@ from alphaforge.features.candle_pattern import (
     DEFAULT_CANDLE_WINDOW,
     compute_candle_pattern_group,
 )
+from alphaforge.features.scalp_momentum import (
+    compute_scalp_momentum_group,
+)
 
 try:
     from numba import njit
@@ -149,6 +152,7 @@ class FeatureGroup(Enum):
     CANDLE_PATTERN = "candle_pattern"
     PERPETUAL_FUNDING = "perpetual_funding"
     LEAD_LAG = "lead_lag"  # DEFERRED — P0.9B cross-sectional data required
+    SCALP_MOMENTUM = "scalp_momentum"  # P0.9G — SCALP-specific momentum enhancers
 
 
 # ---------------------------------------------------------------------------
@@ -520,6 +524,7 @@ FEATURE_GROUP_MAP: Dict[FeatureGroup, str] = {
     # Active filtering (lines 119, 1257) keeps LEAD_LAG out of computation
     # until cross-sectional data support lands (P0.9B).
     FeatureGroup.LEAD_LAG: "compute_lead_lag_group",
+    FeatureGroup.SCALP_MOMENTUM: "compute_scalp_momentum_group",
 }
 
 
@@ -1931,6 +1936,15 @@ def compute_features(
         )
     )
 
+    # 10. SCALP Momentum Group (P0.9G — SCALP-specific momentum enhancers)
+    if "scalp_momentum" in (feature_groups or ["scalp_momentum"]):
+        features.update(
+            compute_scalp_momentum_group(
+                ohlcv_data=ohlcv_data,
+                mode=mode,
+            )
+        )
+
     # Lead-Lag group is DEFERRED — not computed, no columns added.
     # PERPETUAL_FUNDING group is DEFERRED — requires external funding data feed, not OHLCV-only.
 
@@ -1987,6 +2001,7 @@ def compute_features(
             "piercing": "candle_pattern",
             "dark_cloud": "candle_pattern",
             "candle_": "candle_pattern",
+            "mom_": "scalp_momentum",       # P0.9G — all mom_* features
         }
         filtered = {}
         for name, arr in features.items():
