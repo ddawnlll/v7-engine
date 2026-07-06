@@ -1,0 +1,25 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: PASS
+scope_confirmation:
+  issue: 274
+  scope: "Freeze Alpha #1 XGBoost SCALP model metadata in contract registry with hash-pin guard test"
+files_changed:
+  - contracts/registry.json
+  - integration/tests/test_alpha1_artifact_guard.py
+  - reports/phase4f_alpha1_artifact_freeze.md
+  - reports/phase4f_alpha1_artifact_freeze.accp.yaml
+decisions_locked:
+  - "Alpha1FrozenArtifact is metadata-only (schema_file=null); model binary lives externally"
+  - "16-feature set and threshold=0.550 are pinned via guard test — any change breaks CI"
+  - "alphaforge owns the artifact; runtime and alphaforge are consumers"
+remaining_holds:
+  - "Model binary hash is not yet recorded (external artifact, not in repo)"
+  - "Runtime inference loading of Alpha #1 model is pending runtime-side integration"
+safe_next_step: "Runtime can now consume Alpha1FrozenArtifact contract to load the frozen model"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest integration/tests/test_alpha1_artifact_guard.py -q"
+evidence:
+  - "Guard test passed: 7 passed in 0.01s"
+  - "Registry entry verified with correct fields"
+  - "16-feature set and threshold=0.550 pinned"
