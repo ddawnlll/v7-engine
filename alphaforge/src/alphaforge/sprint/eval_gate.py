@@ -1,6 +1,11 @@
-"""Minimal eval gate for the AlphaForge profitability sprint.
+"""Evaluation gate for the AlphaForge profitability sprint.
 
-Defines pass/fail gates for factor candidates. Pure functional, frozen dataclasses.
+Defines PASS/WATCH/FAIL gates for factor candidates. PASS means all
+gates passed. WATCH means net-positive but below min_profit_factor or
+partial gate pass (borderline candidate). FAIL means critical gate
+failure (net loss, too few trades, excessive drawdown).
+
+Pure functional, frozen dataclasses.
 """
 
 from __future__ import annotations
@@ -24,11 +29,24 @@ class GateResult:
 
 @dataclass(frozen=True)
 class EvalGate:
-    """Aggregate evaluation gate result for a factor."""
+    """Aggregate evaluation gate result for a factor.
+
+    ``verdict`` is one of:
+        PASS  — all gates passed, factor is a strong candidate
+        WATCH — net-positive but below min_profit_factor or partial
+                gate pass (borderline candidate worth reviewing)
+        FAIL  — critical gate failure (net loss, too few trades, etc.)
+
+    ``overall_pass`` is a boolean convenience field: True for PASS,
+    False for both WATCH and FAIL. This preserves backward compatibility
+    with code that filters on a simple pass/fail check while the
+    richer 3-state verdict is available via the ``verdict`` field.
+    """
 
     gates: list[GateResult]
-    overall_pass: bool
-    summary: str
+    verdict: str = "FAIL"
+    overall_pass: bool = False
+    summary: str = ""
 
 
 class EvalGateRunner:
@@ -48,7 +66,7 @@ class EvalGateRunner:
         Returns
         -------
         EvalGate
-            Gate results with overall pass/fail.
+            Gate results with 3-state verdict (PASS/WATCH/FAIL).
         """
         gates: list[GateResult] = []
 
@@ -133,16 +151,32 @@ class EvalGateRunner:
             )
         )
 
-        overall_pass = all(g.passed for g in gates)
-        failed_gates = [g.gate_name for g in gates if not g.passed]
+        # Determine 3-state verdict
+        all_pass = all(g.passed for g in gates)
 
-        if overall_pass:
+        if all_pass:
+            verdict = "PASS"
+            overall_pass = True
             summary = f"ALL GATES PASSED — {factor.factor_name} is a candidate"
         else:
-            summary = f"FAILED: {', '.join(failed_gates)} — {factor.factor_name} rejected"
+            overall_pass = False
+            net_positive = factor.net_return > 0
+            min_trades_ok = factor.trade_count >= self._config.min_trades
+            drawdown_ok = factor.max_drawdown <= self._config.max_drawdown_pct
+
+            if net_positive and min_trades_ok and drawdown_ok:
+                # Net-positive but some non-critical gates failed — borderline
+                verdict = "WATCH"
+                borderline = [g.gate_name for g in gates if not g.passed]
+                summary = f"WATCH — {factor.factor_name} net-positive but: {', '.join(borderline)}"
+            else:
+                verdict = "FAIL"
+                failed_gates = [g.gate_name for g in gates if not g.passed]
+                summary = f"FAILED: {', '.join(failed_gates)} — {factor.factor_name} rejected"
 
         return EvalGate(
             gates=gates,
+            verdict=verdict,
             overall_pass=overall_pass,
             summary=summary,
         )
