@@ -1,0 +1,21 @@
+{
+  "experiment": "multi_symbol_scalp",
+  "branch": "exp-ms-profit",
+  "result": "PASS",
+  "baseline_net_r": 0.003656,
+  "experiment_net_r": 0.023331,
+  "improvement_pct": 538.16,
+  "target_50pct_achieved": true,
+  "symbols": "BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT",
+  "accuracy": 0.5636,
+  "inter_fold_consistency": 33.0936,
+  "active_trades": 2166,
+  "exposure_pct": 57.12,
+  "guards_applied": [
+    "P0.9F purge/embargo",
+    "P0.9F nested threshold",
+    "P0.9F G1 PBO/DS",
+    "P0.9F G5 feature conc",
+    "P0.9G G3 cost stress"
+  ]
+}
