@@ -104,6 +104,34 @@ from alphaforge.features.funding import (
     compute_open_interest_proxy,
 )
 
+# Open Interest features (#280)
+from alphaforge.features.open_interest import (
+    AGGRESSIVE_SCALP_OI_WINDOW,
+    DEFAULT_OI_WINDOW,
+    SCALP_OI_WINDOW,
+    SWING_OI_WINDOW,
+    compute_open_interest_change,
+    compute_open_interest_change_pct,
+    compute_open_interest_group,
+    compute_open_interest_volume_ratio,
+    compute_open_interest_zscore,
+)
+
+# Premium Index features (#280)
+from alphaforge.features.premium_index import (
+    AGGRESSIVE_SCALP_BASIS_WINDOW,
+    DEFAULT_BASIS_REGIME_THRESHOLD_BPS,
+    DEFAULT_BASIS_WINDOW,
+    SCALP_BASIS_WINDOW,
+    SWING_BASIS_WINDOW,
+    compute_basis,
+    compute_basis_ma,
+    compute_basis_regime,
+    compute_basis_vol,
+    compute_basis_zscore,
+    compute_premium_index_group,
+)
+
 # Per-mode feature window configuration
 from alphaforge.features.mode_windows import (
     AGGRESSIVE_SCALP_WINDOWS,
@@ -112,6 +140,15 @@ from alphaforge.features.mode_windows import (
     ModeWindowConfig,
     get_all_mode_windows,
     get_mode_windows,
+)
+
+# Residual momentum / clustering features (Milestone C)
+from alphaforge.features.residual_momentum import (
+    compute_beta,
+    compute_residual_momentum,
+    cluster_symbols,
+    compute_cross_sectional_momentum,
+    compute_residual_momentum_group,
 )
 
 __version__ = "0.3.0"
@@ -203,4 +240,26 @@ __all__ = [
     "AGGRESSIVE_SCALP_WINDOWS",
     "get_mode_windows",
     "get_all_mode_windows",
+    # Open Interest features (Real OI data, #280)
+    "compute_open_interest_group",
+    "compute_open_interest_change",
+    "compute_open_interest_change_pct",
+    "compute_open_interest_volume_ratio",
+    "compute_open_interest_zscore",
+    "DEFAULT_OI_WINDOW",
+    "SWING_OI_WINDOW",
+    "SCALP_OI_WINDOW",
+    "AGGRESSIVE_SCALP_OI_WINDOW",
+    # Premium Index features (Real premium index data, #280)
+    "compute_premium_index_group",
+    "compute_basis",
+    "compute_basis_ma",
+    "compute_basis_vol",
+    "compute_basis_zscore",
+    "compute_basis_regime",
+    "DEFAULT_BASIS_WINDOW",
+    "DEFAULT_BASIS_REGIME_THRESHOLD_BPS",
+    "SWING_BASIS_WINDOW",
+    "SCALP_BASIS_WINDOW",
+    "AGGRESSIVE_SCALP_BASIS_WINDOW",
 ]

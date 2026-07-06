@@ -12,6 +12,7 @@ with an optional funding_rate parameter (default 0.0 for backward compat).
 
 from lib.costs.fees import estimate_fee
 from lib.costs.slippage import get_slippage
+from simulation.contracts.models import ExecutionMode
 from simulation.engine.funding import funding_cost_r
 
 
@@ -19,6 +20,8 @@ from simulation.engine.funding import funding_cost_r
 DEFAULT_TAKER_FEE_BPS = 4.0   # 0.04%
 DEFAULT_MAKER_FEE_BPS = 2.0   # 0.02%
 DEFAULT_SLIPPAGE_BPS = 1.0    # 0.01% base slippage
+DEFAULT_MAKER_FILL_PROBABILITY = 0.7  # adverse selection: 70% fill rate
+DEFAULT_EXECUTION_MODE = ExecutionMode.TAKER
 
 
 def compute_entry_risk(atr: float, stop_multiplier: float) -> float:
@@ -35,16 +38,42 @@ def fee_cost_r(
     notional: float,
     entry_risk: float,
     taker_fee_bps: float = DEFAULT_TAKER_FEE_BPS,
+    maker_fee_bps: float = DEFAULT_MAKER_FEE_BPS,
+    execution_mode: ExecutionMode = DEFAULT_EXECUTION_MODE,
+    maker_fill_probability: float = DEFAULT_MAKER_FILL_PROBABILITY,
 ) -> float:
     """Fee cost in R-multiples for both entry and exit.
 
-    Uses conservative taker assumption: fee applied on entry AND exit.
+    Supports three execution modes:
+      - TAKER: taker fee on both sides (conservative default).
+      - MAKER: maker fee on both sides, adjusted for adverse selection.
+        effective_fee = maker_fee + (taker_fee - maker_fee) * (1 - fill_prob)
+        At fill_prob=0.7, effective_fee = maker + 0.3 * spread.
+      - HYBRID: maker fee on entry, taker fee on exit.
     """
     if entry_risk <= 0 or notional <= 0:
         return 0.0
-    taker_rate = taker_fee_bps / 10000.0
-    entry_fee = notional * taker_rate
-    exit_fee = notional * taker_rate
+
+    if execution_mode == ExecutionMode.TAKER:
+        entry_rate = taker_fee_bps / 10000.0
+        exit_rate = taker_fee_bps / 10000.0
+    elif execution_mode == ExecutionMode.MAKER:
+        maker_rate = maker_fee_bps / 10000.0
+        taker_rate = taker_fee_bps / 10000.0
+        effective_maker_rate = maker_rate + (taker_rate - maker_rate) * (1.0 - maker_fill_probability)
+        entry_rate = effective_maker_rate
+        exit_rate = effective_maker_rate
+    elif execution_mode == ExecutionMode.HYBRID:
+        maker_rate = maker_fee_bps / 10000.0
+        taker_rate = taker_fee_bps / 10000.0
+        entry_rate = maker_rate
+        exit_rate = taker_rate
+    else:
+        entry_rate = taker_fee_bps / 10000.0
+        exit_rate = taker_fee_bps / 10000.0
+
+    entry_fee = notional * entry_rate
+    exit_fee = notional * exit_rate
     return (entry_fee + exit_fee) / entry_risk
 
 
@@ -79,9 +108,12 @@ def total_cost_r(
     atr: float,
     stop_multiplier: float,
     taker_fee_bps: float = DEFAULT_TAKER_FEE_BPS,
+    maker_fee_bps: float = DEFAULT_MAKER_FEE_BPS,
     slippage_bps: float = DEFAULT_SLIPPAGE_BPS,
     funding_rate: float = 0.0,
     holding_bars: int = 0,
+    execution_mode: ExecutionMode = DEFAULT_EXECUTION_MODE,
+    maker_fill_probability: float = DEFAULT_MAKER_FILL_PROBABILITY,
 ) -> tuple[float, float, float, float]:
     """Compute all costs in R terms (fee + slippage + funding).
 
@@ -91,12 +123,16 @@ def total_cost_r(
                       backward compatibility.
         holding_bars: Number of bars the position is held. Default 0
                       for backward compatibility.
+        execution_mode: Execution mode for fee computation.
+                        TAKER (default), MAKER, or HYBRID.
+        maker_fill_probability: Fill probability for MAKER mode.
+                                Used to adjust effective fee for adverse selection.
 
     Returns:
         (fee_cost_r, slippage_cost_r, funding_cost_r, total_cost_r)
     """
     risk = compute_entry_risk(atr, stop_multiplier)
-    fcr = fee_cost_r(notional, risk, taker_fee_bps)
+    fcr = fee_cost_r(notional, risk, taker_fee_bps, maker_fee_bps, execution_mode, maker_fill_probability)
     scr = slippage_cost_r(notional, entry_price, risk, slippage_bps, atr)
 
     # Funding cost in quote currency -> R-multiples

@@ -79,6 +79,27 @@ from alphaforge.features.candle_pattern import (
 from alphaforge.features.scalp_momentum import (
     compute_scalp_momentum_group,
 )
+from alphaforge.features.residual_momentum import (
+    compute_residual_momentum_group,
+)
+from alphaforge.features.open_interest import (
+    DEFAULT_OI_WINDOW,
+    SWING_OI_WINDOW,
+    SCALP_OI_WINDOW,
+    AGGRESSIVE_SCALP_OI_WINDOW,
+    compute_open_interest_group,
+)
+from alphaforge.features.premium_index import (
+    AGGRESSIVE_SCALP_BASIS_WINDOW,
+    DEFAULT_BASIS_REGIME_THRESHOLD_BPS,
+    DEFAULT_BASIS_WINDOW,
+    SCALP_BASIS_WINDOW,
+    SWING_BASIS_WINDOW,
+    compute_premium_index_group,
+)
+from alphaforge.features.mtf import (
+    compute_mtf_features,
+)
 
 try:
     from numba import njit
@@ -151,8 +172,12 @@ class FeatureGroup(Enum):
     REGIME = "regime"
     CANDLE_PATTERN = "candle_pattern"
     PERPETUAL_FUNDING = "perpetual_funding"
+    MTF = "mtf"  # Multi-timeframe context features (4h, 1d, 15m)
     LEAD_LAG = "lead_lag"  # DEFERRED — P0.9B cross-sectional data required
     SCALP_MOMENTUM = "scalp_momentum"  # P0.9G — SCALP-specific momentum enhancers
+    OPEN_INTEREST = "open_interest"    # Real OI data features (#280)
+    PREMIUM_INDEX = "premium_index"    # Premium index / basis features (#280)
+    RESIDUAL_MOMENTUM = "residual_momentum"  # Milestone C — beta-adjusted residual momentum
 
 
 # ---------------------------------------------------------------------------
@@ -505,6 +530,45 @@ class FeatureCache:
 
 
 # ---------------------------------------------------------------------------
+# MTF Group — multi-timeframe context features (4h, 1d, 15m)
+# ---------------------------------------------------------------------------
+
+
+def compute_mtf_group(
+    ohlcv_data: dict,
+    mode: str = "SWING",
+    **kwargs,
+) -> Dict[str, np.ndarray]:
+    """Compute all multi-timeframe context features.
+
+    Wraps mtf.compute_mtf_features() and aligns results to the primary
+    bar grid. Accepts single-timeframe OHLCV and resamples internally
+    for higher/lower timeframes.
+
+    Args:
+        ohlcv_data: Primary OHLCV data dict with 'open','high','low',
+            'close','volume' as 1D numpy arrays.
+        mode: Trading mode string (for future mode-specific tuning).
+        **kwargs: Passed through to mtf.compute_mtf_features.
+
+    Returns:
+        Dict mapping MTF feature names to 1D numpy arrays, same length
+        as the input OHLCV data. Returns empty dict if no OHLCV data.
+        All keys are prefixed with mtf_ for namespace isolation.
+    """
+    close = ohlcv_data.get("close")
+    if close is None or len(close) == 0:
+        return {}
+
+    # compute_mtf_features handles internal resampling
+    raw = compute_mtf_features(ohlcv_data)
+
+    # Prefix keys with mtf_ for GROUP_PREFIX_MAP matching
+    prefixed = {f"mtf_{k}": v for k, v in raw.items()}
+    return prefixed
+
+
+# ---------------------------------------------------------------------------
 # Map of active feature groups to their compute functions.
 # LEAD_LAG is intentionally absent — no compute function exists.
 # ---------------------------------------------------------------------------
@@ -519,12 +583,16 @@ FEATURE_GROUP_MAP: Dict[FeatureGroup, str] = {
     FeatureGroup.ORDERBOOK: "compute_orderbook_group",
     FeatureGroup.REGIME: "compute_regime_group",
     FeatureGroup.CANDLE_PATTERN: "compute_candle_pattern_group",
+    FeatureGroup.MTF: "compute_mtf_group",
     FeatureGroup.PERPETUAL_FUNDING: "compute_perpetual_funding_group",
     # LEAD_LAG is mapped but DEFERRED — compute_features does not call it.
     # Active filtering (lines 119, 1257) keeps LEAD_LAG out of computation
     # until cross-sectional data support lands (P0.9B).
     FeatureGroup.LEAD_LAG: "compute_lead_lag_group",
     FeatureGroup.SCALP_MOMENTUM: "compute_scalp_momentum_group",
+    FeatureGroup.RESIDUAL_MOMENTUM: "compute_residual_momentum_group",
+    FeatureGroup.OPEN_INTEREST: "compute_open_interest_group",
+    FeatureGroup.PREMIUM_INDEX: "compute_premium_index_group",
 }
 
 
@@ -1673,6 +1741,11 @@ _MODE_DEFAULTS = {
         "vol_regime_window": SWING_VOL_REGIME_WINDOW,
         # Candle pattern window
         "candle_window": 10,
+        # Open Interest windows
+        "oi_window": SWING_OI_WINDOW,
+        # Premium index windows
+        "basis_window": DEFAULT_BASIS_WINDOW,
+        "basis_threshold_bps": DEFAULT_BASIS_REGIME_THRESHOLD_BPS,
     },
     "SCALP": {
         "n_returns": 12,
@@ -1715,6 +1788,11 @@ _MODE_DEFAULTS = {
         "vol_regime_window": SCALP_VOL_REGIME_WINDOW,
         # Candle pattern window
         "candle_window": 12,
+        # Open Interest windows
+        "oi_window": SCALP_OI_WINDOW,
+        # Premium index windows
+        "basis_window": SCALP_BASIS_WINDOW,
+        "basis_threshold_bps": DEFAULT_BASIS_REGIME_THRESHOLD_BPS,
     },
     "AGGRESSIVE_SCALP": {
         "n_returns": 16,
@@ -1757,6 +1835,11 @@ _MODE_DEFAULTS = {
         "vol_regime_window": AGGRESSIVE_SCALP_VOL_REGIME_WINDOW,
         # Candle pattern window
         "candle_window": 16,
+        # Open Interest windows
+        "oi_window": AGGRESSIVE_SCALP_OI_WINDOW,
+        # Premium index windows
+        "basis_window": AGGRESSIVE_SCALP_BASIS_WINDOW,
+        "basis_threshold_bps": DEFAULT_BASIS_REGIME_THRESHOLD_BPS,
     },
 }
 
@@ -1772,9 +1855,10 @@ def compute_features(
 ) -> FeatureMatrix:
     """Main feature pipeline entry point.
 
-    Computes 9 active feature groups from OHLCV data:
+    Computes 14 active feature groups from OHLCV data:
       RETURNS, VOLATILITY, ATR, MOMENTUM, VOLUME, BREAKOUT, ORDERBOOK,
-      REGIME, CANDLE_PATTERN.
+      REGIME, CANDLE_PATTERN, MTF, SCALP_MOMENTUM, OPEN_INTEREST,
+      PREMIUM_INDEX, RESIDUAL_MOMENTUM.
     Lead-Lag and PERPETUAL_FUNDING are NOT computed (DEFERRED).
 
     Args:
@@ -1787,9 +1871,11 @@ def compute_features(
             Informational only — does not affect computation.
 
     Returns:
-        FeatureMatrix with features dict containing ~54 feature arrays
-        (35 core + 9 OrderBook extended + 6 Regime + 7 Candle Pattern),
-        each of shape (n_bars,). No Lead-Lag columns present.
+        FeatureMatrix with features dict containing ~63 feature arrays
+        (35 core + 9 OrderBook extended + 6 Regime + 7 Candle Pattern
+        + 8 MTF + 5 SCALP Momentum + 4 Open Interest + 5 Premium Index
+        + 4 Residual Momentum), each of shape (n_bars,). No Lead-Lag
+        columns present.
 
     Raises:
         ValueError: if OHLCV data is invalid or mode is unsupported.
@@ -1936,7 +2022,17 @@ def compute_features(
         )
     )
 
-    # 10. SCALP Momentum Group (P0.9G — SCALP-specific momentum enhancers)
+    # 10. MTF Group (multi-timeframe context features)
+    # Resamples internally from primary OHLCV — no extra data needed.
+    if "mtf" in (feature_groups or ["mtf"]):
+        features.update(
+            compute_mtf_group(
+                ohlcv_data=ohlcv_data,
+                mode=mode,
+            )
+        )
+
+    # 11. SCALP Momentum Group (P0.9G — SCALP-specific momentum enhancers)
     if "scalp_momentum" in (feature_groups or ["scalp_momentum"]):
         features.update(
             compute_scalp_momentum_group(
@@ -1944,6 +2040,44 @@ def compute_features(
                 mode=mode,
             )
         )
+
+    # 12. Open Interest Group (4 features — requires 'open_interest' in ohlcv_data)
+    if "open_interest" in (feature_groups or ["open_interest"]):
+        features.update(
+            compute_open_interest_group(
+                ohlcv_data=ohlcv_data,
+                window=defaults.get("oi_window", DEFAULT_OI_WINDOW),
+            )
+        )
+
+    # 13. Premium Index Group (5 features — requires 'premium_close' or 'premium_index')
+    if "premium_index" in (feature_groups or ["premium_index"]):
+        features.update(
+            compute_premium_index_group(
+                ohlcv_data=ohlcv_data,
+                window=defaults.get("basis_window", DEFAULT_BASIS_WINDOW),
+                threshold_bps=defaults.get("basis_threshold_bps", DEFAULT_BASIS_REGIME_THRESHOLD_BPS),
+            )
+        )
+
+    # 14. Residual Momentum Group (Milestone C — beta-adjusted momentum, clustering)
+    # Requires multi-symbol data. When only a single symbol is present,
+    # this group is skipped (it requires at least 2 symbols).
+    if "residual_momentum" in (feature_groups or ["residual_momentum"]):
+        # Build multi-symbol dict if possible; otherwise silently skip
+        symbol_key = ohlcv_data.get("symbol", "UNKNOWN")
+        multi_ohlcv = {symbol_key: ohlcv_data}
+        try:
+            features.update(
+                compute_residual_momentum_group(
+                    multi_ohlcv=multi_ohlcv,
+                    btc_symbol=symbol_key,
+                    beta_window=defaults.get("residual_beta_window", 20),
+                    n_clusters=defaults.get("residual_n_clusters", 3),
+                )
+            )
+        except (ValueError, TypeError, KeyError):
+            pass  # Multi-symbol data not available — skip silently
 
     # Lead-Lag group is DEFERRED — not computed, no columns added.
     # PERPETUAL_FUNDING group is DEFERRED — requires external funding data feed, not OHLCV-only.
@@ -1989,6 +2123,7 @@ def compute_features(
             "cusum": "regime",
             "hmm_": "regime",
             "vol_regime": "regime",
+            "mtf_": "mtf",  # Multi-timeframe features
             "doji": "candle_pattern",
             "engulfing": "candle_pattern",
             "hammer": "candle_pattern",
@@ -2002,6 +2137,18 @@ def compute_features(
             "dark_cloud": "candle_pattern",
             "candle_": "candle_pattern",
             "mom_": "scalp_momentum",       # P0.9G — all mom_* features
+            "open_interest_change": "open_interest",  # #280 OI features
+            "open_interest_volume": "open_interest",  # #280 OI features
+            "open_interest_zscore": "open_interest",  # #280 OI features
+            "basis_ma": "premium_index",             # #280 premium index features
+            "basis_vol": "premium_index",            # #280 premium index features
+            "basis_zscore": "premium_index",         # #280 premium index features
+            "basis_regime": "premium_index",         # #280 premium index features
+            "basis": "premium_index",                # #280 raw basis
+            "residual_beta": "residual_momentum",      # Milestone C
+            "residual_momentum": "residual_momentum",  # Milestone C
+            "cluster_id": "residual_momentum",         # Milestone C
+            "cs_momentum": "residual_momentum",        # Milestone C
         }
         filtered = {}
         for name, arr in features.items():
@@ -2045,7 +2192,10 @@ def compute_features(
             "lead_lag_reason": "P0.9B cross-sectional data dependency",
             "perpetual_funding_status": "DEFERRED",
             "perpetual_funding_reason": "Requires external funding data feed",
-            "active_groups": 9,
+            "active_groups": 14,
+            "residual_momentum_status": "ACTIVE",
+            "open_interest_status": "ACTIVE",
+            "premium_index_status": "ACTIVE",
         },
     )
 

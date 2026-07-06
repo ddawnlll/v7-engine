@@ -1,0 +1,43 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "success"
+scope_confirmation: "Full Milestone A implementation: Maker execution (#11), Fee tier research (#12), Data lake (#280)"
+tasks_completed:
+  - part: "Part 1: Maker execution (#11)"
+    files_changed:
+      - "simulation/contracts/models.py (added ExecutionMode enum)"
+      - "simulation/engine/costs.py (added execution_mode, maker_fill_probability params to fee_cost_r, total_cost_r)"
+      - "simulation/docs/cost_model.md (documented execution modes)"
+      - "simulation/validation/cost_stress.py (fixed __defaults__ patching for new parameter count)"
+  - part: "Part 2: Fee tier research (#12)"
+    files_changed:
+      - "simulation/docs/fee_optimization_research.md (created with Binance/OKX/Bybit tiers, BNB discount, VIP scenarios)"
+  - part: "Part 3: Data lake (#280)"
+    files_changed:
+      - "scripts/download_open_interest.py (created — follows funding_rates.py pattern)"
+      - "scripts/download_premium_index.py (created — premiumIndexKlines endpoint)"
+      - "scripts/download_binance.py (added XRP,DOGE,ADA,AVAX,LINK,DOT to default symbols)"
+      - "alphaforge/src/alphaforge/features/open_interest.py (created — OI change, OI-volume ratio, OI z-score, OI change pct)"
+      - "alphaforge/src/alphaforge/features/premium_index.py (created — basis, basis MA/vol/zscore/regime)"
+      - "alphaforge/src/alphaforge/features/__init__.py (exported new modules)"
+      - "alphaforge/src/alphaforge/features/pipeline.py (added FeatureGroup entries, FEATURE_GROUP_MAP entries, wired into compute_features, mode defaults)"
+decisions_locked:
+  - "ExecutionMode enum and maker fee model are additive — existing TAKER default is unchanged"
+  - "Original fee_cost_r / total_cost_r signatures retain backward compatibility via keyword defaults"
+  - "OI and Premium Index groups are ACTIVE by default (included when feature_groups=None)"
+  - "New groups gracefully degrade to NaN arrays when their data keys are absent from ohlcv_data"
+remaining_holds:
+  - "Numba JIT warmup on first call for new feature groups may add latency (no perf regression on subsequent calls)"
+  - "download_open_interest.py and download_premium_index.py are untested against live API (require Binance endpoint access)"
+safe_next_step: "Run fee tier scenarios against simulation profiles to quantify net R impact for Milestone A target (18-20%)"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest simulation/tests/ -q -x (412 passed)"
+  - "PYTHONPATH=alphaforge/src:$PYTHONPATH python3 -m pytest alphaforge/tests/test_funding_features.py alphaforge/tests/test_pipeline.py -q -x (20 passed)"
+  - "PYTHONPATH=. python3 -m pytest simulation/tests/test_import_boundary.py -q -x (2 passed)"
+evidence:
+  - "ExecutionMode.TAKER produces identical fee output to old taker-only code (verified — same default behavior)"
+  - "Maker mode effective_fee = maker + (taker - maker) * (1 - 0.7) = 2.6 bps at default fill prob"
+  - "OI group returns NaN arrays when ohlcv_data lacks 'open_interest' key (graceful degradation)"
+  - "Premium Index group returns NaN arrays when ohlcv_data lacks 'premium_close' key (graceful degradation)"
+  - "All new feature arrays match input length (verified — 100 bar test)"
+  - "cost_stress.py __defaults__ patching updated from 4-element tuple to 7-element tuple matching new signature"

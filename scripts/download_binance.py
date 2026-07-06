@@ -418,7 +418,7 @@ async def main_async(args: argparse.Namespace) -> list[dict]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="MAX-PERF Binance Vision download")
-    parser.add_argument("--symbols", default="BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT")
+    parser.add_argument("--symbols", default="BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT")
     parser.add_argument("--intervals", default="1h")
     parser.add_argument("--start-year", type=int, default=2023)
     parser.add_argument("--start-month", type=int, default=1)
