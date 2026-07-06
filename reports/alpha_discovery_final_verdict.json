@@ -1,0 +1,70 @@
+{
+  "experiment": "5 profitable alpha discovery - final report",
+  "modes_tested": [
+    "SCALP",
+    "SWING",
+    "AGGRESSIVE_SCALP"
+  ],
+  "combinations_tested": 15,
+  "internet_resources": {
+    "arxiv_api": "429 rate-limited",
+    "semantic_scholar": "429 rate-limited",
+    "google_scholar": "blocked",
+    "binance_api": "success (funding rates)",
+    "arxiv_pdf": "success (single paper)"
+  },
+  "profitable_alphas_found": 2,
+  "reliable": [
+    {
+      "name": "multi_symbol_all_features",
+      "mode": "SCALP",
+      "net_r": 0.006332,
+      "improvement": "+73%",
+      "trades": 13537,
+      "exposure": "57.1%"
+    },
+    {
+      "name": "momentum_spillover",
+      "mode": "SCALP",
+      "net_r": 0.006273,
+      "improvement": "+72%",
+      "features": "returns,momentum"
+    }
+  ],
+  "marginal": [
+    {
+      "name": "breakout+momentum",
+      "net_r": 0.00784,
+      "note": "sadece 9 trade"
+    },
+    {
+      "name": "momentum+orderbook",
+      "net_r": 0.004937,
+      "note": "sadece 15 trade"
+    },
+    {
+      "name": "aggressive_scalp_all",
+      "net_r": 0.000759,
+      "note": "62 trade"
+    },
+    {
+      "name": "BTC+ETH all",
+      "net_r": 0.003721,
+      "note": "67 trade"
+    },
+    {
+      "name": "SWING momentum",
+      "net_r": 0.004373,
+      "note": "28 trade"
+    }
+  ],
+  "failed": [
+    "All other combos (8 total) negative",
+    "SCALP orderbook/volume/candle/regime/funding alone: negative",
+    "SWING all features: negative",
+    "ETH-only: negative"
+  ],
+  "verdict": "5 independent profitable SCALP alphas not possible with current feature set. Only 2 reliable, 4 marginal (undertraded). Crypto 1h market has weak signal-to-noise.",
+  "exa_mcp": "NOT AVAILABLE in tool list. Could not use. webfetch used as alternative.",
+  "worktrees": "5 created, guards applied, all verified."
+}
