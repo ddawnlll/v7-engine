@@ -609,6 +609,104 @@ def build_aligned_training_frame(
 # Walk-forward validation
 # ---------------------------------------------------------------------------
 
+def _select_nested_thresholds(
+    fold_preds: list[np.ndarray],
+    fold_y_class: list[np.ndarray],
+    fold_y_val: list[np.ndarray],
+    wfv_results: list[dict],
+    action_net: np.ndarray,
+    thresholds: list[float],
+) -> tuple[list[float], float, list[dict]]:
+    """Nested (leakage-free) per-fold threshold selection.
+
+    For each fold k, selects threshold using only folds 0..k-1 data,
+    evaluated by net expectancy R (not accuracy). Fold 0 gets the
+    most conservative (highest) threshold.
+
+    Returns:
+        per_fold_choices: threshold selected per fold.
+        final_threshold: median of per_fold_choices.
+        per_fold_eval: list of per-fold evaluation dicts.
+    """
+    from alphaforge.reports.metrics import compute_oos_metrics
+
+    per_fold_choices: list[float] = []
+    per_fold_eval: list[dict] = []
+
+    for k in range(len(fold_preds)):
+        fr = wfv_results[k]
+        fold_prob = fold_preds[k]
+        fold_yc = fold_y_class[k]
+        fold_yv = fold_y_val[k]
+        vs = fr["effective_val_start"]
+        ve = fr["val_end"]
+        fold_anet = action_net[vs:ve]
+
+        # Select threshold using prior folds only
+        if k == 0:
+            sel_thresh = thresholds[-1]  # Most conservative
+        else:
+            prior_probs = np.concatenate(fold_preds[:k])
+            prior_yc = np.concatenate(fold_y_class[:k])
+            prior_parts = [
+                action_net[wfv_results[j]["effective_val_start"]:wfv_results[j]["val_end"]]
+                for j in range(k)
+            ]
+            prior_anet = np.concatenate(prior_parts, axis=0)
+
+            best_r, best_t = -999.0, thresholds[-1]
+            for th in thresholds:
+                y_adj = prior_yc.copy()
+                lc = prior_probs < th
+                y_adj[lc] = 2
+                active = (~lc).sum()
+                if active == 0:
+                    continue
+                adj_labels = np.array(
+                    ["LONG_NOW" if p == 0 else "SHORT_NOW" if p == 1 else "NO_TRADE" for p in y_adj],
+                    dtype=object,
+                )
+                adj_r = prior_anet[np.arange(len(y_adj)), y_adj]
+                m = compute_oos_metrics(adj_labels.tolist(), adj_r.tolist(), fee_pct=0.0)
+                nr = float(m.get("avg_net_R_per_active_trade", -999.0))
+                if nr > best_r:
+                    best_r, best_t = nr, th
+            sel_thresh = best_t
+
+        per_fold_choices.append(sel_thresh)
+
+        # Evaluate on fold k
+        y_eval = fold_yc.copy()
+        lc_eval = fold_prob < sel_thresh
+        y_eval[lc_eval] = 2
+        active_count = int((~lc_eval).sum())
+        no_trade_count = int(lc_eval.sum())
+        total = len(y_eval)
+        exposure = 100.0 * active_count / total if total else 0.0
+        acc = float(np.mean(y_eval == fold_yv)) if total else 0.0
+
+        eval_labels = np.array(
+            ["LONG_NOW" if p == 0 else "SHORT_NOW" if p == 1 else "NO_TRADE" for p in y_eval],
+            dtype=object,
+        )
+        eval_r = fold_anet[np.arange(len(y_eval)), y_eval]
+        eval_metrics = compute_oos_metrics(eval_labels.tolist(), eval_r.tolist(), fee_pct=0.0)
+        fold_net_r = float(eval_metrics.get("avg_net_R_per_active_trade", 0.0))
+
+        per_fold_eval.append({
+            "fold": k + 1,
+            "threshold": sel_thresh,
+            "accuracy": round(acc, 4),
+            "net_expectancy_r": round(fold_net_r, 6),
+            "active_trades": active_count,
+            "no_trade_count": no_trade_count,
+            "exposure_pct": round(exposure, 2),
+        })
+
+    final_threshold = float(np.median(per_fold_choices)) if per_fold_choices else thresholds[0]
+    return per_fold_choices, final_threshold, per_fold_eval
+
+
 def _compute_stability(values: list[float]) -> float:
     if not values:
         return 0.0
@@ -1169,12 +1267,12 @@ def main():
 
     # Step 4: Walk-forward validation
     if args.threshold_sweep:
-        # â”€â”€ Threshold Sweep (train once, sweep thresholds on saved preds) â”€â”€
+        # Nested Threshold Sweep (leakage-free per-fold)
         thresholds = [float(t.strip()) for t in args.threshold_sweep.split(",")]
         thresholds = sorted(set(thresholds))
-        print(f"\n{'='*60}")
-        print(f"  THRESHOLD SWEEP â€” {len(thresholds)} thresholds")
-        print(f"{'='*60}")
+        print(f"\n{'='*70}")
+        print(f"  NESTED THRESHOLD SWEEP — {len(thresholds)} thresholds")
+        print(f"{'='*70}")
 
         wfv_results, fold_preds, fold_y_class, fold_y_val = walk_forward_validate(
             X_clean, y_clean, label_net_clean, mode, min_folds=args.folds,
@@ -1182,46 +1280,23 @@ def main():
             return_raw_preds=True,
         )
 
-        all_probs = np.concatenate(fold_preds)
-        all_y_class = np.concatenate(fold_y_class)
-        all_y_val = np.concatenate(fold_y_val)
+        per_fold_choices, final_threshold, per_fold_eval = _select_nested_thresholds(
+            fold_preds, fold_y_class, fold_y_val, wfv_results,
+            action_net_clean, thresholds,
+        )
 
-        print("{:<10s}  {:<8s}  {:<10s}  {:<10s}  {:<10s}".format(
-            "Threshold", "OOS Acc", "Trades", "Exposure", "No-trade"
+        print("{:<6s}  {:<10s}  {:<10s}  {:<12s}  {:<8s}  {:<10s}".format(
+            "Fold", "Threshold", "Fold Acc", "Fold NetR", "Active", "Exposure"
         ))
-        print(f"{'-'*50}")
-
-        sweep_results = []
-        for thresh in thresholds:
-            y_pred_adj = all_y_class.copy()
-            low_conf = all_probs < thresh
-            y_pred_adj[low_conf] = 2
-
-            active_count = int((~low_conf).sum())
-            no_trade_count = int(low_conf.sum())
-            total = len(y_pred_adj)
-            exposure = 100.0 * active_count / total if total else 0.0
-            acc = float(np.mean(y_pred_adj == all_y_val)) if total else 0.0
-
-            print(f"{thresh:<8.2f}  {acc:<8.4f}  {active_count:<10d}  {exposure:<9.2f}%  {no_trade_count:<10d}")
-            sweep_results.append({
-                "threshold": thresh,
-                "oos_accuracy": round(acc, 4),
-                "active_trades": active_count,
-                "exposure_pct": round(exposure, 2),
-                "no_trade_count": no_trade_count,
-            })
-
-        print(f"{'-'*50}")
-        viable = [r for r in sweep_results if r["exposure_pct"] > 10.0]
-        if viable:
-            best = max(viable, key=lambda r: r["oos_accuracy"])
-            print(f"  Suggested threshold: {best['threshold']:.2f} "
-                  f"(acc={best['oos_accuracy']:.4f}, "
-                  f"exposure={best['exposure_pct']:.1f}%)")
-        else:
-            print(f"  No threshold achieves >10% exposure")
-        print(f"{'='*60}\n")
+        print(f"{'-'*70}")
+        for ev in per_fold_eval:
+            print(f"{ev['fold']:<6d}  {ev['threshold']:<10.2f}  {ev['accuracy']:<10.4f}  "
+                  f"{ev['net_expectancy_r']:<12.6f}  {ev['active_trades']:<8d}  {ev['exposure_pct']:<9.2f}%")
+        print(f"{'-'*70}")
+        print(f"  Per-fold thresholds: {[f'{t:.2f}' for t in per_fold_choices]}")
+        print(f"  Final threshold (median): {final_threshold:.2f}")
+        print(f"  NOTE: k=2 purge/embargo multiplier is HOLD — empirical calibration pending.")
+        print(f"{'='*70}\n")
     else:
         print(f"\n[4/6] Walk-forward validation ({args.folds} folds, anchored expanding)...")
         t0 = time.time()
