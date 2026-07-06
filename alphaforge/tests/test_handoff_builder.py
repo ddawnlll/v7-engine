@@ -79,6 +79,12 @@ def _make_empirical_mrr(
                 "edge_only_in_rare_regime": edge_only_in_rare_regime,
             },
             "no_trade_comparison": {"active_beats_no_trade": True},
+            "multiple_hypothesis_control": {
+                "correction_method": "Bonferroni",
+                "tested_hypothesis_count": 1,
+                "rejected_candidate_count": 0,
+                "p_values": [],
+            },
         }
         if extra:
             wfv.update(extra)
@@ -133,6 +139,9 @@ def _make_empirical_mrr(
         "multiple_hypothesis_control": {
             "correction_method": "Bonferroni",
             "data_snooping_risk_flag": "LOW",
+            "pbo_or_backtest_overfit_risk": "LOW",
+            "deflated_sharpe_or_equivalent": 0.5,
+            "mht_computed_for_real": True,
         },
         "verdict": verdict,
         "blocked_scopes": ["Test scope"],
@@ -255,8 +264,18 @@ class TestEmpiricalHandoffBuilder:
             )
 
     def test_g0_g1_pass_for_promotion_candidate(self):
-        """G0 (DOC_READY) and G1 (RESEARCH_BACKTEST) PASS for CANDIDATE_FOR_V7_GATES."""
-        handoff = self._make_handoff("SWING", verdict="CANDIDATE_FOR_V7_GATES")
+        """G0 (DOC_READY) and G1 (RESEARCH_BACKTEST) PASS for CANDIDATE_FOR_V7_GATES.
+
+        P0.9F: G1 now requires PBO/DS checks. Patch _MHT_AVAILABLE so
+        the builder generates real MHT data and G1 can PASS.
+        """
+        import alphaforge.reports.empirical as mod_emp
+        orig = mod_emp._MHT_AVAILABLE
+        mod_emp._MHT_AVAILABLE = True
+        try:
+            handoff = self._make_handoff("SWING", verdict="CANDIDATE_FOR_V7_GATES")
+        finally:
+            mod_emp._MHT_AVAILABLE = orig
         gm = handoff["v7_gate_mapping"]
         assert gm["G0_doc_ready"]["status"] == "PASS"
         assert gm["G1_research_backtest"]["status"] == "PASS"

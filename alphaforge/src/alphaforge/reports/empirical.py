@@ -642,6 +642,7 @@ def _build_empirical_mht_control(
         "pbo_or_backtest_overfit_risk": pbo_risk,
         "trial_count_disclosure": trial_count,
         "rejected_candidate_count": rejected_count,
+        "mht_computed_for_real": _MHT_AVAILABLE,
         "notes": notes,
     }
 

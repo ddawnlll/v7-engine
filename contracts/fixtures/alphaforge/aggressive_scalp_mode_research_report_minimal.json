@@ -109,6 +109,7 @@
     "corrected_significance": null,
     "data_snooping_risk_flag": "CRITICAL",
     "deflated_sharpe_or_equivalent": null,
+    "mht_computed_for_real": false,
     "notes": "P0.8E: MHT field added. High dimensionality at 15m makes MHT critical."
   },
   "verdict": "CONTINUE_RESEARCH",

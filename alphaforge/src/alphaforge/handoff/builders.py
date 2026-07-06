@@ -80,21 +80,53 @@ def _gate_g0(report: dict) -> tuple[str, str]:
 
 
 def _gate_g1(report: dict) -> tuple[str, str]:
-    """G1: RESEARCH_BACKTEST — initial backtest metrics."""
+    """G1: RESEARCH_BACKTEST — initial backtest metrics.
+
+    P0.9F: Strengthened — PASS requires:
+      1. Verdict is positive (CONTINUE_RESEARCH / BASELINE_VALID / CANDIDATE_FOR_V7_GATES)
+      2. MHT was computed for real (mht_computed_for_real == True)
+      3. PBO risk is LOW or MEDIUM (not HIGH, CRITICAL, or NOT_RUN)
+      4. Deflated Sharpe > 0.0
+
+    Fail-closed: when mht_computed_for_real is False (fallback identity),
+    this gate NEVER passes regardless of reported PBO/deflated Sharpe values.
+    """
     metrics = report.get("metrics", {})
     oos_r = metrics.get("oos_expectancy_r", {}).get("value", 0.0)
     oos_s = metrics.get("oos_sharpe", {}).get("value", 0.0)
     oos_t = metrics.get("oos_trade_count", 0)
+
+    mht = report.get("multiple_hypothesis_control", {})
+    pbo_risk = mht.get("pbo_or_backtest_overfit_risk", "NOT_RUN")
+    deflated_sharpe = mht.get("deflated_sharpe_or_equivalent")
+    mht_real = mht.get("mht_computed_for_real", False)
+
     evidence = (
         f"RESEARCH_BACKTEST evidence from {report.get('report_id', 'unknown')}: "
         f"oos_expectancy_r={oos_r:.4f}R, "
         f"oos_sharpe={oos_s:.4f}, "
-        f"oos_trade_count={oos_t}"
+        f"oos_trade_count={oos_t}, "
+        f"pbo_risk={pbo_risk}, "
+        f"deflated_sharpe={deflated_sharpe}, "
+        f"mht_computed_for_real={mht_real}"
     )
+
     verdict = report.get("verdict", "")
-    status = "PASS" if verdict in (
+    verdict_ok = verdict in (
         "CONTINUE_RESEARCH", "BASELINE_VALID", "CANDIDATE_FOR_V7_GATES",
-    ) else "PENDING"
+    )
+
+    # Fail-closed: MHT must be real
+    if not mht_real:
+        return evidence, "PENDING"
+
+    # PBO must be LOW or MEDIUM
+    pbo_ok = pbo_risk in ("LOW", "MEDIUM")
+
+    # Deflated Sharpe must be positive
+    ds_ok = deflated_sharpe is not None and deflated_sharpe > 0.0
+
+    status = "PASS" if (verdict_ok and pbo_ok and ds_ok) else "PENDING"
     return evidence, status
 
 
@@ -470,6 +502,13 @@ def build_empirical_handoff_package(
         "G7-G10 infrastructure not yet built — shadow, paper, live cannot be evaluated",
     ]
 
+    # --- MHT overfit evidence (for Rule 7) ---
+    _mht = mode_research_report.get("multiple_hypothesis_control", {})
+    _mht_real = _mht.get("mht_computed_for_real", False)
+    _mht_pbo_risk = _mht.get("pbo_or_backtest_overfit_risk", "NOT_RUN")
+    _mht_ds = _mht.get("deflated_sharpe_or_equivalent")
+    _gate_g1_status = _gate_g1(mode_research_report)[1]
+
     # --- Build rejections rules applied ---
     rejection_rules_applied = [
         "Rule 1 (Missing evidence): PASSED — ModeResearchReport present",
@@ -480,7 +519,10 @@ def build_empirical_handoff_package(
         "Rule 6 (Cost vulnerability): "
         f"{'PASSED' if _gate_g3(mode_research_report)[1] == 'PASS' else 'PENDING'} — "
         f"combined_stress_edge_survives={mode_research_report.get('cost_stress', {}).get('combined_stress_edge_survives', False)}",
-        f"Rule 7 (Overfit detected): deferred — overfit check needs ValidationReport",
+        f"Rule 7 (Overfit detected): {_gate_g1_status} — "
+        f"pbo_risk={_mht_pbo_risk}, "
+        f"deflated_sharpe={_mht_ds}, "
+        f"mht_computed_for_real={_mht_real}",
         "Rule 8 (Single-symbol overfitting): "
         f"{'PASSED' if _gate_g5(mode_research_report)[1] == 'PASS' else 'PENDING'} — "
         f"symbols_tested={len(mode_research_report.get('data_scope', {}).get('symbols', []))}",

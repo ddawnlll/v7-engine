@@ -301,6 +301,10 @@
         "notes": {
           "type": "string",
           "description": "Additional notes on MHT methodology or limitations."
+        },
+        "mht_computed_for_real": {
+          "type": "boolean",
+          "description": "P0.9F: Whether MHT values were computed from real statistical functions (True) or fallback identity/no-op (False). When False, G1 gate must NOT PASS regardless of reported values."
         }
       }
     }

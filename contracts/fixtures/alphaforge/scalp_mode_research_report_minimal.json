@@ -109,6 +109,7 @@
     "corrected_significance": null,
     "data_snooping_risk_flag": "HIGH",
     "deflated_sharpe_or_equivalent": null,
+    "mht_computed_for_real": false,
     "notes": "Dummy fixture — no real hypothesis testing. P0.8E: MHT field added."
   },
   "verdict": "CONTINUE_RESEARCH",

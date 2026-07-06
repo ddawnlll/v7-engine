@@ -107,6 +107,7 @@
     "corrected_significance": null,
     "data_snooping_risk_flag": "MEDIUM",
     "deflated_sharpe_or_equivalent": null,
+    "mht_computed_for_real": false,
     "notes": "P0.8E: MHT field added."
   },
   "verdict": "BASELINE_WEAK",
