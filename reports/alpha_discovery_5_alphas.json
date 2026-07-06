@@ -1,0 +1,86 @@
+{
+  "experiment": "5 Alpha Discovery",
+  "date": "2026-07-06",
+  "mode": "SCALP",
+  "symbols": "BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT",
+  "baseline_net_r": 0.003656,
+  "guard_system": "P0.9F/G (all 5 guards active)",
+  "internet_resources": "webfetch (Binance API funding rates)",
+  "alphas": [
+    {
+      "id": 1,
+      "name": "momentum_spillover",
+      "features": "returns,momentum",
+      "net_r": 0.006273,
+      "result": "PASS"
+    },
+    {
+      "id": 2,
+      "name": "orderflow_breakout",
+      "features": "orderbook,breakout",
+      "net_r": -0.003213,
+      "result": "FAIL"
+    },
+    {
+      "id": 3,
+      "name": "volume_profile",
+      "features": "volume,volatility",
+      "net_r": -0.001827,
+      "result": "FAIL"
+    },
+    {
+      "id": 4,
+      "name": "volatility_regime",
+      "features": "regime,volatility,breakout",
+      "net_r": -0.002108,
+      "result": "FAIL"
+    },
+    {
+      "id": 5,
+      "name": "candle_reversal",
+      "features": "candle_pattern,returns",
+      "net_r": -0.008669,
+      "result": "FAIL"
+    }
+  ],
+  "passed": [
+    {
+      "id": 1,
+      "name": "momentum_spillover",
+      "features": "returns,momentum",
+      "net_r": 0.006273,
+      "result": "PASS"
+    }
+  ],
+  "failed": [
+    {
+      "id": 2,
+      "name": "orderflow_breakout",
+      "features": "orderbook,breakout",
+      "net_r": -0.003213,
+      "result": "FAIL"
+    },
+    {
+      "id": 3,
+      "name": "volume_profile",
+      "features": "volume,volatility",
+      "net_r": -0.001827,
+      "result": "FAIL"
+    },
+    {
+      "id": 4,
+      "name": "volatility_regime",
+      "features": "regime,volatility,breakout",
+      "net_r": -0.002108,
+      "result": "FAIL"
+    },
+    {
+      "id": 5,
+      "name": "candle_reversal",
+      "features": "candle_pattern,returns",
+      "net_r": -0.008669,
+      "result": "FAIL"
+    }
+  ],
+  "summary": "1/5 alphas profitable. momentum_spillover exceeds 50% target at +71.58%. Other feature groups alone are unprofitable for SCALP."
+}
