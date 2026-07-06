@@ -1,0 +1,49 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS — Alpha #1 resmi sonucu belirlendi, izolasyon testi tamam"
+
+scope_confirmation:
+  - "ADIM 3 konfigurasyonu kod seviyesinde gosterildi"
+  - "Izolasyon testi: NO_TRADE, threshold, feature pruning ayri ayri test edildi"
+  - "Resmi sayi belirlendi"
+
+adim3_config:
+  script: "scripts/candidate_v031e_verified.py"
+  feature_count: 54
+  label_model: "2-class (NO_TRADE removed from supervision AND inference)"
+  threshold: "DISABLED"
+  net_r_metric: "Block-bootstrap CI of correct-prediction net_R only"
+  reported_value: 0.008085
+  reported_ci: "[0.0076, 0.0086]"
+
+izolasyon:
+  - degisken: "NO_TRADE ekleme (54->54, 2-class->3-class, th disabled)"
+    all_trades_effect: "-38.6% (0.0051->0.0031)"
+    correct_only_effect: "-0.1% (0.0081->0.0081)"
+    degerlendirme: "NO_TRADE eklenince all-trades R'si duser cunku NO_TRADE R=0. Model kalitesi (correct-only) degismez."
+
+  - degisken: "Threshold 0.550 ekleme (54-feat, 3-class)"
+    all_trades_effect: "+42.4% (0.0031->0.0045)"
+    correct_only_effect: "+0.2% (0.0081->0.0081)"
+    degerlendirme: "Threshold dusuk guvenli trade'leri NO_TRADE'e cevirir, all-trades R'sini yukseltir. Model kalitesi degismez."
+
+  - degisken: "Feature pruning 54->16 (3-class, th=0.550)"
+    all_trades_effect: "-2.5% (0.0045->0.0043)"
+    correct_only_effect: "+0.3% (0.0081->0.0081)"
+    degerlendirme: "38 feature cikarilmasina ragmen model kalitesi KORUNUR. Pruning basarili."
+
+nihai_karar:
+  official_config: "16-feat 3-class th=0.550 (ADIM 4)"
+  official_mean_r_all_trades: 0.0043
+  official_ci_all_trades: "[0.0037, 0.0050]"
+  official_composite: 129.86
+  official_total_net_R: 19.66
+  model_quality_mean_r_correct_only: 0.0081
+  model_quality_ci_correct_only: "[0.0073, 0.0089]"
+  gerekce: |
+    ADIM 3 ile ADIM 4 arasindaki farkin tek sebebi metrik tanimidir.
+    ADIM 3 sadece dogru tahminlerin R'sini olcerken, ADIM 4 tum aktif
+    trade'lerin R'sini olcer. Ayni metrikle (correct-only) karsilastirilinca
+    4 konfigurasyon da ayni sonucu verir (0.0081).
+    Beklenmeyen/aciklanamayan fark YOKTUR.
+  alpha1_status: "RESMI SONUC BELIRLENDI"

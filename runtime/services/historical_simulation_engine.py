@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 import uuid
+import warnings
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -25,12 +26,6 @@ from runtime.services.binance_client import fetch_klines_range
 from runtime.runtime.htf import resolve_htf_interval
 from runtime.services.indicator_snapshot import build_indicator_snapshot
 from runtime.services.incremental_indicators import extract_snapshot, precompute_all_indicators
-from v6.contracts.analysis_request import ExecutionContextSection, RuntimeContextSection
-from v6.contracts.compat import to_v5_request
-from v6.contracts.enums import RequestKind
-from v6.runtime.request_assembler import build_analysis_request
-from v6.snapshot.builder import UnifiedSnapshotBuilder
-from v6.snapshot.modes import SnapshotMode
 
 
 def _parse_dt(value: str) -> datetime:
@@ -190,10 +185,19 @@ class HistoricalSimulationEngine:
         analyzer: Any | None = None,
         snapshot_builder: Callable[[pd.DataFrame], dict[str, Any]] | None = None,
     ) -> None:
+        warnings.warn(
+            'HistoricalSimulationEngine is deprecated. Use ReplayBackedSimulationOrchestrator instead.',
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.candle_loader = candle_loader or HistoricalCandleLoader()
         self.analyzer = analyzer
         self.snapshot_builder = snapshot_builder or build_indicator_snapshot
-        self.unified_snapshot_builder = UnifiedSnapshotBuilder() if analyzer is None else None
+        self.unified_snapshot_builder = None
+        if analyzer is None:
+            from v6.snapshot.builder import UnifiedSnapshotBuilder
+
+            self.unified_snapshot_builder = UnifiedSnapshotBuilder()
         # Pre-computed indicator cache (set per symbol/interval run)
         self._indicator_frame: pd.DataFrame | None = None
 
@@ -579,6 +583,12 @@ class HistoricalSimulationEngine:
 
         raw_candles = self._raw_candles(window or frame.iloc[:idx + 1])
         raw_htf_candles = {htf_interval: self._raw_candles(htf_window)} if htf_interval and htf_window is not None and not htf_window.empty else {}
+        from v6.contracts.analysis_request import ExecutionContextSection, RuntimeContextSection
+        from v6.contracts.compat import to_v5_request
+        from v6.contracts.enums import RequestKind
+        from v6.runtime.request_assembler import build_analysis_request
+        from v6.snapshot.modes import SnapshotMode
+
         snapshot_artifact = self.unified_snapshot_builder.build(
             symbol=symbol,
             interval=interval,

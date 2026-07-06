@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  DEPRECATED: Sentetik veri kullanir.                      ║
+# ╚══════════════════════════════════════════════════════════════╝
+
 """TR-05: Train SWING mode XGBoost baseline model.
 
 Uses the existing feature pipeline to compute features from synthetic OHLCV data,

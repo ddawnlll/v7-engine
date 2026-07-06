@@ -1,4 +1,9 @@
 """AlphaForge Profitability v0.1 — A/B Karşılaştırma Scripti
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  DEPRECATED: Sentetik veri kullanir.                      ║
+# ║  Gercek veri icin scripts/candidate_v031e_verified.py     ║
+# ╚══════════════════════════════════════════════════════════════╝
+
 
 Baseline (eski feature'lar):
   RETURNS, VOLATILITY, ATR, MOMENTUM, VOLUME, BREAKOUT

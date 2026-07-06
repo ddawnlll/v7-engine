@@ -143,6 +143,14 @@ check-authority:
 	fi
 	@echo ""
 
+# ====================================================================
+# Real data guard — prevent synthetic data in handoff/candidate files
+# ====================================================================
+check-real-data:
+	@echo "=== Checking real data compliance ==="
+	@PYTHONPATH=. python3 scripts/check_real_data_required.py --all && echo "  ✅ All files use real data." || (echo "  ❌ Real data check failed."; exit 1)
+	@echo ""
+
 typecheck:
 	@echo "Running mypy..."
 	@mypy lib/ --ignore-missing-imports --no-strict-optional 2>/dev/null || echo "  mypy not installed, skipping"

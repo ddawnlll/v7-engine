@@ -85,6 +85,9 @@ def run_discovery(config: DiscoveryConfig) -> DiscoveryResult:
                 symbols=tuple(symbols),
                 random_seed=config.random_seed,
             )
+        if not config.use_synthetic:
+            from lib.data_lake.guard import assert_real_data
+            assert_real_data(ohlcv)
         n_bars_total = len(ohlcv["close"])
         logger.info("  %d bars, %d symbols", n_bars_total, len(symbols))
 

@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  DEPRECATED: Sentetik veri kullanir.                      ║
+# ║  Gercek veri icin scripts/phase_reality_complete.py       ║
+# ║  veya scripts/candidate_v031e_verified.py kullanin.       ║
+# ╚══════════════════════════════════════════════════════════════╝
+
 """Phase 2 - Iteration 2: Confidence-Based Graduated Position Sizing.
 
 Tek degisken: Position sizing fonksiyonu (confidence -> weight multiplier).

@@ -1,0 +1,54 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS — Real data dogrulamasi: Alpha #1 korunur, feature set 54->16, threshold 0.550"
+
+scope_confirmation:
+  - "ADIM 1: Worktree data_lake snapshots dogrulandi — 4 sembol (BTCUSDT/ETHUSDT/SOLUSDT/BNBUSDT), 1h interval, 2023-2026, tum worktreeler ozdes"
+  - "ADIM 2: Data_lake -> data/raw/ kopyalandi, load_cached_data() ile okunabilirligi dogrulandi"
+  - "ADIM 3: candidate_v031e_verified.py calistirildi — Phase 1 audit: gross/net, block-bootstrap CI. 6/6 fold pozitif, aggregate CI=[0.0076, 0.0086]"
+  - "ADIM 4: Phase 2-3 real data ile tekrarlandi: feature ablation (54->16) + threshold optimizasyonu (selected=0.550)"
+  - "TEST kurali: test set'ine SADECE 1 KEZ dokunuldu"
+
+files_changed:
+  - "scripts/restore_real_data.py — YENI: data_lake -> data/raw/ donusturucu"
+  - "scripts/candidate_v031e_verified.py — YENI: Phase 1 audit eklenmis candidate"
+  - "scripts/phase_reality_complete.py — YENI: Phase 2-3 real data ile"
+  - "reports/phase_reality_complete.json — YENI: Phase 2-3 sonuclari"
+  - "reports/phase_reality_complete.accp.yaml — bu rapor"
+  - "reports/candidates/alphaforge_scalp_1h_direction_v01_verified.json — YENI: Phase 1 auditli candidate"
+  - "reports/candidates/alphaforge_scalp_1h_direction_v01_verified.md — YENI: Phase 1 auditli candidate md"
+  - "data/raw/{BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT}/*.parquet — YENI: restor edilmis gercek veri"
+
+decisions_locked:
+  - "LOCKED: Alpha #1 dogrulandi — real binance data, 6-fold WFV, tum fold'lar pozitif CI"
+  - "LOCKED: Feature set = 16 (DoubleEnsemble shuffle ablation, %2 esik, real data)"
+  - "LOCKED: Threshold = 0.550 (val grid optimum, test'te generalize ediyor)"
+  - "LOCKED: Synthetic data sonuclari (32 feature, 0.715 threshold) GECERSIZ"
+  - "LOCKED: Nihai test composite (real data) = 129.47, CI = [0.0037, 0.0050] fully positive"
+
+remaining_holds:
+  - "bb_position %97.3 dominance = concentration risk (real data'da da gecerli)"
+  - "Test composite (129.47) synthetic'ten (223.02) dusuk — gercek veri daha sert"
+  - "4 sembol — cross-sectional multi-symbol genisletme gerekebilir"
+  - "Real market data coverage: 2023-2026 (1h), funding rate vs perp farki modellenmemis"
+  - "XGBoost softmax calibration not validated"
+  - "G7-G10 gates not evaluated"
+
+safe_next_step:
+  - "bb_position dominance analysis — single-feature failure mode test on real data"
+  - "Regime breakdown analysis (G4 gate) with real market regime data"
+  - "Symbol stability analysis (G5 gate) across all 4 symbols"
+  - "Calibration reliability (G6 gate) — platt scaling / isotonic regression"
+
+commands_run:
+  - "python3 scripts/restore_real_data.py"
+  - "PYTHONPATH=... python3 scripts/candidate_v031e_verified.py"
+  - "PYTHONPATH=... python3 scripts/phase_reality_complete.py"
+
+evidence:
+  - "Veri: 118.276 bar (4 sembol × ~29.500 bar/sembol), BTCUSDT+ETHUSDT+SOLUSDT+BNBUSDT, 1h, 2023-2026"
+  - "Phase 1: 6/6 fold pozitif net_R, aggregate net_R=0.008085, CI=[0.0076, 0.0086]"
+  - "Phase 2: 54->16 feature (38 removed <2% shuffle impact), val composite 465.00->533.66 (+14.77%)"
+  - "Phase 3 val grid: 0.385->591, 0.440->662, 0.495->617, 0.550->710, 0.605->584, 0.660->582, 0.715->534"
+  - "Phase 3 test @ 0.550: composite=129.47, total_net_R=19.66, max_DD=0.152, CI=[0.0037, 0.0050]"
+  - "KARSILASTIRMA: synthetic 32-feat@0.715 test=223.02 vs real 16-feat@0.550 test=129.47"

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC
+from datetime import timezone
 from typing import Any
 
 import numpy as np
@@ -76,7 +76,7 @@ def _ultimate_oscillator(high: pd.Series, low: pd.Series, close: pd.Series) -> p
 def _session_label(timestamp: pd.Timestamp | None) -> tuple[str | None, float | None]:
     if timestamp is None:
         return None, None
-    hour = timestamp.tz_convert(UTC).hour if timestamp.tzinfo else timestamp.hour
+    hour = timestamp.tz_convert(timezone.utc).hour if timestamp.tzinfo else timestamp.hour
     if 7 <= hour < 12:
         return "LONDON", 0.9
     if 12 <= hour < 16:

@@ -27,6 +27,8 @@ try:
 except ImportError:
     njit = lambda x: x
 
+from lib.data_lake.guard import tag_as_synthetic, tag_as_real, assert_real_data
+
 # Cost authority — SINGLE source of truth
 from simulation.authority import get_cost_constants
 
@@ -109,6 +111,7 @@ def generate_synthetic_ohlcv(
         "timestamp": np.array(all_data["timestamp"], dtype=np.int64),
         "symbol": all_data["symbol"],
     }
+    return tag_as_synthetic(out)
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +222,7 @@ def load_cached_data(
     if not found_any:
         return None
 
-    return {
+    return tag_as_real({
         "close": np.array(closes, dtype=np.float64),
         "high": np.array(highs, dtype=np.float64),
         "low": np.array(lows, dtype=np.float64),
@@ -227,7 +230,7 @@ def load_cached_data(
         "volume": np.array(volumes, dtype=np.float64),
         "timestamp": np.array(timestamps),
         "symbol": sym_list,
-    }
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -1072,6 +1075,12 @@ def main():
             symbols=tuple(symbols),
             random_seed=42,
         )
+    if not args.synthetic:
+        n_bars = len(ohlcv["close"])
+        n_syms = len(set(str(s) for s in ohlcv.get("symbol", [])))
+        if n_bars < 1000 or n_syms < 1:
+            print(f"  ERROR: Real data too small ({n_bars} bars, {n_syms} symbols)")
+            sys.exit(1)
     n_bars_total = len(ohlcv["close"])
     print(f"  {n_bars_total} total bars, {len(symbols)} symbols")
 

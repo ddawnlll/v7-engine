@@ -1,0 +1,38 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS — Feature parity harness skeleton created; 16 features mapped with tolerances"
+
+scope_confirmation:
+  - "16 locked features identified and mapped to batch formula sources"
+  - "Per-feature tolerance documented with rationale"
+  - "3 highest-risk mismatches documented (bb_position, atr_expansion_N, rsi_N)"
+  - "Test harness skeleton created in runtime/tests/test_alpha1_feature_parity.py"
+  - "Tests pass: skeleton structure verified, actual parity comparison pending live engine"
+
+files_changed:
+  - "runtime/tests/test_alpha1_feature_parity.py"
+  - "reports/phase4h_feature_parity_harness_skeleton.md"
+  - "reports/phase4h_feature_parity_harness_skeleton.accp.yaml"
+
+decisions_locked:
+  - "bb_position tolerance: 0.0 (exact, bit-identical)"
+  - "log_return_1 tolerance: 0.0 (exact)"
+  - "doji_N / hammer_N tolerance: 0.0 (exact, boolean threshold)"
+  - "Stateful features (rsi_N, atr_expansion_N, cusum_positive): 1e-6 to 1e-10"
+  - "OHLCV-proxy features (ofi_N, vwap_mid_deviation_N, microprice_N): 1e-6"
+
+remaining_holds:
+  - "HOLD: Live feature engine not yet implemented (blocked by #273)"
+  - "HOLD: Actual batch vs live comparison tests cannot run until live engine exists"
+  - "HOLD: Tolerances are documented defaults; may need recalibration after first empirical evidence"
+
+safe_next_step: "Implement live feature engine (#273 design decision), then expand parity harness"
+
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest runtime/tests/test_alpha1_feature_parity.py -q — all 6 tests pass"
+
+evidence:
+  - "Test file created with 16-feature manifest, tolerance map, and 3 test classes"
+  - "Documentation covers per-feature mapping, tolerance rationale, and high-risk mismatches"
+  - "Placeholder tests (skipped) ready for live engine expansion"
+  - "No alphaforge/ or simulation/ files modified"

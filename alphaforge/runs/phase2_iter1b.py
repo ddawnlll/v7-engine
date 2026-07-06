@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  DEPRECATED: Sentetik veri kullanir.                      ║
+# ║  Gercek veri icin scripts/phase_reality_complete.py       ║
+# ║  veya scripts/candidate_v031e_verified.py kullanin.       ║
+# ╚══════════════════════════════════════════════════════════════╝
+
 """Phase 2 - Iteration 1b: Confidence Threshold Optimization for TOTAL Net R.
 
 Tek degisken: CONFIDENCE_THRESHOLD.

@@ -1,0 +1,211 @@
+{
+  "candidate_id": "ALPHAFORGE_SCALP_1H_DIRECTION_V01",
+  "timestamp": "2026-07-05T21:55:03.879314+00:00",
+  "v7_status": "PHASE1_VERIFIED",
+  "config": {
+    "mode": "SCALP",
+    "interval": "1h",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT"
+    ],
+    "n_folds": 6,
+    "target": "2-class direction (LONG vs SHORT)",
+    "confidence_threshold": "DISABLED",
+    "no_trade_treatment": "REMOVED_FROM_SUPERVISION",
+    "features": 54
+  },
+  "metrics": {
+    "oos_accuracy": 0.4998,
+    "oos_balanced_accuracy": 0.5004,
+    "oos_long_accuracy": 0.6074,
+    "oos_short_accuracy": 0.3934,
+    "train_accuracy_mean": 0.6882,
+    "train_oos_gap": 0.1883,
+    "oos_net_r_mean": 0.008085,
+    "oos_net_r_sum": 127.376,
+    "active_trade_count": 31518,
+    "fold_stability": 0.9729,
+    "baselines": {
+      "random_direction": 0.5,
+      "majority_direction": 0.5026
+    },
+    "baseline_defeat_random": false,
+    "baseline_defeat_majority": false
+  },
+  "phase1_audit": {
+    "gross_net": {
+      "authority_round_trip_bps": 8.0,
+      "net_r_mean_all_folds": 0.008085,
+      "status": "PASS \u2014 cost deducted in label generator"
+    },
+    "block_bootstrap": {
+      "aggregate_ci_95": [
+        0.007633,
+        0.00856
+      ],
+      "all_folds_positive": true,
+      "n_blocks": 329,
+      "status": "PASS"
+    },
+    "threshold_audit": {
+      "status": "PASS \u2014 DISABLED, no data leakage",
+      "purge_bars": 3501,
+      "embargo_bars": 1750
+    }
+  },
+  "confusion_matrix": [
+    [
+      9521,
+      6155
+    ],
+    [
+      9609,
+      6233
+    ]
+  ],
+  "fold_results": [
+    {
+      "fold": 1,
+      "n_train": 10506,
+      "n_val": 5253,
+      "train_accuracy": 0.8036,
+      "val_accuracy": 0.4936,
+      "long_accuracy": 0.6234,
+      "short_accuracy": 0.3602,
+      "net_r_mean": 0.006546,
+      "gross_r_mean": 0.007346,
+      "cost_ratio_pct": 10.8902,
+      "block_ci_95": [
+        0.00592,
+        0.00722
+      ],
+      "ci_fully_positive": true,
+      "correct_trades": 2593
+    },
+    {
+      "fold": 2,
+      "n_train": 24513,
+      "n_val": 5253,
+      "train_accuracy": 0.7207,
+      "val_accuracy": 0.5248,
+      "long_accuracy": 0.7616,
+      "short_accuracy": 0.2643,
+      "net_r_mean": 0.005666,
+      "gross_r_mean": 0.006466,
+      "cost_ratio_pct": 12.3717,
+      "block_ci_95": [
+        0.005171,
+        0.006188
+      ],
+      "ci_fully_positive": true,
+      "correct_trades": 2757
+    },
+    {
+      "fold": 3,
+      "n_train": 38520,
+      "n_val": 5253,
+      "train_accuracy": 0.6767,
+      "val_accuracy": 0.4873,
+      "long_accuracy": 0.8388,
+      "short_accuracy": 0.162,
+      "net_r_mean": 0.005479,
+      "gross_r_mean": 0.006279,
+      "cost_ratio_pct": 12.7411,
+      "block_ci_95": [
+        0.005011,
+        0.005981
+      ],
+      "ci_fully_positive": true,
+      "correct_trades": 2560
+    },
+    {
+      "fold": 4,
+      "n_train": 52527,
+      "n_val": 5253,
+      "train_accuracy": 0.6559,
+      "val_accuracy": 0.5064,
+      "long_accuracy": 0.6338,
+      "short_accuracy": 0.381,
+      "net_r_mean": 0.007843,
+      "gross_r_mean": 0.008643,
+      "cost_ratio_pct": 9.2557,
+      "block_ci_95": [
+        0.007323,
+        0.008412
+      ],
+      "ci_fully_positive": true,
+      "correct_trades": 2660
+    },
+    {
+      "fold": 5,
+      "n_train": 66534,
+      "n_val": 5253,
+      "train_accuracy": 0.6409,
+      "val_accuracy": 0.4847,
+      "long_accuracy": 0.4976,
+      "short_accuracy": 0.4728,
+      "net_r_mean": 0.010511,
+      "gross_r_mean": 0.011311,
+      "cost_ratio_pct": 7.0729,
+      "block_ci_95": [
+        0.009504,
+        0.011563
+      ],
+      "ci_fully_positive": true,
+      "correct_trades": 2546
+    },
+    {
+      "fold": 6,
+      "n_train": 80541,
+      "n_val": 5253,
+      "train_accuracy": 0.6313,
+      "val_accuracy": 0.5022,
+      "long_accuracy": 0.2848,
+      "short_accuracy": 0.7183,
+      "net_r_mean": 0.012559,
+      "gross_r_mean": 0.013359,
+      "cost_ratio_pct": 5.9886,
+      "block_ci_95": [
+        0.01164,
+        0.01359
+      ],
+      "ci_fully_positive": true,
+      "correct_trades": 2638
+    }
+  ],
+  "data_passport": {
+    "passport_id": "b0c0f349-ffe3-43e1-9817-c297b323507b",
+    "dataset_id": "ALPHAFORGE_SCALP_1H_DIRECTION_V01",
+    "source": "binance",
+    "source_type": "public_archive",
+    "market": "um_futures",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT"
+    ],
+    "intervals": [
+      "1h"
+    ],
+    "data_types": [
+      "klines"
+    ],
+    "start": "2023-01-01T00:00:00+00:00",
+    "end": "2026-07-05T21:55:03.875236+00:00",
+    "is_real_data": true,
+    "allow_synthetic": false,
+    "coverage_pct": 100.0,
+    "gap_count": 4,
+    "duplicate_count": 0,
+    "checksum_pass": false,
+    "point_in_time_safe": true,
+    "revision_risk": "none",
+    "generated_at": "2026-07-05T21:55:03.877538+00:00",
+    "manifest_hash": "fdd4f8ad85df92da664566a8019974bcf7f86e7cdcbda038b2064dc23c29e07b",
+    "passport_version": "1.0.0"
+  }
+}

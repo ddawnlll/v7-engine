@@ -1,0 +1,25 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: PASS
+scope_confirmation:
+  issue: 270
+  scope: "Implement isolated SimulationOutputResultMaterializer without changing simulation_service.py or repository schema"
+files_changed:
+  - runtime/services/simulation_output_result_materializer.py
+  - runtime/tests/test_simulation_output_result_materializer.py
+  - reports/phase4d_simulation_output_result_materializer.md
+  - reports/phase4d_simulation_output_result_materializer.accp.yaml
+  - v7/docs/roadmap.md
+decisions_locked:
+  - "Runtime owns SimulationOutput -> legacy runtime-row projection; simulation truth remains upstream"
+  - "Comparative LONG/SHORT/NO_TRADE evidence is preserved in details metadata instead of being dropped"
+remaining_holds:
+  - "ReplayBackedSimulationOrchestrator is still unimplemented"
+  - "simulation_service.py still uses HistoricalSimulationEngine"
+  - "End-to-end replay parity remains pending integration"
+safe_next_step: "Implement ReplayBackedSimulationOrchestrator and consume the materializer in the runtime replay loop"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest runtime/tests/test_simulation_output_result_materializer.py -q"
+evidence:
+  - "Acceptance test passed: 3 passed, 1 warning in 0.04s"
+  - "Field-by-field manual parity covered LONG-selected, SHORT-selected, and NO_TRADE-selected cases"

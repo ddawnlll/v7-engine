@@ -1,0 +1,91 @@
+{
+  "description": "Alpha #1 isolation test on real data \u2014 4 configs on test fold 6",
+  "note": "ADIM 3 uses correct-only metric; ADIM 4 uses all-trades metric. Both shown.",
+  "test_fold": 6,
+  "configs": {
+    "A: 54-feat 2-class no-th (ADIM 3 style)": {
+      "mean_r_all_trades": 0.005091837966008311,
+      "ci_95_all_trades": [
+        0.004537922214736664,
+        0.005680727123758865
+      ],
+      "mean_r_correct_only": 0.008056688279444606,
+      "ci_95_correct_only": [
+        0.0073632054776344704,
+        0.008783261297740872
+      ],
+      "composite": 207.15652387462126,
+      "total_net_R": 26.660864,
+      "max_dd": 0.12869912610696055,
+      "n_trades": 5236
+    },
+    "B: 54-feat 3-class no-th": {
+      "mean_r_all_trades": 0.0031284800122966788,
+      "ci_95_all_trades": [
+        0.0026490649041679454,
+        0.0036382217166763564
+      ],
+      "mean_r_correct_only": 0.008052573730831432,
+      "ci_95_correct_only": [
+        0.007355513365456039,
+        0.008780328699884375
+      ],
+      "composite": 121.56092326362763,
+      "total_net_R": 19.784508,
+      "max_dd": 0.16275384446412744,
+      "n_trades": 6324
+    },
+    "C: 54-feat 3-class th=0.550": {
+      "mean_r_all_trades": 0.00445430574510462,
+      "ci_95_all_trades": [
+        0.003837694386479738,
+        0.005118637787498638
+      ],
+      "mean_r_correct_only": 0.008069985008519411,
+      "ci_95_correct_only": [
+        0.007332668651050241,
+        0.00885757108997851
+      ],
+      "composite": 131.4969718248467,
+      "total_net_R": 19.964198,
+      "max_dd": 0.1518224950164715,
+      "n_trades": 4482
+    },
+    "D: 16-feat 3-class th=0.550 (ADIM 4)": {
+      "mean_r_all_trades": 0.004344489179447051,
+      "ci_95_all_trades": [
+        0.003725512222162421,
+        0.0050034468090590645
+      ],
+      "mean_r_correct_only": 0.008097129596624546,
+      "ci_95_correct_only": [
+        0.007348575781831792,
+        0.008901870361279408
+      ],
+      "composite": 129.85751481815493,
+      "total_net_R": 19.715292,
+      "max_dd": 0.1518224950164715,
+      "n_trades": 4538
+    }
+  },
+  "isolation": {
+    "adim3_reported_value": 0.008056688279444606,
+    "adim3_to_adim4_correct_only_change": 4.044131717994073e-05,
+    "no_trade_addition_effect_correct_only": -4.114548613173494e-06,
+    "threshold_0550_effect_correct_only": 1.7411277687978677e-05,
+    "feature_pruning_effect_correct_only": 2.714458810513555e-05
+  },
+  "official_result": {
+    "config": "D: 16-feat 3-class th=0.550 (ADIM 4)",
+    "mean_r_all_trades": 0.004344489179447051,
+    "ci_95_all_trades": [
+      0.003725512222162421,
+      0.0050034468090590645
+    ],
+    "mean_r_correct_only": 0.008097129596624546,
+    "composite": 129.85751481815493,
+    "total_net_R": 19.715292,
+    "max_dd": 0.1518224950164715,
+    "n_trades": 4538
+  }
+}

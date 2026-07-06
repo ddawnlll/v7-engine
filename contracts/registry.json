@@ -59,7 +59,7 @@
     {
       "object_name": "TradeOutcome",
       "owner_domain": "v7",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "schema_file": "contracts/schemas/trade_outcome.schema.json",
       "fixture_file": "contracts/fixtures/trade_outcome_minimal.json",
       "description": "Normalized lifecycle consequence record for one DecisionEvent",
@@ -317,6 +317,24 @@
       ],
       "consumers": [
         "v7"
+      ]
+    },
+    {
+      "object_name": "Alpha1FrozenArtifact",
+      "owner_domain": "alphaforge",
+      "version": "1.0.0",
+      "schema_file": null,
+      "fixture_file": null,
+      "description": "Frozen metadata record for locked Alpha #1 XGBoost SCALP model",
+      "source_authority": [
+        "reports/alpha1_runtime_inference_architecture_decision.md"
+      ],
+      "producers": [
+        "alphaforge"
+      ],
+      "consumers": [
+        "runtime",
+        "alphaforge"
       ]
     }
   ]
