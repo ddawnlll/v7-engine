@@ -650,8 +650,12 @@ def walk_forward_validate(
         ]) if n > 0 else np.empty((0, 3), dtype=np.float64)
     fold_size = n // (min_folds + 1)
     results: list[dict] = []
-    purge_bars = fold_size // 4
-    embargo_bars = fold_size // 8
+    # P0.9F: purge/embargo derived from max_hold to guarantee label-leakage barrier
+    # >= k * max_hold. k=2 is HOLD — requires empirical calibration.
+    max_hold = MODE_CONFIG.get(mode, {}).get("max_hold", 12)
+    k = 2  # HOLD: multiplier requires empirical calibration
+    purge_bars = max(fold_size // 4, k * max_hold)
+    embargo_bars = max(fold_size // 8, k * max_hold)
 
     logger.info(
         "WFV: folds=%d, fold_size=%d, purge=%d, embargo=%d",
@@ -674,6 +678,11 @@ def walk_forward_validate(
 
         effective_train_end = train_end - purge_bars
         effective_val_start = val_start + embargo_bars
+
+        assert effective_train_end <= train_end - max_hold, (
+            f"purge_bars={purge_bars} insufficient: train_end={train_end}, "
+            f"effective_train_end={effective_train_end}, max_hold={max_hold}"
+        )
 
         if effective_train_end <= 0 or effective_val_start >= val_end:
             logger.warning("Fold %d: boundary issue â€” stopping", fold + 1)
