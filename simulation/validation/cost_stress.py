@@ -87,17 +87,26 @@ class CostStressRunner:
 
         total_cost_r signature:
           def total_cost_r(notional, entry_price, atr, stop_multiplier,
-                           taker_fee_bps=4.0, slippage_bps=1.0,
-                           funding_rate=0.0, holding_bars=0) -> ...
+                           taker_fee_bps=4.0, maker_fee_bps=2.0,
+                           slippage_bps=1.0, funding_rate=0.0,
+                           holding_bars=0,
+                           execution_mode=TAKER, maker_fill_probability=0.7) -> ...
 
-        __defaults__ order: (fee_bps, slippage_bps, funding_rate, holding_bars)
+        __defaults__ order: (taker_fee_bps, maker_fee_bps, slippage_bps,
+                             funding_rate, holding_bars, execution_mode,
+                             maker_fill_probability)
         """
         orig = cost_mod.total_cost_r.__defaults__
+        # Indices: 0=taker_fee_bps, 1=maker_fee_bps, 2=slippage_bps
+        # Scale both fee params and slippage; leave others unchanged.
         cost_mod.total_cost_r.__defaults__ = (
             orig[0] * multiplier,  # scale taker_fee_bps
-            orig[1] * multiplier,  # scale slippage_bps
-            orig[2],               # keep funding_rate unchanged
-            orig[3],               # keep holding_bars unchanged
+            orig[1] * multiplier,  # scale maker_fee_bps
+            orig[2] * multiplier,  # scale slippage_bps
+            orig[3],               # keep funding_rate unchanged
+            orig[4],               # keep holding_bars unchanged
+            orig[5],               # keep execution_mode unchanged
+            orig[6],               # keep maker_fill_probability unchanged
         )
 
     @staticmethod

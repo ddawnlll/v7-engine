@@ -53,6 +53,18 @@ class NoTradeQuality(str, Enum):
     AMBIGUOUS_NO_TRADE = "AMBIGUOUS_NO_TRADE"
 
 
+class ExecutionMode(str, Enum):
+    """Execution mode for fee computation.
+    
+    TAKER: Use taker fees (conservative default).
+    MAKER: Use maker fees with fill probability for adverse selection.
+    HYBRID: Maker fee on entry, taker fee on exit.
+    """
+    TAKER = "TAKER"
+    MAKER = "MAKER"
+    HYBRID = "HYBRID"
+
+
 class PathQualityBucket(str, Enum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"

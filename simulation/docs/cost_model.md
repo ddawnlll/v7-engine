@@ -30,6 +30,35 @@ Where:
 | `taker_fee_bps` | `4.0` | 4 basis points (0.04%) for market orders |
 | `minimum_fee_quote` | `0.0` | Minimum fee in quote currency (exchange-dependent) |
 | `use_taker_for_simulation` | `true` | Assume taker fees for conservative simulation |
+| `execution_mode` | `TAKER` | Execution mode: `TAKER`, `MAKER`, or `HYBRID` |
+| `maker_fill_probability` | `0.7` | Fill probability for MAKER mode (adverse selection adjustment) |
+
+### Execution Modes
+
+Three execution modes are available:
+
+**TAKER** (default, conservative):  
+Both entry and exit use the taker fee rate. This is the historical default and
+represents the most conservative cost assumption.
+
+**MAKER**:  
+Both entry and exit use an effective maker fee rate that accounts for adverse
+selection. The formula is:
+
+```
+effective_fee_bps = maker_fee_bps + (taker_fee_bps - maker_fee_bps) * (1 - fill_probability)
+```
+
+At `fill_probability=0.7`, the effective fee is:
+`2.0 + (4.0 - 2.0) * 0.3 = 2.6 bps`
+
+This reflects the reality that limit orders have lower explicit fees but face
+adverse selection risk (the order may not fill, or may fill only when the
+market moves against the position).
+
+**HYBRID**:  
+Entry uses the maker fee rate, exit uses the taker fee rate. This represents
+a strategy that enters via limit orders and exits via market orders.
 
 ### Fee Computation
 
