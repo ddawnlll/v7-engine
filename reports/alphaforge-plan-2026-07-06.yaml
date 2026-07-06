@@ -1,0 +1,116 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task: "AlphaForge Research Planning — arxiv literature survey + experiment gap analysis + 3-direction research proposal"
+
+result: "PASS"
+
+scope_confirmation: >
+  Searched arxiv for recent (last 30 days) papers on alpha signals, systematic trading,
+  feature engineering, portfolio construction, and ML for finance. Cross-referenced with
+  existing research artifacts (reports/research/) and pipeline state (alphaforge/src/,
+  simulation/authority.py, data/runs/). Produced 3 concrete research directions.
+
+evaluation:
+  criterion_1_arxiv_search_complete:
+    status: PASS
+    evidence: >
+      Executed 5 arxiv queries (alpha+signals, feature+engineering+financial+TS,
+      portfolio+construction+RL, regime+detection, cat:q-fin.ST+ML). Retrieved 35+
+      papers. Top 10 most relevant shortlisted with ID, title, date, abstract.
+  criterion_2_existing_work_audited:
+    status: PASS
+    evidence: >
+      Audited data/runs/ (empty), reports/research/alphaforge_professional_quant_dossier.md
+      (407 lines, 11 sources), paper_reading_matrix.yaml (388 lines), alpha_factor_research.json,
+      alphaforge/runs/ (10 phase scripts), alphaforge/src/alphaforge/features/ (10 modules),
+      simulation/authority.py (SCALP profile defined). All gaps catalogued.
+  criterion_3_novel_and_concrete:
+    status: PASS
+    evidence: >
+      Proposed 3 directions: (1) Cost-Aware Execution Threshold Optimization — P0/V1,
+      (2) Regime-Conditional Confidence Calibration — P1/V9,
+      (3) Feature Family Ablation & Cross-Factor Correlation — P1/V10.
+      Each has hypothesis, concrete experiment design, parameter sweeps, expected outcomes,
+      and file-level implementation plan.
+  criterion_4_priority_and_ordering:
+    status: PASS
+    evidence: >
+      Directions ordered by impact-per-effort. Cost-aware threshold sweep first (4h,
+      expected 0.2-0.4 net Sharpe gain). Regime calibration second (5h). Feature ablation
+      third (3h). Rationale documented for each ordering decision.
+
+files_changed:
+  - path: reports/alphaforge-plan-2026-07-06.md
+    action: created
+    purpose: "Detailed research plan with literature survey, gap analysis, and 3 concrete experiment proposals"
+  - path: reports/alphaforge-plan-2026-07-06.yaml
+    action: created
+    purpose: "ACCP-YAML companion for machine-auditable completion tracking"
+
+decisions_locked:
+  - decision: >
+      First experiment must establish data/runs/ baseline with cost-aware threshold sweep.
+    status: LOCKED
+    evidence: >
+      data/runs/ is empty — no tracked experiment artifacts exist. Cost-aware filtering
+      is the #1 failure mode per every source reviewed. Highest impact per unit effort.
+  - decision: >
+      All experiments use alpha-invariant optimization only (same hyperparameters,
+      same random_state). No hyperparameter tuning for speed.
+    status: LOCKED
+    evidence: >
+      Per AlphaForge Research Factory skill rule: hyperparameter changes produce
+      different split decisions → different alpha signals. Only parallel WFV folds,
+      nthread threading, and numba JIT are acceptable speedups.
+  - decision: >
+      Research directions correspond to existing validator gates in the professional dossier
+      (V1 cost-aware filter, V9 calibration, V10 feature ablation).
+    status: LOCKED
+    evidence: >
+      Each direction maps to a P0 or P1 validator hardening rule from the dossier.
+      Implementing these directions unlocks the corresponding validator gates.
+
+remaining_holds:
+  - hold: "SCALP dataset availability and train/test split protocol not audited"
+    severity: advisory
+    recommendation: >
+      Run dataset auditor module before starting Direction 1 to confirm OHLCV
+      data availability, timestamp integrity, and walk-forward fold definitions.
+  - hold: "SWING profile not defined in simulation/authority.py"
+    severity: advisory
+    recommendation: >
+      If SWING baseline is needed, define SWING SimulationProfile in authority.py.
+      Currently only SCALP is defined. Not blocking this sprint's SCALP-focused work.
+  - hold: "PBO/DSR/trial ledger validator gates not yet implemented"
+    severity: advisory
+    recommendation: >
+      These are P0 per the dossier but not required for the first experiment.
+      Implement after data/runs/ baseline is established to validate results.
+
+safe_next_step:
+  - command: "python3 -m pytest simulation/tests/ -q"
+    description: "Run simulation tests to confirm authority and cost model are working"
+  - command: "ls data/runs/ && mkdir -p data/runs/$(date +%Y%m%d_%H%M)_cost_aware_sweep"
+    description: "Create first experiment output directory for the cost-aware sweep"
+  - description: "Run the cost-aware execution threshold sweep (after writing the script)"
+    command: >
+      python3 alphaforge/runs/cost_aware_sweep.py
+      --confidence-range 0.50:0.80:5 --cost-range 1.0:3.0:5
+      --output data/runs/$(date +%Y%m%d)_cost_sweep
+
+commands_run:
+  - "curl arxiv API with 5 queries for recent alpha/signal/ML/finance papers"
+  - "ls data/runs/ — confirmed empty (no experiment artifacts)"
+  - "cat reports/research/alphaforge_professional_quant_dossier.md — full 407-line audit"
+  - "cat reports/research/paper_reading_matrix.yaml — 388-line paper analysis"
+  - "ls alphaforge/runs/ — 10 phase scripts exist but no experiment artifacts"
+  - "ls alphaforge/src/alphaforge/features/ — 10 feature modules"
+  - "cat simulation/authority.py — SCALP profile only, SWING not defined"
+  - "grep feature/regime.py — HMM, CUSUM, vol regime detectors exist"
+
+evidence:
+  - "reports/alphaforge-plan-2026-07-06.md written (13.6 KB)"
+  - "reports/alphaforge-plan-2026-07-06.yaml written (companion ACCP-YAML)"
+  - "data/runs/ confirmed empty — baseline establishment is the correct focus"
+  - "10 relevant arxiv papers shortlisted with IDs, dates, and actionable findings"
+  - "All 3 directions map to concrete validator gates in the existing dossier"

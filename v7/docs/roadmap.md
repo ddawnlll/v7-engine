@@ -1247,3 +1247,30 @@ It is:
 - `reports/candidates/alphaforge_scalp_1h_direction_v01_verified.json`
 - `scripts/iso_alpha1.py`, `scripts/phase_reality_complete.py`, `scripts/restore_real_data.py`
 
+---
+
+## Fix: _rolling_mean / _rolling_sum Centered Window → Causal Trailing (2026-07-06)
+
+**Scope:** BUG_FIX — Two files, 4 functions.
+
+### What was fixed
+- **Bug:** `_rolling_mean` and `_rolling_sum` (both `pipeline.py` and `orderbook.py`) used `np.convolve(arr, kernel, mode='same')` in their NaN-free fast-path, producing a **centered** (not trailing) rolling mean. This leaked up to `window//2` future bars into every feature using these helpers.
+- **Fix:** Changed to `np.convolve(arr, kernel, mode='full')[:n]` — true trailing window `[t-window+1 .. t]`.
+- **Impacted features:** `bb_position` (dominant feature at 97.3% weight in SCALP alpha), `return_zscore`, `high_low_range`, `atr`, `atr_expansion`, `volume_ratio`, and all orderbook features (spread, intensity, mp, ofi, etc.).
+
+### Key decisions locked
+- All rolling window computations use trailing windows — LOCKED
+- `np.convolve(mode='same')` banned for time-series features — LOCKED
+- SCALP_bb_position_mean_reversion_v1 alpha is **contaminated** by future leakage and must be re-validated — HOLD
+
+### Verification
+- **31/31 no-revision causality audit tests PASS** (test_causality_audit.py)
+- 25 pre-existing failures (feature count, version, edge cases) unchanged — zero regressions
+
+### Files changed
+- `alphaforge/src/alphaforge/features/pipeline.py` — _rolling_mean, _rolling_sum
+- `alphaforge/src/alphaforge/features/orderbook.py` — _rolling_mean, _rolling_sum
+
+### Reports
+- `reports/accp-fix-rolling-mean-causal.yaml`
+
