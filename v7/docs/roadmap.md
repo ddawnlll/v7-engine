@@ -1258,3 +1258,61 @@ It is:
 
 ### Reports
 - `reports/accp-fix-rolling-mean-causal.yaml`
+
+---
+
+## Milestone C — Agir Sinyal (meta-labeling + cluster + ensemble) COMPLETE (2026-07-06)
+
+**What:** Implemented three signal enhancement techniques for AlphaForge to improve prediction robustness.
+
+### Part 1 — Meta-labeling (#1)
+- `alphaforge/src/alphaforge/meta/` package (config, MetaLabeler, MetaFilter)
+- 70/30 time-series split, secondary XGBoost classifier, primary confidence as meta-feature
+- Walk-forward CV support (6-fold)
+- Training script: `scripts/train_meta_labeling.py`
+- Evaluation with PBO guard: `scripts/evaluate_meta_labeling.py`
+
+### Part 2 — Residual momentum / clustering (#3)
+- `alphaforge/src/alphaforge/features/residual_momentum.py`
+  - `compute_beta()` — rolling OLS beta vs BTC (window=20)
+  - `compute_residual_momentum()` — beta-adjusted returns
+  - `cluster_symbols()` — k-means clustering with ++ initialization
+  - `compute_cross_sectional_momentum()` — rank-based CS momentum
+- Registered in pipeline: `FeatureGroup.RESIDUAL_MOMENTUM`, `FEATURE_GROUP_MAP`, mode defaults
+
+### Part 3 — Ensemble agreement (#10)
+- `alphaforge/src/alphaforge/training/ensemble.py` — `EnsembleAgreement` class
+- Trains N models with different seeds, majority-vote predictions
+- `agreement_score()` / `filter_by_agreement()` with configurable threshold
+- `evaluate_filter_impact()` comparing single vs ensemble-filtered
+
+### Status: LOCKED_INITIAL_BASELINE
+- Meta depth=5, reg_lambda=5.0, train_ratio=0.7, confidence_threshold=0.5
+- Beta window=20, n_clusters=3, CS windows=[5, 10, 20]
+- N_models=5, agreement_threshold=0.6
+
+### Holds
+- Meta-labeling tested on synthetic data only — recalibrate on real data
+- Residual momentum multi-symbol registration silently skips without cross-sectional data
+- Ensemble agreement threshold needs empirical tuning
+
+### Verification
+- All imports pass
+- Meta-labeling training script runs end-to-end (meta accuracy 0.90, WFV avg 0.906)
+- Meta-labeling evaluation script runs end-to-end (6-fold WFV, PBO, cost-stress)
+- Ensemble agreement smoke test passes (fit, predict, filter, evaluate)
+- Training tests (test_xgb_trainer, test_model_trainer) pass — zero regressions
+- Pre-existing failures unchanged (numba version issue, outdated test expectations)
+
+### Files changed
+- `alphaforge/src/alphaforge/meta/` (4 new files)
+- `alphaforge/src/alphaforge/features/residual_momentum.py` (new)
+- `alphaforge/src/alphaforge/features/pipeline.py` (RESIDUAL_MOMENTUM registration)
+- `alphaforge/src/alphaforge/features/__init__.py` (exports)
+- `alphaforge/src/alphaforge/training/ensemble.py` (new)
+- `alphaforge/src/alphaforge/training/__init__.py` (export)
+- `alphaforge/scripts/train_meta_labeling.py` (new)
+- `alphaforge/scripts/evaluate_meta_labeling.py` (new)
+
+### Reports
+- `reports/milestone_c_report.yaml`

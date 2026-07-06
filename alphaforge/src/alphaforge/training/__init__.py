@@ -6,6 +6,7 @@ the ML pilot gate verifies that GBM is absent.
 
 Modules:
     xgb_trainer: XGBoost classifier training for mode-specific alpha models.
+    ensemble: Ensemble agreement filtering for prediction robustness.
 """
 
 from alphaforge.training.xgb_trainer import (
@@ -13,9 +14,11 @@ from alphaforge.training.xgb_trainer import (
     XGBoostTrainer,
     train_swing_model,
 )
+from alphaforge.training.ensemble import EnsembleAgreement
 
 __all__ = [
     "SWING_DEFAULT_HYPERPARAMS",
     "XGBoostTrainer",
     "train_swing_model",
+    "EnsembleAgreement",
 ]

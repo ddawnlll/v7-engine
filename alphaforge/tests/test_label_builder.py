@@ -216,3 +216,87 @@ class TestModeDefaults:
         ))
         # Falls back to min_action_edge=0.15, best_r=0.2 >= 0.15
         assert label["best_action_label"] == "LONG_NOW"
+
+
+# ── ATR-adaptive stop/target ─────────────────────────────────────────
+
+class TestAdaptiveStop:
+    """ATR-adaptive stop/target multiplier tests."""
+
+    def test_adaptive_default_included(self):
+        """Default adaptive_stop=True adds adaptive fields."""
+        label = build_label(_make_sim_output())
+        assert "atr_percentile_rank" in label
+        assert "effective_stop_multiplier" in label
+        assert "effective_target_multiplier" in label
+
+    def test_adaptive_disabled(self):
+        """adaptive_stop=False omits adaptive fields."""
+        label = build_label(_make_sim_output(), adaptive_stop=False)
+        assert "atr_percentile_rank" not in label
+
+    def test_default_rank_is_median(self):
+        """Without atr data, default rank is 0.5."""
+        label = build_label(_make_sim_output())
+        assert label["atr_percentile_rank"] == 0.5
+
+    def test_override_rank(self):
+        """Explicit atr_percentile_rank is used."""
+        label = build_label(_make_sim_output(), atr_percentile_rank=0.9)
+        assert label["atr_percentile_rank"] == 0.9
+
+    def test_effective_multiplier_computation(self):
+        """effective_stop = base * (1 + rank)."""
+        label = build_label(_make_sim_output(
+            mode="SWING",
+            profile={"stop_multiplier": 2.0, "target_multiplier": 2.5},
+        ), atr_percentile_rank=0.25)
+        assert label["effective_stop_multiplier"] == 2.0 * (1 + 0.25)
+        assert label["effective_target_multiplier"] == 2.5 * (1 + 0.25)
+
+    def test_atr_list_rank_computation(self):
+        """atr_list provides historical ATR for rank computation."""
+        sim = _make_sim_output(atr=1000.0, atr_list=[800, 850, 900, 950])
+        label = build_label(sim)
+        # ATR=1000 > 4/4 values → rank ≈ 1.0 (all in window are less)
+        assert label["atr_percentile_rank"] == 1.0
+
+    def test_atr_list_partial_rank(self):
+        """ATR in middle of historical range."""
+        sim = _make_sim_output(atr=900.0, atr_list=[800, 850, 900, 950, 1000])
+        label = build_label(sim)
+        # ATR=900 > 2 of 5 → rank = 0.4
+        assert label["atr_percentile_rank"] == 0.4
+
+    def test_batch_rolling_percentile(self):
+        """build_labels computes rolling ranks across batch."""
+        sims = []
+        for i in range(30):
+            s = _make_sim_output(atr=900.0 + i * 10.0)
+            s["profile"] = {"stop_multiplier": 2.0, "target_multiplier": 2.0}
+            sims.append(s)
+        labels = build_labels(sims, adaptive_stop=True, atr_percentile_window=10)
+        # First 10 should have no adaptive fields (NaN warmup)
+        for label in labels[:10]:
+            assert "atr_percentile_rank" not in label or label["atr_percentile_rank"] is None
+        # Later labels should have ranks
+        for label in labels[15:]:
+            assert label.get("atr_percentile_rank") is not None
+
+    def test_batch_preserves_existing_fields(self):
+        """Batch with adaptive_stop still produces standard label fields."""
+        labels = build_labels([_make_sim_output() for _ in range(5)])
+        for label in labels:
+            assert label["best_action_label"] in ("LONG_NOW", "SHORT_NOW", "NO_TRADE", "AMBIGUOUS_STATE")
+            assert label["long_R_net"] == 1.0
+
+    def test_profile_multipliers_used(self):
+        """Base multipliers from simulation profile take precedence."""
+        sim = _make_sim_output(mode="SWING", profile={
+            "stop_multiplier": 3.0,
+            "target_multiplier": 4.0,
+        })
+        label = build_label(sim, atr_percentile_rank=0.5)
+        # SWING defaults are 2.0/2.0, but profile overrides to 3.0/4.0
+        assert label["effective_stop_multiplier"] == 3.0 * 1.5
+        assert label["effective_target_multiplier"] == 4.0 * 1.5
