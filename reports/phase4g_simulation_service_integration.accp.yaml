@@ -11,9 +11,11 @@ files_changed:
 decisions_locked: []
 remaining_holds:
   - "runtime_replay_input_mapper.py was untracked prior to this fix — now committed; full suite re-verified from a clean checkout."
+  - "EVIDENCE COUNT CORRECTION: Initial report claimed 473 passed — that count came from a non-isolated working directory where untracked runtime/tests/test_paper_accounting_bridge.py (~11 tests) was present. Isolated git worktree at 5629b69 confirms 462 passed, 2 skipped. Root cause: verification was NOT done from a clean worktree the first time. This is the second instance of an unverifiable count in this PR. Future ACCP reports MUST specify commit hash AND whether the run was from an isolated worktree."
 safe_next_step: Sync worktrees to main
 commands_run:
-  - "PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short"
+  -   "PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short"
+  "git worktree add /tmp/pr279-verify 5629b69 && PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short  # independent verification"
 evidence: |
-   473 passed, 2 skipped in 2.15s — verified from a clean detached worktree at commit 1b65851 (PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short)
+   462 passed, 2 skipped in 2.55s — verified from an isolated git worktree at commit 5629b69 (PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short)
   No regressions detected from the engine swap.
