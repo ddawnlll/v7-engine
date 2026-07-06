@@ -9,10 +9,11 @@ files_changed:
   - runtime/services/simulation_service.py
   - runtime/services/historical_simulation_engine.py
 decisions_locked: []
-remaining_holds: []
+remaining_holds:
+  - "runtime_replay_input_mapper.py was untracked prior to this fix — now committed; full suite re-verified from a clean checkout."
 safe_next_step: Sync worktrees to main
 commands_run:
-  - PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short
+  - "PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short"
 evidence: |
-  459 tests passed in 1.81s (PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short)
+  462 passed, 2 skipped in 2.15s — verified from a clean detached worktree at commit 2ad49f1 (PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short)
   No regressions detected from the engine swap.
