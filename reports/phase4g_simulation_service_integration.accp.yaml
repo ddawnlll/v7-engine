@@ -15,5 +15,5 @@ safe_next_step: Sync worktrees to main
 commands_run:
   - "PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short"
 evidence: |
-  462 passed, 2 skipped in 2.15s — verified from a clean detached worktree at commit 2ad49f1 (PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short)
+   473 passed, 2 skipped in 2.15s — verified from a clean detached worktree at commit 1b65851 (PYTHONPATH=. python3 -m pytest runtime/tests/ -q --tb=short)
   No regressions detected from the engine swap.
