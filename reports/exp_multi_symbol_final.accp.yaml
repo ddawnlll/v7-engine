@@ -1,0 +1,52 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+
+scope_confirmation: >
+  Multi-symbol SCALP training experiment to achieve +50% net R improvement
+  over single-symbol baseline (0.003656 R). All anti-overfitting guards
+  (P0.9F/G) applied. Isolated worktree, main branch merge upon success.
+
+internet_resources_used:
+  - tool: "webfetch"
+    source: "Binance Futures API (fapi.binance.com)"
+    data_fetched:
+      - "BTCUSDT live funding rate: 7.45 bps/8h"
+      - "ETHUSDT live funding rate: 4.60 bps/8h"  
+      - "SOLUSDT live funding rate: 10.0 bps/8h"
+      - "BNBUSDT live funding rate: 2.97 bps/8h"
+    impact: "Funding cost validated as negligible (~0.94 bps/trade for SCALP).
+             Does not materially affect cost stress result."
+
+experiment_details:
+  worktree: "../v7-engine-exp-ms" (branch: exp-ms-profit)
+  baseline:
+    mode: SCALP
+    symbols: BTCUSDT (single)
+    net_r: 0.003656
+  multi_symbol:
+    mode: SCALP
+    symbols: BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT (4 symbols)
+    net_r: 0.023331
+    accuracy: 0.5636
+    inter_fold_consistency: 33.09
+    active_trades: 2166
+    exposure: 57.1%
+    guards_applied:
+      - P0.9F purge/embargo max_hold
+      - P0.9F nested threshold selection
+      - P0.9F PBO/Deflated Sharpe (G1)
+      - P0.9F feature concentration (G5)
+      - P0.9G cost stress (G3)
+  improvement:
+    absolute: "+0.019675 R"
+    percentage: "+538.16%"
+    target_50pct: ACHIEVED
+
+merge: main <- exp-ms-profit (fast-forward, commit 9ab1004)
+
+# exo MCP note: exo MCP server was NOT found in the environment
+# (checked: which exo, pip list, npm list, uv tool list, ~/.claude configs).
+# webfetch was used as the closest available alternative for internet data.
+# If exo MCP is available via a different channel, it can be registered
+# with: mcp add exo <path-to-server>
