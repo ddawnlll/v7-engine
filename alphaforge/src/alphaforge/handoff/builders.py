@@ -180,16 +180,36 @@ def _gate_g4(report: dict) -> tuple[str, str]:
 
 
 def _gate_g5(report: dict) -> tuple[str, str]:
-    """G5: SYMBOL_STABILITY — no single symbol >40% of total edge."""
+    """G5: SYMBOL_STABILITY — no single symbol >40% of edge, no feature dominance.
+
+    P0.9F: In addition to symbol count, checks feature_concentration:
+    top_feature_share must be below HOLD threshold (empirical calibration
+    pending — threshold is HOLD, not LOCKED).
+    """
     ds = report.get("data_scope", {})
     symbols = ds.get("symbols", [])
     n = len(symbols)
+
+    fc = report.get("feature_concentration", {})
+    top_feat = fc.get("top_feature", "NONE")
+    top_share = fc.get("top_feature_share", 0.0)
+
     evidence = (
         f"SYMBOL_STABILITY evidence from {report.get('report_id', 'unknown')}: "
-        f"symbols_tested={n} ({', '.join(symbols) if symbols else 'none'})"
+        f"symbols_tested={n} ({', '.join(symbols) if symbols else 'none'}), "
+        f"feature_concentration: top={top_feat}, share={top_share:.4f}"
     )
-    status = "PASS" if n >= 2 else "PENDING"
-    return evidence, status
+
+    # Symbol count: need at least 2
+    if n < 2:
+        return evidence, "PENDING"
+
+    # Feature concentration guard: top_feature_share exceeds HOLD threshold.
+    # Threshold is HOLD — requires empirical calibration.
+    if top_feat != "NONE" and top_share > 0.95:
+        return evidence, "PENDING"
+
+    return evidence, "PASS"
 
 
 def _gate_g6(report: dict) -> tuple[str, str]:

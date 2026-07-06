@@ -144,6 +144,68 @@ def compute_symbol_concentration(
     }
 
 
+def compute_feature_concentration(
+    importance_dict: Dict[str, float],
+) -> Dict[str, Any]:
+    """Compute feature concentration from a feature importance dict.
+
+    Same HHI/top-1 share pattern as compute_symbol_concentration, but for
+    feature importance shares instead of trade shares.
+
+    Args:
+        importance_dict: Dict mapping feature_name -> importance (gain/weight).
+
+    Returns:
+        Dict with keys:
+            num_features, total_importance, top_feature, top_feature_share,
+            feature_concentration_hhi, per_feature_shares, top3_features, top3_share.
+    """
+    if not importance_dict:
+        return {
+            "num_features": 0,
+            "total_importance": 0.0,
+            "top_feature": "NONE",
+            "top_feature_share": 0.0,
+            "feature_concentration_hhi": 0.0,
+            "per_feature_shares": {},
+            "top3_features": [],
+            "top3_share": 0.0,
+        }
+
+    total = sum(importance_dict.values())
+    if total == 0:
+        features = list(importance_dict.keys())
+        return {
+            "num_features": len(features),
+            "total_importance": 0.0,
+            "top_feature": "NONE",
+            "top_feature_share": 0.0,
+            "feature_concentration_hhi": 0.0,
+            "per_feature_shares": {f: 0.0 for f in features},
+            "top3_features": features[:3],
+            "top3_share": 0.0,
+        }
+
+    shares = {name: val / total for name, val in importance_dict.items()}
+    top_feature = max(shares, key=lambda k: shares[k])
+    top_share = shares[top_feature]
+    hhi = sum(s ** 2 for s in shares.values())
+    sorted_by_share = sorted(shares.items(), key=lambda x: -x[1])
+    top3 = [name for name, _ in sorted_by_share[:3]]
+    top3_share_sum = sum(shares[n] for n in top3)
+
+    return {
+        "num_features": len(importance_dict),
+        "total_importance": total,
+        "top_feature": top_feature,
+        "top_feature_share": round(top_share, 6),
+        "feature_concentration_hhi": round(hhi, 6),
+        "per_feature_shares": {name: round(sh, 6) for name, sh in shares.items()},
+        "top3_features": top3,
+        "top3_share": round(top3_share_sum, 6),
+    }
+
+
 def compute_regime_concentration(
     regime_entries: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
