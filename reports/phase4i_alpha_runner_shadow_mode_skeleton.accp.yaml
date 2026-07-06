@@ -1,0 +1,30 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: PASS
+scope_confirmation:
+  issue: 276
+  scope: "AlphaRunner class skeleton with interface documentation, hash verification, and no order submission path"
+files_changed:
+  - runtime/services/alpha_runner.py
+  - runtime/tests/test_alpha_runner.py
+  - reports/phase4i_alpha_runner_shadow_mode_skeleton.md
+  - reports/phase4i_alpha_runner_shadow_mode_skeleton.accp.yaml
+decisions_locked:
+  - "AlphaRunner is observe-only: no imports of paper_execution, execution_orchestrator, binance_client, or any order submission module"
+  - "16-feature set pinned to same locked set as integration/tests/test_alpha1_artifact_guard"
+  - "Threshold locked at 0.550 (matches Alpha #1 frozen artifact)"
+  - "compute_features is a stub raising NotImplementedError until lib/alpha1_inference is implemented"
+  - "Coordination with #25: AlphaRunner provides signal logging, #25 provides shadow comparison infrastructure"
+remaining_holds:
+  - "Live feature engine implementation pending #273 design decision"
+  - "Model binary not yet in repo (external artifact)"
+  - "predict() skeleton returns NEUTRAL; real XGBoost inference pending model loading"
+safe_next_step: "Implement lib/alpha1_inference for live feature computation, then expand compute_features stub"
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest runtime/tests/test_alpha_runner.py -q"
+evidence:
+  - "10 passed in 0.29s"
+  - "AST-based import verification confirms no forbidden modules"
+  - "Feature manifest has exactly 16 features matching locked set"
+  - "Threshold constant == 0.550"
+  - "compute_features raises NotImplementedError('Pending lib/alpha1_inference')"
