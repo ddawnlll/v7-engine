@@ -1,0 +1,25 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: PASS
+scope_confirmation:
+  issue: 273
+  scope: "Design-only decision for Alpha #1 runtime inference package location, loader contract, and feature parity boundary"
+files_changed:
+  - reports/alpha1_runtime_inference_architecture_decision.md
+  - reports/alpha1_runtime_inference_architecture_decision.accp.yaml
+  - v7/docs/roadmap.md
+decisions_locked:
+  - "Alpha #1 live inference must consume a frozen side-effect-free package under lib/, not import the AlphaForge research tree directly"
+  - "Alpha #1 live features must match the batch OHLCV-proxy formulas exactly; runtime analyzer indicators are not a valid serving substitute"
+  - "A new inference request/result contract surface is required in addition to the existing ModelArtifact metadata contract"
+remaining_holds:
+  - "Frozen artifact hash-pin contract and guard are still unimplemented"
+  - "Batch-vs-live parity harness is still unimplemented"
+  - "AlphaRunner shadow-mode code path is still unimplemented"
+safe_next_step: "Freeze the exact Alpha #1 bundle, add hash-pin guard, then implement the lib-hosted feature engine and parity harness"
+commands_run:
+  - "gh issue view 273 --repo ddawnlll/v7-engine --json number,title,body,state,labels"
+  - "grep/read inspection across alphaforge feature sources, runtime incremental indicators, contracts registry, and roadmap authority docs"
+evidence:
+  - "Locked 16-feature list and threshold 0.550 confirmed from Alpha #1 handoff JSON and roadmap"
+  - "Runtime incremental indicator surface was found non-identical for Bollinger, ATR, RSI, and proxy microstructure semantics"
