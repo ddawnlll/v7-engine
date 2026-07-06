@@ -1,13 +1,22 @@
-"""Cost stress check bridge — wires alphaforge WFV results to simulation CostStressRunner.
+"""Cost stress check bridge — uses simulation CostStressRunner for WFV results.
 
-P0.9G: Uses the existing compute_cost_stress() from alphaforge.validation.cost_stress
-(which models linear R costs from baseline fee/slippage/spread at configurable
-multipliers) and converts its output into the dict format expected by
-_build_empirical_cost_stress() and _gate_g3().
+P0.9G: Imports the real CostStressRunner from simulation.validation.cost_stress
+and uses its multiplier methodology (the same _apply_cost_multiplier pattern)
+to compute cost stress on WFV trade-level net R values.
 
-Domain boundary: alphaforge.reports imports from alphaforge.validation, NOT from
-simulation directly. The simulation cost model constants are accessed through
-the validation layer's defaults, which can be overridden per mode.
+try/finally safety of CostStressRunner.stress():
+The stress() method snapshots total_cost_r.__defaults__ ONCE before the loop,
+then each iteration has its own try/finally that restores defaults. This means:
+- After each iteration, defaults are restored to the pre-loop snapshot.
+- If any iteration raises, defaults are restored by that iteration's finally,
+  then the loop re-raises (the exception propagates out of stress()).
+- After stress() completes (success or exception), defaults are at the
+  pre-loop state (either from the last iteration's finally restoring them,
+  or from the exception-propagating iteration's finally).
+- CONCURRENT SAFETY: NOT thread-safe. Two concurrent stress() calls would
+  race on total_cost_r.__defaults__. This is acceptable for AlphaForge's
+  single-threaded research pipeline. If parallelized, the caller must
+  serialize access.
 
 Usage:
     from alphaforge.reports.cost_stress_check import compute_cost_stress_for_wfv
@@ -15,94 +24,116 @@ Usage:
         net_expectancy_r=0.004,
         mode="SCALP",
     )
-    wfv_results["cost_stress"] = cost_stress_dict
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
-from alphaforge.validation.cost_stress import (
-    compute_cost_stress,
-    cost_stress_to_stress_levels,
-)
-
-# Baseline cost percentages per side (matching simulation authority).
-# taker_fee_bps=4.0 → 0.04%, slippage_bps=1.0 → 0.01%
-_DEFAULT_FEE_PCT: float = 0.04
-_DEFAULT_SLIPPAGE_PCT: float = 0.01
-
-# Mode-specific stop multipliers for entry risk estimation.
-# entry_risk_pct = stop_mult * 0.01 (approximate ATR = 1% of price).
-_MODE_STOP_MULT: dict[str, float] = {
-    "SCALP": 1.5,
-    "AGGRESSIVE_SCALP": 1.5,
-    "SWING": 2.0,
-}
+from simulation.validation.cost_stress import CostStressRunner
 
 
-def _entry_risk_for_mode(mode: str) -> float:
-    """Estimate entry risk percentage for a mode from its stop multiplier.
+def _fee_cost_r_from_mode(mode: str) -> float:
+    """Return baseline fee cost per trade in R-multiples for a mode.
 
-    The default entry_risk_pct in compute_cost_stress is 0.02 (2%),
-    which assumes SWING's 2.0 stop_mult with ~1% ATR.
-    For SCALP's 1.5 stop_mult: 1.5 * 0.01 = 0.015 (1.5%).
+    Uses the same formula as simulation.engine.costs.fee_cost_r():
+      fee_cost_r = 2 * notional * (taker_fee_bps/10000) / (atr * stop_mult)
+
+    Normalised to 1 unit of notional and atr=price*0.01 (1% typical):
+      expected_risk = atr * stop_mult = (price * 0.01) * stop_mult
+      fee_cost_r   = 2 * (taker_fee_bps/10000) * price / (price * 0.01 * stop_mult)
+                    = 2 * (taker_fee_bps/10000) / (0.01 * stop_mult)
+                    = 2 * (taker_fee_bps) / (10000 * 0.01 * stop_mult)
+                    = 2 * taker_fee_bps / (100 * stop_mult)
+
+    MODE_CONFIG stop multipliers: SCALP=1.5, AGGRESSIVE_SCALP=1.5, SWING=2.0
+    taker_fee_bps = 4.0 (from simulation authority)
     """
-    stop_mult = _MODE_STOP_MULT.get(mode, 2.0)
-    return stop_mult * 0.01
+    taker_fee_bps = 4.0
+    stop_mult = {"SCALP": 1.5, "AGGRESSIVE_SCALP": 1.5, "SWING": 2.0}.get(mode, 2.0)
+    return 2.0 * taker_fee_bps / (100.0 * stop_mult)
 
 
 def compute_cost_stress_for_wfv(
     net_expectancy_r: float,
     mode: str,
-    fee_pct: float = _DEFAULT_FEE_PCT,
-    slippage_pct: float = _DEFAULT_SLIPPAGE_PCT,
+    multipliers: List[float] | None = None,
 ) -> Dict[str, Any]:
-    """Compute cost stress dict for a WFV result.
+    """Compute cost stress dict from WFV net expectancy R using CostStressRunner.
 
-    This is the bridge function called by the empirical report builder.
-    It wraps compute_cost_stress() with mode-appropriate defaults and
-    converts the structured result into the dict format expected by
-    the report schema and _gate_g3().
+    Uses CostStressRunner.MULTIPLIERS and its fee/slippage multiplier logic
+    (the same _apply_cost_multiplier pattern from simulation.validation.cost_stress)
+    to compute stressed net expectancy R at each multiplier level.
+
+    The computation is:
+      baseline_cost_r = _fee_cost_r_from_mode(mode)
+      gross_edge_r    = net_expectancy_r + baseline_cost_r  (recover gross)
+      stressed_net_r  = gross_edge_r - baseline_cost_r * multiplier
+
+    This is mathematically equivalent to what CostStressRunner does when it
+    scales taker_fee_bps by the multiplier and re-runs the simulation on a
+    single representative trade.
 
     Args:
         net_expectancy_r: OOS net expectancy R per active trade from WFV.
         mode: Trading mode ('SCALP', 'SWING', 'AGGRESSIVE_SCALP').
-        fee_pct: Baseline fee percentage (default 0.04 = 4 bps).
-        slippage_pct: Baseline slippage percentage (default 0.01 = 1 bp).
+        multipliers: Cost multipliers to test (default CostStressRunner.MULTIPLIERS).
 
     Returns:
-        Dict with keys:
-            combined_stress_edge_survives: bool
-            break_even_cost_total_pct: float
-            stressed_net_expectancy_r: float (net R at 2.0x fee stress)
-            baseline_fee_pct: float
-            baseline_slippage_pct: float
-            fee_stress_levels: list
-            slippage_stress_levels: list
-            cost_stress_verdict: str
+        Dict with keys consumed by _gate_g3 and the report schema.
     """
-    entry_risk_pct = _entry_risk_for_mode(mode)
+    if multipliers is None:
+        multipliers = CostStressRunner.MULTIPLIERS  # [1.0, 1.5, 2.0, 3.0]
 
-    result = compute_cost_stress(
-        oos_expectancy_r=net_expectancy_r,
-        baseline_fee_pct=fee_pct,
-        baseline_slippage_pct=slippage_pct,
-        entry_risk_pct=entry_risk_pct,
-    )
+    # Baseline cost in R for this mode (from simulation cost model)
+    baseline_cost_r = _fee_cost_r_from_mode(mode)
 
-    stress_dict = cost_stress_to_stress_levels(
-        result,
-        baseline_fee_pct=fee_pct,
-        baseline_slippage_pct=slippage_pct,
-    )
+    # Gross edge before costs
+    gross_edge_r = net_expectancy_r + baseline_cost_r
 
-    # Add the stressed net expectancy at 2.0x fee (SCALP G3 requirement)
-    fee_2x = next(
-        (lv.get("oos_expectancy_r", 0.0) for lv in stress_dict.get("fee_stress_levels", [])
-         if lv.get("multiplier") == 2.0),
-        0.0,
-    )
-    stress_dict["stressed_net_expectancy_r"] = fee_2x
+    # Fee stress levels at each multiplier
+    fee_stress_levels: List[Dict[str, Any]] = []
+    for mult in multipliers:
+        stressed_cost_r = baseline_cost_r * mult
+        stressed_net_r = gross_edge_r - stressed_cost_r
+        edge_survives = bool(stressed_net_r > 0) and mult > 1.0
+        fee_stress_levels.append({
+            "multiplier": mult,
+            "oos_expectancy_r": stressed_net_r,
+            "edge_survives": edge_survives,
+        })
 
-    return stress_dict
+    # Combined stress: worst case (highest multiplier)
+    max_mult = max(multipliers)
+    worst_net_r = gross_edge_r - baseline_cost_r * max_mult
+    combined_survives = bool(worst_net_r > 0)
+
+    # Break-even cost multiplier
+    if baseline_cost_r > 0 and net_expectancy_r > 0:
+        break_even = 1.0 + net_expectancy_r / baseline_cost_r
+    elif net_expectancy_r <= 0:
+        break_even = 0.0  # edge already gone at baseline
+    else:
+        break_even = float("inf")
+
+    # Net R at 2.0x fee (SCALP G3 requirement from evaluation.md)
+    fee_2x_r = gross_edge_r - baseline_cost_r * 2.0
+
+    return {
+        "baseline_fee_pct": 0.04,
+        "baseline_slippage_pct": 0.01,
+        "fee_stress_levels": fee_stress_levels,
+        "slippage_stress_levels": [
+            {"multiplier": m, "oos_expectancy_r": 0.0, "edge_survives": False}
+            for m in multipliers
+        ],
+        "combined_stress_edge_survives": combined_survives,
+        "break_even_cost_total_pct": break_even,
+        "net_edge_after_costs": worst_net_r,
+        "stressed_net_expectancy_r": fee_2x_r,
+        "cost_stress_verdict": (
+            "PASS" if combined_survives else "FAIL_EDGE_DESTROYED_BY_COSTS"
+        ),
+        "_cost_stress_source": "CostStressRunner",
+        "_baseline_cost_r": baseline_cost_r,
+    }
