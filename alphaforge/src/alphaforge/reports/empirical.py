@@ -315,17 +315,34 @@ def _compute_verdict(
 # Empirical cost stress builder
 # ---------------------------------------------------------------------------
 
-def _build_empirical_cost_stress(wfv_results: dict) -> dict:
-    """Build cost_stress section from WFV results."""
+def _build_empirical_cost_stress(
+    wfv_results: dict,
+    mode: str = "SWING",
+    oos_expectancy_r: float = 0.0,
+) -> dict:
+    """Build cost_stress section from WFV results.
+
+    P0.9G: When no pre-computed cost_stress data exists in wfv_results,
+    automatically computes cost stress from the OOS expectancy R using
+    compute_cost_stress_for_wfv() with mode-appropriate parameters.
+    This eliminates the "NOT_RUN" / MISLEADING_PASS gap.
+    Returns the full computed dict including extra keys.
+    """
     cost_data = wfv_results.get("cost_stress", {})
+
+    # Auto-compute cost stress if not pre-computed
+    _auto_computed = False
+    if not cost_data and oos_expectancy_r != 0.0:
+        from alphaforge.reports.cost_stress_check import compute_cost_stress_for_wfv
+        cost_data = compute_cost_stress_for_wfv(
+            net_expectancy_r=oos_expectancy_r,
+            mode=mode,
+        )
+        _auto_computed = True
 
     fee_levels = cost_data.get("fee_stress_levels", [])
     slip_levels = cost_data.get("slippage_stress_levels", [])
     combined = cost_data.get("combined_stress_edge_survives", False)
-
-    # Default fee/slippage
-    baseline_fee = cost_data.get("baseline_fee_pct", 0.04)
-    baseline_slip = cost_data.get("baseline_slippage_pct", 0.02)
 
     # Determine cost stress verdict based on available data
     levels_empty = not fee_levels and not slip_levels
@@ -336,9 +353,15 @@ def _build_empirical_cost_stress(wfv_results: dict) -> dict:
     else:
         cost_verdict = "FAIL_EDGE_DESTROYED_BY_COSTS"
 
+    # When auto-computed, return the full dict (preserves extra keys
+    # like stressed_net_expectancy_r). Otherwise build from scratch.
+    if _auto_computed:
+        cost_data["cost_stress_verdict"] = cost_verdict
+        return cost_data
+
     return {
-        "baseline_fee_pct": baseline_fee,
-        "baseline_slippage_pct": baseline_slip,
+        "baseline_fee_pct": cost_data.get("baseline_fee_pct", 0.04),
+        "baseline_slippage_pct": cost_data.get("baseline_slippage_pct", 0.02),
         "fee_stress_levels": [
             {
                 "multiplier": lv.get("multiplier", 1.0),
@@ -775,7 +798,9 @@ def build_empirical_mode_research_report(
     date_end = data_scope.get("date_range_end", "2026-01-01T00:00:00Z")
 
     # --- Cost stress section ---
-    cost_stress_section = _build_empirical_cost_stress(wfv_results)
+    cost_stress_section = _build_empirical_cost_stress(
+        wfv_results, mode=mode, oos_expectancy_r=oos_expectancy_r,
+    )
     no_trade_section = _build_empirical_no_trade_comparison(
         wfv_results, oos_expectancy_r,
     )

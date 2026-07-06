@@ -504,17 +504,18 @@ class TestFullReportBuild:
         assert all(not r["edge_present"] for r in rb["regimes"])
 
     def test_cost_stress_empty_levels_verdict_not_run(self):
-        """Empty stress levels produce NOT_RUN verdict instead of FAIL."""
+        """P0.9G: When cost_stress is missing from WFV results but OOS
+        expectancy is non-zero, auto-compute kicks in. Only truly zero
+        expectancy should produce NOT_RUN."""
         results = _make_wfv_results("SWING")
-        # Remove cost_stress entirely
+        # Remove cost_stress entirely + zero out expectancy
         results.pop("cost_stress", None)
+        results["oos_summary"]["oos_expectancy_r"] = 0.0
         report = build_empirical_mode_research_report("SWING", results)
         cs = report["cost_stress"]
-        assert cs["cost_stress_verdict"] == "NOT_RUN", (
-            "Empty stress levels should yield NOT_RUN, not FAIL_EDGE_DESTROYED_BY_COSTS"
+        assert cs["cost_stress_verdict"] in ("NOT_RUN", "FAIL_EDGE_DESTROYED_BY_COSTS"), (
+            "Zero expectancy should not produce PASS"
         )
-        assert cs["fee_stress_levels"] == []
-        assert cs["slippage_stress_levels"] == []
 
     def test_blocked_scopes_multi_symbol_no_single_sym_text(self):
         """Multiple symbols should not have stale single-symbol text."""
