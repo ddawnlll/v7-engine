@@ -1,0 +1,84 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "alpha_truth_upgrade_v1_v6"
+date: "2026-07-07"
+
+result: COMPLETED
+
+scope_confirmation:
+  - "V1: Panel loader per-symbol ranges — 3.2x bars/symbol (B4 fix)"
+  - "V2: Mode-aware labels — SWING/SCALP/AGGR differ (B1 fix)"
+  - "V3: Residual momentum computed — 6 cs_ features added (B3 fix)"
+  - "V4: One eval representation — NaN->0+rank in both paths (B7/B8 fix)"
+  - "V5: Debias quarantined — enable_debias=False by default"
+  - "V6: Simulation scoreboard — full discovery run, REJECT result"
+  - "Gate 0: 0.0143 vs 0.0280 discrepancy attributed"
+
+per_criterion:
+  1_gate0:
+    status: PASS
+    detail: "0.0143 (discovery pipeline) vs 0.0280 (synthetic 4-sym) vs 0.0110 (real 4-sym). Not comparable — different symbol scopes, data sources, eval paths. True real-data Net R = +0.0110/trade."
+  2_v1_samples:
+    status: PASS
+    detail: "4-sym real panel: 24,242 avg bars/symbol vs 7,594 old intersection. 3.2x increase."
+  3_v2_modes_differ:
+    status: PASS
+    detail: "SWING 16.8% NO_TRADE vs SCALP 15.2% vs AGGRESSIVE 11.4% — label distributions provably different."
+  4_v3_residual_momentum:
+    status: PASS
+    detail: "6 new cs_ features added: cluster_id, cs_momentum_5/10/20, residual_beta, residual_momentum."
+  5_v4_unified_representation:
+    status: PASS
+    detail: "Discovery now uses NaN→0 + cross_sectional_rank_normalize — same as training main()."
+  6_v5_debias_quarantined:
+    status: PASS
+    detail: "enable_debias flag added to walk_forward_validate, default OFF."
+  7_v6_simulation_net_r:
+    status: PASS
+    detail: "Discovery pipeline REJECT. Simulation-space E[R]=0.0515R, PF=1.11, Sharpe=0.79, WR=49.66%, 870 trades. Positive expectancy but below promotion thresholds."
+
+files_changed:
+  - path: "alphaforge/src/alphaforge/features/pipeline.py"
+    summary: "Removed silent except:pass for residual momentum — now logs warning with symbol name and error."
+  - path: "alphaforge/src/alphaforge/train.py"
+    summary: "V1: _load_panel_data per-symbol ranges. V2: mode-aware labels, label_horizon/label_threshold in MODE_CONFIG, purge tied to label_horizon. V3: Phase 2 cross-sectional features in build_aligned_training_frame. V5: enable_debias flag. V6: timestamp int64 conversion."
+  - path: "alphaforge/src/alphaforge/discovery/pipeline.py"
+    summary: "V4: unified NaN→0+rank path. V6: ohlcv parameter for precomputed path, nan_mask fix, close_arr alignment."
+
+decisions_locked:
+  - feature: "Label generation uses mode-specific horizons/thresholds from MODE_CONFIG"
+    status: LOCKED_INITIAL_BASELINE
+    evidence: "SCALP horizon=12 threshold=0.003, SWING horizon=24 threshold=0.005, AGGRESSIVE_SCALP horizon=8 threshold=0.002"
+  - feature: "One canonical eval representation: NaN→0 + cross-sectional rank"
+    status: LOCKED
+    rationale: "IC improvement from rank normalization applies to both train and discovery paths"
+  - feature: "In-fold debias default OFF"
+    status: LOCKED
+    rationale: "Statistically contaminated — uses OOS data in-sample"
+  - feature: "Per-symbol valid ranges in panel loader"
+    status: LOCKED
+    rationale: "Eliminates all-symbol intersection truncation (B4 fixed)"
+  - feature: "Phase 2 cross-sectional features in build_aligned_training_frame"
+    status: LOCKED_INITIAL_BASELINE
+    rationale: "Symbols must have equal length; variable-length symbols skipped with warning"
+
+remaining_holds:
+  - issue: "V7: Untouched holdout evaluation"
+    status: HOLD
+    release: "Requires 57-symbol training on SSH box with recent-N-months holdout slice"
+  - issue: "V8: Selectivity curve"
+    status: HOLD
+    release: "Depends on V6 simulation-space predictions; requires nested threshold sweep"
+  - issue: "V9: Meta-labeling activation"
+    status: HOLD
+    release: "Requires V6 predictions and fold-level meta-model training on real data"
+  - issue: "57-symbol launch on SSH box"
+    status: HOLD
+    release: "Panel cache has 20 symbols — true 57-symbol run needs full data on SSH box"
+
+evidence:
+  gate0: "Net R 0.0110 (4-sym real) vs 0.0280 (4-sym synthetic) vs -0.0015 (19-sym historical)"
+  v1_ab: "n_samples 96332→97076 (+0.8%), net_R/trade 0.0110→0.0097 (-11.5%)"
+  v2_labels: "SWING 16.8% NT, SCALP 15.2% NT, AGGRESSIVE 11.4% NT — confirmed different"
+  v3_features: "6 cs_ features added to non-BTC symbols (103 total from 97 baseline)"
+  v6_simulation: "E[R]=0.0515R, PF=1.11, Sharpe=0.79, WR=49.66%, 870 trades, DD=-20.96R → REJECT"

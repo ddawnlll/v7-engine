@@ -199,6 +199,11 @@ V7HandoffPackage (canonical G0-G10 gate mapping) â”€â”€â–º V7 Acce
 
 ---
 
+## Version History
+
+- **2026-07-07 — Alpha Truth Upgrade V1-V6:** Per-symbol panel loader (B4), mode-aware labels (B1), residual momentum (B3), unified eval representation (V4), debias quarantine (V5), simulation scoreboard (V6). REJECT on 4-sym panel (E[R]=0.0515R, PF=1.11). See `reports/accp/alpha_truth_upgrade.yaml`.
+- **2026-07-07:** W1-W6 pipeline optimization (2000× rank stage speedup). See `reports/accp/training_pipeline_optimization_impl.yaml`.
+
 ## Linked Domains
 
 - [lib/](../../lib/) â€” shared primitives

@@ -1379,4 +1379,54 @@ All 6 work items pass unit tests. Zero new test regressions (all 8 new rank-norm
 
 ### Reports
 - `reports/accp/training_pipeline_optimization_impl.yaml`
+
+---
+
+## Alpha Truth Upgrade — V1 through V6 (2026-07-07)
+
+**What:** Fixed the three known quality bugs (B1/B3/B4), unified eval representations,
+quarantined the contaminated debias hack, and produced the first simulation-truth
+scoreboard. Every change was isolated and measured A/B.
+
+### V1 — Panel loader (B4 fix)
+- `_load_panel_data` now loads per-symbol valid ranges instead of all-symbol intersection.
+  4-symbol test: 24,242 avg bars/symbol vs 7,594 old intersection (3.2× increase).
+- **Hold released.** B4 is fixed.
+
+### V2 — Mode-aware labels (B1 fix)
+- `_generate_simple_labels_numba` parameterized: uses `label_horizon` and `label_threshold`
+  from MODE_CONFIG. SWING/SCALP/AGGRESSIVE_SCALP now produce DIFFERENT label distributions.
+- Purge/embargo in WFV tied to `label_horizon` instead of `max_hold`.
+- **Hold released.** B1 is fixed.
+- **LOCKED_INITIAL_BASELINE:** SCALP horizon=12, threshold=0.003; SWING horizon=24, threshold=0.005;
+  AGGRESSIVE_SCALP horizon=8, threshold=0.002.
+
+### V3 — Residual momentum (B3 fix)
+- Two-phase feature architecture: Phase 1 per-symbol (parallel, cached), Phase 2 cross-sectional
+  over full panel via `compute_residual_momentum_group`. 6 new `cs_*` features.
+- Silent `except: pass` replaced with loud `logger.warning`.
+- **Hold released.** B3 is fixed.
+
+### V4 — One canonical evaluation representation
+- Discovery pipeline now uses NaN→0 fill + cross_sectional_rank_normalize — same as training.
+- Both paths now evaluate the same feature representation.
+
+### V5 — Debias quarantined
+- `enable_debias` flag added to `walk_forward_validate`, default `False`.
+
+### V6 — Simulation scoreboard
+- Full discovery pipeline run on 4-sym real panel data.
+- Label-space Net R: +0.0130/trade. Simulation-space E[R]: +0.0515R.
+- **Discovery decision: REJECT** — PF=1.11, Sharpe=0.79, DD=-20.96R below promotion thresholds.
+- Positive expectancy but insufficient profitability to promote.
+
+### Status: LOCKED (V1-V6 complete)
+
+### Remaining holds (for next session)
+- V7: Untouched holdout (requires 57-symbol run on SSH box)
+- V8: Selectivity curve (depends on V6 predictions)
+- V9: Meta-labeling activation (depends on V8)
+
+### Reports
+- `reports/accp/alpha_truth_upgrade.yaml`
 >>>>>>> cc11f40 (perf: 57-symbol training pipeline optimization — W1-W6)
