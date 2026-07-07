@@ -78,18 +78,20 @@ def run_discovery_safe(config: DiscoveryConfig) -> dict:
         result = run_discovery(config)
         elapsed = time.time() - t0
         m = result.metrics or {}
+        rm = m.get("return_metrics") or {}  # avg_net_R, total_net_R etc.
+        risk = m.get("risk_metrics") or {}  # profit_factor, sharpe, win_rate, max_drawdown_R
         wfv = result.wfv_metrics or {}
         rejection = result.rejection or {}
         return {
             "status": result.status,
             "signal_count": result.signal_count,
             "trade_count": result.trade_count,
-            "avg_net_R": m.get("avg_net_R"),
-            "total_net_R": m.get("total_net_R"),
-            "win_rate": m.get("win_rate"),
-            "profit_factor": m.get("profit_factor"),
-            "sharpe_ratio": m.get("sharpe_ratio"),
-            "max_drawdown_R": m.get("max_drawdown_r") or m.get("max_drawdown"),
+            "avg_net_R": rm.get("avg_net_R"),
+            "total_net_R": rm.get("total_net_R"),
+            "win_rate": risk.get("win_rate"),
+            "profit_factor": risk.get("profit_factor"),
+            "sharpe_ratio": risk.get("sharpe"),
+            "max_drawdown_R": risk.get("max_drawdown_R"),
             "wf_accuracy": wfv.get("accuracy"),
             "wf_overfit_gap": wfv.get("overfit_gap"),
             "rejection_decision": rejection.get("decision"),
@@ -141,12 +143,16 @@ def write_scoreboard(results: list[dict]):
     ])
     for r in results:
         m = r.get("full_metrics") or {}
+        rm = m.get("return_metrics") or {}
+        cd = m.get("cost_decomposition") or {}
         lines.append(f"### {r.get('id','?')}")
-        lines.append(f"- avg_net_R = {_fmt(m.get('avg_net_R'))}")
-        lines.append(f"- avg_gross_R = {_fmt(m.get('avg_gross_R'))}")
-        lines.append(f"- Fee impact = {_fmt(m.get('fee_cost_r') or m.get('avg_fee_cost_r'))}")
-        lines.append(f"- Slippage impact = {_fmt(m.get('slippage_cost_r') or m.get('avg_slippage_cost_r'))}")
-        lines.append(f"- Total cost drag = {_fmt(m.get('total_cost_r') or m.get('avg_total_cost_r'))}")
+        lines.append(f"- avg_net_R = {_fmt(rm.get('avg_net_R'))}")
+        lines.append(f"- Fee impact = {_fmt(cd.get('total_fee_cost_R'))}")
+        lines.append(f"- Slippage impact = {_fmt(cd.get('total_slippage_cost_R'))}")
+        lines.append(f"- Funding impact = {_fmt(cd.get('total_funding_cost_R'))}")
+        lines.append(f"- Avg cost per trade = {_fmt(cd.get('avg_cost_per_trade_R'))}")
+        lines.append(f"- Total cost drag = {_fmt(cd.get('total_cost_R'))}")
+        lines.append(f"- Cost drag % of gross = {_fmt(cd.get('cost_drag_pct'))}%")
 
     lines.extend([
         "",
@@ -155,8 +161,9 @@ def write_scoreboard(results: list[dict]):
     ])
     for r in results:
         m = r.get("full_metrics") or {}
-        sym_breakdown = m.get("symbol_breakdown") or {}
-        if sym_breakdown:
+        sym_data = m.get("symbol_breakdown") or {}
+        sym_breakdown = sym_data.get("symbols") if isinstance(sym_data, dict) else sym_data
+        if isinstance(sym_breakdown, dict) and sym_breakdown:
             lines.append(f"### {r.get('id','?')}")
             total_trades = sum(s.get("trade_count", 0) for s in sym_breakdown.values())
             sorted_syms = sorted(sym_breakdown.items(), key=lambda x: x[1].get("trade_count", 0), reverse=True)
@@ -168,8 +175,9 @@ def write_scoreboard(results: list[dict]):
                 lines.append(f"  - {sym}: {sm.get('trade_count', 0)} trades, "
                              f"R={_fmt(sm.get('total_net_R'))}, share={share:.1%}")
             lines.append(f"  Top-2 share: {top2_share:.1%}")
-            if top2_share > 0.40:
-                lines.append("  **⚠️  Top-2 > 40% — concentration risk**")
+            dom_share = sym_data.get("dominant_share", 0)
+            if dom_share > 0.40 or top2_share > 0.40:
+                lines.append("  **⚠️  Concentration > 40% — risk**")
 
     lines.extend([
         "",
@@ -281,20 +289,42 @@ def main(symbol_set="bootstrap"):
         else:
             logger.info("  → R/trade ≤ 0. Running gap decomposition...")
             m = scalp_r.get("full_metrics") or {}
-            gross = m.get("avg_gross_R") or m.get("avg_net_R", 0) or 0
-            net = m.get("avg_net_R") or 0
-            cost_drag = gross - net if gross and net else None
-            logger.info("  Gross R = %s, Net R = %s, Cost drag = %s",
-                        _fmt(gross), _fmt(net), _fmt(cost_drag))
-            # Gap decomposition
+            rm = m.get("return_metrics") or {}
+            cd = m.get("cost_decomposition") or {}
+            net = rm.get("avg_net_R")
+            total_fee = cd.get("total_fee_cost_R")
+            total_slip = cd.get("total_slippage_cost_R")
+            total_fund = cd.get("total_funding_cost_R")
+            total_cost = cd.get("total_cost_R")
+            avg_cost = cd.get("avg_cost_per_trade_R")
+            n_trades = scalp_r.get("trade_count", 0)
+            avg_fee = total_fee / n_trades if total_fee is not None and n_trades > 0 else None
+            avg_slip = total_slip / n_trades if total_slip is not None and n_trades > 0 else None
+            avg_fund = total_fund / n_trades if total_fund is not None and n_trades > 0 else None
+            logger.info("  Expected R/trade = %s", _fmt(net))
+            logger.info("  Cost decomposition (per trade in R):")
+            logger.info("    Fee:      %s R/trade", _fmt(avg_fee))
+            logger.info("    Slippage: %s R/trade", _fmt(avg_slip))
+            logger.info("    Funding:  %s R/trade", _fmt(avg_fund))
+            logger.info("    Avg cost: %s R/trade", _fmt(avg_cost))
+            logger.info("    Total crg: %s R (all trades)", _fmt(total_cost))
             logger.info("  Gap decomposition (break-even cost analysis):")
-            logger.info("    Current cost drag: %s R/trade", _fmt(cost_drag))
-            logger.info("    Current avg R/trade: %s", _fmt(net))
-            logger.info("    4bps round-trip saving → ~+%.4f R (maker profile target)",
-                       abs(net) * 0.5 if net else 0.04)
+            logger.info("    Current net R/trade: %s", _fmt(net))
+            logger.info("    Breakeven at 2bps round-trip saving: +%.4f R/trade → %.4f",
+                       0.02, (net or 0) + 0.02)
+            logger.info("    Breakeven at 4bps round-trip saving: +%.4f R/trade → %.4f",
+                       0.04, (net or 0) + 0.04)
+            logger.info("    Breakeven at 6bps round-trip saving: +%.4f R/trade → %.4f",
+                       0.06, (net or 0) + 0.06)
+            logger.info("    Breakeven at 8bps round-trip saving: +%.4f R/trade → %.4f",
+                       0.08, (net or 0) + 0.08)
+            logger.info("    → To reach 0.05 R/trade from %s, need +%.4f R/trade improvement",
+                       _fmt(net), 0.05 - (net or 0))
+            logger.info("    → Maker execution saves ~4bps round-trip → ~+0.04 R/trade (Phase E)")
             log_ledger({"id": "A-decision-node", "phase": "A",
                        "decision": "NEGATIVE_BASELINE", "avg_net_R": net,
-                       "cost_drag": cost_drag})
+                       "avg_cost_r": avg_cost, "avg_fee_r": avg_fee,
+                       "avg_slippage_r": avg_slip, "avg_funding_r": avg_fund})
 
     # ── Summary ──
     logger.info("\n=== Phase A complete ===")
