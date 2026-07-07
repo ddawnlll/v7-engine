@@ -1,0 +1,32 @@
+{
+  "phase": "F.1",
+  "candidate_config": {
+    "mode": "SCALP",
+    "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
+                "DOGEUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT", "LTCUSDT", "BCHUSDT"],
+    "folds": 6,
+    "confidence_threshold": 0.50,
+    "execution_mode": "MAKER",
+    "maker_fill_assumption": "pessimistic",
+    "seed": 42
+  },
+  "sim_metrics": {
+    "n_trades": 4726,
+    "avg_net_R": -0.0828,
+    "total_net_R": -391.48,
+    "win_rate": 0.4467,
+    "profit_factor": 0.8337,
+    "max_dd_R": -405.15,
+    "avg_cost_per_trade_R": 0.0496
+  },
+  "distance_to_0.05": 0.1328,
+  "gap_decomposition": {
+    "base_R": -0.0951,
+    "maker_lever": 0.0124,
+    "needed_for_0.05": 0.1328,
+    "remaining_levers": ["time_features (~0.005)", "lead-lag (~0.003)",
+                         "selectivity_0.55 (INSUFFICIENT-N)", "funding_timing"]
+  },
+  "frozen_at": "2026-07-07T22:30:00Z",
+  "holdout_status": "NOT_RUN — negative base renders holdout confirmatory; would require pipeline modification for explicit 3-month holdout reservation"
+}
