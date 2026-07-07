@@ -50,14 +50,17 @@ MODE_CONFIG = {
     "SWING": {
         "primary": "4h", "max_hold": 30, "stop_mult": 2.0, "target_mult": 3.0,
         "ambiguity_margin_r": 0.15, "min_edge_r": 0.25,
+        "label_horizon": 24, "label_threshold": 0.005,  # 4 days × 4h bars, 0.5% threshold
     },
     "SCALP": {
         "primary": "1h", "max_hold": 12, "stop_mult": 1.5, "target_mult": 2.0,
         "ambiguity_margin_r": 0.10, "min_edge_r": 0.15,
+        "label_horizon": 12, "label_threshold": 0.003,  # 12 hours (1 trading day), 0.3% threshold
     },
     "AGGRESSIVE_SCALP": {
         "primary": "15m", "max_hold": 5, "stop_mult": 1.5, "target_mult": 2.0,
         "ambiguity_margin_r": 0.05, "min_edge_r": 0.10,
+        "label_horizon": 8, "label_threshold": 0.002,  # 2 hours, 0.2% threshold
     },
 }
 
@@ -410,27 +413,30 @@ def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n
 
 
 @njit
-def _generate_simple_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n,
+def _generate_simple_labels_numba(close, high, low, label_horizon, label_threshold, cost, n,
                                    min_edge_r=0.15, ambiguity_margin_r=0.10):
-    """Forward-return label generation — higher IC than triple-barrier.
+    """Forward-return label generation — mode-aware horizon and threshold.
 
-    Uses 12-bar forward return with threshold. Achieves IC > 0.05
-    with derivatives features (proven in A/B test: IC 0.0813 -> 0.0870).
+    Parameters come from MODE_CONFIG (label_horizon, label_threshold) and
+    simulation authority constants (cost = round_trip_cost_r).
+
+    Label decision uses net return (cost-aware). Forward return exceeding
+    +threshold → LONG, below -threshold → SHORT, else NO_TRADE.
+
+    Previously hardcoded horizon=12, threshold=0.003, cost=0.0008 which meant
+    SWING/SCALP/AGGRESSIVE_SCALP all produced IDENTICAL labels despite
+    operating at different timeframes. This was bug B1.
     """
-    horizon = 12
-    threshold = 0.003  # 0.3%
-    cost = 0.0008  # 8 bps round trip
+    ints_list = np.empty(n - label_horizon - 1, dtype=np.int32)
+    long_gross_vals = np.empty(n - label_horizon - 1, dtype=np.float64)
+    short_gross_vals = np.empty(n - label_horizon - 1, dtype=np.float64)
+    long_net_vals = np.empty(n - label_horizon - 1, dtype=np.float64)
+    short_net_vals = np.empty(n - label_horizon - 1, dtype=np.float64)
+    gross_r_vals = np.empty(n - label_horizon - 1, dtype=np.float64)
+    net_r_vals = np.empty(n - label_horizon - 1, dtype=np.float64)
 
-    ints_list = np.empty(n - horizon - 1, dtype=np.int32)
-    long_gross_vals = np.empty(n - horizon - 1, dtype=np.float64)
-    short_gross_vals = np.empty(n - horizon - 1, dtype=np.float64)
-    long_net_vals = np.empty(n - horizon - 1, dtype=np.float64)
-    short_net_vals = np.empty(n - horizon - 1, dtype=np.float64)
-    gross_r_vals = np.empty(n - horizon - 1, dtype=np.float64)
-    net_r_vals = np.empty(n - horizon - 1, dtype=np.float64)
-
-    for i in range(n - horizon - 1):
-        fwd_ret = (close[i + horizon] / close[i] - 1.0)
+    for i in range(n - label_horizon - 1):
+        fwd_ret = (close[i + label_horizon] / close[i] - 1.0)
 
         long_gross = max(fwd_ret, 0.0)
         short_gross = max(-fwd_ret, 0.0)
@@ -442,11 +448,11 @@ def _generate_simple_labels_numba(close, high, low, max_hold, stop_mult, target_
         long_net_vals[i] = long_net
         short_net_vals[i] = short_net
 
-        if fwd_ret > threshold:
+        if fwd_ret > label_threshold:
             ints_list[i] = 0  # LONG
             gross_r_vals[i] = long_gross
             net_r_vals[i] = long_net
-        elif fwd_ret < -threshold:
+        elif fwd_ret < -label_threshold:
             ints_list[i] = 1  # SHORT
             gross_r_vals[i] = short_gross
             net_r_vals[i] = short_net
@@ -459,16 +465,18 @@ def _generate_simple_labels_numba(close, high, low, max_hold, stop_mult, target_
 
 
 def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
-    """Generate triple-barrier labels with stop/target simulation.
+    """Generate mode-aware forward-return labels.
+
+    Uses label_horizon and label_threshold from MODE_CONFIG per mode,
+    so SWING/SCALP/AGGRESSIVE_SCALP produce DIFFERENT label distributions.
 
     Returns (int_labels, gross_r_values, net_r_values, metrics_dict).
     Label DECISION uses net_R (cost-aware); gross_R is exported for analysis
     and net_R is exported for downstream economic metrics.
     """
     cfg = MODE_CONFIG[mode]
-    max_hold = cfg["max_hold"]
-    stop_mult = cfg["stop_mult"]
-    target_mult = cfg["target_mult"]
+    label_horizon = cfg["label_horizon"]
+    label_threshold = cfg["label_threshold"]
     min_edge_r = cfg.get("min_edge_r", 0.15)
     ambiguity_margin_r = cfg.get("ambiguity_margin_r", 0.10)
 
@@ -486,11 +494,11 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
         sym_high = high_arr[mask]
         sym_low = low_arr[mask]
         n_sym = len(sym_close)
-        if n_sym <= max_hold + 1:
+        if n_sym <= label_horizon + 1:
             continue
         ints_s, gross_s, net_s, _, _, _, _ = _generate_simple_labels_numba(
             sym_close, sym_high, sym_low,
-            max_hold, stop_mult, target_mult, n_sym,
+            label_horizon, label_threshold, _ROUND_TRIP_COST_FRACTIONAL, n_sym,
             min_edge_r, ambiguity_margin_r,
         )
         all_ints.append(ints_s)
@@ -527,9 +535,6 @@ def _compute_single_symbol_frame(
     sym_volume: np.ndarray,
     sym_ts: np.ndarray,
     mode: str,
-    max_hold: int,
-    stop_mult: float,
-    target_mult: float,
     min_edge_r: float,
     ambiguity_margin_r: float,
     symbol_order: int,
@@ -549,9 +554,11 @@ def _compute_single_symbol_frame(
     OHLCV arrays.
     """
     from alphaforge.features.pipeline import cached_compute_features, CACHE_DIR_DEFAULT
+    from alphaforge.train import MODE_CONFIG, _ROUND_TRIP_COST_FRACTIONAL
 
     n_sym = len(sym_close)
-    if n_sym <= max_hold + 1:
+    _label_horizon = MODE_CONFIG.get(mode, {}).get("label_horizon", 12)
+    if n_sym <= _label_horizon + 1:
         return None
 
     if precomputed_features is not None and sym in precomputed_features:
@@ -580,11 +587,11 @@ def _compute_single_symbol_frame(
         fn = sorted(fm.features.keys())
         Xs = np.column_stack([fm.features[k] for k in fn]).astype(np.float64)
 
-    ints_s, gross_s, net_s, long_gross_s, short_gross_s, long_net_s, short_net_s = _generate_simple_labels_numba(
-        sym_close, sym_high, sym_low,
-        max_hold, stop_mult, target_mult, n_sym,
-        min_edge_r, ambiguity_margin_r,
-    )
+        ints_s, gross_s, net_s, long_gross_s, short_gross_s, long_net_s, short_net_s = _generate_simple_labels_numba(
+            sym_close, sym_high, sym_low,
+            cfg["label_horizon"], cfg["label_threshold"], _ROUND_TRIP_COST_FRACTIONAL, n_sym,
+            min_edge_r, ambiguity_margin_r,
+        )
 
     label_len = len(ints_s)
     if label_len == 0:
@@ -708,9 +715,6 @@ def build_aligned_training_frame(
     feat_names: list[str] | None = None
 
     cfg = MODE_CONFIG[mode]
-    max_hold = cfg["max_hold"]
-    stop_mult = cfg["stop_mult"]
-    target_mult = cfg["target_mult"]
     min_edge_r = cfg.get("min_edge_r", 0.15)
     ambiguity_margin_r = cfg.get("ambiguity_margin_r", 0.10)
 
@@ -738,9 +742,6 @@ def build_aligned_training_frame(
             sym_volume=volume_arr[symbols == sym],
             sym_ts=timestamps[symbols == sym],
             mode=mode,
-            max_hold=max_hold,
-            stop_mult=stop_mult,
-            target_mult=target_mult,
             min_edge_r=min_edge_r,
             ambiguity_margin_r=ambiguity_margin_r,
             symbol_order=symbol_order[sym],
@@ -997,12 +998,13 @@ def walk_forward_validate(
         ]) if n > 0 else np.empty((0, 3), dtype=np.float64)
     fold_size = n // (min_folds + 1)
     results: list[dict] = []
-    # P0.9F: purge/embargo derived from max_hold to guarantee label-leakage barrier
-    # >= k * max_hold. k=2 is HOLD — requires empirical calibration.
-    max_hold = MODE_CONFIG.get(mode, {}).get("max_hold", 12)
+    # P0.9F: purge/embargo tied to label_horizon (the actual forward lookahead
+    # of the label function — was previously bound to max_hold, which was wrong
+    # because max_hold is the position-sizing horizon, not the label horizon).
+    label_horizon = MODE_CONFIG.get(mode, {}).get("label_horizon", 12)
     k = 2  # HOLD: multiplier requires empirical calibration
-    purge_bars = max(fold_size // 4, k * max_hold)
-    embargo_bars = max(fold_size // 8, k * max_hold)
+    purge_bars = max(fold_size // 4, k * label_horizon)
+    embargo_bars = max(fold_size // 8, k * label_horizon)
 
     logger.info(
         "WFV: folds=%d, fold_size=%d, purge=%d, embargo=%d",
@@ -1026,9 +1028,9 @@ def walk_forward_validate(
         effective_train_end = train_end - purge_bars
         effective_val_start = val_start + embargo_bars
 
-        assert effective_train_end <= train_end - max_hold, (
+        assert effective_train_end <= train_end - label_horizon, (
             f"purge_bars={purge_bars} insufficient: train_end={train_end}, "
-            f"effective_train_end={effective_train_end}, max_hold={max_hold}"
+            f"effective_train_end={effective_train_end}, label_horizon={label_horizon}"
         )
 
         if effective_train_end <= 0 or effective_val_start >= val_end:
