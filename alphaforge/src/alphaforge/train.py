@@ -63,9 +63,8 @@ MODE_CONFIG = {
 
 # Confidence threshold for trade filtering: if max softprob < this, force NO_TRADE
 # Recalibrated 2026-07-06: 54-feat WFV threshold sweep -> median 0.35
-# Alpha #1 (16-feat pruned) uses 0.55
-# SWING threshold: 0.70 (6-fold WFV)
-CONFIDENCE_THRESHOLD = 0.55
+# With 93 features + derivatives, lower threshold increases active trades
+CONFIDENCE_THRESHOLD = 0.35
 
 
 # ---------------------------------------------------------------------------

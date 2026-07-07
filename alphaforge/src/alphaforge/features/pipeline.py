@@ -614,6 +614,56 @@ def compute_perpetual_funding_group(
 
 
 # ---------------------------------------------------------------------------
+# TREND Group — SMA slope features for market direction context
+# ---------------------------------------------------------------------------
+
+
+def _compute_trend_group(
+    close: np.ndarray,
+    ma_short: int = 50,
+    ma_long: int = 200,
+) -> Dict[str, np.ndarray]:
+    """Compute long-term trend features from SMA slopes.
+
+    Features:
+      - trend_ma_short_slope:  slope of short MA (50 bars) over its window
+      - trend_ma_long_slope:   slope of long MA (200 bars) over its window
+      - trend_ma_cross:        short_MA / long_MA - 1 (golden/death cross)
+      - trend_position:        close / long_MA - 1 (distance from trend)
+
+    All values positive in uptrend, negative in downtrend.
+    Helps model avoid short bias in bull markets.
+    """
+    n = len(close)
+    result = {}
+    for name, period in [("trend_ma_short_slope", ma_short), ("trend_ma_long_slope", ma_long)]:
+        ma = np.full(n, np.nan, dtype=np.float64)
+        slope = np.full(n, np.nan, dtype=np.float64)
+        for i in range(period - 1, n):
+            ma[i] = np.mean(close[i - period + 1 : i + 1])
+        # Slope: linear regression over half-period window
+        window = max(period // 2, 5)
+        for i in range(window + period - 1, n):
+            y = ma[i - window + 1 : i + 1]
+            x = np.arange(window, dtype=np.float64)
+            if np.all(np.isfinite(y)):
+                slope[i] = (np.sum((x - x.mean()) * (y - y.mean())) /
+                           max(np.sum((x - x.mean()) ** 2), 1e-12))
+        result[name] = slope
+
+    # MA cross and position
+    ma_s = np.full(n, np.nan, dtype=np.float64)
+    ma_l = np.full(n, np.nan, dtype=np.float64)
+    for i in range(ma_long - 1, n):
+        ma_s[i] = np.mean(close[i - ma_short + 1 : i + 1])
+        ma_l[i] = np.mean(close[i - ma_long + 1 : i + 1])
+    result["trend_ma_cross"] = (ma_s / ma_l - 1.0) * 100
+    result["trend_position"] = (close / ma_l - 1.0) * 100
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Map of active feature groups to their compute functions.
 # LEAD_LAG is intentionally absent — no compute function exists.
 # ---------------------------------------------------------------------------
@@ -2067,7 +2117,17 @@ def compute_features(
         )
     )
 
-    # 10. MTF Group (multi-timeframe context features)
+    # 10. TREND Group — long-term market direction via SMA slopes
+    # Fixes the SHORT bias in bull markets by providing trend context.
+    features.update(
+        _compute_trend_group(
+            close=close,
+            ma_short=50,
+            ma_long=200,
+        )
+    )
+
+    # 11. MTF Group (multi-timeframe context features)
     # Resamples internally from primary OHLCV — no extra data needed.
     if "mtf" in (feature_groups or ["mtf"]):
         features.update(
@@ -2209,6 +2269,7 @@ def compute_features(
             "funding_rate_change": "perpetual_funding",
             "funding_oi_divergence": "perpetual_funding",
             "open_interest_proxy": "perpetual_funding",
+            "trend_": "trend",  # trend features (always included)
         }
         filtered = {}
         for name, arr in features.items():
