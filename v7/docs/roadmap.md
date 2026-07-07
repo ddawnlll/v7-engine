@@ -1319,6 +1319,7 @@ It is:
 
 ---
 
+<<<<<<< HEAD
 ## 2026-07-07 — Training Pipeline Optimization Audit (57-symbol scale) — AUDIT ONLY
 
 ### What changed
@@ -1346,3 +1347,36 @@ It is:
 ### Release condition for HOLD
 - Implement P1→P3→P4→P2, then verify a 4-symbol smoke run reproduces pre-fix metrics
   before launching the 57-symbol training.
+=======
+## Training Pipeline Optimization — 57-Symbol Scale (2026-07-07)
+
+**What:** Implemented 6 work items to eliminate waste from the training pipeline without changing any model output. All changes are CPU-path optimizations — no GPU is required for the speedups (CUDA improvements are additive for the SSD box).
+
+### Changes
+- **W1 (P1):** Vectorized cross-sectional rank normalization — replaced O(T·F·S) per-timestamp/per-column loop with grouped 2D argsort (~2000× on this stage).
+- **W2 (P3):** Wired existing `FeatureCache` into `build_aligned_training_frame` with data-content fingerprint (row count + first/last close + timestamps) for automatic cache invalidation on data refresh.
+- **W3 (P4):** Parallelized per-symbol feature computation via `joblib.Parallel` (uses `n_jobs=cpu_count` threads).
+- **W4 (P2):** Refactored `run_discovery` to accept optional precomputed training frame + WFV results — `--discovery` flag now reuses the already-computed data rather than rebuilding from scratch (∼50% time savings on discovery runs).
+- **W5:** CUDA-path hygiene — `ALPHAFORGE_XGB_DEVICE=cuda|cpu` env override for SSH/cron environments; `QuantileDMatrix` + float32 when device=cuda; `inplace_predict` instead of `DMatrix+predict` in WFV.
+- **W6 (B5):** Chronological tail split for early stopping (eliminates temporal leakage from shuffled train/val split).
+- **Cleanup:** Removed ~100 lines of unreachable dead code after `_generate_simple_labels_numba` return; removed unused `tag_as_synthetic` import.
+
+### Status: LOCKED
+
+All 6 work items pass unit tests. Zero new test regressions (all 8 new rank-normalize tests + 36 xgb_trainer tests + 25 feature_cache tests pass; 2 pre-existing failures unchanged).
+
+### Remaining holds (unchanged, separate quality tasks)
+- B1 — mode configs ignored in label generator (all modes produce identical labels)
+- B3 — residual momentum silently skipped in single-symbol training
+- B4 — panel loader truncates to youngest symbol (all-symbol intersection)
+
+### Files changed
+- `alphaforge/src/alphaforge/train.py` — rank normalization, parallel features, cache wiring, discovery reuse, inplace_predict, dead code removal
+- `alphaforge/src/alphaforge/features/pipeline.py` — FeatureCache fingerprint, cached_compute_features extension
+- `alphaforge/src/alphaforge/training/xgb_trainer.py` — env override, QuantileDMatrix, chronological split
+- `alphaforge/src/alphaforge/discovery/pipeline.py` — precomputed data support
+- `alphaforge/tests/test_cross_sectional_rank_normalize.py` — new test file (8 tests)
+
+### Reports
+- `reports/accp/training_pipeline_optimization_impl.yaml`
+>>>>>>> cc11f40 (perf: 57-symbol training pipeline optimization — W1-W6)

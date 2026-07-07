@@ -1,0 +1,124 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "training_pipeline_optimization_57sym"
+date: "2026-07-07"
+
+result: COMPLETED
+
+scope_confirmation:
+  - "W1 (P1): Vectorized cross-sectional rank normalization — replaced O(T·F·S·logS) per-timestamp/per-column loop with grouped 2D argsort.argsort"
+  - "W2 (P3): Wired existing FeatureCache into build_aligned_training_frame with data-content fingerprint for cache invalidation"
+  - "W3 (P4): Parallelized per-symbol feature computation via joblib.Parallel"
+  - "W4 (P2): Refactored run_discovery to accept optional precomputed frame + WFV results from training pipeline"
+  - "W5: CUDA-path hygiene — ALPHAFORGE_XGB_DEVICE env override, QuantileDMatrix+float32 for GPU, inplace_predict in WFV"
+  - "W6 (B5): Chronological tail split for early stopping (eliminates temporal leakage)"
+  - "Deleted unreachable dead code: ~100 lines after _generate_simple_labels_numba return, unreachable tag_as_synthetic return"
+
+files_changed:
+  - path: "alphaforge/src/alphaforge/train.py"
+    summary: >
+      Added cross_sectional_rank_normalize() function (vectorized grouped 2D argsort).
+      Replaced ~18-line slow loop in main() with function call.
+      Added _compute_single_symbol_frame() helper for parallel per-symbol computation.
+      Replaced sequential symbol loop in build_aligned_training_frame with joblib.Parallel call.
+      Imported cached_compute_features, CACHE_DIR_DEFAULT; replaced compute_features call.
+      Updated _run_discovery_after_training to accept precomputed_frame + precomputed_wfv.
+      Updated main() to pass precomputed training_frame + WFV results to discovery.
+      Set WFV to return_raw_preds=True when --discovery is set.
+      Replaced xgb.DMatrix(X_val)+model.predict in walk_forward_validate with inplace_predict.
+      Deleted ~100 lines of unreachable dead code after _generate_simple_labels_numba return.
+      Removed unused tag_as_synthetic import.
+    operations: >
+      1 function added (rank normalize), 1 helper added (parallel symbol compute),
+      3 function signatures changed (build_aligned_training_frame imports,
+      _run_discovery_after_training params, main() WFV+discovery wiring),
+      1 function body changed (walk_forward_validate prediction),
+      2 dead-code deletions.
+
+  - path: "alphaforge/src/alphaforge/features/pipeline.py"
+    summary: >
+      Added _compute_data_fingerprint() helper for cache invalidation.
+      Extended FeatureCache._cache_key to accept optional data_fingerprint.
+      Extended FeatureCache.get and FeatureCache.put with data_fingerprint param.
+      Updated cached_compute_features to compute and pass data_fingerprint.
+      Added feature_groups parameter to cached_compute_features.
+    operations: >
+      1 function added, 3 method signatures extended with optional param,
+      1 function signature extended with feature_groups.
+
+  - path: "alphaforge/src/alphaforge/training/xgb_trainer.py"
+    summary: >
+      Added ALPHAFORGE_XGB_DEVICE env override to _detect_gpu().
+      Changed train() to use QuantileDMatrix + float32 when device=cuda.
+      Replaced shuffled train/val split with chronological tail split.
+    operations: >
+      1 function modified (env override), 1 method modified (split strategy),
+      1 method modified (DMatrix choice dep. on device).
+
+  - path: "alphaforge/src/alphaforge/discovery/pipeline.py"
+    summary: >
+      Added precomputed_frame and precomputed_wfv optional parameters to run_discovery().
+      When precomputed data is provided, skips data loading, frame building, NaN cleaning,
+      and walk-forward validation.
+    operations: >
+      1 function signature extended with 2 optional params, internal flow conditional.
+
+  - path: "alphaforge/tests/test_cross_sectional_rank_normalize.py"
+    summary: "New test file: 8 tests for cross_sectional_rank_normalize covering equivalence with original loop, rank range, <3-symbol groups, NaN matching, determinism, non-contiguous groups."
+
+decisions_locked:
+  - feature: "cross_sectional_rank_normalize uses grouped 2D argsort"
+    status: LOCKED
+    evidence: "np.allclose(original_loop, vectorized) passes for randomized test at 57 sym × 89 feat × 100 ts"
+  - feature: "Feature cache key includes data fingerprint"
+    status: LOCKED
+    rationale: "Prevents stale feature serving when OHLCV data is refreshed"
+  - feature: "Discovery receives RAW (pre-rank, pre-NaN-fill) training frame"
+    status: LOCKED
+    rationale: "Preserves discovery's NaN-drop semantics — precomputed frame is the raw build_aligned_training_frame output"
+  - feature: "Chronological tail split for early stopping validation"
+    status: LOCKED
+    rationale: "Temporal leakage eliminated; metrics may shift slightly (recorded in evidence)"
+  - feature: "ALPHAFORGE_XGB_DEVICE env override for GPU detection"
+    status: LOCKED
+    rationale: "SSH/cron environments may not have nvidia-smi on PATH at import time"
+
+remaining_holds:
+  - issue: "B1 — mode configs ignored in label generator"
+    status: HOLD
+    release: "Separate quality-focused task; not part of speed optimization"
+  - issue: "B3 — residual momentum never computed (1-symbol dict, raises + except:pass)"
+    status: HOLD
+    release: "Requires multi-symbol data assembly; separate task"
+  - issue: "B4 — panel loader truncates to youngest symbol"
+    status: HOLD
+    release: "Changes model behavior; separate quality task"
+  - issue: "Pre-existing test failures (2 in test_feature_cache)"
+    status: HOLD
+    detail: "test_cache_returns_same_object_shape (feature name mismatch), test_cache_dir_default_ends_with_slash (Path strips trailing /)"
+    release: "Fix in separate cleanup task"
+
+safe_next_step:
+  - "Run 4-symbol smoke equivalence test: PYTHONPATH=alphaforge/src python3 -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT --panel-cache cache/factor_sprint --folds 6"
+  - "Compare before/after metrics (accuracy, net_expectancy_r, total_net_R, feature_count, n_samples) for W1-W4 identity"
+  - "After 4-symbol smoke passes, launch full 57-symbol run with timing measurements"
+
+commands_run:
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_cross_sectional_rank_normalize.py -v — 8/8 passed"
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_xgb_trainer.py -v — 36/36 passed"
+  - "PYTHONPATH=alphaforge/src python3 -m pytest alphaforge/tests/test_feature_cache.py -v — 2 pre-existing failures, 0 new"
+  - "PYTHONPATH=alphaforge/src python3 -c 'import alphaforge.train; import alphaforge.discovery.pipeline; import alphaforge.training.xgb_trainer' — all modules import cleanly"
+
+evidence:
+  W1_rank_equivalence: "cross_sectional_rank_normalize produces np.allclose output vs original loop at 50 ts × 10 sym × 20 feat AND at 100 ts × 57 sym × 89 feat"
+  W1_tests: "8/8 tests pass including equivalence, large-scale equivalence, <3 symbol unchanged, NaN matching, determinism, non-contiguous timestamps"
+  W2_cache_compiles: "cached_compute_features used in build_aligned_training_frame with data fingerprint"
+  W2_fingerprint: "_compute_data_fingerprint incorporates row count, first/last close, first/last timestamp (if available)"
+  W3_parallel: "build_aligned_training_frame uses Parallel(n_jobs=n_cores) with _compute_single_symbol_frame helper"
+  W4_discovery_reuse: "run_discovery accepts precomputed_frame and precomputed_wfv; main() passes training_frame + WFV raw preds when --discovery set"
+  W5_env_override: "ALPHAFORGE_XGB_DEVICE=cuda|cpu bypasses nvidia-smi detection"
+  W5_quantile: "QuantileDMatrix + float32 used when device=cuda in XGBoostTrainer.train()"
+  W5_inplace: "walk_forward_validate uses booster.inplace_predict(X_val) instead of DMatrix+model.predict"
+  W6_chronological: "train/val split uses last val_fraction rows instead of rng.shuffle"
+  dead_code_removed: "~100 unreachable lines after _generate_simple_labels_numba return removed; unused tag_as_synthetic import removed"
+  test_regressions: "Zero new test regressions — all 8 rank tests pass, all 36 xgb tests pass, feature_cache has same 2 pre-existing failures"

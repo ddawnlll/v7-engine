@@ -42,13 +42,27 @@ from alphaforge.train import (
 logger = logging.getLogger("alphaforge.discovery.pipeline")
 
 
-def run_discovery(config: DiscoveryConfig) -> DiscoveryResult:
+def run_discovery(
+    config: DiscoveryConfig,
+    precomputed_frame: Optional[dict] = None,
+    precomputed_wfv: Optional[tuple[list[dict], list[np.ndarray], list[np.ndarray], list[np.ndarray]]] = None,
+) -> DiscoveryResult:
     """Execute the full discovery pipeline.
 
     Parameters
     ----------
     config:
         Pipeline configuration (mode, symbols, thresholds, etc.).
+    precomputed_frame:
+        Optional pre-built aligned training frame (from train.py main()).
+        When provided, skips data loading and frame construction (steps 1-3).
+        The frame is used AS-IS (no NaN-fill or rank normalization applied)
+        so discovery's NaN-drop semantics are preserved.
+    precomputed_wfv:
+        Optional tuple of (wfv_results, fold_preds, fold_y_class, fold_y_val)
+        from a prior walk-forward validation run. When provided, skips the
+        WFV stage (step 4). The three fold_preds/... arrays are the raw
+        prediction outputs returned by walk_forward_validate(return_raw_preds=True).
 
     Returns
     -------
@@ -70,58 +84,85 @@ def run_discovery(config: DiscoveryConfig) -> DiscoveryResult:
 
     try:
         # ------------------------------------------------------------------
-        # Step 1: Load data
+        # Step 1-3: Load data / build frame / clean NaN (or use precomputed)
         # ------------------------------------------------------------------
-        logger.info("[1/8] Loading OHLCV data...")
-        ohlcv = None
-        if config.panel_cache:
-            ohlcv = _load_panel_data(config.panel_cache, symbols)
-        elif not config.use_synthetic:
-            ohlcv = load_cached_data(symbols, interval, data_dir=config.data_dir)
-        if ohlcv is None:
-            logger.info("  Falling back to synthetic data (%d bars)", config.n_bars)
-            ohlcv = generate_synthetic_ohlcv(
-                n_bars=config.n_bars,
-                symbols=tuple(symbols),
-                random_seed=config.random_seed,
+        if precomputed_frame is not None:
+            logger.info("[1-3/8] Using precomputed training frame...")
+            training_frame = precomputed_frame
+            X = training_frame["X"]
+            y_int = training_frame["y_int"]
+            label_net_r = training_frame["label_net_r"]
+            action_net_r = training_frame["action_net_r"]
+            timestamps = training_frame["timestamps"]
+            symbols_arr = training_frame["symbols"]
+            feat_names = training_frame["feature_names"]
+
+            logger.info("[3/8] Cleaning NaN rows from precomputed frame...")
+            nan_mask = np.isnan(X).any(axis=1)
+            X_clean = X[~nan_mask]
+            y_clean = y_int[~nan_mask]
+            label_net_clean = label_net_r[~nan_mask]
+            action_net_clean = action_net_r[~nan_mask]
+            ts_clean = timestamps[~nan_mask]
+            sym_clean = symbols_arr[~nan_mask]
+            logger.info("  %d valid samples (%d NaN dropped)",
+                        len(X_clean), int(nan_mask.sum()))
+
+            ohlcv = None  # signal generation will fall back to ts/sym
+        else:
+            # ------------------------------------------------------------------
+            # Step 1: Load data
+            # ------------------------------------------------------------------
+            logger.info("[1/8] Loading OHLCV data...")
+            ohlcv = None
+            if config.panel_cache:
+                ohlcv = _load_panel_data(config.panel_cache, symbols)
+            elif not config.use_synthetic:
+                ohlcv = load_cached_data(symbols, interval, data_dir=config.data_dir)
+            if ohlcv is None:
+                logger.info("  Falling back to synthetic data (%d bars)", config.n_bars)
+                ohlcv = generate_synthetic_ohlcv(
+                    n_bars=config.n_bars,
+                    symbols=tuple(symbols),
+                    random_seed=config.random_seed,
+                )
+            if not config.use_synthetic:
+                from lib.data_lake.guard import assert_real_data
+                assert_real_data(ohlcv)
+            n_bars_total = len(ohlcv["close"])
+            logger.info("  %d bars, %d symbols", n_bars_total, len(symbols))
+
+            # ------------------------------------------------------------------
+            # Step 2: Build aligned training frame
+            # ------------------------------------------------------------------
+            logger.info("[2/8] Building aligned feature + label frame...")
+            feature_groups = None if config.features.lower() == "all" else [
+                g.strip() for g in config.features.split(",")
+            ]
+            training_frame = build_aligned_training_frame(
+                ohlcv, mode, feature_groups=feature_groups,
             )
-        if not config.use_synthetic:
-            from lib.data_lake.guard import assert_real_data
-            assert_real_data(ohlcv)
-        n_bars_total = len(ohlcv["close"])
-        logger.info("  %d bars, %d symbols", n_bars_total, len(symbols))
+            X = training_frame["X"]
+            y_int = training_frame["y_int"]
+            label_net_r = training_frame["label_net_r"]
+            action_net_r = training_frame["action_net_r"]
+            timestamps = training_frame["timestamps"]
+            symbols_arr = training_frame["symbols"]
+            feat_names = training_frame["feature_names"]
 
-        # ------------------------------------------------------------------
-        # Step 2: Build aligned training frame
-        # ------------------------------------------------------------------
-        logger.info("[2/8] Building aligned feature + label frame...")
-        feature_groups = None if config.features.lower() == "all" else [
-            g.strip() for g in config.features.split(",")
-        ]
-        training_frame = build_aligned_training_frame(
-            ohlcv, mode, feature_groups=feature_groups,
-        )
-        X = training_frame["X"]
-        y_int = training_frame["y_int"]
-        label_net_r = training_frame["label_net_r"]
-        action_net_r = training_frame["action_net_r"]
-        timestamps = training_frame["timestamps"]
-        symbols_arr = training_frame["symbols"]
-        feat_names = training_frame["feature_names"]
-
-        # ------------------------------------------------------------------
-        # Step 3: Clean NaN
-        # ------------------------------------------------------------------
-        logger.info("[3/8] Cleaning NaN rows...")
-        nan_mask = np.isnan(X).any(axis=1)
-        X_clean = X[~nan_mask]
-        y_clean = y_int[~nan_mask]
-        label_net_clean = label_net_r[~nan_mask]
-        action_net_clean = action_net_r[~nan_mask]
-        ts_clean = timestamps[~nan_mask]
-        sym_clean = symbols_arr[~nan_mask]
-        logger.info("  %d valid samples (%d NaN dropped)",
-                    len(X_clean), int(nan_mask.sum()))
+            # ------------------------------------------------------------------
+            # Step 3: Clean NaN
+            # ------------------------------------------------------------------
+            logger.info("[3/8] Cleaning NaN rows...")
+            nan_mask = np.isnan(X).any(axis=1)
+            X_clean = X[~nan_mask]
+            y_clean = y_int[~nan_mask]
+            label_net_clean = label_net_r[~nan_mask]
+            action_net_clean = action_net_r[~nan_mask]
+            ts_clean = timestamps[~nan_mask]
+            sym_clean = symbols_arr[~nan_mask]
+            logger.info("  %d valid samples (%d NaN dropped)",
+                        len(X_clean), int(nan_mask.sum()))
 
         if len(X_clean) < 100:
             result.status = "ERROR"
@@ -130,18 +171,22 @@ def run_discovery(config: DiscoveryConfig) -> DiscoveryResult:
             return result
 
         # ------------------------------------------------------------------
-        # Step 4: Walk-forward validation with raw predictions
+        # Step 4: Walk-forward validation (or use precomputed)
         # ------------------------------------------------------------------
-        logger.info("[4/8] Walk-forward validation (%d folds)...", config.folds)
-        t0 = time.time()
-        wfv_results, fold_preds, fold_y_class, fold_y_val = walk_forward_validate(
-            X_clean, y_clean, label_net_clean, mode,
-            min_folds=config.folds,
-            action_net_r=action_net_clean,
-            return_raw_preds=True,
-        )
-        wfv_duration = time.time() - t0
-        logger.info("  %d folds in %.1fs", len(wfv_results), wfv_duration)
+        if precomputed_wfv is not None:
+            logger.info("[4/8] Using precomputed walk-forward validation...")
+            wfv_results, fold_preds, fold_y_class, fold_y_val = precomputed_wfv
+        else:
+            logger.info("[4/8] Walk-forward validation (%d folds)...", config.folds)
+            t0 = time.time()
+            wfv_results, fold_preds, fold_y_class, fold_y_val = walk_forward_validate(
+                X_clean, y_clean, label_net_clean, mode,
+                min_folds=config.folds,
+                action_net_r=action_net_clean,
+                return_raw_preds=True,
+            )
+            wfv_duration = time.time() - t0
+            logger.info("  %d folds in %.1fs", len(wfv_results), wfv_duration)
 
         # Aggregate WFV metrics
         import alphaforge.train as _train_mod

@@ -150,6 +150,34 @@ MIN_BARS: int = 2
 
 
 # ---------------------------------------------------------------------------
+# Data fingerprint for cache invalidation
+# ---------------------------------------------------------------------------
+
+
+def _compute_data_fingerprint(ohlcv_data: dict) -> str:
+    """Compute deterministic fingerprint from OHLCV data for cache key.
+
+    Incorporates row count, first/last close values, and first/last timestamps
+    (if available). This ensures that refreshed or corrected data produces a
+    cache miss rather than serving stale features.
+
+    Returns:
+        Hex SHA-256 digest, or empty string if data has no close array.
+    """
+    close = ohlcv_data.get("close")
+    if close is None or len(close) == 0:
+        return ""
+    parts = [str(len(close))]
+    parts.append(f"{close[0]:.8f}")
+    parts.append(f"{close[-1]:.8f}")
+    ts = ohlcv_data.get("timestamp")
+    if ts is not None and len(ts) > 0:
+        parts.append(str(ts[0]))
+        parts.append(str(ts[-1]))
+    return hashlib.sha256("|".join(parts).encode()).hexdigest()
+
+
+# ---------------------------------------------------------------------------
 # FeatureGroup enum
 # ---------------------------------------------------------------------------
 
@@ -265,21 +293,34 @@ class FeatureCache:
     # Cache key computation
     # ------------------------------------------------------------------
 
-    def _cache_key(self, symbol: str, interval: str, mode: str) -> str:
+    def _cache_key(
+        self, symbol: str, interval: str, mode: str,
+        data_fingerprint: str = "",
+    ) -> str:
         """Compute deterministic SHA-256 cache key.
 
         Incorporates symbol, interval, mode, and PIPELINE_VERSION so that
-        changing any of these produces a distinct cache entry.
+        changing any of these produces a distinct cache entry. When a
+        ``data_fingerprint`` is provided (a hex hash derived from the OHLCV
+        data content), it is also incorporated — this ensures that refreshed
+        or corrected data produces a cache miss rather than serving stale
+        features.
 
         Args:
             symbol: Trading pair identifier (e.g. \"BTCUSDT\").
             interval: Bar interval string (e.g. \"4h\", \"1h\", \"15m\").
             mode: Trading mode (\"SWING\", \"SCALP\", \"AGGRESSIVE_SCALP\").
+            data_fingerprint: Optional hex hash of OHLCV data content. When
+                present, the key uniquely identifies both the data source AND
+                the content at the time of computation.
 
         Returns:
             Hex-encoded SHA-256 digest.
         """
-        raw = f"{symbol}|{interval}|{mode}|{PIPELINE_VERSION}"
+        if data_fingerprint:
+            raw = f"{symbol}|{interval}|{mode}|{PIPELINE_VERSION}|{data_fingerprint}"
+        else:
+            raw = f"{symbol}|{interval}|{mode}|{PIPELINE_VERSION}"
         return hashlib.sha256(raw.encode()).hexdigest()
 
     def _cache_path(self, key: str) -> Path:
@@ -323,7 +364,8 @@ class FeatureCache:
     # ------------------------------------------------------------------
 
     def get(
-        self, symbol: str, interval: str, mode: str
+        self, symbol: str, interval: str, mode: str,
+        data_fingerprint: str = "",
     ) -> Optional[FeatureMatrix]:
         """Load cached FeatureMatrix if it exists and version matches.
 
@@ -334,11 +376,14 @@ class FeatureCache:
             symbol: Trading pair identifier.
             interval: Bar interval string.
             mode: Trading mode.
+            data_fingerprint: Optional hex hash of OHLCV data content.
+                When provided, the cache key incorporates the fingerprint
+                so that refreshed data produces a cache miss.
 
         Returns:
             FeatureMatrix if cache hit, None otherwise.
         """
-        key = self._cache_key(symbol, interval, mode)
+        key = self._cache_key(symbol, interval, mode, data_fingerprint)
         path = self._cache_path(key)
 
         if not path.exists():
@@ -419,6 +464,7 @@ class FeatureCache:
         interval: str,
         mode: str,
         matrix: FeatureMatrix,
+        data_fingerprint: str = "",
     ) -> None:
         """Store FeatureMatrix to cache as Parquet+Zstd file.
 
@@ -429,8 +475,11 @@ class FeatureCache:
             interval: Bar interval string.
             mode: Trading mode.
             matrix: FeatureMatrix to cache.
+            data_fingerprint: Optional hex hash of OHLCV data content.
+                When provided, the cache key incorporates the fingerprint
+                so that refreshed data produces a cache miss.
         """
-        key = self._cache_key(symbol, interval, mode)
+        key = self._cache_key(symbol, interval, mode, data_fingerprint)
         path = self._cache_path(key)
 
         with self._lock:
@@ -2334,17 +2383,19 @@ def cached_compute_features(
     timeframe_stack: Optional[dict] = None,
     interval: str = "4h",
     cache_dir: str = CACHE_DIR_DEFAULT,
+    feature_groups: Optional[List[str]] = None,
 ) -> FeatureMatrix:
     """Compute features with Parquet+Zstd caching.
 
-    Checks cache first by (symbol, interval, mode, PIPELINE_VERSION) key.
+    Checks cache first by (symbol, interval, mode, PIPELINE_VERSION, data_fingerprint) key.
     On cache hit, returns the cached FeatureMatrix immediately without
     recomputing features (typically 5-15 min saved per pipeline run).
     On cache miss, delegates to compute_features() and stores the result.
 
-    Cache invalidation is automatic: when PIPELINE_VERSION changes, the
-    cache key changes and a new computation is triggered. Old cache files
-    are orphaned but harmless — they can be cleaned via FeatureCache.clear_all().
+    Cache invalidation is automatic: when PIPELINE_VERSION changes or the
+    OHLCV data content changes, the cache key changes and a new computation
+    is triggered. Old cache files are orphaned but harmless — they can be
+    cleaned via FeatureCache.clear_all().
 
     Args:
         ohlcv_data: dict with keys 'open', 'high', 'low', 'close', 'volume'.
@@ -2354,6 +2405,8 @@ def cached_compute_features(
         timeframe_stack: Optional dict with keys primary, context, refinement.
         interval: Bar interval string for cache key (e.g. "4h", "1h", "15m").
         cache_dir: Directory path for cache files.
+        feature_groups: Optional list of feature groups to compute. Passed
+            through to compute_features() on cache miss.
 
     Returns:
         FeatureMatrix with computed features (from cache or fresh compute).
@@ -2362,24 +2415,25 @@ def cached_compute_features(
         ValueError: if OHLCV data is invalid or mode is unsupported.
     """
     symbol = ohlcv_data.get("symbol", "unknown")
+    data_fp = _compute_data_fingerprint(ohlcv_data)
 
     cache = FeatureCache(cache_dir=cache_dir)
-    cached = cache.get(symbol, interval, mode)
+    cached = cache.get(symbol, interval, mode, data_fingerprint=data_fp)
     if cached is not None:
         logger.info(
-            "Cache HIT for %s/%s/%s (v%s) — returning cached features",
-            symbol, interval, mode, PIPELINE_VERSION,
+            "Cache HIT for %s/%s/%s (v%s, fp=%s) — returning cached features",
+            symbol, interval, mode, PIPELINE_VERSION, data_fp[:8],
         )
         return cached
 
     logger.info(
-        "Cache MISS for %s/%s/%s (v%s) — computing features...",
-        symbol, interval, mode, PIPELINE_VERSION,
+        "Cache MISS for %s/%s/%s (v%s, fp=%s) — computing features...",
+        symbol, interval, mode, PIPELINE_VERSION, data_fp[:8],
     )
-    matrix = compute_features(ohlcv_data, mode=mode, timeframe_stack=timeframe_stack)
-    cache.put(symbol, interval, mode, matrix)
+    matrix = compute_features(ohlcv_data, mode=mode, timeframe_stack=timeframe_stack, feature_groups=feature_groups)
+    cache.put(symbol, interval, mode, matrix, data_fingerprint=data_fp)
     logger.info(
-        "Cached %d features for %s/%s/%s (%d bars)",
-        matrix.total_features(), symbol, interval, mode, matrix.bar_count(),
+        "Cached %d features for %s/%s/%s (%d bars, fp=%s)",
+        matrix.total_features(), symbol, interval, mode, matrix.bar_count(), data_fp[:8],
     )
     return matrix

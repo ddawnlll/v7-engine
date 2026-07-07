@@ -67,8 +67,21 @@ def _detect_gpu() -> dict[str, str]:
     Tries nvidia-smi for CUDA GPUs, rocm-smi for AMD GPUs.
     Falls back to CPU (hist) when no GPU is available at runtime.
 
+    Can be overridden via the environment variable
+    ``ALPHAFORGE_XGB_DEVICE`` set to ``cuda`` or ``cpu``.
+
     Returns {"tree_method": ..., "device": ...} or {"tree_method": "hist"}.
     """
+    # Environment override (checked first for SSH/cron environments where
+    # nvidia-smi may not be on PATH at import time)
+    env_device = os.environ.get("ALPHAFORGE_XGB_DEVICE", "").strip().lower()
+    if env_device == "cuda":
+        logger.info("XGBoost GPU: ALPHAFORGE_XGB_DEVICE=cuda — forcing device=cuda")
+        return {"tree_method": "hist", "device": "cuda"}
+    if env_device == "cpu":
+        logger.info("XGBoost GPU: ALPHAFORGE_XGB_DEVICE=cpu — forcing CPU hist")
+        return {"tree_method": "hist"}
+
     try:
         info = xgb.build_info()
         has_cuda = info.get("USE_CUDA") or info.get("USE_HIP")
@@ -255,27 +268,38 @@ class XGBoostTrainer:
         # Convert string labels to int if needed
         y_int = self._encode_labels(y)
 
-        # Split into train/val
+        # Split into train/val — chronological tail split (rows entering
+        # train() are time-ordered from build_aligned_training_frame's lexsort).
+        # Using a chronological split prevents temporal leakage into early
+        # stopping that would occur with a random shuffle.
         n_samples = len(y_int)
         n_val = max(1, int(n_samples * val_fraction))
-        indices = np.arange(n_samples)
-        self._rng.shuffle(indices)
-
-        val_indices = indices[:n_val]
-        train_indices = indices[n_val:]
+        val_indices = np.arange(n_samples - n_val, n_samples)
+        train_indices = np.arange(0, n_samples - n_val)
 
         X_train = X[train_indices]
         y_train = y_int[train_indices]
         X_val = X[val_indices]
         y_val = y_int[val_indices]
 
-        # Prepare DMatrix
-        dtrain = xgb.DMatrix(X_train, label=y_train)
-        if feature_names:
-            dtrain.feature_names = feature_names
-        dval = xgb.DMatrix(X_val, label=y_val)
-        if feature_names:
-            dval.feature_names = feature_names
+        # Prepare DMatrix — use QuantileDMatrix for GPU (lower memory, faster binning)
+        _device = self._hyperparameters.get("device", "cpu")
+        if _device == "cuda":
+            _X_train_32 = X_train.astype(np.float32, copy=False)
+            _X_val_32 = X_val.astype(np.float32, copy=False)
+            dtrain = xgb.QuantileDMatrix(_X_train_32, label=y_train)
+            if feature_names:
+                dtrain.feature_names = feature_names
+            dval = xgb.QuantileDMatrix(_X_val_32, label=y_val, ref=dtrain)
+            if feature_names:
+                dval.feature_names = feature_names
+        else:
+            dtrain = xgb.DMatrix(X_train, label=y_train)
+            if feature_names:
+                dtrain.feature_names = feature_names
+            dval = xgb.DMatrix(X_val, label=y_val)
+            if feature_names:
+                dval.feature_names = feature_names
 
         # Extract training params (strip non-xgb params)
         params = self._extract_xgb_params()

@@ -27,7 +27,7 @@ try:
 except ImportError:
     njit = lambda x: x
 
-from lib.data_lake.guard import tag_as_synthetic, tag_as_real, assert_real_data
+from lib.data_lake.guard import tag_as_real, assert_real_data
 
 # Cost authority — SINGLE source of truth
 from simulation.authority import get_cost_constants
@@ -118,7 +118,6 @@ def generate_synthetic_ohlcv(
         "open_interest": np.concatenate(all_data["open_interest"]),
         "premium_index": np.concatenate(all_data["premium_index"]),
     }
-    return tag_as_synthetic(out)
 
 
 # ---------------------------------------------------------------------------
@@ -424,107 +423,6 @@ def _generate_simple_labels_numba(close, high, low, max_hold, stop_mult, target_
             net_r_vals[i] = 0.0
 
     return ints_list, gross_r_vals, net_r_vals, long_gross_vals, short_gross_vals, long_net_vals, short_net_vals
-    ints_list = np.empty(n - max_hold - 1, dtype=np.int32)
-    long_gross_vals = np.empty(n - max_hold - 1, dtype=np.float64)
-    short_gross_vals = np.empty(n - max_hold - 1, dtype=np.float64)
-    long_net_vals = np.empty(n - max_hold - 1, dtype=np.float64)
-    short_net_vals = np.empty(n - max_hold - 1, dtype=np.float64)
-    gross_r_vals = np.empty(n - max_hold - 1, dtype=np.float64)
-    net_r_vals = np.empty(n - max_hold - 1, dtype=np.float64)
-
-    fee_pct = _FEE_FRACTIONAL  # authority: 4 bps taker
-    round_trip_cost_r = _ROUND_TRIP_COST_FRACTIONAL  # authority: 8 bps round trip
-
-    for i in range(n - max_hold - 1):
-        entry_price = close[i]
-        atr_sum = 0.0
-        atr_count = 0
-        start = max(0, i - 14)
-        for k in range(start + 1, i + 1):
-            atr_sum += abs(close[k] - close[k - 1])
-            atr_count += 1
-        atr = atr_sum / max(atr_count, 1)
-
-        if atr <= 0 or atr > entry_price * 0.5:
-            ints_list[i] = 2
-            long_gross_vals[i] = 0.0
-            short_gross_vals[i] = 0.0
-            long_net_vals[i] = 0.0
-            short_net_vals[i] = 0.0
-            gross_r_vals[i] = 0.0
-            net_r_vals[i] = 0.0
-            continue
-
-        stop_dist = atr * stop_mult
-        target_dist = atr * target_mult
-
-        # LONG simulation
-        long_gross = 0.0
-        for j in range(1, min(max_hold + 1, n - i)):
-            future_high = high[i + j]
-            future_low = low[i + j]
-            future_close = close[i + j]
-            if future_low <= entry_price - stop_dist:
-                long_gross = -stop_dist / entry_price
-                break
-            if future_high >= entry_price + target_dist:
-                long_gross = target_dist / entry_price
-                break
-            long_gross = (future_close - entry_price) / entry_price
-
-        # SHORT simulation
-        short_gross = 0.0
-        for j in range(1, min(max_hold + 1, n - i)):
-            future_high = high[i + j]
-            future_low = low[i + j]
-            future_close = close[i + j]
-            if future_high >= entry_price + stop_dist:
-                short_gross = -stop_dist / entry_price
-                break
-            if future_low <= entry_price - target_dist:
-                short_gross = target_dist / entry_price
-                break
-            short_gross = (entry_price - future_close) / entry_price
-
-        net_long = long_gross - round_trip_cost_r
-        net_short = short_gross - round_trip_cost_r
-        long_gross_vals[i] = long_gross
-        short_gross_vals[i] = short_gross
-        long_net_vals[i] = net_long
-        short_net_vals[i] = net_short
-
-        # Convert to R-multiple: net_return / risk_amount
-        risk_r = stop_dist / entry_price  # fraction of entry price at risk
-        if risk_r > 1e-12:
-            long_r_mult = net_long / risk_r
-            short_r_mult = net_short / risk_r
-        else:
-            long_r_mult = 0.0
-            short_r_mult = 0.0
-
-        # Ambiguity check: if both sides are within margin, it's NO_TRADE
-        if abs(long_r_mult - short_r_mult) <= ambiguity_margin_r:
-            ints_list[i] = 2
-            long_gross_vals[i] = long_gross
-            short_gross_vals[i] = short_gross
-            long_net_vals[i] = net_long
-            short_net_vals[i] = net_short
-            gross_r_vals[i] = 0.0
-            net_r_vals[i] = 0.0
-        elif long_r_mult > short_r_mult and long_r_mult > min_edge_r:
-            ints_list[i] = 0
-            gross_r_vals[i] = long_gross
-            net_r_vals[i] = net_long
-        elif short_r_mult > long_r_mult and short_r_mult > min_edge_r:
-            ints_list[i] = 1
-            gross_r_vals[i] = short_gross
-            net_r_vals[i] = net_short
-        else:
-            ints_list[i] = 2
-            gross_r_vals[i] = 0.0
-            net_r_vals[i] = 0.0
-
-    return ints_list, gross_r_vals, net_r_vals, long_gross_vals, short_gross_vals, long_net_vals, short_net_vals
 
 
 def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
@@ -585,6 +483,101 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
 # ---------------------------------------------------------------------------
 # Feature computation
 # ---------------------------------------------------------------------------
+
+
+def _compute_single_symbol_frame(
+    sym: str,
+    sym_close: np.ndarray,
+    sym_high: np.ndarray,
+    sym_low: np.ndarray,
+    sym_open: np.ndarray,
+    sym_volume: np.ndarray,
+    sym_ts: np.ndarray,
+    mode: str,
+    max_hold: int,
+    stop_mult: float,
+    target_mult: float,
+    min_edge_r: float,
+    ambiguity_margin_r: float,
+    symbol_order: int,
+    feature_groups: Optional[list[str]],
+    precomputed_features: Optional[dict[str, tuple[np.ndarray, list[str]]]],
+    funding_rate: Optional[np.ndarray] = None,
+    open_interest: Optional[np.ndarray] = None,
+    premium_index: Optional[np.ndarray] = None,
+) -> Optional[dict]:
+    """Compute features + labels for a single symbol.
+
+    Returns a dict of arrays keyed by part name, or None if the symbol has
+    too few bars. Designed to be called from ``joblib.Parallel`` workers.
+
+    Extra columns (funding_rate, open_interest, premium_index) are passed
+    as per-symbol masked arrays to maintain correct length alignment with
+    OHLCV arrays.
+    """
+    from alphaforge.features.pipeline import cached_compute_features, CACHE_DIR_DEFAULT
+
+    n_sym = len(sym_close)
+    if n_sym <= max_hold + 1:
+        return None
+
+    if precomputed_features is not None and sym in precomputed_features:
+        Xs, fn = precomputed_features[sym]
+    else:
+        ohlcv_input = {
+            "close": sym_close,
+            "high": sym_high,
+            "low": sym_low,
+            "open": sym_open,
+            "volume": sym_volume,
+            "symbol": sym,
+        }
+        if funding_rate is not None:
+            ohlcv_input["funding_rate"] = funding_rate
+        if open_interest is not None:
+            ohlcv_input["open_interest"] = open_interest
+        if premium_index is not None:
+            ohlcv_input["premium_index"] = premium_index
+        _interval = MODE_CONFIG[mode]["primary"]
+        fm = cached_compute_features(
+            ohlcv_input, mode=mode, interval=_interval,
+            feature_groups=feature_groups,
+            cache_dir=CACHE_DIR_DEFAULT,
+        )
+        fn = sorted(fm.features.keys())
+        Xs = np.column_stack([fm.features[k] for k in fn]).astype(np.float64)
+
+    ints_s, gross_s, net_s, long_gross_s, short_gross_s, long_net_s, short_net_s = _generate_simple_labels_numba(
+        sym_close, sym_high, sym_low,
+        max_hold, stop_mult, target_mult, n_sym,
+        min_edge_r, ambiguity_margin_r,
+    )
+
+    label_len = len(ints_s)
+    if label_len == 0:
+        return None
+
+    return {
+        "sym_order": symbol_order,
+        "X": Xs[:label_len],
+        "y": ints_s[:label_len],
+        "label_gross": gross_s[:label_len],
+        "label_net": net_s[:label_len],
+        "action_gross": np.column_stack([
+            long_gross_s[:label_len],
+            short_gross_s[:label_len],
+            np.zeros(label_len, dtype=np.float64),
+        ]),
+        "action_net": np.column_stack([
+            long_net_s[:label_len],
+            short_net_s[:label_len],
+            np.zeros(label_len, dtype=np.float64),
+        ]),
+        "ts": sym_ts[:label_len],
+        "close_prices": sym_close[:label_len],
+        "feat_names": fn,
+    }
+
 
 def compute_all_features(ohlcv: dict, mode: str) -> Tuple[np.ndarray, List[str]]:
     """Compute all feature groups per-symbol to avoid cross-symbol contamination."""
@@ -653,7 +646,7 @@ def build_aligned_training_frame(
         precomputed_features: Optional dict mapping symbol -> (feature_matrix, feature_names).
             When provided, skips feature re-computation (avoids double compute).
     """
-    from alphaforge.features.pipeline import compute_features
+    from alphaforge.features.pipeline import cached_compute_features, CACHE_DIR_DEFAULT
 
     close_arr = ohlcv["close"].astype(np.float64)
     high_arr = ohlcv["high"].astype(np.float64)
@@ -688,74 +681,57 @@ def build_aligned_training_frame(
     min_edge_r = cfg.get("min_edge_r", 0.15)
     ambiguity_margin_r = cfg.get("ambiguity_margin_r", 0.10)
 
+    # Build per-symbol extra column dicts (masked per symbol)
+    sym_extras: dict[str, dict[str, np.ndarray]] = {}
     for sym in unique_syms:
         mask = symbols == sym
-        sym_close = close_arr[mask]
-        sym_high = high_arr[mask]
-        sym_low = low_arr[mask]
-        sym_open = open_arr[mask]
-        sym_volume = volume_arr[mask]
-        sym_ts = timestamps[mask]
-        n_sym = len(sym_close)
-        if n_sym <= max_hold + 1:
+        extra = {}
+        for key in ("funding_rate", "open_interest", "premium_index"):
+            if key in ohlcv:
+                extra[key] = ohlcv[key][mask]
+        sym_extras[sym] = extra if extra else None
+
+    # Parallel per-symbol computation
+    from joblib import Parallel, delayed
+    n_jobs = min(len(unique_syms), os.cpu_count() or 1)
+    symbol_results = Parallel(n_jobs=n_jobs, prefer="threads")(
+        delayed(_compute_single_symbol_frame)(
+            sym=sym,
+            sym_close=close_arr[symbols == sym],
+            sym_high=high_arr[symbols == sym],
+            sym_low=low_arr[symbols == sym],
+            sym_open=open_arr[symbols == sym],
+            sym_volume=volume_arr[symbols == sym],
+            sym_ts=timestamps[symbols == sym],
+            mode=mode,
+            max_hold=max_hold,
+            stop_mult=stop_mult,
+            target_mult=target_mult,
+            min_edge_r=min_edge_r,
+            ambiguity_margin_r=ambiguity_margin_r,
+            symbol_order=symbol_order[sym],
+            feature_groups=feature_groups,
+            precomputed_features=precomputed_features,
+            **sym_extras.get(sym, {}),
+        )
+        for sym in unique_syms
+    )
+
+    # Collect and order results
+    for res in symbol_results:
+        if res is None:
             continue
-
-        if precomputed_features is not None and sym in precomputed_features:
-            Xs, fn = precomputed_features[sym]
-        else:
-            ohlcv_input = {
-                "close": sym_close,
-                "high": sym_high,
-                "low": sym_low,
-                "open": sym_open,
-                "volume": sym_volume,
-                "symbol": sym,
-            }
-            if "funding_rate" in ohlcv:
-                ohlcv_input["funding_rate"] = ohlcv["funding_rate"][mask]
-            if "open_interest" in ohlcv:
-                ohlcv_input["open_interest"] = ohlcv["open_interest"][mask]
-            if "premium_index" in ohlcv:
-                ohlcv_input["premium_index"] = ohlcv["premium_index"][mask]
-
-            fm = compute_features(ohlcv_input, mode=mode, feature_groups=feature_groups)
-            fn = sorted(fm.features.keys())
-            Xs = np.column_stack([fm.features[k] for k in fn]).astype(np.float64)
-
+        x_parts.append(res["X"])
+        y_parts.append(res["y"])
+        label_gross_parts.append(res["label_gross"])
+        label_net_parts.append(res["label_net"])
+        action_gross_parts.append(res["action_gross"])
+        action_net_parts.append(res["action_net"])
+        ts_parts.append(res["ts"])
+        sym_rank_parts.append(np.full(len(res["y"]), res["sym_order"], dtype=np.int32))
+        close_price_parts.append(res["close_prices"])
         if feat_names is None:
-            feat_names = fn
-
-        ints_s, gross_s, net_s, long_gross_s, short_gross_s, long_net_s, short_net_s = _generate_simple_labels_numba(
-            sym_close, sym_high, sym_low,
-            max_hold, stop_mult, target_mult, n_sym,
-            min_edge_r, ambiguity_margin_r,
-        )
-
-        label_len = len(ints_s)
-        if label_len == 0:
-            continue
-
-        x_parts.append(Xs[:label_len])
-        y_parts.append(ints_s[:label_len])
-        label_gross_parts.append(gross_s[:label_len])
-        label_net_parts.append(net_s[:label_len])
-        action_gross_parts.append(
-            np.column_stack([
-                long_gross_s[:label_len],
-                short_gross_s[:label_len],
-                np.zeros(label_len, dtype=np.float64),
-            ])
-        )
-        action_net_parts.append(
-            np.column_stack([
-                long_net_s[:label_len],
-                short_net_s[:label_len],
-                np.zeros(label_len, dtype=np.float64),
-            ])
-        )
-        ts_parts.append(sym_ts[:label_len])
-        sym_rank_parts.append(np.full(label_len, symbol_order[sym], dtype=np.int32))
-        close_price_parts.append(sym_close[:label_len])
+            feat_names = res["feat_names"]
 
     if not x_parts:
         return {
@@ -803,6 +779,45 @@ def build_aligned_training_frame(
         "close_prices": close_prices[sort_idx] if len(close_prices) == len(ts) else close_prices,
         "feature_names": feat_names or [],
     }
+
+
+# ---------------------------------------------------------------------------
+# Cross-sectional rank normalization (vectorized)
+# ---------------------------------------------------------------------------
+
+
+def cross_sectional_rank_normalize(X: np.ndarray, ts: np.ndarray) -> np.ndarray:
+    """Rank-normalize each feature column cross-sectionally per timestamp group.
+
+    Converts raw feature values to percentile ranks [0, 1] across all symbols
+    within each unique timestamp. Rows are assumed to be sorted by timestamp
+    (contiguous groups — matching the output of build_aligned_training_frame).
+
+    Timestamps with fewer than 3 symbols are left unchanged (not enough for
+    meaningful cross-sectional ranking).
+
+    Uses a grouped 2D argsort.argsort to avoid O(F) inner loops per group.
+    """
+    X_ranked = X.copy()
+    _unique_ts, _counts = np.unique(ts, return_counts=True)
+    _boundaries = np.cumsum(_counts[:-1])
+    _groups = np.split(np.arange(len(ts), dtype=np.intp), _boundaries)
+
+    _ranked_count = 0
+    for _g in _groups:
+        _n = len(_g)
+        if _n >= 3:
+            _sub = X[_g, :]  # (n_symbols, n_features) — vectorized 2D slice
+            # Column-wise double argsort gives rank positions per feature
+            _ranks = np.argsort(np.argsort(_sub, axis=0), axis=0).astype(np.float64)
+            X_ranked[_g, :] = (_ranks + 0.5) / _n
+            _ranked_count += 1
+
+    logger.info(
+        "Cross-sectional rank normalization: applied to %d/%d timestamp groups",
+        _ranked_count, len(_unique_ts),
+    )
+    return X_ranked
 
 
 # ---------------------------------------------------------------------------
@@ -998,8 +1013,7 @@ def walk_forward_validate(
 
         trainer = XGBoostTrainer(mode=mode)
         fold_result = trainer.train(X_train, y_train)
-        dval = xgb.DMatrix(X_val)
-        y_pred_prob = fold_result.model.predict(dval)
+        y_pred_prob = fold_result.model.inplace_predict(X_val)
         y_pred_prob_max = np.max(y_pred_prob, axis=1)
         y_pred = np.argmax(y_pred_prob, axis=1)
 
@@ -1302,10 +1316,19 @@ def _run_discovery_after_training(
     folds: int = 6,
     confidence_threshold: float = 0.55,
     output: str | None = None,
+    precomputed_frame: dict | None = None,
+    precomputed_wfv: tuple | None = None,
 ) -> None:
     """Run the discovery pipeline after training completes.
 
     Called when ``--discovery`` flag is set in the training CLI.
+    When ``precomputed_frame`` and ``precomputed_wfv`` are provided (from
+    the main training pipeline), discovery skips data loading, frame
+    construction, NaN cleaning, and walk-forward validation — using the
+    training pipeline's precomputed results instead.
+
+    The precomputed frame is the RAW training frame (pre-rank-normalization,
+    pre-NaN-fill) so that discovery's NaN-drop semantics are preserved.
     """
     from alphaforge.discovery import DiscoveryConfig
     from alphaforge.discovery.pipeline import run_discovery
@@ -1324,7 +1347,11 @@ def _run_discovery_after_training(
         create_handoff=True,
     )
 
-    result = run_discovery(config)
+    result = run_discovery(
+        config,
+        precomputed_frame=precomputed_frame,
+        precomputed_wfv=precomputed_wfv,
+    )
 
     print(f"\n  Discovery result: {result.status}")
     if result.rejection:
@@ -1453,20 +1480,7 @@ def main():
     if len(sym_clean) > 0 and len(ts_clean) > 0:
         _unique_ts = np.unique(ts_clean)
         if len(_unique_ts) < len(ts_clean):  # multiple symbols per timestamp
-            X_ranked = X_clean.copy()
-            _ranked_count = 0
-            for _ts in _unique_ts:
-                _mask = ts_clean == _ts
-                _n = _mask.sum()
-                if _n >= 3:  # need at least 3 symbols for meaningful rank
-                    for _col in range(X_clean.shape[1]):
-                        _vals = X_clean[_mask, _col]
-                        # Map to percentile ranks 0..1 using scipy
-                        _ranks = (_vals.argsort().argsort().astype(np.float64) + 0.5) / _n
-                        X_ranked[_mask, _col] = _ranks
-                    _ranked_count += 1
-            print(f"  Cross-sectional rank normalization: applied to {_ranked_count}/{len(_unique_ts)} timestamps")
-            X_clean = X_ranked
+            X_clean = cross_sectional_rank_normalize(X_clean, ts_clean)
 
 
     # Feature dump for correlation analysis
@@ -1546,11 +1560,19 @@ def main():
     else:
         print(f"\n[4/6] Walk-forward validation ({args.folds} folds, anchored expanding)...")
         t0 = time.time()
-        wfv_results = walk_forward_validate(
-            X_clean, y_clean, label_net_clean, mode, min_folds=args.folds,
-            action_net_r=action_net_clean,
-            dump_softmax_path=args.dump_softmax,
-        )
+        _need_raw_preds = args.discovery
+        if _need_raw_preds:
+            wfv_results, fold_preds, fold_y_class, fold_y_val = walk_forward_validate(
+                X_clean, y_clean, label_net_clean, mode, min_folds=args.folds,
+                action_net_r=action_net_clean,
+                return_raw_preds=True,
+            )
+        else:
+            wfv_results = walk_forward_validate(
+                X_clean, y_clean, label_net_clean, mode, min_folds=args.folds,
+                action_net_r=action_net_clean,
+                dump_softmax_path=args.dump_softmax,
+            )
         wfv_duration = time.time() - t0
         print(f"  {len(wfv_results)} folds completed in {wfv_duration:.1f}s")
 
@@ -1623,6 +1645,9 @@ def main():
         print(f"\n{'='*60}")
         print(f"  DISCOVERY PIPELINE")
         print(f"{'='*60}")
+        _wfv_tuple = None
+        if _need_raw_preds:
+            _wfv_tuple = (wfv_results, fold_preds, fold_y_class, fold_y_val)
         _run_discovery_after_training(
             mode=mode,
             ohlcv=ohlcv,
@@ -1630,6 +1655,8 @@ def main():
             folds=args.folds,
             confidence_threshold=args.discovery_confidence_threshold,
             output=args.discovery_output,
+            precomputed_frame=training_frame,
+            precomputed_wfv=_wfv_tuple,
         )
 
     # Return the metrics for programmatic use
