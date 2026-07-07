@@ -1264,3 +1264,43 @@ class TestMtfGroup:
         """FeatureGroup enum should include MTF."""
         assert hasattr(FeatureGroup, "MTF")
         assert FeatureGroup.MTF.value == "mtf"
+
+
+# ===========================================================================
+# Derivatives Data Activation Tests
+# ===========================================================================
+
+class TestDerivativesDataActivation:
+    """When real funding_rate/OI/premium_index keys are in ohlcv_data,
+    the feature modules must produce non-NaN feature arrays.
+
+    Note: PERPETUAL_FUNDING group is DEFERRED in pipeline.py and not
+    computed. Open Interest and Premium Index are the active groups."""
+
+    def test_open_interest_features_activate_with_real_data(self):
+        """OI group produces non-NaN when open_interest key present."""
+        n = 100
+        ohlcv = {"open": np.full(n, 100.0), "high": np.full(n, 102.0),
+                 "low": np.full(n, 99.0),
+                 "close": 100.0 + np.cumsum(np.random.randn(n) * 0.5),
+                 "volume": np.full(n, 1000.0),
+                 "open_interest": 50000.0 + np.cumsum(np.random.randn(n) * 100)}
+        fm = compute_features(ohlcv, mode="SWING", feature_groups=["open_interest"])
+        oi_keys = [k for k in fm.features if "open_interest" in k]
+        assert len(oi_keys) > 0, "No OI features computed"
+        for k in oi_keys:
+            assert not np.all(np.isnan(fm.features[k])), f"{k} is all NaN"
+
+    def test_premium_index_features_activate_with_real_data(self):
+        """Premium index group produces non-NaN when premium_index key present."""
+        n = 100
+        ohlcv = {"open": np.full(n, 100.0), "high": np.full(n, 102.0),
+                 "low": np.full(n, 99.0),
+                 "close": 100.0 + np.cumsum(np.random.randn(n) * 0.5),
+                 "volume": np.full(n, 1000.0),
+                 "premium_index": np.random.randn(n) * 0.5}
+        fm = compute_features(ohlcv, mode="SWING", feature_groups=["premium_index"])
+        basis_keys = [k for k in fm.features if "basis" in k]
+        assert len(basis_keys) > 0, "No premium index features computed"
+        for k in basis_keys:
+            assert not np.all(np.isnan(fm.features[k])), f"{k} is all NaN"

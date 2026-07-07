@@ -80,7 +80,9 @@ def generate_synthetic_ohlcv(
     """Generate synthetic multi-symbol OHLCV data."""
     rng = np.random.RandomState(random_seed)
     all_data = {
-        "open": [], "high": [], "low": [], "close": [], "volume": [], "timestamp": [], "symbol": [],
+        "open": [], "high": [], "low": [], "close": [], "volume": [],
+        "timestamp": [], "symbol": [],
+        "funding_rate": [], "open_interest": [], "premium_index": [],
     }
     for sym in symbols:
         returns = rng.randn(n_bars) * 0.02
@@ -102,6 +104,10 @@ def generate_synthetic_ohlcv(
         all_data["volume"].append(volume)
         all_data["timestamp"].extend(np.arange(n_bars, dtype=np.int64))
         all_data["symbol"].extend([sym] * n_bars)
+        # Synthetic derivatives data fills so feature pipeline activates
+        all_data["funding_rate"].append(rng.randn(n_bars) * 0.001)
+        all_data["open_interest"].append(1000.0 + rng.randn(n_bars) * 100.0)
+        all_data["premium_index"].append(rng.randn(n_bars) * 0.5)
     return {
         "open": np.concatenate(all_data["open"]),
         "high": np.concatenate(all_data["high"]),
@@ -110,6 +116,9 @@ def generate_synthetic_ohlcv(
         "volume": np.concatenate(all_data["volume"]),
         "timestamp": np.array(all_data["timestamp"], dtype=np.int64),
         "symbol": all_data["symbol"],
+        "funding_rate": np.concatenate(all_data["funding_rate"]),
+        "open_interest": np.concatenate(all_data["open_interest"]),
+        "premium_index": np.concatenate(all_data["premium_index"]),
     }
     return tag_as_synthetic(out)
 
@@ -435,6 +444,12 @@ def compute_features_selected(ohlcv: dict, mode: str, feature_groups: Optional[L
             "open": ohlcv["open"][mask],
             "volume": ohlcv["volume"][mask],
         }
+        if "funding_rate" in ohlcv:
+            sym_ohlcv["funding_rate"] = ohlcv["funding_rate"][mask]
+        if "open_interest" in ohlcv:
+            sym_ohlcv["open_interest"] = ohlcv["open_interest"][mask]
+        if "premium_index" in ohlcv:
+            sym_ohlcv["premium_index"] = ohlcv["premium_index"][mask]
         if feature_groups is None or feature_groups == ["all"]:
             fm = compute_features(sym_ohlcv, mode=mode)
         else:
@@ -519,18 +534,22 @@ def build_aligned_training_frame(
         if precomputed_features is not None and sym in precomputed_features:
             Xs, fn = precomputed_features[sym]
         else:
-            fm = compute_features(
-                {
-                    "close": sym_close,
-                    "high": sym_high,
-                    "low": sym_low,
-                    "open": sym_open,
-                    "volume": sym_volume,
-                    "symbol": sym,
-                },
-                mode=mode,
-                feature_groups=feature_groups,
-            )
+            ohlcv_input = {
+                "close": sym_close,
+                "high": sym_high,
+                "low": sym_low,
+                "open": sym_open,
+                "volume": sym_volume,
+                "symbol": sym,
+            }
+            if "funding_rate" in ohlcv:
+                ohlcv_input["funding_rate"] = ohlcv["funding_rate"][mask]
+            if "open_interest" in ohlcv:
+                ohlcv_input["open_interest"] = ohlcv["open_interest"][mask]
+            if "premium_index" in ohlcv:
+                ohlcv_input["premium_index"] = ohlcv["premium_index"][mask]
+
+            fm = compute_features(ohlcv_input, mode=mode, feature_groups=feature_groups)
             fn = sorted(fm.features.keys())
             Xs = np.column_stack([fm.features[k] for k in fn]).astype(np.float64)
 

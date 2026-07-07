@@ -108,6 +108,57 @@ class BinanceClient:
 
         return self._get("/fapi/v1/fundingRate", params)
 
+    def get_open_interest_hist(
+        self,
+        symbol: str,
+        period: str = "1h",
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        limit: int = 500,
+    ) -> list[list[Any]]:
+        """Fetch open interest history from Binance Futures.
+
+        Returns raw response data. Use OpenInterestService for normalization.
+        Period: "5m","15m","30m","1h","2h","4h","6h","12h","1d".
+        Max limit per call is 500.
+        """
+        params: dict[str, Any] = {
+            "symbol": symbol.upper(),
+            "period": period,
+            "limit": min(limit, 500),
+        }
+        if start_time is not None:
+            params["startTime"] = start_time
+        if end_time is not None:
+            params["endTime"] = end_time
+
+        return self._get("/fapi/v1/openInterestHist", params)
+
+    def get_premium_index_klines(
+        self,
+        symbol: str,
+        interval: str,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        limit: int = 1000,
+    ) -> list[list[Any]]:
+        """Fetch premium index klines from Binance Futures.
+
+        Returns raw response data. Use PremiumIndexService for normalization.
+        Shows the premium/discount of mark price vs index price.
+        """
+        params: dict[str, Any] = {
+            "symbol": symbol.upper(),
+            "interval": interval,
+            "limit": min(limit, 1000),
+        }
+        if start_time is not None:
+            params["startTime"] = start_time
+        if end_time is not None:
+            params["endTime"] = end_time
+
+        return self._get("/fapi/v1/premiumIndexKlines", params)
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
