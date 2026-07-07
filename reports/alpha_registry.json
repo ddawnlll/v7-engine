@@ -206,6 +206,16 @@
     "model_ic": 0.087,
     "net_expectancy_r": 0.007331,
     "mode": "SWING",
-    "symbol": "BTCUSDT"
+    "symbol": "BTCUSDT",
+    "multi_symbol_results": {
+      "symbols": "BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT",
+      "symbol_count": 4,
+      "net_expectancy_r": 0.010976,
+      "net_r_improvement_vs_1sym": "+49.7%",
+      "active_trades": 17418,
+      "exposure_pct": 23.7,
+      "total_samples": 245132,
+      "long_short_ratio": "8591/8827"
+    }
   }
 }
