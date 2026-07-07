@@ -347,19 +347,19 @@ def compute_premium_index_group(
         index_price = ohlcv_data.get("index_price")
         basis = compute_basis(premium_close.astype(np.float64),
                               index_price.astype(np.float64) if (index_price is not None and isinstance(index_price, np.ndarray) and len(index_price) == n) else None)
+
+        basis_ma = compute_basis_ma(basis, window=window)
+        basis_vol = compute_basis_vol(basis, window=window)
+        basis_zscore = compute_basis_zscore(basis, window=window)
+        basis_regime = compute_basis_regime(basis, threshold_bps=threshold_bps)
+
+        return {
+            "basis": basis,
+            "basis_ma_N": basis_ma,
+            "basis_vol_N": basis_vol,
+            "basis_zscore_N": basis_zscore,
+            "basis_regime_N": basis_regime,
+        }
     else:
-        # No premium data available — return NaN arrays
-        basis = np.full(n, np.nan, dtype=np.float64)
-
-    basis_ma = compute_basis_ma(basis, window=window)
-    basis_vol = compute_basis_vol(basis, window=window)
-    basis_zscore = compute_basis_zscore(basis, window=window)
-    basis_regime = compute_basis_regime(basis, threshold_bps=threshold_bps)
-
-    return {
-        "basis": basis,
-        "basis_ma_N": basis_ma,
-        "basis_vol_N": basis_vol,
-        "basis_zscore_N": basis_zscore,
-        "basis_regime_N": basis_regime,
-    }
+        # No premium data available — return empty dict (no NaN columns)
+        return {}

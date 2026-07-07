@@ -297,14 +297,8 @@ def compute_open_interest_group(
         if oi_proxy is not None:
             open_interest = oi_proxy
         else:
-            # No OI data at all — return NaN arrays
-            nan_arr = np.full(n, np.nan, dtype=np.float64)
-            return {
-                "open_interest_change_N": nan_arr.copy(),
-                "open_interest_volume_ratio": nan_arr.copy(),
-                "open_interest_zscore_N": nan_arr.copy(),
-                "open_interest_change_pct_N": nan_arr.copy(),
-            }
+            # No OI data — return empty dict (no NaN columns added)
+            return {}
 
     if isinstance(open_interest, np.ndarray) and len(open_interest) == n:
         oi = open_interest.astype(np.float64)

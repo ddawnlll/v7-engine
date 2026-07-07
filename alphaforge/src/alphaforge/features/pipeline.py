@@ -545,6 +545,10 @@ def compute_mtf_group(
     bar grid. Accepts single-timeframe OHLCV and resamples internally
     for higher/lower timeframes.
 
+    NOTE: Returns empty dict for multi-symbol data (MTF resampling
+    assumes continuous single-symbol time series). This is a known
+    limitation — process per-symbol for cross-symbol MTF features.
+
     Args:
         ohlcv_data: Primary OHLCV data dict with 'open','high','low',
             'close','volume' as 1D numpy arrays.
@@ -553,12 +557,19 @@ def compute_mtf_group(
 
     Returns:
         Dict mapping MTF feature names to 1D numpy arrays, same length
-        as the input OHLCV data. Returns empty dict if no OHLCV data.
-        All keys are prefixed with mtf_ for namespace isolation.
+        as the input OHLCV data. Returns empty dict if no OHLCV data
+        or multi-symbol data detected. All keys prefixed mtf_.
     """
     close = ohlcv_data.get("close")
     if close is None or len(close) == 0:
         return {}
+
+    # Detect multi-symbol data — MTF resampling assumes continuous series
+    symbols = ohlcv_data.get("symbol", [])
+    if isinstance(symbols, (list, np.ndarray)) and len(symbols) > 1:
+        unique_syms = set(str(s) for s in symbols)
+        if len(unique_syms) > 1:
+            return {}
 
     # compute_mtf_features handles internal resampling
     raw = compute_mtf_features(ohlcv_data)

@@ -62,10 +62,10 @@ MODE_CONFIG = {
 }
 
 # Confidence threshold for trade filtering: if max softprob < this, force NO_TRADE
-# Set to 0.715 via Faz2 Iterasyon2 composite optimization (total_net_R / max_drawdown)
-# Validated on held-out test fold: CI=[0.022272, 0.025485], total_net_R=10.64
-# Previous: 0.55
-CONFIDENCE_THRESHOLD = 0.715
+# Recalibrated 2026-07-06: 54-feat WFV threshold sweep -> median 0.35
+# Alpha #1 (16-feat pruned) uses 0.55
+# SWING threshold: 0.70 (6-fold WFV)
+CONFIDENCE_THRESHOLD = 0.55
 
 
 # ---------------------------------------------------------------------------
