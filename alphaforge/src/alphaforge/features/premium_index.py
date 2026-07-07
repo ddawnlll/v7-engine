@@ -353,13 +353,27 @@ def compute_premium_index_group(
         basis_zscore = compute_basis_zscore(basis, window=window)
         basis_regime = compute_basis_regime(basis, threshold_bps=threshold_bps)
 
-        return {
+        result = {
             "basis": basis,
             "basis_ma_N": basis_ma,
             "basis_vol_N": basis_vol,
             "basis_zscore_N": basis_zscore,
             "basis_regime_N": basis_regime,
         }
+
+        # funding_basis_divergence: when funding and basis disagree
+        # Positive funding + negative basis = retail long vs institutional short
+        # Negative funding + positive basis = retail short vs institutional long
+        funding_rate = ohlcv_data.get("funding_rate")
+        if funding_rate is not None and isinstance(funding_rate, np.ndarray) and len(funding_rate) == n:
+            fr = funding_rate.astype(np.float64)
+            funding_basis_div = np.full(n, np.nan, dtype=np.float64)
+            valid = ~np.isnan(fr) & ~np.isnan(basis)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                funding_basis_div[valid] = fr[valid] * basis[valid] * -1.0
+            result["funding_basis_divergence_N"] = funding_basis_div
+
+        return result
     else:
         # No premium data available — return empty dict (no NaN columns)
         return {}

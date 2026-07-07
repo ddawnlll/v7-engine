@@ -1273,9 +1273,55 @@ class TestMtfGroup:
 class TestDerivativesDataActivation:
     """When real funding_rate/OI/premium_index keys are in ohlcv_data,
     the feature modules must produce non-NaN feature arrays.
+    
+    PERPETUAL_FUNDING group is now ACTIVE with funding_oi_divergence.
+    Interaction features (oi_price_divergence, funding_basis_divergence)
+    are high-value engineered signals."""
 
-    Note: PERPETUAL_FUNDING group is DEFERRED in pipeline.py and not
-    computed. Open Interest and Premium Index are the active groups."""
+    def test_perpetual_funding_group_activated(self):
+        """PERPETUAL_FUNDING group now produces funding_oi_divergence."""
+        n = 150
+        ohlcv = {"open": np.full(n, 100.0), "high": np.full(n, 102.0),
+                 "low": np.full(n, 99.0),
+                 "close": 100.0 + np.cumsum(np.random.randn(n) * 0.5),
+                 "volume": np.full(n, 1000.0),
+                 "funding_rate": np.random.randn(n) * 0.001}
+        fm = compute_features(ohlcv, mode="SWING", feature_groups=["perpetual_funding"])
+        divergence_keys = [k for k in fm.features if "divergence" in k]
+        assert len(divergence_keys) > 0, "No divergence features computed from PERPETUAL_FUNDING"
+        for k in divergence_keys:
+            assert not np.all(np.isnan(fm.features[k])), f"{k} is all NaN"
+
+    def test_oi_price_divergence_feature(self):
+        """OI group now includes oi_price_divergence interaction feature."""
+        n = 150
+        ohlcv = {"open": np.full(n, 100.0), "high": np.full(n, 102.0),
+                 "low": np.full(n, 99.0),
+                 "close": 100.0 + np.cumsum(np.random.randn(n) * 0.5),
+                 "volume": np.full(n, 1000.0),
+                 "open_interest": 50000.0 + np.cumsum(np.random.randn(n) * 100)}
+        fm = compute_features(ohlcv, mode="SWING", feature_groups=["open_interest"])
+        div_keys = [k for k in fm.features if "price_divergence" in k or "divergence" in k]
+        assert len(div_keys) > 0, "No oi_price_divergence found"
+        for k in div_keys:
+            assert not np.all(np.isnan(fm.features[k])), f"{k} is all NaN"
+
+    def test_funding_basis_divergence_feature(self):
+        """Premium index group now includes funding_basis_divergence."""
+        n = 150
+        ohlcv = {"open": np.full(n, 100.0), "high": np.full(n, 102.0),
+                 "low": np.full(n, 99.0),
+                 "close": 100.0 + np.cumsum(np.random.randn(n) * 0.5),
+                 "volume": np.full(n, 1000.0),
+                 "funding_rate": np.random.randn(n) * 0.001,
+                 "premium_index": np.random.randn(n) * 0.5}
+        fm = compute_features(ohlcv, mode="SWING", feature_groups=["premium_index"])
+        div_keys = [k for k in fm.features if "divergence" in k or "funding_basis" in k]
+        if not div_keys:
+            # The interaction may be in the full feature set
+            fm = compute_features(ohlcv, mode="SWING")
+            div_keys = [k for k in fm.features if "funding_basis" in k or "basis_funding" in k]
+        assert len(div_keys) > 0, "No funding-basis divergence found"
 
     def test_open_interest_features_activate_with_real_data(self):
         """OI group produces non-NaN when open_interest key present."""

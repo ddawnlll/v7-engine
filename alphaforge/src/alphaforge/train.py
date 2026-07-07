@@ -193,6 +193,7 @@ def load_cached_data(
         data_dir = str(REPO_ROOT / "data")
     raw_dir = Path(data_dir) / "raw"
     closes, highs, lows, opens, volumes, timestamps, sym_list = [], [], [], [], [], [], []
+    extra_cols: dict[str, list] = {}
 
     import pyarrow.parquet as pq
 
@@ -202,8 +203,15 @@ def load_cached_data(
         if not sym_dir.exists():
             logger.info("  No data dir for %s at %s", sym, sym_dir)
             continue
-        parquet_files = sorted(sym_dir.glob(f"*_{interval}_*.parquet"))
-        # Fallback to any parquet file
+        # Prefer combined derivatives file, fall back to regular parquet
+        deriv_files = sorted(sym_dir.glob(f"*_{interval}_with_derivatives.parquet"))
+        if deriv_files:
+            parquet_files = deriv_files
+            logger.info("  Using derivatives-enhanced file: %s", deriv_files[0].name)
+        else:
+            parquet_files = sorted(sym_dir.glob(f"*_{interval}_*.parquet"))
+            # Exclude derivatives file (shouldn't exist in fallback, but be safe)
+            parquet_files = [p for p in parquet_files if "with_derivatives" not in p.name]
         if not parquet_files:
             parquet_files = sorted(sym_dir.glob("*.parquet"))
         for pf in parquet_files:
@@ -225,13 +233,20 @@ def load_cached_data(
                 sym_list.extend([sym] * n)
                 found_any = True
                 logger.info("  Loaded %d bars from %s/%s", n, sym, pf.name)
+                # If derivatives file, also load extra columns
+                if "with_derivatives" in pf.name:
+                    for col_name in ["funding_rate", "open_interest", "premium_index"]:
+                        if col_name in table.column_names:
+                            col_data = table.column(col_name).to_numpy()
+                            extra_cols.setdefault(col_name, []).extend(col_data.tolist())
+                            logger.info("    Loaded extra column: %s", col_name)
             except Exception as e:
                 logger.warning("  Error reading %s: %s", pf, e)
 
     if not found_any:
         return None
 
-    return tag_as_real({
+    result = {
         "close": np.array(closes, dtype=np.float64),
         "high": np.array(highs, dtype=np.float64),
         "low": np.array(lows, dtype=np.float64),
@@ -239,7 +254,12 @@ def load_cached_data(
         "volume": np.array(volumes, dtype=np.float64),
         "timestamp": np.array(timestamps),
         "symbol": sym_list,
-    })
+    }
+    for col_name, col_list in extra_cols.items():
+        if len(col_list) == len(closes):
+            result[col_name] = np.array(col_list, dtype=np.float64)
+            logger.info("  Added extra column to output: %s (%d values)", col_name, len(col_list))
+    return tag_as_real(result)
 
 
 # ---------------------------------------------------------------------------
@@ -1243,16 +1263,21 @@ def main():
     print("\n[3/6] Aligning samples and cleaning NaNs...")
     print(f"  {X.shape[1]} feature columns, {X.shape[0]} aligned rows")
 
-    nan_mask = np.isnan(X).any(axis=1)
-    X_clean = X[~nan_mask]
-    y_clean = y_int[~nan_mask]
-    label_gross_clean = label_gross_r[~nan_mask]
-    label_net_clean = label_net_r[~nan_mask]
-    action_gross_clean = action_gross_r[~nan_mask]
-    action_net_clean = action_net_r[~nan_mask]
-    ts_clean = sample_timestamps[~nan_mask]
-    sym_clean = sample_symbols[~nan_mask]
-    print(f"  After NaN removal: {len(X_clean)} valid samples ({int(nan_mask.sum())} dropped)")
+    # Fill NaN with 0 — XGBoost treats 0 as a split value and also handles
+    # missing via sparsity-aware algorithm. For financial features (z-scores,
+    # ratios, returns), 0 means "neutral/no signal" which is a reasonable
+    # default for NaN (insufficient lookback).
+    nan_count = int(np.isnan(X).sum())
+    X = np.nan_to_num(X, nan=0.0)
+    print(f"  Filled {nan_count} NaN values with 0 — kept all {len(X)} rows")
+    X_clean = X
+    y_clean = y_int
+    label_gross_clean = label_gross_r
+    label_net_clean = label_net_r
+    action_gross_clean = action_gross_r
+    action_net_clean = action_net_r
+    ts_clean = sample_timestamps
+    sym_clean = sample_symbols
     
     # Feature dump for correlation analysis
     if args.dump_features:

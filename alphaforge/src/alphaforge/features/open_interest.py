@@ -318,4 +318,50 @@ def compute_open_interest_group(
         "open_interest_volume_ratio": oi_vol_ratio,
         "open_interest_zscore_N": oi_zscore,
         "open_interest_change_pct_N": oi_change_pct,
+        "oi_price_divergence_N": _compute_oi_price_divergence(oi, close, window),
     }
+
+
+@njit
+def _compute_oi_price_divergence(
+    oi: np.ndarray,
+    close: np.ndarray,
+    window: int = 10,
+) -> np.ndarray:
+    """Compute OI-price divergence: z(ΔOI) × z(return).
+
+    Positive = OI and price move together (trend confirmation).
+    Negative = OI and price diverge (positioning exhaustion / reversal signal).
+
+    When price rises but OI falls = short covering, weak rally → bearish.
+    When price falls but OI rises = shorts building, strong selling → bearish.
+    """
+    n = len(oi)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < window + 1:
+        return result
+
+    # OI change per bar
+    oi_chg = np.full(n, np.nan, dtype=np.float64)
+    for i in range(1, n):
+        if not np.isnan(oi[i]) and not np.isnan(oi[i - 1]) and oi[i - 1] != 0:
+            oi_chg[i] = (oi[i] / oi[i - 1] - 1.0) * 100.0
+
+    # Close return per bar
+    ret = np.full(n, np.nan, dtype=np.float64)
+    for i in range(1, n):
+        if close[i - 1] != 0:
+            ret[i] = (close[i] / close[i - 1] - 1.0) * 100.0
+
+    # Rolling z-scores
+    for i in range(window, n):
+        oi_seg = oi_chg[i - window : i]
+        ret_seg = ret[i - window : i]
+        oi_valid = oi_seg[~np.isnan(oi_seg)]
+        ret_valid = ret_seg[~np.isnan(ret_seg)]
+        if len(oi_valid) >= 3 and len(ret_valid) >= 3:
+            oi_z = (oi_chg[i] - np.mean(oi_valid)) / max(np.std(oi_valid), 1e-12)
+            ret_z = (ret[i] - np.mean(ret_valid)) / max(np.std(ret_valid), 1e-12)
+            result[i] = oi_z * ret_z
+
+    return result

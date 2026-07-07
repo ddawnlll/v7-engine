@@ -100,6 +100,9 @@ from alphaforge.features.premium_index import (
 from alphaforge.features.mtf import (
     compute_mtf_features,
 )
+from alphaforge.features.funding import (
+    compute_funding_group,
+)
 
 try:
     from numba import njit
@@ -209,7 +212,7 @@ class FeatureMatrix:
     def __post_init__(self):
         if not self.feature_group_ids:
             # Infer from active group map
-            # Exclude DEFERRED groups: LEAD_LAG and PERPETUAL_FUNDING
+            # Exclude DEFERRED groups: only LEAD_LAG is deferred now
             excluded = {FeatureGroup.LEAD_LAG, FeatureGroup.PERPETUAL_FUNDING}
             active = [g.value for g in FeatureGroup if g not in excluded]
             self.feature_group_ids = active
@@ -577,6 +580,37 @@ def compute_mtf_group(
     # Prefix keys with mtf_ for GROUP_PREFIX_MAP matching
     prefixed = {f"mtf_{k}": v for k, v in raw.items()}
     return prefixed
+
+
+# ---------------------------------------------------------------------------
+# PERPETUAL_FUNDING Group — funding rate + OI divergence features (#119)
+# ---------------------------------------------------------------------------
+
+
+def compute_perpetual_funding_group(
+    ohlcv_data: dict,
+    **kwargs,
+) -> Dict[str, np.ndarray]:
+    """Compute funding rate and funding-OI divergence features.
+
+    Delegates to funding.compute_funding_group which produces:
+      - funding_rate, funding_rate_ma_N, funding_rate_vol_N,
+        funding_rate_zscore_N, funding_rate_change_N,
+        open_interest_proxy_N, funding_oi_divergence_N
+
+    Requires 'funding_rate' key in ohlcv_data for real funding data;
+    falls back to OHLCV-derived proxy when absent.
+    Requires 'volume' key for OI proxy computation.
+
+    Returns:
+        Dict mapping feature name to 1D numpy array.
+    """
+    from alphaforge.features.funding import (
+        DEFAULT_FUNDING_WINDOW,
+        DEFAULT_OI_PROXY_WINDOW,
+        compute_funding_group as _cfg,
+    )
+    return _cfg(ohlcv_data, window=DEFAULT_FUNDING_WINDOW, oi_window=DEFAULT_OI_PROXY_WINDOW)
 
 
 # ---------------------------------------------------------------------------
@@ -1869,8 +1903,8 @@ def compute_features(
     Computes 14 active feature groups from OHLCV data:
       RETURNS, VOLATILITY, ATR, MOMENTUM, VOLUME, BREAKOUT, ORDERBOOK,
       REGIME, CANDLE_PATTERN, MTF, SCALP_MOMENTUM, OPEN_INTEREST,
-      PREMIUM_INDEX, RESIDUAL_MOMENTUM.
-    Lead-Lag and PERPETUAL_FUNDING are NOT computed (DEFERRED).
+      PREMIUM_INDEX, RESIDUAL_MOMENTUM, PERPETUAL_FUNDING.
+    Lead-Lag is NOT computed (DEFERRED).
 
     Args:
         ohlcv_data: dict with keys 'open', 'high', 'low', 'close', 'volume'.
@@ -2052,7 +2086,7 @@ def compute_features(
             )
         )
 
-    # 12. Open Interest Group (4 features — requires 'open_interest' in ohlcv_data)
+    # 12. Open Interest Group (4+1 features — requires 'open_interest' in ohlcv_data)
     if "open_interest" in (feature_groups or ["open_interest"]):
         features.update(
             compute_open_interest_group(
@@ -2091,7 +2125,13 @@ def compute_features(
             pass  # Multi-symbol data not available — skip silently
 
     # Lead-Lag group is DEFERRED — not computed, no columns added.
-    # PERPETUAL_FUNDING group is DEFERRED — requires external funding data feed, not OHLCV-only.
+    # PERPETUAL_FUNDING group — funding rate + OI divergence features
+    if "perpetual_funding" in (feature_groups or ["perpetual_funding"]):
+        features.update(
+            compute_perpetual_funding_group(
+                ohlcv_data=ohlcv_data,
+            )
+        )
 
     # Filter to requested feature groups if specified
     if feature_groups is not None:
@@ -2151,15 +2191,24 @@ def compute_features(
             "open_interest_change": "open_interest",  # #280 OI features
             "open_interest_volume": "open_interest",  # #280 OI features
             "open_interest_zscore": "open_interest",  # #280 OI features
+            "oi_price_divergence": "open_interest",   # new OI-price divergence
             "basis_ma": "premium_index",             # #280 premium index features
             "basis_vol": "premium_index",            # #280 premium index features
             "basis_zscore": "premium_index",         # #280 premium index features
             "basis_regime": "premium_index",         # #280 premium index features
             "basis": "premium_index",                # #280 raw basis
+            "funding_basis_divergence": "premium_index",  # new funding-basis divergence
             "residual_beta": "residual_momentum",      # Milestone C
             "residual_momentum": "residual_momentum",  # Milestone C
             "cluster_id": "residual_momentum",         # Milestone C
             "cs_momentum": "residual_momentum",        # Milestone C
+            "funding_rate": "perpetual_funding",       # PERPETUAL_FUNDING group
+            "funding_rate_ma": "perpetual_funding",
+            "funding_rate_vol": "perpetual_funding",
+            "funding_rate_zscore": "perpetual_funding",
+            "funding_rate_change": "perpetual_funding",
+            "funding_oi_divergence": "perpetual_funding",
+            "open_interest_proxy": "perpetual_funding",
         }
         filtered = {}
         for name, arr in features.items():
@@ -2181,8 +2230,8 @@ def compute_features(
 
     # Assemble FeatureMatrix
     # Exclude DEFERRED groups: LEAD_LAG (P0.9B cross-sectional data)
-    # and PERPETUAL_FUNDING (requires external funding data feed).
-    excluded = {FeatureGroup.LEAD_LAG, FeatureGroup.PERPETUAL_FUNDING}
+    # and PERPETUAL_FUNDING (live funding data feed now supported).
+    excluded = {FeatureGroup.LEAD_LAG}
     expected_groups = [
         g.value for g in FeatureGroup
         if g not in excluded
