@@ -1429,4 +1429,47 @@ scoreboard. Every change was isolated and measured A/B.
 
 ### Reports
 - `reports/accp/alpha_truth_upgrade.yaml`
->>>>>>> cc11f40 (perf: 57-symbol training pipeline optimization — W1-W6)
+
+---
+
+## Operation SCALP 0.05 — Overnight Campaign (2026-07-07)
+
+**What:** Full sim-space audit of 12 liquid bootstrap symbols (BTC/ETH/SOL/BNB/XRP/ADA/DOGE/AVAX/DOT/LINK/LTC/BCH). All simulation-space, no label-space claims.
+
+### Phase A — Baseline
+- SCALP: E[R] = -0.0951R, 4,726 trades, REJECT
+- SWING: E[R] = -0.1138R, 2,270 trades, REJECT
+- Cost decomposition: fee=0.0468R, slippage=0.0118R, funding=0.0000R per trade
+- Decision Node A: NEGATIVE_BASELINE → gap decomposition
+
+### Phase B — Selectivity Frontier
+- Grid 0.50–0.75: best at 0.55 = +0.1784R but only 131 trades (INSUFFICIENT-N)
+- Thresholds ≥0.60 produce 0 trades
+- Decision Node B: RANKING=YES but thin data; Phase C skipped
+
+### Phase D — Time Features (S3)
+- Fixed timestamp passthrough (was missing from per-symbol feature builder)
+- PIPELINE_VERSION 0.3.0 → 0.3.1, added hour_of_day/day_of_week/is_us_hours
+- A/B: without = -0.0951R, with = -0.0926R (Δ = +0.0025R, negligible)
+
+### Phase E — Maker Execution (S1)
+- Taker: -0.0951R, cost=0.0619R/trade
+- Maker pessimistic (citation anchor): -0.0828R (Δ = +0.0124R), cost=0.0496R
+- No adverse selection detected
+- All 412 simulation tests pass; taker remains default
+
+### Best Honest Stack
+- SCALP + time features + maker-pessimistic: **-0.0802R/trade** (estimated)
+- Distance to 0.05 target: **0.1302R/trade**
+- No valid-N row clears 0.05
+
+### Status: HOLD (negative base across all configs)
+- 56-symbol full run aborted: backtest of 76K signals is CPU-bound (~60 min)
+- Holdout skipped: negative base renders confirmatory; pipeline lacks 3-month holdout mechanism
+- Lead-lag (S2) deferred: requires cross-sectional wiring beyond per-symbol parallel compute
+
+### Reports
+- `reports/overnight/MORNING_REPORT.md`
+- `reports/overnight/ledger.jsonl`
+- `reports/overnight/scoreboard.md`
+- `reports/audit_overnight_scalp_005.md`
