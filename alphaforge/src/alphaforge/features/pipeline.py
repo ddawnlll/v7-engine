@@ -2232,8 +2232,12 @@ def compute_features(
                     n_clusters=defaults.get("residual_n_clusters", 3),
                 )
             )
-        except (ValueError, TypeError, KeyError):
-            pass  # Multi-symbol data not available — skip silently
+        except (ValueError, TypeError, KeyError) as e:
+            logger.warning(
+                "Residual momentum group skipped for %s: %s — "
+                "requires >=2 symbols with close data (multi-symbol panel)",
+                symbol_key, e,
+            )
 
     # Lead-Lag group is DEFERRED — not computed, no columns added.
     # PERPETUAL_FUNDING group — funding rate + OI divergence features

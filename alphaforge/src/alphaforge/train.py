@@ -535,6 +535,8 @@ def _compute_single_symbol_frame(
     sym_volume: np.ndarray,
     sym_ts: np.ndarray,
     mode: str,
+    label_horizon: int,
+    label_threshold: float,
     min_edge_r: float,
     ambiguity_margin_r: float,
     symbol_order: int,
@@ -554,11 +556,10 @@ def _compute_single_symbol_frame(
     OHLCV arrays.
     """
     from alphaforge.features.pipeline import cached_compute_features, CACHE_DIR_DEFAULT
-    from alphaforge.train import MODE_CONFIG, _ROUND_TRIP_COST_FRACTIONAL
+    from alphaforge.train import _ROUND_TRIP_COST_FRACTIONAL
 
     n_sym = len(sym_close)
-    _label_horizon = MODE_CONFIG.get(mode, {}).get("label_horizon", 12)
-    if n_sym <= _label_horizon + 1:
+    if n_sym <= label_horizon + 1:
         return None
 
     if precomputed_features is not None and sym in precomputed_features:
@@ -589,7 +590,7 @@ def _compute_single_symbol_frame(
 
         ints_s, gross_s, net_s, long_gross_s, short_gross_s, long_net_s, short_net_s = _generate_simple_labels_numba(
             sym_close, sym_high, sym_low,
-            cfg["label_horizon"], cfg["label_threshold"], _ROUND_TRIP_COST_FRACTIONAL, n_sym,
+            label_horizon, label_threshold, _ROUND_TRIP_COST_FRACTIONAL, n_sym,
             min_edge_r, ambiguity_margin_r,
         )
 
@@ -742,6 +743,8 @@ def build_aligned_training_frame(
             sym_volume=volume_arr[symbols == sym],
             sym_ts=timestamps[symbols == sym],
             mode=mode,
+            label_horizon=cfg["label_horizon"],
+            label_threshold=cfg["label_threshold"],
             min_edge_r=min_edge_r,
             ambiguity_margin_r=ambiguity_margin_r,
             symbol_order=symbol_order[sym],
@@ -767,6 +770,82 @@ def build_aligned_training_frame(
         close_price_parts.append(res["close_prices"])
         if feat_names is None:
             feat_names = res["feat_names"]
+
+    # ------------------------------------------------------------------
+    # Phase 2: Cross-sectional features (residual momentum, lead-lag)
+    # Computed once over the full multi-symbol panel, then joined per-symbol.
+    # ------------------------------------------------------------------
+    if len(unique_syms) >= 2:
+        try:
+            from alphaforge.features.residual_momentum import compute_residual_momentum_group
+            # Build multi-symbol OHLCV dict from the original input
+            multi_ohlcv: dict[str, dict[str, np.ndarray]] = {}
+            for sym in unique_syms:
+                mask = symbols == sym
+                sym_data = {
+                    "close": close_arr[mask],
+                    "high": high_arr[mask],
+                    "low": low_arr[mask],
+                    "open": open_arr[mask],
+                    "volume": volume_arr[mask],
+                }
+                if "funding_rate" in ohlcv:
+                    sym_data["funding_rate"] = ohlcv["funding_rate"][mask]
+                if "open_interest" in ohlcv:
+                    sym_data["open_interest"] = ohlcv["open_interest"][mask]
+                if "premium_index" in ohlcv:
+                    sym_data["premium_index"] = ohlcv["premium_index"][mask]
+                multi_ohlcv[sym] = sym_data
+
+            cs_features = compute_residual_momentum_group(
+                multi_ohlcv=multi_ohlcv,
+                btc_symbol="BTCUSDT",
+            )
+
+            # cs_features values are (n_others, n_bars) — map to x_parts
+            _other_symbols = [s for s in unique_syms if s != "BTCUSDT"]
+            _cs_feat_names = sorted(cs_features.keys())
+            for idx, sym in enumerate(_other_symbols):
+                if sym not in symbol_order:
+                    continue
+                sym_pos = symbol_order[sym]
+                if sym_pos >= len(x_parts):
+                    continue
+                n_sym = len(x_parts[sym_pos])
+                for feat_name in _cs_feat_names:
+                    feat_arr = cs_features[feat_name][idx]  # (n_bars,)
+                    _feat_len = len(feat_arr)
+                    _x_len = len(x_parts[sym_pos])
+                    if _feat_len >= _x_len:
+                        x_parts[sym_pos] = np.column_stack([
+                            x_parts[sym_pos], feat_arr[:_x_len]
+                        ])
+                    else:
+                        padded = np.full(_x_len, np.nan)
+                        padded[:_feat_len] = feat_arr
+                        x_parts[sym_pos] = np.column_stack([x_parts[sym_pos], padded])
+
+            # Pad BTC (excluded from output) with NaN columns for shape alignment
+            if "BTCUSDT" in symbol_order and _cs_feat_names:
+                btc_pos = symbol_order["BTCUSDT"]
+                n_cols = len(_cs_feat_names)
+                x_parts[btc_pos] = np.column_stack([
+                    x_parts[btc_pos],
+                    np.full((len(x_parts[btc_pos]), n_cols), np.nan),
+                ])
+
+            for feat_name in _cs_feat_names:
+                feat_names.append(f"cs_{feat_name}")
+
+            if _cs_feat_names:
+                logger.info(
+                    "Phase 2: %d cross-sectional features (%s) added to %d symbols",
+                    len(_cs_feat_names), ",".join(_cs_feat_names), len(_other_symbols),
+                )
+        except ImportError as e:
+            logger.warning("Phase 2 features unavailable: %s", e)
+        except Exception as e:
+            logger.warning("Phase 2 features failed (non-fatal): %s", e)
 
     if not x_parts:
         return {
