@@ -578,6 +578,7 @@ def _compute_single_symbol_frame(
             "open": sym_open,
             "volume": sym_volume,
             "symbol": sym,
+            "timestamp": sym_ts,  # S3 time features need this
         }
         if funding_rate is not None:
             ohlcv_input["funding_rate"] = funding_rate
@@ -762,9 +763,27 @@ def build_aligned_training_frame(
     )
 
     # Collect and order results
+    target_n_cols = 0
+    full_feat_names: list[str] | None = None
     for res in symbol_results:
         if res is None:
             continue
+        n_cols = res["X"].shape[1]
+        if n_cols > target_n_cols:
+            target_n_cols = n_cols
+            full_feat_names = res["feat_names"]
+
+    # Pad x_parts to uniform feature dimension across symbols
+    # (derivatives-enhanced symbols produce extra features from funding/OI/premium groups)
+    for res in symbol_results:
+        if res is None:
+            continue
+        if res["X"].shape[1] < target_n_cols:
+            pad_width = target_n_cols - res["X"].shape[1]
+            res["X"] = np.column_stack([
+                res["X"],
+                np.full((res["X"].shape[0], pad_width), np.nan, dtype=np.float64),
+            ])
         x_parts.append(res["X"])
         y_parts.append(res["y"])
         label_gross_parts.append(res["label_gross"])
@@ -774,8 +793,7 @@ def build_aligned_training_frame(
         ts_parts.append(res["ts"])
         sym_rank_parts.append(np.full(len(res["y"]), res["sym_order"], dtype=np.int32))
         close_price_parts.append(res["close_prices"])
-        if feat_names is None:
-            feat_names = res["feat_names"]
+    feat_names = full_feat_names  # Use fullest feature name set (from symbols with derivative data)
 
     # ------------------------------------------------------------------
     # Phase 2: Cross-sectional features (residual momentum, lead-lag)

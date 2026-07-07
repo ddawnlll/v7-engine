@@ -115,7 +115,7 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-PIPELINE_VERSION: str = "0.2.0"
+PIPELINE_VERSION: str = "0.3.1"
 
 # Default cache directory for feature matrices
 # Resolved to absolute path at module load time to prevent working-directory confusion.
@@ -209,6 +209,7 @@ class FeatureGroup(Enum):
     OPEN_INTEREST = "open_interest"    # Real OI data features (#280)
     PREMIUM_INDEX = "premium_index"    # Premium index / basis features (#280)
     RESIDUAL_MOMENTUM = "residual_momentum"  # Milestone C — beta-adjusted residual momentum
+    TIME_FEATURES = "time_features"  # Calendar/time-based features (hour_of_day, day_of_week, us_hours)
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +223,7 @@ class FeatureMatrix:
     Attributes:
         features: Dict mapping feature name to numpy array of shape (n_bars,).
             Features are organized by group. Keys match the output of each
-            group's compute function. No Lead-Lag keys are present.
+            group's compute function.
         timestamps: Optional index array of same length as each feature array.
             Can be sequential bar indices or ISO timestamp strings.
         symbol: Trading pair identifier (e.g. "BTCUSDT").
@@ -239,9 +240,9 @@ class FeatureMatrix:
 
     def __post_init__(self):
         if not self.feature_group_ids:
-            # Infer from active group map
-            # Exclude DEFERRED groups: only LEAD_LAG is deferred now
-            excluded = {FeatureGroup.LEAD_LAG, FeatureGroup.PERPETUAL_FUNDING}
+            # Exclude only PERPETUAL_FUNDING from default active set.
+            # LEAD_LAG is conditional on multi_ohlcv availability.
+            excluded = {FeatureGroup.PERPETUAL_FUNDING}
             active = [g.value for g in FeatureGroup if g not in excluded]
             self.feature_group_ids = active
         if not self.metadata:
@@ -737,6 +738,7 @@ FEATURE_GROUP_MAP: Dict[FeatureGroup, str] = {
     FeatureGroup.RESIDUAL_MOMENTUM: "compute_residual_momentum_group",
     FeatureGroup.OPEN_INTEREST: "compute_open_interest_group",
     FeatureGroup.PREMIUM_INDEX: "compute_premium_index_group",
+    FeatureGroup.TIME_FEATURES: "compute_time_features_group",
 }
 
 
@@ -1838,6 +1840,93 @@ def compute_breakout_group(
     }
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# Time Features Group (S3 — calendar/time-based features)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def compute_time_features_group(
+    timestamps: np.ndarray,
+) -> Dict[str, np.ndarray]:
+    """Compute time/calendar-based features from Unix timestamps.
+
+    Produces 5 features:
+      hour_of_day_sin, hour_of_day_cos  — sin/cos encoding of trading hour
+      day_of_week_sin, day_of_week_cos  — sin/cos encoding of day of week
+      is_us_hours                       — 1 during US market overlap (13:30-20:00 UTC)
+
+    All features are trivially causal (derived from timestamp alone,
+    no future leakage possible).
+
+    Args:
+        timestamps: Unix-ns or Unix-ms int64 array of bar close times.
+
+    Returns:
+        Dict with 5 keys, each a float64 array of same length as input.
+    """
+    n = len(timestamps)
+    if n == 0:
+        return {
+            "hour_of_day_sin": np.array([], dtype=np.float64),
+            "hour_of_day_cos": np.array([], dtype=np.float64),
+            "day_of_week_sin": np.array([], dtype=np.float64),
+            "day_of_week_cos": np.array([], dtype=np.float64),
+            "is_us_hours": np.array([], dtype=np.float64),
+        }
+
+    # Detect scale: Unix-ns (~1.7e18) vs Unix-ms (~1.7e12) vs Unix-s (~1.7e9)
+    ts_max = float(timestamps.max())
+    if ts_max > 1e15:
+        # Nanoseconds → seconds
+        ts_s = timestamps.astype(np.float64) / 1e9
+    elif ts_max > 1e11:
+        # Milliseconds → seconds
+        ts_s = timestamps.astype(np.float64) / 1e3
+    else:
+        ts_s = timestamps.astype(np.float64)
+
+    # Convert to UTC datetime components using vectorized operations
+    # Python's datetime fromtimestamp for vectorized hour/day-of-week extraction
+    import datetime
+
+    hours = np.zeros(n, dtype=np.float64)
+    day_of_week = np.zeros(n, dtype=np.float64)
+
+    for i in range(n):
+        try:
+            dt = datetime.datetime.utcfromtimestamp(ts_s[i])
+            hours[i] = float(dt.hour)
+            day_of_week[i] = float(dt.weekday())  # Monday=0, Sunday=6
+        except (OSError, ValueError, OverflowError):
+            hours[i] = np.nan
+            day_of_week[i] = np.nan
+
+    # Sin/cos encoding for cyclical features
+    hour_angle = 2.0 * np.pi * hours / 24.0
+    dow_angle = 2.0 * np.pi * day_of_week / 7.0
+
+    hour_sin = np.sin(hour_angle)
+    hour_cos = np.cos(hour_angle)
+
+    dow_sin = np.sin(dow_angle)
+    dow_cos = np.cos(dow_angle)
+
+    # US trading hours: 13:30-20:00 UTC (NY open to close)
+    # is_us_hours = 1 during this window, 0 otherwise
+    us_hours = np.where(
+        np.isnan(hours), np.nan,
+        np.where((hours >= 13.5) & (hours < 20.0), 1.0, 0.0),
+    )
+
+    return {
+        "hour_of_day_sin": hour_sin,
+        "hour_of_day_cos": hour_cos,
+        "day_of_week_sin": dow_sin,
+        "day_of_week_cos": dow_cos,
+        "is_us_hours": us_hours.astype(np.float64),
+    }
+
+
 # ===========================================================================
 # Main Pipeline Entry Point
 # ===========================================================================
@@ -1996,13 +2085,15 @@ def compute_features(
     mode: str = "SWING",
     timeframe_stack: Optional[dict] = None,
     feature_groups: Optional[List[str]] = None,
+    multi_ohlcv: Optional[Dict[str, Dict[str, np.ndarray]]] = None,
 ) -> FeatureMatrix:
     """Main feature pipeline entry point.
 
-    Computes 14 active feature groups from OHLCV data:
+    Computes 15 active feature groups from OHLCV data:
       RETURNS, VOLATILITY, ATR, MOMENTUM, VOLUME, BREAKOUT, ORDERBOOK,
       REGIME, CANDLE_PATTERN, MTF, SCALP_MOMENTUM, OPEN_INTEREST,
-      PREMIUM_INDEX, RESIDUAL_MOMENTUM, PERPETUAL_FUNDING.
+      PREMIUM_INDEX, RESIDUAL_MOMENTUM, PERPETUAL_FUNDING,
+      TIME_FEATURES.
     Lead-Lag is NOT computed (DEFERRED).
 
     Args:
@@ -2239,7 +2330,35 @@ def compute_features(
                 symbol_key, e,
             )
 
-    # Lead-Lag group is DEFERRED — not computed, no columns added.
+    # Lead-Lag group — cross-sectional features (requires multi_ohlcv)
+    # Default OFF — enabled by passing lead_lag in feature_groups AND multi_ohlcv.
+    if "lead_lag" in (feature_groups or []) and multi_ohlcv is not None:
+        symbol_key = ohlcv_data.get("symbol", "UNKNOWN")
+        # Use BTC as the context symbol for lead-lag detection
+        context_symbol = "BTCUSDT" if "BTCUSDT" in multi_ohlcv else (
+            next(s for s in multi_ohlcv if s != symbol_key) if len(multi_ohlcv) > 1 else symbol_key
+        )
+        cluster_symbols = [s for s in multi_ohlcv if s != symbol_key and s != context_symbol][:5]
+        try:
+            ll_features = compute_lead_lag_group(
+                multi_ohlcv=multi_ohlcv,
+                primary_symbol=symbol_key,
+                context_symbol=context_symbol,
+                correlation_window=defaults.get("ll_correlation_window", 12),
+                volatility_window=defaults.get("ll_volatility_window", 12),
+                max_lag=defaults.get("ll_max_lag", 3),
+                periods_per_year=defaults.get("periods_per_year", 8760),
+                cluster_symbols=cluster_symbols if len(cluster_symbols) >= 2 else None,
+            )
+            features.update(ll_features)
+        except (ValueError, TypeError, KeyError) as e:
+            logger.warning(
+                "Lead-lag group skipped for %s: %s", symbol_key, e,
+            )
+    elif "lead_lag" in (feature_groups or []):
+        logger.warning(
+            "Lead-lag group requested but no multi_ohlcv provided — skipping"
+        )
     # PERPETUAL_FUNDING group — funding rate + OI divergence features
     if "perpetual_funding" in (feature_groups or ["perpetual_funding"]):
         features.update(
@@ -2247,6 +2366,17 @@ def compute_features(
                 ohlcv_data=ohlcv_data,
             )
         )
+
+    # 15. Time Features Group (S3 — calendar/time-based features)
+    # Trivially causal from timestamps alone. Requires 'timestamp' in ohlcv_data.
+    if "time_features" in (feature_groups or ["time_features"]):
+        ts = ohlcv_data.get("timestamp")
+        if ts is not None and len(ts) == n_bars:
+            features.update(
+                compute_time_features_group(ts)
+            )
+        else:
+            logger.warning("Time features skipped: no timestamp data available")
 
     # Filter to requested feature groups if specified
     if feature_groups is not None:
@@ -2325,6 +2455,9 @@ def compute_features(
             "funding_oi_divergence": "perpetual_funding",
             "open_interest_proxy": "perpetual_funding",
             "trend_": "trend",  # trend features (always included)
+            "hour_of_day": "time_features",   # S3 time features
+            "day_of_week": "time_features",   # S3 time features
+            "is_us_hours": "time_features",   # S3 time features
         }
         filtered = {}
         for name, arr in features.items():
@@ -2364,14 +2497,15 @@ def compute_features(
             "n_bars": n_bars,
             "total_features": len(features),
             "window_defaults": defaults,
-            "lead_lag_status": "DEFERRED",
-            "lead_lag_reason": "P0.9B cross-sectional data dependency",
+            "lead_lag_status": "CONDITIONAL",
+            "lead_lag_reason": "Activated when multi_ohlcv provided + lead_lag in feature_groups",
             "perpetual_funding_status": "DEFERRED",
             "perpetual_funding_reason": "Requires external funding data feed",
-            "active_groups": 14,
+            "active_groups": 15,
             "residual_momentum_status": "ACTIVE",
             "open_interest_status": "ACTIVE",
             "premium_index_status": "ACTIVE",
+            "time_features_status": "ACTIVE",
         },
     )
 
