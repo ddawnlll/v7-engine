@@ -208,15 +208,17 @@
     "mode": "SWING",
     "symbol": "BTCUSDT",
     "multi_symbol_results": {
-      "symbols": "BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT,ADAUSDT,DOTUSDT,AVAXUSDT,LINKUSDT,DOGEUSDT",
-      "symbol_count": 10,
-      "net_expectancy_r": 0.012807,
-      "net_r_improvement_vs_1sym": "+74.7%",
-      "net_r_improvement_vs_4sym": "+16.7%",
-      "active_trades": 27844,
-      "exposure_pct": 19.3,
-      "total_samples": 481381,
-      "long_short_ratio": "20631/7213"
+      "symbols": "19 symbols (all except MATICUSDT)",
+      "symbol_count": 19,
+      "net_expectancy_r": 0.014269,
+      "per_trade_r": 0.014269,
+      "net_r_improvement_vs_1sym": "+94.6%",
+      "net_r_improvement_vs_4sym": "+30.0%",
+      "net_r_improvement_vs_10sym": "+11.4%",
+      "active_trades": 46137,
+      "exposure_pct": 19.2,
+      "total_samples": 802647,
+      "long_short_ratio": "38599/7538"
     }
   }
 }
