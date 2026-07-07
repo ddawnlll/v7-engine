@@ -47,6 +47,7 @@ def run_discovery(
     config: DiscoveryConfig,
     precomputed_frame: Optional[dict] = None,
     precomputed_wfv: Optional[tuple[list[dict], list[np.ndarray], list[np.ndarray], list[np.ndarray]]] = None,
+    ohlcv: Optional[dict] = None,
 ) -> DiscoveryResult:
     """Execute the full discovery pipeline.
 
@@ -64,6 +65,9 @@ def run_discovery(
         from a prior walk-forward validation run. When provided, skips the
         WFV stage (step 4). The three fold_preds/... arrays are the raw
         prediction outputs returned by walk_forward_validate(return_raw_preds=True).
+    ohlcv:
+        Optional OHLCV data dict (required when precomputed_frame is provided,
+        since signal generation needs OHLCV data for entry/exit simulation).
 
     Returns
     -------
@@ -111,7 +115,13 @@ def run_discovery(
             logger.info("  All %d samples preserved (NaN→0 fill, no row-drop)",
                         len(X_clean))
 
-            ohlcv = None  # signal generation will fall back to ts/sym
+            # ohlcv must be provided when using precomputed frame (needed for
+            # signal generation entry/exit simulation in step 5)
+            if ohlcv is None:
+                logger.warning(
+                    "ohlcv not provided with precomputed_frame — signal generation "
+                    "will use synthetic close prices; simulation results may be degraded"
+                )
         else:
             # ------------------------------------------------------------------
             # Step 1: Load data
@@ -216,8 +226,12 @@ def run_discovery(
                     config.confidence_threshold)
 
         # Build a close-array aligned with the cleaned training frame
+        # (no row drops happen with NaN→0 fill + rank, so raw is already aligned)
         close_arr_raw = training_frame.get("close_prices", None)
-        if close_arr_raw is not None and len(close_arr_raw) == len(timestamps):
+        if precomputed_frame is not None:
+            # Precomputed path: no NaN-drop, raw close is already aligned
+            close_arr_aligned = close_arr_raw
+        elif close_arr_raw is not None and len(close_arr_raw) == len(timestamps):
             close_arr_aligned = close_arr_raw[~nan_mask]
         else:
             close_arr_aligned = None

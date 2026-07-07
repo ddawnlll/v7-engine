@@ -186,7 +186,13 @@ def _load_panel_data(cache_dir: str, symbols: list[str]) -> dict | None:
         lows.append(sym_low)
         opens.append(sym_open)
         volumes.append(sym_volume)
-        timestamps_out.extend(sym_ts)
+        # Convert timestamps to int64 (nanoseconds since epoch)
+        # pd.DatetimeIndex with timezone yields object arrays of Timestamps
+        if sym_ts.dtype.kind == "M":
+            _ts_int = sym_ts.astype(np.int64)
+        else:
+            _ts_int = np.array([t.value for t in sym_ts], dtype=np.int64)
+        timestamps_out.extend(_ts_int)
         symbols_out.extend([col] * n)
         total_bars += n
         if min_bars == 0 or n < min_bars:
@@ -778,70 +784,78 @@ def build_aligned_training_frame(
     if len(unique_syms) >= 2:
         try:
             from alphaforge.features.residual_momentum import compute_residual_momentum_group
-            # Build multi-symbol OHLCV dict from the original input
-            multi_ohlcv: dict[str, dict[str, np.ndarray]] = {}
+            # Check all symbols have the same length before building multi_ohlcv
+            sym_lengths = {}
             for sym in unique_syms:
-                mask = symbols == sym
-                sym_data = {
-                    "close": close_arr[mask],
-                    "high": high_arr[mask],
-                    "low": low_arr[mask],
-                    "open": open_arr[mask],
-                    "volume": volume_arr[mask],
-                }
-                if "funding_rate" in ohlcv:
-                    sym_data["funding_rate"] = ohlcv["funding_rate"][mask]
-                if "open_interest" in ohlcv:
-                    sym_data["open_interest"] = ohlcv["open_interest"][mask]
-                if "premium_index" in ohlcv:
-                    sym_data["premium_index"] = ohlcv["premium_index"][mask]
-                multi_ohlcv[sym] = sym_data
-
-            cs_features = compute_residual_momentum_group(
-                multi_ohlcv=multi_ohlcv,
-                btc_symbol="BTCUSDT",
-            )
-
-            # cs_features values are (n_others, n_bars) — map to x_parts
-            _other_symbols = [s for s in unique_syms if s != "BTCUSDT"]
-            _cs_feat_names = sorted(cs_features.keys())
-            for idx, sym in enumerate(_other_symbols):
-                if sym not in symbol_order:
-                    continue
-                sym_pos = symbol_order[sym]
-                if sym_pos >= len(x_parts):
-                    continue
-                n_sym = len(x_parts[sym_pos])
-                for feat_name in _cs_feat_names:
-                    feat_arr = cs_features[feat_name][idx]  # (n_bars,)
-                    _feat_len = len(feat_arr)
-                    _x_len = len(x_parts[sym_pos])
-                    if _feat_len >= _x_len:
-                        x_parts[sym_pos] = np.column_stack([
-                            x_parts[sym_pos], feat_arr[:_x_len]
-                        ])
-                    else:
-                        padded = np.full(_x_len, np.nan)
-                        padded[:_feat_len] = feat_arr
-                        x_parts[sym_pos] = np.column_stack([x_parts[sym_pos], padded])
-
-            # Pad BTC (excluded from output) with NaN columns for shape alignment
-            if "BTCUSDT" in symbol_order and _cs_feat_names:
-                btc_pos = symbol_order["BTCUSDT"]
-                n_cols = len(_cs_feat_names)
-                x_parts[btc_pos] = np.column_stack([
-                    x_parts[btc_pos],
-                    np.full((len(x_parts[btc_pos]), n_cols), np.nan),
-                ])
-
-            for feat_name in _cs_feat_names:
-                feat_names.append(f"cs_{feat_name}")
-
-            if _cs_feat_names:
-                logger.info(
-                    "Phase 2: %d cross-sectional features (%s) added to %d symbols",
-                    len(_cs_feat_names), ",".join(_cs_feat_names), len(_other_symbols),
+                sym_lengths[sym] = len(close_arr[symbols == sym])
+            if len(set(sym_lengths.values())) > 1:
+                logger.warning(
+                    "Phase 2 (residual momentum) skipped: symbols have different lengths %s. "
+                    "Load panel data with consistent per-symbol ranges.",
+                    sym_lengths,
                 )
+            else:
+                # Build multi-symbol OHLCV dict from the original input
+                multi_ohlcv: dict[str, dict[str, np.ndarray]] = {}
+                for sym in unique_syms:
+                    mask = symbols == sym
+                    sym_data = {
+                        "close": close_arr[mask],
+                        "high": high_arr[mask],
+                        "low": low_arr[mask],
+                        "open": open_arr[mask],
+                        "volume": volume_arr[mask],
+                    }
+                    if "funding_rate" in ohlcv:
+                        sym_data["funding_rate"] = ohlcv["funding_rate"][mask]
+                    if "open_interest" in ohlcv:
+                        sym_data["open_interest"] = ohlcv["open_interest"][mask]
+                    if "premium_index" in ohlcv:
+                        sym_data["premium_index"] = ohlcv["premium_index"][mask]
+                    multi_ohlcv[sym] = sym_data
+
+                cs_features = compute_residual_momentum_group(
+                    multi_ohlcv=multi_ohlcv, btc_symbol="BTCUSDT",
+                )
+
+                # cs_features values are (n_others, n_bars) — map to x_parts
+                _other_symbols = [s for s in unique_syms if s != "BTCUSDT"]
+                _cs_feat_names = sorted(cs_features.keys())
+                for idx, sym in enumerate(_other_symbols):
+                    if sym not in symbol_order:
+                        continue
+                    sym_pos = symbol_order[sym]
+                    if sym_pos >= len(x_parts):
+                        continue
+                    for feat_name in _cs_feat_names:
+                        feat_arr = cs_features[feat_name][idx]
+                        _x_len = len(x_parts[sym_pos])
+                        if len(feat_arr) >= _x_len:
+                            x_parts[sym_pos] = np.column_stack([
+                                x_parts[sym_pos], feat_arr[:_x_len]
+                            ])
+                        else:
+                            padded = np.full(_x_len, np.nan)
+                            padded[:len(feat_arr)] = feat_arr
+                            x_parts[sym_pos] = np.column_stack([x_parts[sym_pos], padded])
+
+                # Pad BTC with NaN columns for shape alignment
+                if "BTCUSDT" in symbol_order and _cs_feat_names:
+                    btc_pos = symbol_order["BTCUSDT"]
+                    n_cols = len(_cs_feat_names)
+                    x_parts[btc_pos] = np.column_stack([
+                        x_parts[btc_pos],
+                        np.full((len(x_parts[btc_pos]), n_cols), np.nan),
+                    ])
+
+                for feat_name in _cs_feat_names:
+                    feat_names.append(f"cs_{feat_name}")
+
+                if _cs_feat_names:
+                    logger.info(
+                        "Phase 2: %d cross-sectional features (%s) added to %d symbols",
+                        len(_cs_feat_names), ",".join(_cs_feat_names), len(_other_symbols),
+                   )
         except ImportError as e:
             logger.warning("Phase 2 features unavailable: %s", e)
         except Exception as e:
@@ -1485,6 +1499,7 @@ def _run_discovery_after_training(
         config,
         precomputed_frame=precomputed_frame,
         precomputed_wfv=precomputed_wfv,
+        ohlcv=ohlcv,
     )
 
     print(f"\n  Discovery result: {result.status}")
