@@ -37,6 +37,7 @@ from alphaforge.train import (
     walk_forward_validate,
     _load_panel_data,
     collect_metrics,
+    cross_sectional_rank_normalize,
 )
 
 logger = logging.getLogger("alphaforge.discovery.pipeline")
@@ -56,8 +57,8 @@ def run_discovery(
     precomputed_frame:
         Optional pre-built aligned training frame (from train.py main()).
         When provided, skips data loading and frame construction (steps 1-3).
-        The frame is used AS-IS (no NaN-fill or rank normalization applied)
-        so discovery's NaN-drop semantics are preserved.
+        The frame is used AS-IS — must already be NaN→0 filled and rank
+        normalized to match training's eval representation.
     precomputed_wfv:
         Optional tuple of (wfv_results, fold_preds, fold_y_class, fold_y_val)
         from a prior walk-forward validation run. When provided, skips the
@@ -97,16 +98,18 @@ def run_discovery(
             symbols_arr = training_frame["symbols"]
             feat_names = training_frame["feature_names"]
 
-            logger.info("[3/8] Cleaning NaN rows from precomputed frame...")
-            nan_mask = np.isnan(X).any(axis=1)
-            X_clean = X[~nan_mask]
-            y_clean = y_int[~nan_mask]
-            label_net_clean = label_net_r[~nan_mask]
-            action_net_clean = action_net_r[~nan_mask]
-            ts_clean = timestamps[~nan_mask]
-            sym_clean = symbols_arr[~nan_mask]
-            logger.info("  %d valid samples (%d NaN dropped)",
-                        len(X_clean), int(nan_mask.sum()))
+            # NaN→0 fill + rank normalization (same as training main())
+            logger.info("[3/8] Applying NaN→0 fill and rank normalization...")
+            X_clean = np.nan_to_num(X, nan=0.0)
+            if len(np.unique(timestamps)) < len(timestamps):
+                X_clean = cross_sectional_rank_normalize(X_clean, timestamps)
+            y_clean = y_int.copy()
+            label_net_clean = label_net_r.copy()
+            action_net_clean = action_net_r.copy()
+            ts_clean = timestamps.copy()
+            sym_clean = symbols_arr.copy()
+            logger.info("  All %d samples preserved (NaN→0 fill, no row-drop)",
+                        len(X_clean))
 
             ohlcv = None  # signal generation will fall back to ts/sym
         else:
@@ -151,18 +154,19 @@ def run_discovery(
             feat_names = training_frame["feature_names"]
 
             # ------------------------------------------------------------------
-            # Step 3: Clean NaN
+            # Step 3: NaN→0 fill + rank normalization (same as training main())
             # ------------------------------------------------------------------
-            logger.info("[3/8] Cleaning NaN rows...")
-            nan_mask = np.isnan(X).any(axis=1)
-            X_clean = X[~nan_mask]
-            y_clean = y_int[~nan_mask]
-            label_net_clean = label_net_r[~nan_mask]
-            action_net_clean = action_net_r[~nan_mask]
-            ts_clean = timestamps[~nan_mask]
-            sym_clean = symbols_arr[~nan_mask]
-            logger.info("  %d valid samples (%d NaN dropped)",
-                        len(X_clean), int(nan_mask.sum()))
+            logger.info("[3/8] Applying NaN→0 fill and rank normalization...")
+            X_clean = np.nan_to_num(X, nan=0.0)
+            if len(np.unique(timestamps)) < len(timestamps):
+                X_clean = cross_sectional_rank_normalize(X_clean, timestamps)
+            y_clean = y_int.copy()
+            label_net_clean = label_net_r.copy()
+            action_net_clean = action_net_r.copy()
+            ts_clean = timestamps.copy()
+            sym_clean = symbols_arr.copy()
+            logger.info("  All %d samples preserved (NaN→0 fill, no row-drop)",
+                        len(X_clean))
 
         if len(X_clean) < 100:
             result.status = "ERROR"
