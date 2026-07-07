@@ -689,7 +689,8 @@ def build_aligned_training_frame(
         for key in ("funding_rate", "open_interest", "premium_index"):
             if key in ohlcv:
                 extra[key] = ohlcv[key][mask]
-        sym_extras[sym] = extra if extra else None
+        if extra:
+            sym_extras[sym] = extra
 
     # Parallel per-symbol computation
     from joblib import Parallel, delayed
