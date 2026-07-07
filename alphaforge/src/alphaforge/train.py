@@ -979,8 +979,24 @@ def walk_forward_validate(
     threshold: float | None = None,
     action_net_r: np.ndarray | None = None,
     return_raw_preds: bool = False,
+    enable_debias: bool = False,
 ) -> List[dict] | tuple[list[dict], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
     """6-fold anchored expanding walk-forward validation.
+
+    Args:
+        X: Feature matrix.
+        y_int: Integer labels (0=LONG, 1=SHORT, 2=NO_TRADE).
+        net_r_values: Net R values per sample.
+        mode: Trading mode.
+        min_folds: Minimum number of folds (default 6).
+        dump_softmax_path: Optional path to dump softmax probabilities.
+        threshold: Confidence threshold for NO_TRADE filtering.
+        action_net_r: Action-aligned net R (n_samples, 3).
+        return_raw_preds: If True, return raw fold predictions for post-hoc analysis.
+        enable_debias: If True, apply in-fold direction debias correction.
+            Default False — the debias is statistically contaminated (it adapts
+            to OOS data in-sample) and should only be enabled for retrospective
+            analysis of its impact.
 
     Returns per-fold result dicts.
     """
@@ -1056,22 +1072,25 @@ def walk_forward_validate(
         # Direction debias: if model heavily over-predicts one direction,
         # apply a gentle correction. This fixes systematic bias from
         # imbalanced market regimes (e.g. too SHORT-biased in bull market).
-        _long_pct = np.mean(y_pred == 0)
-        _short_pct = np.mean(y_pred == 1)
-        _bias = _long_pct - _short_pct
-        if abs(_bias) > 0.20 and _long_pct + _short_pct > 0.10:
-            _shift = -_bias * 0.15  # neutralize 15% of bias
-            y_pred_prob[:, 0] += _shift
-            y_pred_prob[:, 1] -= _shift
-            y_pred_prob = np.clip(y_pred_prob, 0, 1)
-            y_pred_prob /= y_pred_prob.sum(axis=1, keepdims=True)
-            y_pred = np.argmax(y_pred_prob, axis=1)
-            y_pred_prob_max = np.max(y_pred_prob, axis=1)
-            logger.info(
-                "  Debias: LONG=%.0f%% SHORT=%.0f%% (shift=%.3f) -> LONG=%.0f%% SHORT=%.0f%%",
-                _long_pct * 100, _short_pct * 100, _shift,
-                np.mean(y_pred == 0) * 100, np.mean(y_pred == 1) * 100,
-            )
+        # NOTE: This is statistically contaminated — it uses the VAL fold's
+        # own prediction distribution. Default OFF (enable_debias=False).
+        if enable_debias:
+            _long_pct = np.mean(y_pred == 0)
+            _short_pct = np.mean(y_pred == 1)
+            _bias = _long_pct - _short_pct
+            if abs(_bias) > 0.20 and _long_pct + _short_pct > 0.10:
+                _shift = -_bias * 0.15  # neutralize 15% of bias
+                y_pred_prob[:, 0] += _shift
+                y_pred_prob[:, 1] -= _shift
+                y_pred_prob = np.clip(y_pred_prob, 0, 1)
+                y_pred_prob /= y_pred_prob.sum(axis=1, keepdims=True)
+                y_pred = np.argmax(y_pred_prob, axis=1)
+                y_pred_prob_max = np.max(y_pred_prob, axis=1)
+                logger.info(
+                    "  Debias: LONG=%.0f%% SHORT=%.0f%% (shift=%.3f) -> LONG=%.0f%% SHORT=%.0f%%",
+                    _long_pct * 100, _short_pct * 100, _shift,
+                    np.mean(y_pred == 0) * 100, np.mean(y_pred == 1) * 100,
+                )
 
         # Save raw preds for post-hoc threshold sweep (before threshold applied)
         if return_raw_preds:
