@@ -1,0 +1,211 @@
+{
+  "schema": "alpha_registry_v1",
+  "generated": "2026-07-07T22:00:00Z",
+  "alphas": [
+    {
+      "name": "open_interest_change_N",
+      "index": 68,
+      "importance": 0.0,
+      "importance_pct": 0.0,
+      "group": "open_interest"
+    },
+    {
+      "name": "open_interest_change_pct_N",
+      "index": 69,
+      "importance": 0.0,
+      "importance_pct": 0.0,
+      "group": "open_interest"
+    },
+    {
+      "name": "open_interest_volume_ratio",
+      "index": 71,
+      "importance": 0.0,
+      "importance_pct": 0.0,
+      "group": "open_interest"
+    },
+    {
+      "name": "open_interest_zscore_N",
+      "index": 72,
+      "importance": 0.0,
+      "importance_pct": 0.0,
+      "group": "open_interest"
+    },
+    {
+      "name": "oi_price_divergence_N",
+      "index": 67,
+      "importance": 0.0,
+      "importance_pct": 0.0,
+      "group": "open_interest"
+    },
+    {
+      "name": "basis",
+      "index": 4,
+      "importance": 0.0089,
+      "importance_pct": 0.89,
+      "group": "premium_index"
+    },
+    {
+      "name": "basis_ma_N",
+      "index": 5,
+      "importance": 0.0122,
+      "importance_pct": 1.22,
+      "group": "premium_index"
+    },
+    {
+      "name": "basis_regime_N",
+      "index": 6,
+      "importance": 0.0,
+      "importance_pct": 0.0,
+      "group": "premium_index"
+    },
+    {
+      "name": "basis_vol_N",
+      "index": 7,
+      "importance": 0.0108,
+      "importance_pct": 1.08,
+      "group": "premium_index"
+    },
+    {
+      "name": "basis_zscore_N",
+      "index": 8,
+      "importance": 0.006,
+      "importance_pct": 0.6,
+      "group": "premium_index"
+    },
+    {
+      "name": "funding_basis_divergence_N",
+      "index": 19,
+      "importance": 0.0049,
+      "importance_pct": 0.49,
+      "group": "premium_index"
+    },
+    {
+      "name": "funding_oi_divergence_N",
+      "index": 20,
+      "importance": 0.0076,
+      "importance_pct": 0.76,
+      "group": "funding_rate"
+    },
+    {
+      "name": "funding_rate",
+      "index": 21,
+      "importance": 0.0069,
+      "importance_pct": 0.69,
+      "group": "funding_rate"
+    },
+    {
+      "name": "funding_rate_change_N",
+      "index": 22,
+      "importance": 0.006,
+      "importance_pct": 0.6,
+      "group": "funding_rate"
+    },
+    {
+      "name": "funding_rate_ma_N",
+      "index": 23,
+      "importance": 0.0112,
+      "importance_pct": 1.12,
+      "group": "funding_rate"
+    },
+    {
+      "name": "funding_rate_vol_N",
+      "index": 24,
+      "importance": 0.0138,
+      "importance_pct": 1.38,
+      "group": "funding_rate"
+    },
+    {
+      "name": "funding_rate_zscore_N",
+      "index": 25,
+      "importance": 0.0077,
+      "importance_pct": 0.77,
+      "group": "funding_rate"
+    },
+    {
+      "name": "open_interest_proxy_N",
+      "index": 70,
+      "importance": 0.0151,
+      "importance_pct": 1.51,
+      "group": "open_interest"
+    },
+    {
+      "name": "trend_ma_cross",
+      "index": 85,
+      "importance": 0.016,
+      "importance_pct": 1.6,
+      "group": "trend"
+    },
+    {
+      "name": "trend_ma_long_slope",
+      "index": 86,
+      "importance": 0.0145,
+      "importance_pct": 1.45,
+      "group": "trend"
+    },
+    {
+      "name": "trend_ma_short_slope",
+      "index": 87,
+      "importance": 0.013,
+      "importance_pct": 1.3,
+      "group": "trend"
+    },
+    {
+      "name": "trend_position",
+      "index": 88,
+      "importance": 0.0135,
+      "importance_pct": 1.35,
+      "group": "trend"
+    },
+    {
+      "name": "mtf_funding_direction",
+      "index": 52,
+      "importance": 0.0,
+      "importance_pct": 0.0,
+      "group": "funding_rate"
+    },
+    {
+      "name": "mtf_funding_rate",
+      "index": 53,
+      "importance": 0.0,
+      "importance_pct": 0.0,
+      "group": "funding_rate"
+    },
+    {
+      "name": "mtf_funding_regime",
+      "index": 54,
+      "importance": 0.0,
+      "importance_pct": 0.0,
+      "group": "funding_rate"
+    },
+    {
+      "name": "mtf_funding_zscore",
+      "index": 55,
+      "importance": 0.0,
+      "importance_pct": 0.0,
+      "group": "funding_rate"
+    },
+    {
+      "name": "mtf_trend_strength_4h",
+      "index": 60,
+      "importance": 0.0176,
+      "importance_pct": 1.76,
+      "group": "trend"
+    },
+    {
+      "name": "volume_trend_N",
+      "index": 93,
+      "importance": 0.011,
+      "importance_pct": 1.1,
+      "group": "trend"
+    }
+  ],
+  "metadata": {
+    "total_features": 97,
+    "new_features": 28,
+    "new_features_importance_pct": 19.67,
+    "model_ic": 0.087,
+    "net_expectancy_r": 0.007331,
+    "mode": "SWING",
+    "symbol": "BTCUSDT"
+  }
+}
