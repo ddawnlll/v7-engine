@@ -49,3 +49,16 @@ Symbols: 56
 
 ---
 _Phase A complete at 2026-07-07T21:49:07Z_
+## Phase B — Selectivity Frontier
+
+| Threshold | N Trades | Avg R | Total R | WR | PF | Max DD | Status | Duration |
+|-----------|----------|-------|---------|----|----|--------|--------|----------|
+| 0.50      | 4726     | -0.0951 | -449.5395 | 0.4448 | 0.8115 | -462.8268 | REJECT | 304.9s |
+| 0.55      | 131      ⚠️ <500 | 0.1784 |  23.3707 | 0.5649 | 1.4428 | -9.7930 | REJECT |  35.4s |
+| 0.60      | 0        |      ? |        ? |   ? |    ? |       ? | REJECTED |  28.2s |
+| 0.65      | 0        |      ? |        ? |   ? |    ? |       ? | REJECTED |  28.1s |
+| 0.70      | 0        |      ? |        ? |   ? |    ? |       ? | REJECTED |  28.4s |
+| 0.75      | 0        |      ? |        ? |   ? |    ? |       ? | REJECTED |  28.8s |
+
+### Decision Node B
+Top decile (0.55) = 0.1784 > overall average (-0.0951) → RANKING=YES
