@@ -1,0 +1,136 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "audit_training_optimization_57sym"
+date: "2026-07-07"
+
+result: PASS
+scope_confirmation:
+  - "Audit-only task: no source code modified, no training executed (per owner instruction)"
+  - "Audited train.py, discovery/pipeline.py, features/pipeline.py, xgb_trainer.py, factors/loader.py, panel cache"
+  - "Micro-benchmarked cross-sectional rank loop (scaled, no training) with equivalence-checked vectorized replacement"
+  - "Verified hardware: AMD RX 7800 XT + CUDA-build xgboost 3.3.0 => GPU path unreachable, all training is CPU"
+
+files_changed:
+  - path: "reports/accp/audit_training_optimization_57sym.yaml"
+    summary: "This audit report (new)"
+  - path: "v7/docs/roadmap.md"
+    summary: "Audit entry appended (docs only)"
+
+findings:
+  performance_critical:
+    - id: P1_RANK_LOOP_QUADRATIC
+      where: "alphaforge/src/alphaforge/train.py:1453-1469"
+      detail: >
+        Cross-sectional rank normalization is O(T^2 * S * F): per-timestamp boolean
+        mask scan over all rows + per-column Python argsort. Measured (S=57, F=89):
+        T=500 3.66s, T=1000 13.64s, T=2000 50.11s (quadratic). Extrapolated to
+        T=30000 hourly bars: ~3.1 HOURS for this loop alone. Vectorized grouped
+        implementation (rows already ts-major sorted via lexsort) produces identical
+        output (np.allclose verified) in ~6s at full scale. ~2000x speedup available.
+    - id: P2_DISCOVERY_DOUBLE_COMPUTE
+      where: "train.py main() --discovery -> discovery/pipeline.py run_discovery"
+      detail: >
+        --discovery re-runs build_aligned_training_frame + walk_forward_validate from
+        scratch on the same ohlcv. Entire pipeline cost is paid twice per run.
+        Pass the existing training_frame / wfv results into discovery instead.
+    - id: P3_FEATURE_CACHE_UNUSED
+      where: "features/pipeline.py cached_compute_features (exists) vs train.py (never calls it)"
+      detail: >
+        FeatureCache (parquet+zstd, HMAC) is implemented but the training path calls
+        compute_features directly. Every experiment recomputes all features for all
+        symbols. Wire cached_compute_features into build_aligned_training_frame and
+        add a data-content hash (first/last ts + row count) to the cache key to
+        prevent stale-cache on data refresh.
+    - id: P4_SEQUENTIAL_SYMBOL_FEATURES
+      where: "train.py build_aligned_training_frame per-symbol loop"
+      detail: >
+        Feature computation is per-symbol independent but sequential. joblib
+        (loky backend on Windows) across 57 symbols gives ~5x on the 6-core 5600X.
+        Add cache=True to @njit decorators so worker processes reuse compiled kernels.
+    - id: P5_FEATURE_FILTER_AFTER_COMPUTE
+      where: "features/pipeline.py compute_features (groups 1-10 unconditional; filter at end)"
+      detail: >
+        Core groups (returns..trend, incl. 21-feature orderbook) are always computed;
+        feature_groups filtering happens post-hoc. Selecting 30 of 89 features saves
+        ~zero feature-pipeline time. Group skip must happen before compute.
+  bugs:
+    - id: B1_MODE_PARAMS_IGNORED_IN_LABELS
+      where: "train.py _generate_simple_labels_numba"
+      detail: >
+        Hardcoded horizon=12, threshold=0.003, cost=0.0008 for ALL modes; the
+        max_hold/stop_mult/target_mult/min_edge_r/ambiguity args are accepted but
+        unused. SWING, SCALP, AGGRESSIVE_SCALP produce identical labels. MODE_CONFIG
+        is effectively dead in the label path.
+    - id: B2_DEAD_CODE_BLOCKS
+      where: "train.py:427-527 (unreachable triple-barrier body after return); train.py:121 (unreachable tag_as_synthetic)"
+      detail: >
+        generate_synthetic_ohlcv returns before tag_as_synthetic — synthetic data is
+        never tagged; data-lake guard cannot distinguish it if the guard relies on tags.
+    - id: B3_RESIDUAL_MOMENTUM_NEVER_COMPUTED
+      where: "features/pipeline.py:2173-2187 + residual_momentum.py _validate (requires >=2 symbols)"
+      detail: >
+        Training computes features per symbol; the single-symbol dict always raises
+        ValueError which is swallowed silently. residual_*, cluster_id, cs_momentum
+        never exist in training despite metadata claiming ACTIVE. Silent alpha loss.
+    - id: B4_PANEL_INTERSECTION_TRUNCATION
+      where: "train.py _load_panel_data (notna().all(axis=1))"
+      detail: >
+        Requires ALL symbols valid per row: 20-symbol panel keeps 7,594/29,928 rows.
+        With 57 symbols the youngest listing truncates every symbol's history.
+        Use per-symbol valid ranges; only cross-sectional rank needs alignment and
+        it already tolerates variable symbol counts per timestamp.
+    - id: B5_SHUFFLED_EARLYSTOP_SPLIT
+      where: "training/xgb_trainer.py train() rng.shuffle(indices)"
+      detail: >
+        Inner train/val split for early stopping randomly shuffles time-series rows —
+        temporal leakage into the early-stopping signal (optimistic round selection).
+        Use a chronological tail split.
+    - id: B6_PURGE_VS_LABEL_HORIZON
+      where: "train.py walk_forward_validate purge assert uses max_hold"
+      detail: >
+        Labels look 12 bars ahead (hardcoded) but purge invariant is asserted against
+        max_hold. AGGRESSIVE_SCALP (max_hold=5) can purge less than label horizon on
+        small folds. Tie purge to the actual label horizon.
+    - id: B7_RANK_ONLY_IN_ONE_PATH
+      where: "train.py main() ranks; discovery/pipeline.py does not (and drops NaN vs fill-0)"
+      detail: >
+        Training summary and discovery evaluate DIFFERENT feature representations and
+        different NaN policies. Reported Net R from the two paths is not comparable.
+    - id: B8_GPU_DETECTION_MOOT
+      where: "training/xgb_trainer.py _detect_gpu"
+      detail: >
+        Machine GPU is AMD RX 7800 XT; installed xgboost 3.3.0 is CUDA build; nvidia-smi
+        absent; /dev/kfd and rocm-smi never exist on Windows. Detection always falls
+        back to CPU hist. No CUDA path exists on this hardware.
+  quality:
+    - id: Q1_KEEP_ALL_89_FEATURES
+      detail: >
+        Feature-count reduction does not reduce feature-pipeline time (P5) and XGBoost
+        hist depth-4/80-round training is not the dominant cost. The 89->30 shrink
+        sacrifices alpha for ~no speed. Recommendation: keep all 89; if reduction is
+        ever wanted, use fold-stable importance + correlation clustering, gated by an
+        A/B Net R comparison, not top-N gain.
+
+decisions_locked: []
+remaining_holds:
+  - id: FIX_IMPLEMENTATION
+    status: HOLD
+    details: "All fixes above are recommendations; owner has not yet approved code changes."
+
+safe_next_step: >
+  Implement in order: P1 vectorized rank (identical-output replacement),
+  P3 feature cache wiring, P4 joblib per-symbol parallelism, P2 discovery reuse.
+  Then re-run a 4-symbol smoke training to confirm identical metrics before 57-symbol run.
+
+commands_run:
+  - "git log/branch inspection (read-only)"
+  - "wc -l / grep audits of alphaforge train + features modules"
+  - ".venv python: xgboost build_info, numba/cupy/lightgbm presence checks"
+  - "wmic GPU/CPU query (AMD RX 7800 XT, Ryzen 5 5600X, 12 threads)"
+  - "pandas inspection of cache/factor_sprint panel (29928 rows, 20 symbols, 7594 all-valid)"
+  - "scratchpad bench_rank.py: rank loop benchmark + vectorized equivalence (np.allclose PASS)"
+evidence:
+  - "Rank loop timings: T=500 3.66s / T=1000 13.64s / T=2000 50.11s (S=57,F=89) — quadratic; vectorized 0.09/0.22/0.38s, outputs identical"
+  - "xgboost.build_info(): USE_CUDA=True, CUDA 12.9 — on AMD-GPU Windows host => CPU-only guaranteed"
+  - "Panel cache: rows where all 20 symbols valid = 7594 of 29928"
+  - "No training was executed (owner instruction)"

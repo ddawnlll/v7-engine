@@ -1316,3 +1316,33 @@ It is:
 
 ### Reports
 - `reports/milestone_c_report.yaml`
+
+---
+
+## 2026-07-07 — Training Pipeline Optimization Audit (57-symbol scale) — AUDIT ONLY
+
+### What changed
+- No source code changed. Full performance + correctness audit of the multi-symbol
+  training path ahead of the planned 57-symbol run. Report:
+  `reports/accp/audit_training_optimization_57sym.yaml`.
+
+### Status: HOLD (fixes recommended, not yet implemented)
+
+### Key findings (evidence in ACCP report)
+- P1: cross-sectional rank loop in `train.py` is O(T² · S · F) — measured/extrapolated
+  ~3.1 h at 57 symbols × 30k bars; equivalence-verified vectorized version runs in ~6 s.
+- P2: `--discovery` re-runs features + labels + WFV from scratch (2× total cost).
+- P3: `cached_compute_features`/FeatureCache exist but training never uses them.
+- P4: per-symbol feature compute is sequential; embarrassingly parallel across symbols.
+- P5: core feature groups are computed unconditionally and filtered afterwards —
+  the 89→30 feature shrink saves ~no pipeline time. Recommendation: keep all 89 features.
+- B1: `_generate_simple_labels_numba` hardcodes horizon=12/0.3%/8 bps — all modes get
+  identical labels; MODE_CONFIG stop/target/max_hold are dead in the label path.
+- B3: residual-momentum group silently never computes in per-symbol training (needs ≥2 symbols).
+- B4: `_load_panel_data` all-symbol intersection truncates history to the youngest listing
+  (20-symbol panel: 7,594 of 29,928 rows survive).
+- B8: host GPU is AMD RX 7800 XT with CUDA-build xgboost — GPU path unreachable; training is CPU-only.
+
+### Release condition for HOLD
+- Implement P1→P3→P4→P2, then verify a 4-symbol smoke run reproduces pre-fix metrics
+  before launching the 57-symbol training.

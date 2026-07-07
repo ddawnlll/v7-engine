@@ -83,3 +83,4 @@ reports/**/candidate_dataset.parquet
 
 # --- Data lake ---
 data_lake/
+.worktrees/
