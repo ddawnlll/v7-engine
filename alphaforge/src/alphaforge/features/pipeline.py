@@ -1996,6 +1996,8 @@ def compute_features(
     # Compute all active groups
     features: Dict[str, np.ndarray] = {}
 
+    _SKIP_ON_1H = {"orderbook", "candle_pattern", "scalp_momentum", "breakout"}
+
     # 1. Returns Group (4 features)
     features.update(
         compute_returns_group(
