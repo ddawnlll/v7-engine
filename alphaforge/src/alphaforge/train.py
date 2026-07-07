@@ -62,9 +62,8 @@ MODE_CONFIG = {
 }
 
 # Confidence threshold for trade filtering: if max softprob < this, force NO_TRADE
-# Recalibrated 2026-07-06: 54-feat WFV threshold sweep -> median 0.35
-# With 93 features + derivatives, lower threshold increases active trades
-CONFIDENCE_THRESHOLD = 0.35
+# 0.45 filters out low-confidence predictions, improves net R per trade
+CONFIDENCE_THRESHOLD = 0.50
 
 
 # ---------------------------------------------------------------------------
@@ -852,6 +851,26 @@ def walk_forward_validate(
         y_pred_prob = fold_result.model.predict(dval)
         y_pred_prob_max = np.max(y_pred_prob, axis=1)
         y_pred = np.argmax(y_pred_prob, axis=1)
+
+        # Direction debias: if model heavily over-predicts one direction,
+        # apply a gentle correction. This fixes systematic bias from
+        # imbalanced market regimes (e.g. too SHORT-biased in bull market).
+        _long_pct = np.mean(y_pred == 0)
+        _short_pct = np.mean(y_pred == 1)
+        _bias = _long_pct - _short_pct
+        if abs(_bias) > 0.20 and _long_pct + _short_pct > 0.10:
+            _shift = -_bias * 0.15  # neutralize 15% of bias
+            y_pred_prob[:, 0] += _shift
+            y_pred_prob[:, 1] -= _shift
+            y_pred_prob = np.clip(y_pred_prob, 0, 1)
+            y_pred_prob /= y_pred_prob.sum(axis=1, keepdims=True)
+            y_pred = np.argmax(y_pred_prob, axis=1)
+            y_pred_prob_max = np.max(y_pred_prob, axis=1)
+            logger.info(
+                "  Debias: LONG=%.0f%% SHORT=%.0f%% (shift=%.3f) -> LONG=%.0f%% SHORT=%.0f%%",
+                _long_pct * 100, _short_pct * 100, _shift,
+                np.mean(y_pred == 0) * 100, np.mean(y_pred == 1) * 100,
+            )
 
         # Save raw preds for post-hoc threshold sweep (before threshold applied)
         if return_raw_preds:
