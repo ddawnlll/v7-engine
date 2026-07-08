@@ -1,0 +1,83 @@
+{
+  "run_timestamp": "2026-07-08T15:06:13Z",
+  "config": {
+    "mode": "SCALP",
+    "symbols": [
+      "SOLUSDT"
+    ],
+    "confidence_threshold": 0.55,
+    "folds": 6,
+    "execution_mode": "TAKER"
+  },
+  "metrics": {
+    "trade_count": 262,
+    "raw_mean_R": 0.003173,
+    "median_R": -0.23267,
+    "std_R": 1.02323,
+    "cost_per_trade_R": 0.052388,
+    "cost_adjusted_R": -0.049215,
+    "2x_cost_R": -0.101603,
+    "5x_cost_R": -0.258767,
+    "win_rate": 0.454198,
+    "first_half_R": -0.135511,
+    "second_half_R": 0.141857,
+    "first_half_count": 131,
+    "second_half_count": 131,
+    "long_count": 131,
+    "short_count": 131,
+    "long_mean_R": -0.020628,
+    "short_mean_R": 0.026973
+  },
+  "cost_stress": [
+    {
+      "cost_multiplier": 1.0,
+      "cost_per_trade_R": 0.052388,
+      "cost_adjusted_R": -0.049215,
+      "pass": false
+    },
+    {
+      "cost_multiplier": 1.25,
+      "cost_per_trade_R": 0.065485,
+      "cost_adjusted_R": -0.062312,
+      "pass": false
+    },
+    {
+      "cost_multiplier": 1.5,
+      "cost_per_trade_R": 0.078582,
+      "cost_adjusted_R": -0.075409,
+      "pass": false
+    },
+    {
+      "cost_multiplier": 2.0,
+      "cost_per_trade_R": 0.104776,
+      "cost_adjusted_R": -0.101603,
+      "pass": false
+    },
+    {
+      "cost_multiplier": 3.0,
+      "cost_per_trade_R": 0.157164,
+      "cost_adjusted_R": -0.153991,
+      "pass": false
+    },
+    {
+      "cost_multiplier": 5.0,
+      "cost_per_trade_R": 0.26194,
+      "cost_adjusted_R": -0.258767,
+      "pass": false
+    }
+  ],
+  "baseline": {
+    "actual_mean_R": 0.003173,
+    "random_baseline_mean_R": 0.003173,
+    "random_baseline_std_R": 0.0,
+    "z_score": 0.2217,
+    "p_value": 0.491,
+    "beats_baseline": true
+  },
+  "verdict": "KIRMIZI",
+  "verdict_detail": "SOL edge does NOT survive OOS validation. Noise confirmed.",
+  "oos_pass": false,
+  "cost_stress_1_5x_pass": false,
+  "cost_stress_2x_pass": false,
+  "elapsed_seconds": 10.61
+}
