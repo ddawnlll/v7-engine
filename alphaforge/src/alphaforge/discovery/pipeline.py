@@ -178,6 +178,53 @@ def run_discovery(
             logger.info("  All %d samples preserved (NaN→0 fill, no row-drop)",
                         len(X_clean))
 
+        # ------------------------------------------------------------------
+        # Phase G: Holdout reservation (before training, never peek)
+        # ------------------------------------------------------------------
+        holdout_mask: np.ndarray | None = None
+        holdout_X: np.ndarray | None = None
+        holdout_ts: np.ndarray | None = None
+        holdout_sym: np.ndarray | None = None
+        if config.holdout_cutoff is not None and len(ts_clean) > 0:
+            from datetime import datetime, timezone
+            try:
+                cutoff_dt = datetime.fromisoformat(config.holdout_cutoff)
+                cutoff_dt = cutoff_dt.replace(tzinfo=timezone.utc)
+                # Timestamps in data are Unix-ms (need to match — sample first ts)
+                ts_sample = ts_clean[0] if len(ts_clean) > 0 else 0
+                # Detect units: if ts_sample < 1e12, it's seconds or ms
+                if abs(ts_sample) < 1e15:
+                    # Seconds or milliseconds — use ms
+                    cutoff_ts = int(cutoff_dt.timestamp() * 1000)
+                else:
+                    # Nanoseconds
+                    cutoff_ts = int(cutoff_dt.timestamp() * 1_000_000_000)
+                holdout_mask = ts_clean >= cutoff_ts
+                train_mask = ~holdout_mask
+                n_train = int(train_mask.sum())
+                n_holdout = int(holdout_mask.sum())
+                logger.info("[Phase G] Holdout cutoff=%s → %d train, %d holdout rows",
+                            config.holdout_cutoff, n_train, n_holdout)
+                if n_holdout < 100:
+                    logger.warning("  Holdout too small (%d rows) — skipping holdout split", n_holdout)
+                    holdout_mask = None
+                else:
+                    # Save holdout arrays for later evaluation
+                    holdout_X = X_clean[holdout_mask].copy()
+                    holdout_ts = ts_clean[holdout_mask].copy()
+                    holdout_sym = sym_clean[holdout_mask].copy()
+
+                    # Keep only training data for WFV (model NEVER sees holdout)
+                    X_clean = X_clean[train_mask]
+                    y_clean = y_clean[train_mask]
+                    label_net_clean = label_net_clean[train_mask]
+                    action_net_clean = action_net_clean[train_mask]
+                    ts_clean = ts_clean[train_mask]
+                    sym_clean = sym_clean[train_mask]
+                    logger.info("  WFV will train on %d pre-holdout rows only", n_train)
+            except Exception as e:
+                logger.warning("  Holdout cutoff parse failed: %s — ignoring holdout", e)
+
         if len(X_clean) < 100:
             result.status = "ERROR"
             result.errors.append(f"Insufficient samples: {len(X_clean)}")
@@ -232,7 +279,8 @@ def run_discovery(
             # Precomputed path: no NaN-drop, raw close is already aligned
             close_arr_aligned = close_arr_raw
         elif close_arr_raw is not None and len(close_arr_raw) == len(timestamps):
-            close_arr_aligned = close_arr_raw[~nan_mask]
+            # NaN→0 fill means no rows dropped — raw close is already aligned
+            close_arr_aligned = close_arr_raw
         else:
             close_arr_aligned = None
 
@@ -280,6 +328,8 @@ def run_discovery(
             signals=signals,
             ohlcv=ohlcv,
             mode=mode,
+            execution_mode=config.execution_mode,
+            maker_fill_assumption=config.maker_fill_assumption,
         )
         backtest_duration = time.time() - t0
         result.trade_count = len(trades)
@@ -323,6 +373,82 @@ def run_discovery(
         )
 
         # ------------------------------------------------------------------
+        # Phase G: Holdout evaluation — train final model on all pre-holdout
+        # data, predict on the held-out 3-month window, backtest, report.
+        # Exactly once, no retry, no tweak.
+        # ------------------------------------------------------------------
+        holdout_metrics: dict | None = None
+        if holdout_X is not None and len(holdout_X) > 0:
+            logger.info("[Phase G] Holdout evaluation (%d rows)...", len(holdout_X))
+            try:
+                import xgboost as xgb
+                n_classes = int(y_clean.max()) + 1 if len(y_clean) > 0 else 3
+                model = xgb.XGBClassifier(
+                    n_estimators=200, max_depth=6, learning_rate=0.1,
+                    objective="multi:softprob", num_class=n_classes,
+                    random_state=config.random_seed, device="cuda",
+                    eval_metric="mlogloss",
+                )
+                model.fit(X_clean, y_clean)
+                hold_prob = model.predict_proba(holdout_X)
+                hold_pred = hold_prob.max(axis=1)          # max softmax → like fold_preds
+                hold_class = hold_prob.argmax(axis=1).astype(np.int64)  # argmax → like fold_y_class
+
+                # Generate signals on holdout predictions
+                # Create a single dummy fold covering all holdout rows
+                n_hold = len(holdout_ts)
+                dummy_fold = [{
+                    "fold": 0, "val_start": 0, "val_end": n_hold,
+                    "effective_val_start": 0,
+                    "timestamps": holdout_ts,
+                }]
+                hold_signals = generate_trade_signals(
+                    fold_results=dummy_fold,
+                    fold_preds=[hold_pred],
+                    fold_y_class=[hold_class],
+                    ohlcv=ohlcv,
+                    mode_cfg=cfg,
+                    timestamps=holdout_ts,
+                    symbols=holdout_sym,
+                    confidence_threshold=config.confidence_threshold,
+                )
+                hold_signals = filter_overlapping_signals(hold_signals)
+                logger.info("  Holdout: %d trade signals", len(hold_signals))
+
+                if hold_signals:
+                    hold_trades = backtest_signals(
+                        signals=hold_signals, ohlcv=ohlcv, mode=mode,
+                        execution_mode=config.execution_mode,
+                        maker_fill_assumption=config.maker_fill_assumption,
+                    )
+                    if hold_trades:
+                        holdout_metrics = analyze_profitability(hold_trades, mode=mode)
+                        hr = holdout_metrics.get("return_metrics", {})
+                        hk = holdout_metrics.get("risk_metrics", {})
+                        logger.info(
+                            "  ╔══ Phase G — HOLDOUT VERDICT ═══╗")
+                        logger.info("  ║  Trades=%d, E[R]=%.4fR       ║",
+                                    len(hold_trades), hr.get("expectancy_R", 0.0))
+                        logger.info("  ║  PF=%.2f, Sharpe=%.2f        ║",
+                                    hk.get("profit_factor", 0.0),
+                                    hk.get("sharpe_ratio", 0.0))
+                        logger.info("  ╚══════════════════════════════╝")
+                        logger.info("  Holdout: NO RETRY, NO TWEAK — this is the ONE evaluation.")
+                else:
+                    logger.warning("  Holdout: no trade signals at threshold=%.2f",
+                                   config.confidence_threshold)
+            except Exception as e:
+                logger.warning("  Holdout evaluation failed: %s — no holdout result", e)
+                import traceback
+                logger.warning(traceback.format_exc())
+        else:
+            logger.info("[Phase G] No holdout configured — skipping holdout evaluation")
+
+        # Store holdout metrics if produced
+        if holdout_metrics is not None:
+            result.metrics["holdout"] = holdout_metrics
+
+        # ------------------------------------------------------------------
         # Step 8: Rejection evaluation
         # ------------------------------------------------------------------
         logger.info("[8/8] Evaluating rejection criteria...")
@@ -346,6 +472,45 @@ def run_discovery(
                         handoff.get("handoff_package_id", "?"))
 
         result.status = rejection["decision"]
+
+        # ------------------------------------------------------------------
+        # Step 9: Record alpha in ledger (always, regardless of outcome)
+        # ------------------------------------------------------------------
+        try:
+            from alphaforge.reports.alpha_ledger import AlphaLedger
+            ledger = AlphaLedger()
+            alpha_id = f"{mode.lower()}_discovery_{config.confidence_threshold}_{int(time.time())}"
+            ret = metrics.get("return_metrics", {})
+            risk = metrics.get("risk_metrics", {})
+            hold = result.metrics.get("holdout")
+            ledger.upsert_alpha(
+                alpha_id=alpha_id,
+                run_id=f"discovery-{mode.lower()}-{int(start_ts)}",
+                mode=mode,
+                name=f"Discovery {mode} th={config.confidence_threshold}",
+                thesis=f"Discovery pipeline run, {len(config.symbols)} symbols, threshold={config.confidence_threshold}",
+                source="discovery",
+                status=rejection["decision"],
+                data_source="real" if not config.use_synthetic else "synthetic",
+                symbols=list(config.symbols),
+                net_R_per_trade=ret.get("expectancy_R"),
+                trade_count=metrics.get("metadata", {}).get("total_trades"),
+                win_rate=risk.get("win_rate"),
+                profit_factor=risk.get("profit_factor"),
+                max_drawdown_R=risk.get("max_drawdown_R"),
+                sharpe=risk.get("sharpe_ratio"),
+                cost_stress_survived=None,
+                holdout_tested=hold is not None,
+                holdout_net_R=hold.get("return_metrics", {}).get("expectancy_R") if hold else None,
+                symbol_breakdown=metrics.get("symbol_breakdown", {}),
+                notes=rejection.get("summary", ""),
+                tags=["discovery-pipeline"],
+                lineage={"confidence_threshold": config.confidence_threshold},
+            )
+            ledger.write()
+            logger.info("  Alpha recorded in ledger: %s", alpha_id)
+        except Exception as ledger_exc:
+            logger.warning("  Alpha ledger write failed (non-blocking): %s", ledger_exc)
 
     except Exception as e:
         logger.exception("Discovery pipeline failed")

@@ -492,3 +492,33 @@ class FactorSprintRunner:
             })
         except Exception:
             pass  # Ledger failure should not crash the run
+
+        # Also record in Alpha Ledger for persistent alpha tracking
+        try:
+            from alphaforge.reports.alpha_ledger import AlphaLedger
+            ledger = AlphaLedger()
+            alpha_id = f"fs_{result.factor_name}_{self._mode}_{self._config.horizon}"
+            ledger.upsert_alpha(
+                alpha_id=alpha_id,
+                run_id=f"factor-sprint-{self._mode}-{int(time.time())}",
+                mode=self._mode,
+                name=result.factor_name,
+                thesis=f"Factor: {result.factor_name}, direction={result.direction}, horizon={result.horizon}h",
+                source="factor_sprint",
+                status="WATCH" if result.pass_fail == "WATCH" else (
+                    "ACTIVE" if result.pass_fail == "PASS" else "REJECTED"
+                ),
+                data_source="real",
+                symbols=[],
+                net_R_per_trade=result.expectancy_r if hasattr(result, "expectancy_r") else None,
+                trade_count=result.trade_count,
+                win_rate=result.win_rate,
+                profit_factor=result.profit_factor,
+                max_drawdown_R=result.max_drawdown,
+                oos_rank_ic=result.mean_ic,
+                notes=f"IC_IR={result.ic_ir:.4f}, net_return={result.net_return:.4f}",
+                tags=[f"horizon-{result.horizon}h", result.direction],
+            )
+            ledger.write()
+        except Exception:
+            pass

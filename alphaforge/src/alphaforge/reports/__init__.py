@@ -44,6 +44,8 @@ from alphaforge.reports.collapse_detector import (
     detect_no_trade_collapse,
 )
 from alphaforge.constants import CANONICAL_V7_GATES, FORBIDDEN_GATE_NAMES
+# Alpha Ledger — persistent alpha candidate registry
+from alphaforge.reports.alpha_ledger import AlphaLedger
 
 __all__ = [
     "analyze_label_distribution",
@@ -69,4 +71,5 @@ __all__ = [
     "detect_no_trade_collapse",
     "CANONICAL_V7_GATES",
     "FORBIDDEN_GATE_NAMES",
+    "AlphaLedger",
 ]
