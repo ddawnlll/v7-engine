@@ -1473,3 +1473,44 @@ scoreboard. Every change was isolated and measured A/B.
 - `reports/overnight/ledger.jsonl`
 - `reports/overnight/scoreboard.md`
 - `reports/audit_overnight_scalp_005.md`
+
+---
+
+## GPU/CUDA Backtest Migration — Completed (2026-07-08)
+
+**What:** Replaced serial Python per-signal backtest loop with CPU-parallel numba batch
+path. CUDA kernel implemented but proven inferior (2-3x slower) at all scales.
+GPU path behind `force_gpu=True` opt-in flag.
+
+### Wiring
+- `backtest_signals()` (pipeline.py → backtest.py) → `BatchSimulator(use_batch=True)`
+- CPU-parallel numba is DEFAULT. GPU requires explicit `force_gpu=True`.
+- Call chain verified via grep: pipeline.py:327 → backtest.py:299 → batch.py:338.
+
+### Bug Fixes Found
+- MFE clamping: batch kernel clamped MFE to 0 when negative; original doesn't. 109/500 cases.
+- time_to_mae: batch kernel returned bar index when MAE=0; original returns 0. 37/500 cases.
+- Both bugs were in cuda_kernels.py only. Original `exits.py` was correct.
+
+### Parity (500 cases, all fields)
+- GPU=CPU: 11 fields, max_diff = 0.00e+00 (bit-identical)
+- Batch vs original simulate(): 10 fields, max_diff = 0.00e+00 (bit-identical)
+
+### GPU Benchmark (Tesla T4, 11-core CPU)
+- GPU NEVER wins at any scale (100–2M paths). CPU 2-3x faster.
+- GPU utilization 0–62% but still slower. Crossover point does NOT exist.
+- GPU kernel retained behind opt-in flag (`force_gpu=True`).
+
+### Production Benchmark (real pipeline, 12 symbols, 432K bars)
+- 10K signals: ORIGINAL 5.015s → NEW 3.180s = **1.58x speedup**
+- 69K signals (measured): ORIGINAL projected ~10.6s → NEW **actual ~6.6s**
+
+### Status: LOCKABLE_WITH_HOLDS
+- **LOCKED:** CPU-parallel batch path in production (default)
+- **LOCKED:** Bug fixes (MFE clamp, time_to_mae) — 1e-9 parity achieved
+- **HOLD:** CUDA kernel retention behind opt-in flag
+- **HOLD:** 56-symbol full run not completed (CPU-bound at signal extraction layer)
+
+### Reports
+- `simulation/docs/gpu_cuda_migration_plan.md`
+- `reports/accp/accp_v7_gpu_cuda_migration.yaml`

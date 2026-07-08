@@ -353,3 +353,17 @@ Regime constraints (ADVISORY/SOFT_BLOCK/HARD_BLOCK) are policy-layer, not simula
 > See also: [migration_from_v7.md](migration_from_v7.md) for stale-wording audit checklist.
 
 simulation, simulation truth, truth layer, runtime-hosted simulation, label-only simulator, backtest-only simulator, side-effect-free adapter, TradeOutcome, R-label, R multiple, realized R, NO_TRADE, LONG_NOW, SHORT_NOW, cost model, fee model, slippage model, horizon family, stop family, target family, time-exit family, unresolved, invalidated, Monte Carlo, paper forward, historical replay, runtime simulation, AlphaForge simulation adapter, import boundary, hidden simulator, regime gate forced no trade
+
+---
+
+## 14. GPU/CUDA BACKTEST MIGRATION (LOCKABLE_WITH_HOLDS)
+
+CPU-parallel numba batch path is **LOCKED** and wired into production via `backtest_signals()` → `BatchSimulator(use_batch=True)`. Two real bugs found and fixed (MFE clamp, time_to_mae). Parity: 500 cases × 10 fields = all 0.00e+00 max diff.
+
+**GPU (cuda.jit):** Retained behind `force_gpu=True` opt-in. Proven 2-3x slower than CPU-parallel at ALL scales (100–2M paths on Tesla T4). GPU utilization 0–62% but never wins. Not recommended for short-path workloads (5–30 bars).
+
+**Production wiring:** `pipeline.py` → `backtest_signals()` → `BatchSimulator(run_batch_cpu())`. CPU-parallel is the default and only active path.
+
+**Key numbers:** 10K signals: original 5.0s → new 3.2s (1.58x). 69K signals measured: ~6.6s.
+
+See: [gpu_cuda_migration_plan.md](gpu_cuda_migration_plan.md) — full benchmark data, bug fix details, GPU crossover analysis.
