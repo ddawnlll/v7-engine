@@ -132,13 +132,20 @@ def batch_path_kernel(
 
     hold_dur = exit_idx + 1 if exit_reason != EXIT_TIME_EXIT else n_avail
 
-    # MFE/MAE over pre-exit bars
+    # MFE/MAE computation
+    # For STOP/TARGET: bars 0..exit_idx-1 (pre-exit only, matching simulate_path_from_arrays)
+    # For TIME_EXIT: bars 0..available_bars-1 (including exit bar, matching original code
+    #   which passes highs[:available_bars] to _compute_path_metrics)
+    if exit_reason == EXIT_TIME_EXIT:
+        pre_bars = n_avail  # include exit bar in MFE/MAE
+    else:
+        pre_bars = exit_idx
     mfe = 0.0; mae = 0.0; t_mfe = 0; t_mae = 0
-    pre_bars = exit_idx
     if pre_bars > 0:
         if is_long:
             best_gain = -1e18
             worst_loss = 1e18
+            t_mae_raw = 0  # track raw index even when mae=0
             for j in range(pre_bars):
                 gain = high_data[idx, j] - ep
                 if gain > best_gain:
@@ -147,12 +154,18 @@ def batch_path_kernel(
                 loss = low_data[idx, j] - ep
                 if loss < worst_loss:
                     worst_loss = loss
-                    t_mae = j
-            mfe = best_gain if best_gain > 0 else 0.0
-            mae = worst_loss if worst_loss < 0 else 0.0
+                    t_mae_raw = j
+            mfe = best_gain  # NO clamping — matches original _compute_path_metrics
+            if worst_loss < 0:
+                mae = worst_loss
+                t_mae = t_mae_raw
+            else:
+                mae = 0.0
+                t_mae = 0  # match original: return 0 when no adverse move
         else:
             best_gain = -1e18
             worst_loss = 1e18
+            t_mae_raw = 0
             for j in range(pre_bars):
                 gain = ep - low_data[idx, j]
                 if gain > best_gain:
@@ -161,9 +174,14 @@ def batch_path_kernel(
                 loss = high_data[idx, j] - ep
                 if loss < worst_loss:
                     worst_loss = loss
-                    t_mae = j
-            mfe = best_gain if best_gain > 0 else 0.0
-            mae = worst_loss if worst_loss < 0 else 0.0
+                    t_mae_raw = j
+            mfe = best_gain  # NO clamping — matches original _compute_path_metrics
+            if worst_loss < 0:
+                mae = worst_loss
+                t_mae = t_mae_raw
+            else:
+                mae = 0.0
+                t_mae = 0  # match original: return 0 when no adverse move
 
     if er > 0.0:
         mfe_r = mfe / er
@@ -272,26 +290,36 @@ def batch_path_cpu_parallel(
         hd = exit_idx + 1 if exit_reason != EXIT_TIME_EXIT else n_avail
 
         mfe = 0.0; mae = 0.0; t_mfe = 0; t_mae = 0
-        pre = exit_idx
+        if exit_reason == EXIT_TIME_EXIT:
+            pre = n_avail   # include exit bar (matching original _compute_path_metrics)
+        else:
+            pre = exit_idx  # stop/target: bars before exit
         if pre > 0:
+            t_mae_raw = 0
             if is_long:
                 best_g = -1e18; worst_l = 1e18
                 for j in range(pre):
                     g = high_data[idx, j] - ep
                     if g > best_g: best_g = g; t_mfe = j
                     l = low_data[idx, j] - ep
-                    if l < worst_l: worst_l = l; t_mae = j
-                mfe = best_g if best_g > 0 else 0.0
-                mae = worst_l if worst_l < 0 else 0.0
+                    if l < worst_l: worst_l = l; t_mae_raw = j
+                mfe = best_g  # NO clamping — matches original _compute_path_metrics
+                if worst_l < 0:
+                    mae = worst_l; t_mae = t_mae_raw
+                else:
+                    mae = 0.0; t_mae = 0  # match original: 0 when no adverse move
             else:
                 best_g = -1e18; worst_l = 1e18
                 for j in range(pre):
                     g = ep - low_data[idx, j]
                     if g > best_g: best_g = g; t_mfe = j
                     l = high_data[idx, j] - ep
-                    if l < worst_l: worst_l = l; t_mae = j
-                mfe = best_g if best_g > 0 else 0.0
-                mae = worst_l if worst_l < 0 else 0.0
+                    if l < worst_l: worst_l = l; t_mae_raw = j
+                mfe = best_g  # NO clamping — matches original _compute_path_metrics
+                if worst_l < 0:
+                    mae = worst_l; t_mae = t_mae_raw
+                else:
+                    mae = 0.0; t_mae = 0  # match original: 0 when no adverse move
 
         if er > 0.0:
             mfe_r = mfe / er; mae_r = mae / er

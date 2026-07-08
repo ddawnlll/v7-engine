@@ -1,8 +1,13 @@
 """Parity test: GPU/CPU batch path vs original simulation engine.
 
-500 randomized cases: LONG/SHORT, variable bars (1-30), variable ATR,
-stop-hit, target-hit, time-exit, same-candle ambiguity.
-Asserts: GPU=CPU (1e-9), CPU path ≈ original simulate() (1e-4).
+500 randomized cases: LONG/SHORT, variable bars (1-30), variable ATR.
+Covers all exit reasons: stop-hit, target-hit, time-exit, same-candle ambiguity.
+
+Tests:
+1. GPU=CPU path: all 11 fields, 1e-9 tolerance (bit-identical)
+2. Batch vs original simulate(): ALL important fields, reports max diff for each.
+   Tolerance: 0.0 for integers (bit-identical), 1e-9 for floats (must match).
+   If 1e-9 fails, root-cause is documented, not hand-waved.
 """
 
 import numpy as np
@@ -16,7 +21,6 @@ from simulation.engine.cuda_kernels import (
     EXIT_STOP_HIT, EXIT_TARGET_HIT, EXIT_TIME_EXIT,
 )
 from simulation.engine.engine import simulate
-from simulation.engine.exits import _extract_ohlc
 
 EXIT_REASON_STR = {0: "STOP_HIT", 1: "TARGET_HIT", 2: "TIME_EXIT"}
 
@@ -87,30 +91,151 @@ def _gen_random_signal(rng, mode="SCALP", max_bars=None):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Tests
+# Test 1: GPU=CPU path parity (11 fields, 1e-9 tolerance)
 # ═══════════════════════════════════════════════════════════════════════
 
+class TestGPUCPUParity:
+    """GPU path vs CPU path: must be bit-identical (1e-9)."""
 
-class TestNumbaParity:
-    """GPU/CPU numba path produces identical results."""
+    def _check_field(self, key, gpu_vals, cpu_vals, tolerance=1e-9):
+        """Check a single field across the batch, return max diff."""
+        if gpu_vals.dtype in (np.float64, np.float32):
+            diff = np.max(np.abs(gpu_vals - cpu_vals))
+            return float(diff)
+        else:
+            if not np.array_equal(gpu_vals, cpu_vals):
+                mismatches = np.sum(gpu_vals != cpu_vals)
+                raise AssertionError(f"{key}: {mismatches}/{len(gpu_vals)} mismatched integers")
+            return 0.0
 
-    def _check_exit_equality(self, gpu, cpu, tolerance=1e-9):
-        for key in ("realized_gross", "exit_price", "exit_idx", "hold_dur",
-                     "mfe", "mae", "mfe_r", "mae_r", "t_mfe", "t_mae",
-                     "exit_reason"):
-            gv = gpu[key]; cv = cpu[key]
-            if isinstance(gv, (int, np.integer)):
-                assert gv == cv, f"{key}: GPU={gv} CPU={cv}"
+    def test_batch_parity_500_fields(self):
+        """500 random cases: GPU=CPU for all 11 fields with 1e-9 tolerance."""
+        rng = np.random.RandomState(42)
+        signals = []
+        for _ in range(500):
+            sig_dict, _ = _gen_random_signal(rng)
+            signals.append(sig_dict)
+
+        arr = prepare_batch_arrays(signals)
+        cpu = run_batch_cpu(arr)
+        gpu = run_batch_gpu(arr)
+
+        field_diffs = {}
+        for key in cpu:
+            diff = self._check_field(key, gpu[key], cpu[key])
+            field_diffs[key] = diff
+            if cpu[key].dtype in (np.float64, np.float32):
+                assert diff < 1e-9, f"{key}: max diff={diff} exceeds 1e-9"
+
+        # Report all max diffs for documentation
+        print("\nGPU=CPU field max diffs (500 cases):")
+        for key, diff in field_diffs.items():
+            print(f"  {key:20s}: {diff:.2e}")
+
+    def test_batch_parity_500_vs_engine_all_fields(self):
+        """500 random cases: batch path vs original simulate() — ALL important fields.
+
+        Tolerance: 0.0 for exit_reason (must be identical integer).
+                   1e-9 for realized_r_gross (same algorithm, same float64).
+        Reports max diff per field for documentation.
+
+        Root-cause analysis for any diff > 1e-9:
+        The batch path computes realized_gross directly from raw arrays.
+        The original path computes realized_gross via:
+          _extract_ohlc(candles) → simulate_path_from_arrays() → ExitResult
+        Both use the same logic. The only possible source of difference is
+        the initial float64 precision when extracting OHLC from Candle objects.
+        """
+        rng = np.random.RandomState(123)
+        field_max_diffs = {}
+        field_n_diffs = {}
+        field_n_compared = 0
+        n_skipped = 0
+        exit_reason_mismatches = 0
+
+        for i in range(500):
+            sig_dict, sim_input = _gen_random_signal(rng)
+
+            try:
+                output = simulate(sim_input)
+            except Exception:
+                n_skipped += 1
+                continue
+            side = sig_dict["direction"]
+            outcome = output.long_outcome if side == "LONG" else output.short_outcome
+            if outcome is None:
+                n_skipped += 1
+                continue
+
+            arr = prepare_batch_arrays([sig_dict])
+            cpu = run_batch_cpu(arr)
+            batch_rg = float(cpu["realized_gross"][0])
+            orig_rg = outcome.realized_r_gross
+
+            # === Key fields comparison ===
+            comparisons = {
+                "realized_r_gross": (orig_rg, batch_rg),
+                "exit_bar_index": (outcome.exit_bar_index, int(cpu["exit_idx"][0])),
+                "hold_duration_bars": (outcome.hold_duration_bars, int(cpu["hold_dur"][0])),
+                "mfe": (outcome.path_metrics.mfe if outcome.path_metrics else 0.0, float(cpu["mfe"][0])),
+                "mae": (outcome.path_metrics.mae if outcome.path_metrics else 0.0, float(cpu["mae"][0])),
+                "mfe_r": (outcome.path_metrics.mfe_r if outcome.path_metrics else 0.0, float(cpu["mfe_r"][0])),
+                "mae_r": (outcome.path_metrics.mae_r if outcome.path_metrics else 0.0, float(cpu["mae_r"][0])),
+                "time_to_mfe": (outcome.path_metrics.time_to_mfe if outcome.path_metrics else 0, int(cpu["t_mfe"][0])),
+                "time_to_mae": (outcome.path_metrics.time_to_mae if outcome.path_metrics else 0, int(cpu["t_mae"][0])),
+                "exit_reason": (outcome.exit_reason, EXIT_REASON_STR.get(int(cpu["exit_reason"][0]), "?")),
+            }
+
+            field_n_compared += 1
+            for field, (orig, batch) in comparisons.items():
+                if field not in field_max_diffs:
+                    field_max_diffs[field] = 0.0
+                    field_n_diffs[field] = 0
+
+                if isinstance(orig, (int, np.integer)) and isinstance(batch, (int, np.integer)):
+                    diff = abs(orig - batch) if orig != batch else 0.0
+                    if orig != batch:
+                        exit_reason_mismatches += 1
+                        print(f"  INTEGER MISMATCH [{i}] {field}: orig={orig} batch={batch}")
+                elif isinstance(orig, float) and isinstance(batch, float):
+                    diff = abs(orig - batch)
+                elif isinstance(orig, str) and isinstance(batch, str):
+                    diff = 0.0 if orig == batch else 1.0
+                else:
+                    diff = 0.0 if str(orig) == str(batch) else 1.0
+
+                field_max_diffs[field] = max(field_max_diffs[field], diff)
+                if diff > 0:
+                    field_n_diffs[field] += 1
+
+        # Report
+        print(f"\nBatch vs original simulate() — {field_n_compared} cases compared, {n_skipped} skipped:")
+        for field, max_diff in field_max_diffs.items():
+            n_diff = field_n_diffs[field]
+            status = "PASS (1e-9)" if max_diff < 1e-9 else f"DIFF >1e-9"
+            print(f"  {field:20s}: max_diff={max_diff:.2e}  n_diff={n_diff}/{field_n_compared}  {status}")
+
+        # Assertions
+        for field, max_diff in field_max_diffs.items():
+            if field in ("exit_reason", "exit_bar_index", "hold_duration_bars",
+                         "time_to_mfe", "time_to_mae"):
+                assert max_diff == 0.0, f"{field}: INTEGER MISMATCH (diff={max_diff})"
             else:
-                assert abs(gv - cv) < tolerance, \
-                    f"{key}: GPU={gv} CPU={cv} diff={abs(gv-cv)}"
+                assert max_diff < 1e-9, (
+                    f"{field}: max diff {max_diff:.2e} exceeds 1e-9 — "
+                    f"root cause: both paths use identical algorithm, "
+                    f"possible float precision issue in Candle→array conversion"
+                )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Test 2: Deterministic edge cases
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestDeterministicParity:
+    """Hand-crafted edge cases."""
 
     def test_stop_hit_long(self):
-        """LONG: stop hit on first bar."""
-        candles = [
-            Candle(open=100, high=101, low=97, close=98),
-            Candle(open=98, high=99, low=96, close=97),
-        ]
         sd = {
             "direction": "LONG", "entry_price": 100, "stop_price": 97,
             "target_price": 104, "entry_risk": 3.0, "close_price": 97,
@@ -122,11 +247,13 @@ class TestNumbaParity:
         gpu = run_batch_gpu(arr)
         assert cpu["exit_reason"][0] == EXIT_STOP_HIT
         assert abs(cpu["realized_gross"][0] - (-1.0)) < 1e-9
-        self._check_exit_equality({k: v[0] for k, v in gpu.items()},
-                                  {k: v[0] for k, v in cpu.items()})
+        for key in ("realized_gross", "exit_price", "exit_idx", "hold_dur",
+                     "mfe", "mae", "mfe_r", "mae_r", "t_mfe", "t_mae",
+                     "exit_reason"):
+            assert np.array_equal(gpu[key], cpu[key]) if not isinstance(gpu[key][0], float) \
+                else abs(float(gpu[key][0]) - float(cpu[key][0])) < 1e-9
 
     def test_same_candle_stop_wins(self):
-        """Stop and target on same bar: stop wins."""
         sd = {
             "direction": "LONG", "entry_price": 100, "stop_price": 97,
             "target_price": 104, "entry_risk": 3.0, "close_price": 102,
@@ -137,49 +264,26 @@ class TestNumbaParity:
         cpu = run_batch_cpu(arr)
         gpu = run_batch_gpu(arr)
         assert cpu["exit_reason"][0] == EXIT_STOP_HIT
-        self._check_exit_equality({k: v[0] for k, v in gpu.items()},
-                                  {k: v[0] for k, v in cpu.items()})
-
-    def test_batch_parity_500(self):
-        """500 random cases: GPU=CPU with 1e-9 tolerance."""
-        rng = np.random.RandomState(42)
-        signals = []
-        for i in range(500):
-            sig_dict, _ = _gen_random_signal(rng)
-            signals.append(sig_dict)
-        arr = prepare_batch_arrays(signals)
-        cpu = run_batch_cpu(arr)
-        gpu = run_batch_gpu(arr)
         for key in cpu:
             if cpu[key].dtype in (np.float64, np.float32):
-                max_diff = float(np.max(np.abs(gpu[key] - cpu[key])))
-                assert max_diff < 1e-9, f"{key}: max diff={max_diff}"
+                assert abs(float(gpu[key][0]) - float(cpu[key][0])) < 1e-9
             else:
-                assert np.array_equal(gpu[key], cpu[key]), f"{key}: GPU!=CPU"
+                assert int(gpu[key][0]) == int(cpu[key][0])
 
-    def test_batch_parity_500_vs_engine(self):
-        """500 random cases: CPU batch path ≈ original simulate() (1e-4)."""
-        rng = np.random.RandomState(123)
-        for i in range(500):
-            sig_dict, sim_input = _gen_random_signal(rng)
-
-            # Run original path
-            try:
-                output = simulate(sim_input)
-            except Exception:
-                continue
-            side = sig_dict["direction"]
-            outcome = output.long_outcome if side == "LONG" else output.short_outcome
-            if outcome is None:
-                continue
-            orig_r = outcome.realized_r_gross
-
-            # Run batch path
-            arr = prepare_batch_arrays([sig_dict])
-            cpu = run_batch_cpu(arr)
-            batch_r = float(cpu["realized_gross"][0])
-
-            assert abs(orig_r - batch_r) < 1e-4, (
-                f"Case {i} {side}: original={orig_r:.6f} batch={batch_r:.6f} "
-                f"diff={abs(orig_r-batch_r):.6f}"
-            )
+    def test_time_exit_no_stop_no_target(self):
+        sd = {
+            "direction": "LONG", "entry_price": 100, "stop_price": 95,
+            "target_price": 110, "entry_risk": 1.5, "close_price": 102,
+            "available_bars": 5,
+            "highs": [101, 102, 103, 104, 105],
+            "lows": [99, 99.5, 100, 100.5, 101],
+        }
+        arr = prepare_batch_arrays([sd])
+        cpu = run_batch_cpu(arr)
+        gpu = run_batch_gpu(arr)
+        assert cpu["exit_reason"][0] == EXIT_TIME_EXIT
+        for key in cpu:
+            if cpu[key].dtype in (np.float64, np.float32):
+                assert abs(float(gpu[key][0]) - float(cpu[key][0])) < 1e-9
+            else:
+                assert int(gpu[key][0]) == int(cpu[key][0])
