@@ -82,7 +82,15 @@ evidence:
       new_cpu_njit: "3.180s"
       speedup: "1.58x"
       parity: "EXACT (all fields max_diff=0)"
-    signals_69k_measured: "6.6s (actual measurement, not projected)"
+    signals_69095_measured:
+      signal_generation: "0.553s (pre-built symbol index)"
+      original_backtest: "33.891s"
+      new_cpu_njit: "29.582s"
+      kernel_time: "6.787s (from BatchSimulator log)"
+      object_construction_time: "22.8s (Python overhead)"
+      speedup: "1.15x"
+      parity: "EXACT (69,094/69,094 max_diff=0.00e+00)"
+      avg_R: "-0.036341 (identical on both paths)"
 
   full_test_suite: "417 passed, 0 failed, 2 warnings"
   import_boundary: "2/2 passed (simulation/ imports no alphaforge/ or v7/)"

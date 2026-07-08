@@ -112,10 +112,13 @@ CPU `@njit(parallel=True)` with 11 cores has near-zero overhead.
 | 1,000 | 1.221 | 1.718 | 0.71x | EXACT |
 | 5,000 | 3.347 | 1.893 | 1.77x | EXACT |
 | 10,000 | 5.015 | 3.180 | 1.58x | EXACT |
+| **69,095** | **33.891** | **29.582** | **1.15x** | **EXACT** |
 
 *N=500 includes JIT warmup (~4.7s). Subsequent calls are fast.
+**69,095: Measured (not projected). Kernel took 6.787s; remaining 22.8s is Python object construction.
 
-**Projected to 69,095 signals:** ORIGINAL ~10.6s → NEW ~6.6s = 1.6x speedup.
+**Projected to 69,095 signals:** MEASURED: ORIGINAL ~33.9s → NEW ~29.6s = 1.15x speedup.
+Signal generation: 0.55s (with pre-built index).
 
 ---
 

@@ -1503,7 +1503,10 @@ GPU path behind `force_gpu=True` opt-in flag.
 
 ### Production Benchmark (real pipeline, 12 symbols, 432K bars)
 - 10K signals: ORIGINAL 5.015s → NEW 3.180s = **1.58x speedup**
-- 69K signals (measured): ORIGINAL projected ~10.6s → NEW **actual ~6.6s**
+- **69,095 signals (MEASURED, not projected):** ORIGINAL 33.891s → NEW 29.582s = **1.15x**
+- Parity: 69,094/69,094 results EXACT (max_diff=0.00e+00)
+- Signal generation: 0.55s (with pre-built symbol index)
+- NEW path kernel: 6.787s; remaining 22.8s is Python object construction overhead
 
 ### Status: LOCKABLE_WITH_HOLDS
 - **LOCKED:** CPU-parallel batch path in production (default)
