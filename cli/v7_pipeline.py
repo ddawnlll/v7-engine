@@ -866,71 +866,136 @@ class PipelineRunner:
             print(f"  Generated {n_bars} synthetic labels")
             print(f"  Distribution: {distribution}")
         else:
-            # Real labels from SimulationOutput via LabelAdapter
-            # NOT YET WIRED — requires simulation pipeline
+            # Real labels from canonical SimulationInput + simulation engine
             try:
-                from simulation.engine.engine import simulate as sim_engine
-                from simulation.contracts.models import SimulationInput
+                from simulation.engine.engine import simulate
+                from simulation.contracts.models import (
+                    SimulationInput, SimulationProfile, FuturePath,
+                    Candle, TradingMode,
+                )
                 from alphaforge.labels.adapter import LabelAdapter
 
                 adapter = LabelAdapter()
                 ohlcv = self._ctx.ohlcv_data
                 n = len(ohlcv["close"])
 
-                stop_mult = 2.0 if self._config.mode == "SWING" else 1.5
-                target_mult = 3.0 if self._config.mode == "SWING" else 2.0
-                max_hold = 30 if self._config.mode == "SWING" else 12
+                mode = self._config.mode.upper()
+                mode_enum = TradingMode.SCALP if mode == "SCALP" else (
+                    TradingMode.AGGRESSIVE_SCALP if mode == "AGGRESSIVE_SCALP" else TradingMode.SWING
+                )
+                max_hold = 12 if mode in ("SCALP", "AGGRESSIVE_SCALP") else 30
+                stop_mult = 1.5 if mode != "SWING" else 2.0
+                target_mult = 2.0 if mode != "SWING" else 3.0
+
+                # Group bars by symbol for proper future-path isolation
+                symbols_arr = np.asarray(ohlcv.get("symbol", ["DEFAULT"] * n))
+                unique_symbols = np.unique(symbols_arr)
 
                 labels_list = []
                 label_ints_list = []
+                error_count = 0
+                error_details = []
 
-                for i in range(n):
-                    if i >= 14:
-                        # True Range: max(high-low, |high-prev_close|, |low-prev_close|)
-                        hs = ohlcv["high"][i-14:i+1]
-                        ls = ohlcv["low"][i-14:i+1]
-                        cs = ohlcv["close"][i-14:i+1]
+                for sym in unique_symbols:
+                    sym_indices = np.flatnonzero(symbols_arr == sym)
+                    for idx_pos, i in enumerate(sym_indices):
+                        if idx_pos < 15 or idx_pos >= len(sym_indices) - max_hold - 1:
+                            continue  # need lookback + future room
+
+                        entry_price = float(ohlcv["close"][i])
+
+                        # ATR from same symbol lookback
+                        lb = sym_indices[max(0, idx_pos - 14):idx_pos + 1]
+                        hs = ohlcv["high"][lb]; ls = ohlcv["low"][lb]; cs = ohlcv["close"][lb]
                         tr = np.maximum(
                             hs[1:] - ls[1:],
-                            np.maximum(
-                                np.abs(hs[1:] - cs[:-1]),
-                                np.abs(ls[1:] - cs[:-1]),
-                            ),
+                            np.maximum(np.abs(hs[1:] - cs[:-1]), np.abs(ls[1:] - cs[:-1])),
                         )
                         atr_val = float(np.mean(tr))
-                    else:
-                        atr_val = float(ohlcv["high"][i] - ohlcv["low"][i])
+                        if atr_val <= 0 or atr_val > entry_price * 0.5:
+                            continue
 
-                    inp = SimulationInput(
-                        symbol=str(ohlcv["symbol"][i]) if isinstance(ohlcv["symbol"], list) else "S",
-                        entry_price=float(ohlcv["close"][i]),
-                        high_price=float(ohlcv["high"][i]),
-                        low_price=float(ohlcv["low"][i]),
-                        atr_14=atr_val,
-                        stop_loss_mult=stop_mult,
-                        take_profit_mult=target_mult,
-                        max_hold_bars=max_hold,
-                        fee_pct=0.04,
-                        slippage_pct=0.02,
-                    )
-                    try:
-                        sim_out = sim_engine(inp)
-                        ld = sim_out.model_dump() if hasattr(sim_out, "model_dump") else vars(sim_out)
-                        label = adapter.adapt_simulation_output(ld)
-                        best = label.get("best_action_after_cost", "NO_TRADE")
+                        # Future candles — same symbol only
+                        future_idx = sym_indices[idx_pos + 1:idx_pos + 1 + max_hold]
+                        candles = [
+                            Candle(
+                                open=float(ohlcv["open"][fj]) if "open" in ohlcv and fj < len(ohlcv["open"]) else entry_price,
+                                high=float(ohlcv["high"][fj]),
+                                low=float(ohlcv["low"][fj]),
+                                close=float(ohlcv["close"][fj]),
+                            )
+                            for fj in future_idx
+                        ]
+
+                        # Build canonical profile
+                        profile = SimulationProfile(
+                            profile_version="pipeline-v1.0.0",
+                            mode=mode_enum,
+                            primary_interval="1h",
+                            max_holding_bars=max_hold,
+                            stop_multiplier=stop_mult,
+                            target_multiplier=target_mult,
+                            ambiguity_margin_r=0.10,
+                            min_action_edge_r=0.15,
+                            no_trade_default=False,
+                        )
+
+                        # Build canonical input
+                        timestamp_val = ohlcv["timestamp"][i] if "timestamp" in ohlcv and i < len(ohlcv["timestamp"]) else str(i)
+                        sim_input = SimulationInput(
+                            symbol=str(sym),
+                            decision_timestamp=str(timestamp_val)
+                                if not isinstance(timestamp_val, str)
+                                else timestamp_val,
+                            entry_price=entry_price,
+                            atr=atr_val,
+                            future_path=FuturePath(candles=candles),
+                            profile=profile,
+                            mode=mode_enum,
+                            primary_interval="1h",
+                            simulation_family_version="pipeline-v1.0.0",
+                            cost_model_version="pipeline-v1.0.0",
+                        )
+
+                        try:
+                            sim_out = simulate(sim_input)
+                        except Exception as e:
+                            error_count += 1
+                            error_details.append(f"bar {i} ({sym}): {type(e).__name__}: {e}")
+                            continue
+
+                        # Convert output to label
+                        try:
+                            ld = sim_out.model_dump() if hasattr(sim_out, "model_dump") else vars(sim_out)
+                            label = adapter.adapt_simulation_output(ld)
+                            best = label.get("best_action_after_cost", "NO_TRADE")
+                        except Exception as e:
+                            error_count += 1
+                            error_details.append(f"label adapt bar {i} ({sym}): {type(e).__name__}: {e}")
+                            continue
+
                         labels_list.append(best)
                         label_ints_list.append(_LABEL_TO_INT.get(best, _LABEL_TO_INT["NO_TRADE"]))
-                    except Exception:
-                        labels_list.append("NO_TRADE")
-                        label_ints_list.append(_LABEL_TO_INT["NO_TRADE"])
 
-                self._ctx.labels = np.array(labels_list)
-                self._ctx.label_ints = np.array(label_ints_list, dtype=int)
+                self._ctx.labels = np.array(labels_list) if labels_list else np.array([])
+                self._ctx.label_ints = np.array(label_ints_list, dtype=int) if label_ints_list else np.array([], dtype=int)
 
                 unique, counts = np.unique(labels_list, return_counts=True)
                 dist = {str(k): int(v) for k, v in zip(unique, counts)}
-                metrics.update({"n_labels": n, "label_distribution": dist, "label_source": "simulation"})
-                print(f"  Generated {n} simulation labels. Dist: {dist}")
+                metrics.update({
+                    "n_labels": len(labels_list),
+                    "n_errors": error_count,
+                    "label_distribution": dist,
+                    "label_source": "simulation",
+                })
+                print(f"  Generated {len(labels_list)} simulation labels from {len(unique_symbols)} symbols")
+                print(f"  Distribution: {dist}")
+                if error_count > 0:
+                    print(f"  Errors: {error_count} — first 3: {error_details[:3]}")
+                    if error_count > len(labels_list) * 0.5:
+                        errors.append(
+                            f"High error rate: {error_count}/{len(labels_list) + error_count} bars failed"
+                        )
 
             except ImportError as e:
                 errors.append(f"Sim engine unavailable: {e}")
