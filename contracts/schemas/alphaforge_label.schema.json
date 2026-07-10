@@ -92,7 +92,7 @@
     },
     "resolution_status": {
       "type": "string",
-      "enum": ["COMPLETE", "UNRESOLVED", "INVALIDATED", "TARGET_HIT", "STOP_HIT", "TIME_EXIT", "UNRESOLVED"],
+      "enum": ["COMPLETE", "UNRESOLVED", "INVALIDATED", "TARGET_HIT", "STOP_HIT", "TIME_EXIT"],
       "description": "How simulation resolved, propagated from SimulationOutput for audit trail."
     },
     "exit_reason": {

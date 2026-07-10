@@ -94,6 +94,7 @@ def _gen_random_signal(rng, mode="SCALP", max_bars=None):
 # Test 1: GPU=CPU path parity (11 fields, 1e-9 tolerance)
 # ═══════════════════════════════════════════════════════════════════════
 
+@pytest.mark.skipif(not is_cuda_available(), reason="CUDA not available")
 class TestGPUCPUParity:
     """GPU path vs CPU path: must be bit-identical (1e-9)."""
 
@@ -232,6 +233,7 @@ class TestGPUCPUParity:
 # Test 2: Deterministic edge cases
 # ═══════════════════════════════════════════════════════════════════════
 
+@pytest.mark.skipif(not is_cuda_available(), reason="CUDA not available")
 class TestDeterministicParity:
     """Hand-crafted edge cases."""
 
