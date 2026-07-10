@@ -313,7 +313,6 @@ class TestFundingSigns:
             events=[FundingEvent(1_700_001_000_000, 0.0001)],
             entry_timestamp=1_700_000_000_000,
             exit_timestamp=1_700_002_000_000,
-            risk=1000.0,
         )
         assert cost > 0, f"Long at positive rate expected > 0, got {cost}"
 
@@ -324,12 +323,9 @@ class TestFundingSigns:
             events=[FundingEvent(1_700_001_000_000, 0.0001)],
             entry_timestamp=1_700_000_000_000,
             exit_timestamp=1_700_002_000_000,
-            risk=1000.0,
         )
         assert cost < 0, f"Short at positive rate expected < 0, got {cost}"
 
-    @pytest.mark.xfail(strict=True,
-                       reason="#315: scalar SHORT funding sign wrong")
     def test_scalar_short_sign_correct(self):
         """Scalar funding_cost_r with negative notional (short) at positive
         rate must return negative cost (gain for short).
@@ -464,8 +460,6 @@ class TestEmptyVsMissing:
 class TestFundingLineage:
     """Funding lineage status must derive from engine outcomes, not hardcode."""
 
-    @pytest.mark.xfail(strict=True,
-                       reason="#315: lineage APPLIED hardcoded")
     def test_lineage_from_engine_not_hardcoded(self):
         """Funding lineage status must be derived from the actual engine
         computation, not a hardcoded 'APPLIED' string.

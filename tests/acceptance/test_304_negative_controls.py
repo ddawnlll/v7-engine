@@ -122,8 +122,7 @@ class TestControlSymbolIsolation:
             events=eth_events,
             entry_timestamp=1_700_000_000_000,
             exit_timestamp=1_700_100_000_000,
-            risk=1000.0,
-        )
+        )  # returns rate*notional = 0.0002 * 100k = 20 quote
 
         # Wrong: BTC events used for ETH
         eth_cost_wrong = funding_cost_r_from_events(
@@ -131,7 +130,6 @@ class TestControlSymbolIsolation:
             events=btc_events,  # BUG: wrong symbol's events
             entry_timestamp=1_700_000_000_000,
             exit_timestamp=1_700_100_000_000,
-            risk=1000.0,
         )
 
         # Different funding events → different costs
@@ -226,15 +224,13 @@ class TestControlShortSign:
         notional = -100_000.0  # short
         rate = 0.0001
         events = [FundingEvent(1_700_001_000_000, rate)]
-        risk = 1000.0
 
-        # Current implementation: cost = rate * notional
+        # Current implementation: cost = rate * notional (quote currency)
         correct_cost = funding_cost_r_from_events(
             notional=notional,
             events=events,
             entry_timestamp=1_700_000_000_000,
             exit_timestamp=1_700_002_000_000,
-            risk=risk,
         )
 
         # The code uses: cost = rate * notional = 0.0001 * (-100000) = -10
