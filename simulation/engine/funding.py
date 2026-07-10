@@ -1,19 +1,24 @@
-"""
-Funding cost model for perpetual swap positions.
+"""Funding cost model for perpetual swap positions.
 
-Implements the per-bar funding cost formula:
-  funding_cost_r = notional * funding_rate * holding_bars
+Two modes
+---------
+1. **Scalar funding** (legacy): ``funding_cost_r(notional, rate, holding_bars, side)``
+   — per-bar rate applied over holding bars.  Side-aware: LONG pays positive
+   rates, SHORT receives positive rates.
 
-This is a simple model where:
-  - *notional* is the position size in quote currency.
-  - *funding_rate* is the per-bar rate (e.g. 0.0001 = 1 bp per bar).
-  - *holding_bars* is the number of bars the position is held.
+2. **Event-based funding**: ``funding_cost_r_from_events(...)``
+   — timestamped events between entry/exit, each with a signed contribution.
 
-For Binance perpetual swaps the funding interval is 8 hours.  If the
-simulation runs on 1h bars, *funding_rate* should be the per-1h rate
-and *holding_bars* is the number of 1h bars held.  Equivalently, on 8h
-bars the rate is the raw Binance funding rate and *holding_bars* is the
-number of 8h windows.
+Event authority rule
+--------------------
+    entry_timestamp < event.timestamp <= exit_timestamp
+
+Sign convention
+---------------
+- Positive rate → LONG pays, SHORT receives.
+- Negative rate → LONG receives, SHORT pays.
+- ``funding_cost_r`` returns **positive = cost** (detracts from gross R),
+  **negative = credit** (adds to gross R).
 
 Status: IMPLEMENTED
   Classification: IMPLEMENTED
@@ -25,81 +30,120 @@ Status: IMPLEMENTED
     - Variable funding intervals across symbols
 """
 
+from __future__ import annotations
+
+import math
+from typing import Sequence
+
+from simulation.contracts.models import FundingEvent
+
 funding_status = "IMPLEMENTED"
+FUNDING_MODEL_VERSION = "funding-2.0.0"
 
 
 def funding_cost_r(
     notional: float,
     funding_rate: float,
     holding_bars: int,
+    side: str = "LONG",
 ) -> float:
-    """Compute funding cost in R-multiples for a perpetual swap position.
+    """Compute scalar funding cost in quote currency.
 
-    Args:
-        notional: Position size in quote currency (positive for long,
-                  negative for short).
-        funding_rate: Per-bar funding rate (e.g. 0.0001 for 1 bp/bar).
-                      Positive means longs pay shorts; negative means
-                      shorts pay longs.
-        holding_bars: Number of bars the position is held.
+    Parameters
+    ----------
+    notional : float
+        Position size in quote currency.  **Backward-compatible**: positive for
+        LONG, can be negative for SHORT (old convention).  The ``side`` parameter
+        adds explicit sign control on top of the notional sign.
+    funding_rate : float
+        Per-bar funding rate (e.g. 0.0001 for 1 bp/bar).
+    holding_bars : int
+        Number of bars the position is held.
+    side : str
+        ``"LONG"`` or ``"SHORT"``.  When ``side="SHORT"`` the raw result is
+        negated (longs pay, shorts receive).
 
-    Returns:
+    Returns
+    -------
+    float
         Funding cost in quote currency (positive = cost, negative = gain).
-        A long position paying positive funding yields a positive cost.
-        A short position receiving positive funding yields a negative cost
-        (a gain).
-
-    Formula:
-        cost = notional * funding_rate * holding_bars
-
-    Examples:
-        >>> funding_cost_r(100_000.0, 0.0001, 8)   # 1 bp over 8 bars
-        80.0
-        >>> funding_cost_r(50_000.0, -0.0001, 4)    # negative rate, short
-        -20.0
-        >>> funding_cost_r(0.0, 0.0001, 10)
-        0.0
-        >>> funding_cost_r(100_000.0, 0.0, 10)
-        0.0
     """
     if notional == 0.0 or funding_rate == 0.0 or holding_bars == 0:
         return 0.0
-    return notional * funding_rate * holding_bars
+    raw = notional * funding_rate * holding_bars
+    if side.upper() == "SHORT":
+        raw = -raw
+    return raw
 
 
 def funding_cost_r_from_events(
     notional: float,
-    events: list,
+    events: Sequence[FundingEvent],
     entry_timestamp: int,
     exit_timestamp: int,
-    risk: float,
 ) -> float:
     """Compute funding cost from timestamped events between entry and exit.
 
-    Funding only applies to events where:
-      entry_timestamp < event.timestamp <= exit_timestamp
+    Each matching event contributes::
 
-    Uses notional sign convention (positive long, negative short):
-      cost = rate * notional
-      → LONG at positive rate: positive cost
-      → SHORT at positive rate: negative cost (gain)
+        contribution = event.rate * signed_notional
 
-    Args:
-        notional: Position size (positive long, negative short).
-        events: List of FundingEvent objects with .timestamp and .rate.
-        entry_timestamp: Entry time in ms.
-        exit_timestamp: Exit time in ms.
-        risk: 1R risk amount in quote currency (for R conversion).
+    where ``signed_notional = +notional`` for LONG and ``-notional`` for SHORT.
+    The caller is responsible for passing the correct sign on *notional*.
 
-    Returns:
-        Funding cost in R-multiples (positive = cost, negative = gain).
+    Parameters
+    ----------
+    notional : float
+        Signed notional: **positive** for LONG, **negative** for SHORT.
+    events : Sequence[FundingEvent]
+        Timestamped funding events (must be sorted ascending).
+    entry_timestamp : int
+        Entry time in ms.
+    exit_timestamp : int
+        Exit time in ms.
+
+    Returns
+    -------
+    float
+        Total funding cost in **quote currency** (positive = cost, negative = credit).
     """
-    if risk <= 0 or notional == 0:
+    if notional == 0:
         return 0.0
-    total_funding_quote = 0.0
+    total = 0.0
     for evt in events:
         if entry_timestamp < evt.timestamp <= exit_timestamp:
-            # Long: cost = -rate * notional  (pays when rate > 0)
-            # Short: cost = +rate * notional (receives when rate > 0)
-            total_funding_quote += evt.rate * notional
-    return total_funding_quote / risk
+            total += evt.rate * notional
+    return total
+
+
+def resolve_funding_status(
+    events: Sequence[FundingEvent] | None,
+    has_legacy_scalar: bool,
+    matching_count: int,
+) -> str:
+    """Derive the truthful ``FundingDataStatus`` for a simulation run.
+
+    Parameters
+    ----------
+    events : list[FundingEvent] | None
+        ``None`` = no funding data provided; ``[]`` = data available but empty.
+    has_legacy_scalar : bool
+        Whether a scalar fallback rate was explicitly configured.
+    matching_count : int
+        Number of events that matched the position interval.
+
+    Returns
+    -------
+    str
+        One of ``FundingDataStatus`` values.
+    """
+    from simulation.contracts.models import FundingDataStatus
+
+    if events is None:
+        if has_legacy_scalar:
+            return FundingDataStatus.LEGACY_SCALAR.value
+        return FundingDataStatus.MISSING_DATA.value
+    if matching_count > 0:
+        return FundingDataStatus.APPLIED.value
+    # events is not None but no events in window
+    return FundingDataStatus.AVAILABLE_EMPTY.value
