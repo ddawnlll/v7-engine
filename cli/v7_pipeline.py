@@ -1166,14 +1166,39 @@ class PipelineRunner:
 
         try:
             from alphaforge.validation.walk_forward_runner import run_walk_forward
+            from alphaforge.validation.walk_forward_runner import generate_net_r_from_ohlcv
+
+            # Compute net_r from pipeline OHLCV data (needed for economic metrics)
+            ctx = self._ctx
+            if ctx.ohlcv_data is not None:
+                # Determine equal-length bars from concatenated data
+                n_symbols = len(ctx.symbol_list) if ctx.symbol_list else 1
+                n_total = len(ctx.ohlcv_data.get("close", []))
+                pipe_n_bars = n_total // max(n_symbols, 1)
+                gross_r_raw, net_r_raw = generate_net_r_from_ohlcv(
+                    ctx.ohlcv_data, n_bars=pipe_n_bars, mode=self._config.mode,
+                )
+            else:
+                gross_r_raw, net_r_raw = None, None
+
+            label_ints = ctx.label_ints if ctx.label_ints is not None else None
+            y_labels = ctx.labels if ctx.labels is not None else None
 
             result = run_walk_forward(
                 n_bars=self._config.n_bars,
                 n_symbols=len(self._config.symbols),
                 random_seed=self._config.random_seed,
-                min_folds=3,  # Per issue spec
+                min_folds=3,
                 mode=self._config.mode,
-                ohlcv_data=self._ctx.ohlcv_data,  # Use pipeline data, not synthetic
+                ohlcv_data=ctx.ohlcv_data,
+                feature_matrix=ctx.feature_matrix,
+                y_labels=y_labels,
+                y_int=label_ints,
+                net_r=net_r_raw,
+                gross_r=gross_r_raw,
+                timestamp_list=ctx.timestamp_list if ctx.timestamp_list else None,
+                symbol_list=ctx.symbol_list if ctx.symbol_list else None,
+                feature_names=ctx.feature_names if ctx.feature_names else None,
             )
             self._ctx.wfv_result = result
 

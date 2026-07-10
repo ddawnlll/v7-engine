@@ -762,6 +762,14 @@ def run_walk_forward(
     min_folds: int = WFV_MIN_FOLDS,
     mode: str = "SWING",
     ohlcv_data: dict | None = None,
+    feature_matrix: Any | None = None,
+    y_labels: np.ndarray | None = None,
+    y_int: np.ndarray | None = None,
+    net_r: np.ndarray | None = None,
+    gross_r: np.ndarray | None = None,
+    timestamp_list: list[str] | None = None,
+    symbol_list: list[str] | None = None,
+    feature_names: list[str] | None = None,
 ) -> WalkForwardResult:
     """Run complete walk-forward validation for a specified trading mode.
 
@@ -830,61 +838,75 @@ def run_walk_forward(
         logger.info(f"[{mode_str}] Generated {total_bars} bars across {len(symbols)} symbols")
 
     # ------------------------------------------------------------------
-    # 1b. Generate net_R values from OHLCV (for economic metrics)
+    # 1b. Generate or accept net_R values
     # ------------------------------------------------------------------
-    gross_r_raw, net_r_raw = generate_net_r_from_ohlcv(
-        ohlcv_data, n_bars=n_bars, mode=mode_str,
-    )
-    logger.info(
-        f"[{mode_str}] Generated net_R: "
-        f"mean={float(np.mean(net_r_raw[net_r_raw != 0])):.6f} "
-        f"(non-zero), {int(np.sum(net_r_raw != 0))} active bars"
-    )
+    if net_r is not None and gross_r is not None:
+        logger.info(f"[{mode_str}] Using provided net_R/gross_R arrays")
+        gross_r_raw, net_r_raw = gross_r, net_r
+    else:
+        gross_r_raw, net_r_raw = generate_net_r_from_ohlcv(
+            ohlcv_data, n_bars=n_bars, mode=mode_str,
+        )
+        logger.info(
+            f"[{mode_str}] Generated net_R: "
+            f"mean={float(np.mean(net_r_raw[net_r_raw != 0])):.6f} "
+            f"(non-zero), {int(np.sum(net_r_raw != 0))} active bars"
+        )
 
     # ------------------------------------------------------------------
-    # 2. Compute features (mode-aware)
+    # 2. Compute or accept features
     # ------------------------------------------------------------------
-    from alphaforge.features.pipeline import compute_features
+    if feature_matrix is not None and feature_names is not None:
+        logger.info(f"[{mode_str}] Using provided feature matrix ({len(feature_names)} features)")
+        X_all = np.column_stack([
+            feature_matrix.features[name] for name in feature_names
+        ])
+        nan_mask = np.isnan(X_all).any(axis=1)
+        X = X_all[~nan_mask]
+        X = np.ascontiguousarray(X, dtype=np.float64)
+        valid_count = len(X)
+        logger.info(f"Feature matrix: {valid_count} valid rows out of {len(X_all)}")
+    else:
+        from alphaforge.features.pipeline import compute_features
 
-    feature_matrix = compute_features(ohlcv_data, mode=mode_str)
-    feature_names = sorted(feature_matrix.features.keys())
-    logger.info(f"[{mode_str}] Computed {len(feature_names)} features: {feature_names}")
+        feature_matrix = compute_features(ohlcv_data, mode=mode_str)
+        feature_names = sorted(feature_matrix.features.keys())
+        logger.info(f"[{mode_str}] Computed {len(feature_names)} features: {feature_names}")
 
-    # Assemble feature array
-    X_all = np.column_stack([
-        feature_matrix.features[name] for name in feature_names
-    ])
-
-    # Remove rows with NaN (lookback gaps)
-    nan_mask = np.isnan(X_all).any(axis=1)
-    valid_count = int((~nan_mask).sum())
-    X = X_all[~nan_mask]
-    X = np.ascontiguousarray(X, dtype=np.float64)
-    logger.info(f"Feature matrix: {valid_count} valid rows out of {len(X_all)}")
+        X_all = np.column_stack([
+            feature_matrix.features[name] for name in feature_names
+        ])
+        nan_mask = np.isnan(X_all).any(axis=1)
+        valid_count = int((~nan_mask).sum())
+        X = X_all[~nan_mask]
+        X = np.ascontiguousarray(X, dtype=np.float64)
+        logger.info(f"Feature matrix: {valid_count} valid rows out of {len(X_all)}")
 
     # Build timestamp and symbol arrays for valid rows
-    all_symbols_list = ohlcv_data["symbol"]
-    symbol_list = []
-    timestamp_list = []
-    for i in range(len(all_symbols_list)):
-        if not nan_mask[i]:
-            symbol_list.append(all_symbols_list[i])
-            # Each row gets a chronologically sorted ISO timestamp
-            # Format: 2025-01-01T{row_index:06d}
-            timestamp_list.append(f"2025-01-01T{i:06d}")
+    if timestamp_list is not None and symbol_list is not None:
+        logger.info(f"[{mode_str}] Using provided timestamp/symbol arrays ({len(timestamp_list)} rows)")
+    else:
+        all_symbols_list = ohlcv_data["symbol"]
+        symbol_list = []
+        timestamp_list = []
+        for i in range(len(all_symbols_list)):
+            if not nan_mask[i]:
+                symbol_list.append(all_symbols_list[i])
+                timestamp_list.append(f"2025-01-01T{i:06d}")
 
-    # ------------------------------------------------------------------
-    # 3. Align net_R with valid rows and generate synthetic labels
-    # ------------------------------------------------------------------
-    net_r = net_r_raw[~nan_mask]
-    gross_r = gross_r_raw[~nan_mask]
-    logger.info(
-        f"[{mode_str}] net_R aligned: {len(net_r)} valid rows "
-        f"(dropped {int(nan_mask.sum())})"
-    )
-
-    y_labels = generate_walk_forward_labels(len(X), random_seed=random_seed)
-    y_int = np.array([_LABEL_TO_INT[str(lbl)] for lbl in y_labels], dtype=int)
+    # Align net_R with valid rows
+    if net_r is None or gross_r is None:
+        net_r_arr = net_r_raw[~nan_mask]
+        gross_r_arr = gross_r_raw[~nan_mask]
+    else:
+        net_r_arr = net_r
+        gross_r_arr = gross_r
+    # Use provided labels or generate random ones
+    if y_labels is not None and y_int is not None:
+        logger.info(f"[{mode_str}] Using provided labels ({len(y_labels)} rows)")
+    else:
+        y_labels = generate_walk_forward_labels(len(X), random_seed=random_seed)
+        y_int = np.array([_LABEL_TO_INT[str(lbl)] for lbl in y_labels], dtype=int)
 
     # ------------------------------------------------------------------
     # 4. Build chronological dataset for WalkForwardValidator
@@ -1019,8 +1041,8 @@ def run_walk_forward(
             pass
 
         # OOS financial metrics
-        oos_net_r = net_r[oos_idx]
-        oos_gross_r = gross_r[oos_idx]
+        oos_net_r = net_r_arr[oos_idx]
+        oos_gross_r = gross_r_arr[oos_idx]
         oos_fin_metrics = compute_economic_metrics(
             oos_pred, y_oos,
             net_r_values=oos_net_r,
