@@ -131,13 +131,19 @@ Old datasets remain traceable to the `cost_model_version` that produced their la
 
 ## Funding Cost Model for Perpetuals
 
-**Status: DEFERRED_FOR_SPOT_OR_NON_PERP_FIRST_PHASE**
+**Status: LOCKED_INITIAL_BASELINE**
 
 ### Decision
 
-Funding cost for perpetual swap positions is **not yet implemented** in the first-phase cost model. The first-phase scope targets spot trading where funding is not applicable.
+Funding cost for perpetual swap positions is implemented as of simulation v0.34B+.
+The cost model wires funding_rate from SimulationProfile into total_cost_r() via
+`funding_cost_r()` in `simulation/engine/costs.py`. A non-zero funding_rate produces
+a non-zero funding_cost_r in the simulation output.
 
-For derivatives/perpetuals to be promoted to live eligibility, a funding cost model must be implemented. The section below defines the **LOCK_CANDIDATE** formula and parameters that must be reviewed before implementation.
+The adapter layer (simulation_adapter.py, backtest.py) previously hardcoded
+funding_rate=0.0, which bypassed the funding model. As of #315 fix, these
+hardcodes are removed — funding_rate defaults to SimulationProfile.funding_rate
+(0.0) and can be overridden via config when market data is available.
 
 ### Why Funding Matters
 
@@ -178,10 +184,11 @@ realized_r_net = realized_r_gross - fee_cost_r - slippage_cost_r - funding_cost_
 
 ### Blocking Rule
 
-**Until funding cost model is implemented (status moves from DEFERRED to LOCKED):**
-- Perpetual swap trading is blocked for all modes at G3 (COST_STRESS) promotion gate.
-- Alpha hypotheses involving funding (e.g., FUNDING_DIVERGENCE) may be researched but cannot be promoted for perpetuals.
-- Spot trading is unaffected.
+**Funding cost model is implemented (LOCKED_INITIAL_BASELINE). The blocking rule is lifted:**
+- Perpetual swap trading is eligible for promotion through G3 (COST_STRESS) gate.
+- Alpha hypotheses involving funding (e.g., FUNDING_DIVERGENCE) may be researched and promoted.
+- Funding_rate must be populated from market data (via data lake funding series) for real-mode backtests.
+- Spot trading remains unaffected (funding_rate = 0.0 / NOT_APPLICABLE).
 
 ### Versioning
 

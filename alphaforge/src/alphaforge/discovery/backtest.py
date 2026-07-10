@@ -85,7 +85,7 @@ def _build_profile(mode: str, stop_mult: float, target_mult: float,
         mae_penalty_weight=1.0,
         cost_penalty_weight=1.0,
         time_penalty_weight=0.3,
-        funding_rate=0.0,
+        # funding_rate: SimulationProfile defaults to 0.0; override via config when available
         execution_mode=execution_mode,
         maker_fill_probability=_FILL_ASSUMPTIONS.get(maker_fill_assumption, 0.7),
         maker_fill_assumption=maker_fill_assumption,

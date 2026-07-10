@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # ---------------------------------------------------------------------------
 
 LABEL_INTERPRETATION_VERSION: str = "1.0.0"
-FUNDING_STATUS_DEFAULT: str = "DEFERRED"
+FUNDING_STATUS_DEFAULT: str = "APPLIED"  # Engine has funding as LOCKED_INITIAL_BASELINE
 
 VALID_MODES: Tuple[str, ...] = ("SWING", "SCALP", "AGGRESSIVE_SCALP")
 VALID_BEST_ACTIONS: Tuple[str, ...] = ("LONG_NOW", "SHORT_NOW", "NO_TRADE", "AMBIGUOUS_STATE")

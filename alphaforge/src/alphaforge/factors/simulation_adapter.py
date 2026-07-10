@@ -96,7 +96,7 @@ def _map_config_to_profile(
         mae_penalty_weight=1.0,
         cost_penalty_weight=1.0,
         time_penalty_weight=0.3,
-        funding_rate=0.0,
+        # funding_rate: SimulationProfile defaults to 0.0; override via config when available
     )
 
 
