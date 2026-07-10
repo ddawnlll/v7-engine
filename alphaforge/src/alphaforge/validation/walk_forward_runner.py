@@ -846,30 +846,51 @@ def run_walk_forward(
     mode_str = mode_upper
 
     # ====== STRICT PRECOMPUTED BUNDLE VALIDATION ======
-    _precomputed_bundles = {
-        "feature_matrix + feature_names": (
-            (feature_matrix is not None) == (feature_names is not None)
-        ),
-        "y_labels + y_int": (
-            (y_labels is not None) == (y_int is not None)
-        ),
-        "timestamp_list + symbol_list": (
-            (timestamp_list is not None) == (symbol_list is not None)
-        ),
-        "long/net + short/net + long/gross + short/gross": (
-            (long_net_r is not None or long_gross_r is not None or
-             short_net_r is not None or short_gross_r is not None) and (
-                long_net_r is not None and short_net_r is not None and
-                long_gross_r is not None and short_gross_r is not None
-            )
-        ),
+    # Three modes: SYNTHETIC (all None), FULL (all present), FAIL (partial)
+    r_members = [long_net_r, short_net_r, long_gross_r, short_gross_r]
+    r_any = any(x is not None for x in r_members)
+    r_all = all(x is not None for x in r_members)
+
+    pairs = {
+        "feature_matrix + feature_names": (feature_matrix, feature_names),
+        "y_labels + y_int": (y_labels, y_int),
+        "timestamp_list + symbol_list": (timestamp_list, symbol_list),
     }
-    for bundle_name, valid in _precomputed_bundles.items():
-        if not valid:
+
+    # Each pair must be either both present or both absent
+    for name, (a, b) in pairs.items():
+        if (a is not None) != (b is not None):
             raise ValueError(
-                f"Partial precomputed bundle: '{bundle_name}'. "
-                f"Either provide all members or none. "
-                f"Synthetic fallback only when NO precomputed data is given."
+                f"Partial precomputed bundle: '{name}'. "
+                f"Either provide both members or none."
+            )
+
+    # If any single bundle is present, ALL must be present
+    pair_any = any(a is not None for (a, b) in pairs.values())
+    pair_all = all(a is not None for (a, b) in pairs.values())
+    if pair_any and not pair_all:
+        present = [n for n, (a, _) in pairs.items() if a is not None]
+        missing = [n for n, (a, _) in pairs.items() if a is None]
+        raise ValueError(
+            f"Partial precomputed input: present=[{present}], missing={missing}. "
+            f"ALL bundles must be provided together. "
+            f"Synthetic fallback only valid when NO precomputed data given."
+        )
+
+    # R bundle: 4 arrays must be together if any present
+    if r_any and not r_all:
+        raise ValueError(
+            "Partial directional R bundle: all 4 arrays "
+            "(long_net, short_net, long_gross, short_gross) "
+            "must be provided together."
+        )
+
+    # FULL PRECOMPUTED: pairs + R bundle
+    if pair_any:
+        if not r_all:
+            raise ValueError(
+                "FULL PRECOMPUTED mode requires all 4 R arrays "
+                "(long_net, short_net, long_gross, short_gross)."
             )
 
     # Get mode-specific hyperparameters
