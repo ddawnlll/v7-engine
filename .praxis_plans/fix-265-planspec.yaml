@@ -1,0 +1,120 @@
+planSpecVersion: "0.1.0"
+kind: "ImplementationPlan"
+profile: "praxis-v0.1"
+
+metadata:
+  planId: "fix-265-atr-true-range"
+  title: "Fix #265: Triple-barrier ATR uses True Range"
+  description: "Replace close-close difference with canonical True Range (max of high-low, |high-prev_close|, |low-prev_close|) in ATR computation for triple-barrier label generation"
+  createdAt: "2026-07-10T14:45:00Z"
+  humanId: "fix-265-atr"
+  status: "passed"
+
+authority:
+  executor: "OtherAgent"
+  completionAuthority: "PraxisTruthKernel"
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: "human"
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+
+workspace:
+  root: "/workspace/v7-engine"
+  allowedFiles:
+    - "alphaforge/src/alphaforge/validation/walk_forward_runner.py"
+    - "alphaforge/src/alphaforge/train.py"
+    - "alphaforge/tests/"
+    - "simulation/tests/"
+    - "integration/tests/"
+    - "lib/tests/"
+  forbiddenFiles:
+    - ".env"
+    - "**/__pycache__/**"
+
+execution:
+  mode: "single_session"
+  agent: "claude-code"
+  autonomy: "implementation_allowed"
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 1
+
+tasks:
+  - id: "fix-atr"
+    title: "Fix close-close ATR to True Range ATR"
+    objective: "Replace close-close difference with canonical True Range formula in ATR computation for triple-barrier labels"
+    implementation:
+      instructions:
+        - "In walk_forward_runner.py line 386, replace np.diff(close) with vectorized True Range using high/low/close arrays"
+        - "In train.py _generate_labels_numba loop (line 334), replace close[k]-close[k-1] with max(high-low, |high-prev_close|, |low-prev_close|)"
+      allowedFiles:
+        - "alphaforge/src/alphaforge/validation/walk_forward_runner.py"
+        - "alphaforge/src/alphaforge/train.py"
+    artifactPolicy:
+      class: "library_code"
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: true
+      deterministicEvidenceRequired: true
+    acceptanceCriteria:
+      - id: "ac-1"
+        description: "walk_forward_runner.py ATR uses True Range not close-close diff"
+        criteria:
+          - "ATR computed as mean of max(high[t]-low[t], |high[t]-close[t-1]|, |low[t]-close[t-1]|)"
+          - "high_arr and low_arr are used, not just close_arr"
+      - id: "ac-2"
+        description: "train.py _generate_labels_numba ATR uses True Range"
+        criteria:
+          - "Loop computes tr = max(high[k]-low[k], |high[k]-close[k-1]|, |low[k]-close[k-1]|)"
+          - "atr_sum accumulates tr not close-close diff"
+      - id: "ac-3"
+        description: "Full test suite passes with fix"
+        criteria:
+          - "927+ tests pass, 0 failures"
+
+commands:
+  pre:
+    - "cd /workspace/v7-engine && PYTHONPATH=. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ --ignore=lib/tests/test_data_lake_*.py -q --tb=short"
+  verify:
+    - "cd /workspace/v7-engine && git diff alphaforge/src/alphaforge/validation/walk_forward_runner.py | head -30"
+    - "cd /workspace/v7-engine && git diff alphaforge/src/alphaforge/train.py | head -30"
+
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes:
+    - "git_diff"
+    - "test_output"
+    - "file_contents"
+  hashWhenAvailable: false
+
+gates:
+  required:
+    - "schema"
+    - "evidence"
+    - "exec"
+  schema:
+    enabled: true
+  lock:
+    enabled: false
+  evidence:
+    enabled: true
+  wiring:
+    enabled: false
+  exec:
+    enabled: true
+    command:
+      - "cd /workspace/v7-engine && PYTHONPATH=. python3 -m pytest lib/tests/ integration/tests/ simulation/tests/ --ignore=lib/tests/test_data_lake_*.py -q --tb=short"
+    expected: "927 passed.*0 failed"
+  final:
+    enabled: false
+
+repair:
+  enabled: false
+
+locking:
+  policy: "none"
+
+reports:
+  - format: "yaml"
+    path: "reports/accp/fix-265-atr-true-range.yaml"

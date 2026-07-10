@@ -332,7 +332,13 @@ def _generate_labels_numba(close, high, low, max_hold, stop_mult, target_mult, n
         atr_count = 0
         start = max(0, i - 14)
         for k in range(start + 1, i + 1):
-            atr_sum += abs(close[k] - close[k - 1])
+            # True Range: max(high-low, |high-prev_close|, |low-prev_close|)
+            prev_close = close[k - 1]
+            hl = high[k] - low[k]
+            hc = abs(high[k] - prev_close)
+            lc = abs(low[k] - prev_close)
+            tr = max(hl, hc, lc)
+            atr_sum += tr
             atr_count += 1
         atr = atr_sum / max(atr_count, 1)
 

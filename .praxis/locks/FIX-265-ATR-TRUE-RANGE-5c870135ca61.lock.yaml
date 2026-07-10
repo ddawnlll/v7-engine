@@ -1,0 +1,18 @@
+lockVersion: praxis-plan-lock/v0.1
+planSpecVersion: 0.1.0
+kind: ImplementationPlan
+profile: praxis-v0.1
+planId: FIX-265-ATR-TRUE-RANGE
+title: "Fix #265: Triple-barrier ATR uses True Range"
+createdAt: 2026-07-10T14:45:00Z
+updatedAt: 2026-07-10T15:31:13.762Z
+hashes:
+  planHash: 5c870135ca61a12b33994e85ab2bbc316e1f681e23999bf627658910bd08ac87
+  acceptanceCriteriaHash: d034c127ee9678ec5bf733972cf7732f564bc7aed7c6367239db24adf4035f3c
+  artifactPolicyHash: ed77185c26747cd6cb5c2349ee302a053b4657d22fad0bebe92ab76a8e6e5f56
+  integrationContractHash: 4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+  commandPolicyHash: 72897c6f17a4ece6f1183b85444e91822f7f0c649737a41e0722a7ecca94a6e4
+  allowedFilesHash: fd41c236e1ba6c3ffd0c4110649079421e70adc9263634f0ebd3382958d333df
+  forbiddenFilesHash: 4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+source:
+  schemaPath: schemas/planspec.v0.1.schema.yaml

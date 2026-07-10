@@ -383,7 +383,18 @@ def generate_net_r_from_ohlcv(
             lookback_start = max(sym_start, i - 14)
             if i - lookback_start < 3:
                 continue
-            atr = float(np.mean(np.abs(np.diff(close_arr[lookback_start:i + 1]))))
+            # True Range: max(high-low, |high-prev_close|, |low-prev_close|)
+            high_slice = high_arr[lookback_start + 1:i + 1]
+            low_slice = low_arr[lookback_start + 1:i + 1]
+            close_prev = close_arr[lookback_start:i]  # close[t-1]
+            tr = np.maximum(
+                high_slice - low_slice,
+                np.maximum(
+                    np.abs(high_slice - close_prev),
+                    np.abs(low_slice - close_prev),
+                ),
+            )
+            atr = float(np.mean(tr))
             if atr <= 0 or atr > entry_price * 0.5:
                 continue
 
