@@ -65,3 +65,41 @@ def funding_cost_r(
     if notional == 0.0 or funding_rate == 0.0 or holding_bars == 0:
         return 0.0
     return notional * funding_rate * holding_bars
+
+
+def funding_cost_r_from_events(
+    notional: float,
+    events: list,
+    entry_timestamp: int,
+    exit_timestamp: int,
+    risk: float,
+) -> float:
+    """Compute funding cost from timestamped events between entry and exit.
+
+    Funding only applies to events where:
+      entry_timestamp < event.timestamp <= exit_timestamp
+
+    Uses notional sign convention (positive long, negative short):
+      cost = rate * notional
+      → LONG at positive rate: positive cost
+      → SHORT at positive rate: negative cost (gain)
+
+    Args:
+        notional: Position size (positive long, negative short).
+        events: List of FundingEvent objects with .timestamp and .rate.
+        entry_timestamp: Entry time in ms.
+        exit_timestamp: Exit time in ms.
+        risk: 1R risk amount in quote currency (for R conversion).
+
+    Returns:
+        Funding cost in R-multiples (positive = cost, negative = gain).
+    """
+    if risk <= 0 or notional == 0:
+        return 0.0
+    total_funding_quote = 0.0
+    for evt in events:
+        if entry_timestamp < evt.timestamp <= exit_timestamp:
+            # Long: cost = -rate * notional  (pays when rate > 0)
+            # Short: cost = +rate * notional (receives when rate > 0)
+            total_funding_quote += evt.rate * notional
+    return total_funding_quote / risk

@@ -845,6 +845,33 @@ def run_walk_forward(
     mode_enum = Mode(mode_upper)
     mode_str = mode_upper
 
+    # ====== STRICT PRECOMPUTED BUNDLE VALIDATION ======
+    _precomputed_bundles = {
+        "feature_matrix + feature_names": (
+            (feature_matrix is not None) == (feature_names is not None)
+        ),
+        "y_labels + y_int": (
+            (y_labels is not None) == (y_int is not None)
+        ),
+        "timestamp_list + symbol_list": (
+            (timestamp_list is not None) == (symbol_list is not None)
+        ),
+        "long/net + short/net + long/gross + short/gross": (
+            (long_net_r is not None or long_gross_r is not None or
+             short_net_r is not None or short_gross_r is not None) and (
+                long_net_r is not None and short_net_r is not None and
+                long_gross_r is not None and short_gross_r is not None
+            )
+        ),
+    }
+    for bundle_name, valid in _precomputed_bundles.items():
+        if not valid:
+            raise ValueError(
+                f"Partial precomputed bundle: '{bundle_name}'. "
+                f"Either provide all members or none. "
+                f"Synthetic fallback only when NO precomputed data is given."
+            )
+
     # Get mode-specific hyperparameters
     hyperparams = _MODE_HYPERPARAMS.get(mode_str, SWING_DEFAULT_HYPERPARAMS).copy()
 
@@ -933,8 +960,10 @@ def run_walk_forward(
 
     # Align long/short R values with valid rows
     if long_net_r is not None and short_net_r is not None:
+        if long_gross_r is None or short_gross_r is None:
+            raise ValueError("Partial R bundle: net arrays provided without gross arrays")
         long_net_valid, short_net_valid = long_net_r, short_net_r
-        long_gross_valid, short_gross_valid = None, None
+        long_gross_valid, short_gross_valid = long_gross_r, short_gross_r
     else:
         long_net_valid = long_net_raw[~nan_mask]
         short_net_valid = short_net_raw[~nan_mask]
@@ -965,6 +994,26 @@ def run_walk_forward(
         f"[{mode_str}] Aligned dataset: {len(X)} rows, "
         f"{len(set(symbol_list))} symbols, "
         f"{len(set(timestamp_list))} timestamps"
+    )
+
+    # ====== CANONICAL CHRONOLOGICAL REORDER ======
+    # WFV validator expects (timestamp, symbol) ascending order.
+    # Apply the same permutation to ALL aligned arrays.
+    timestamp_arr = np.array(timestamp_list)
+    symbol_arr = np.array(symbol_list)
+    order = np.lexsort((symbol_arr, timestamp_arr))
+    X = X[order]
+    y_valid = y_valid[order]
+    timestamp_list = timestamp_arr[order].tolist()
+    symbol_list = symbol_arr[order].tolist()
+    if long_net_valid is not None:
+        long_net_valid = long_net_valid[order]
+        short_net_valid = short_net_valid[order]
+        long_gross_valid = long_gross_valid[order]
+        short_gross_valid = short_gross_valid[order]
+    logger.info(
+        f"[{mode_str}] Chronologically reordered {len(X)} rows "
+        f"({len(set(timestamp_list))} unique timestamps)"
     )
 
     # ------------------------------------------------------------------

@@ -31,6 +31,18 @@ class Action(str, Enum):
     AMBIGUOUS_STATE = "AMBIGUOUS_STATE"
 
 
+@dataclass
+class FundingEvent:
+    """A single funding rate event for perpetual swap positions.
+
+    timestamp: Unix timestamp in milliseconds (same convention as OHLCV).
+    rate: Funding rate as decimal (e.g. 0.0001 = 1 bp).
+          Positive → longs pay shorts. Negative → shorts pay longs.
+    """
+    timestamp: int
+    rate: float
+
+
 class ResolutionStatus(str, Enum):
     COMPLETE = "COMPLETE"
     UNRESOLVED = "UNRESOLVED"
@@ -105,6 +117,10 @@ class SimulationProfile:
     cost_penalty_weight: float = 1.0
     time_penalty_weight: float = 0.3
     funding_rate: float = 0.0
+    # Timestamped funding events for perpetual swap positions.
+    # When populated, used instead of scalar funding_rate for event-based
+    # computation between entry and exit timestamps.
+    funding_events: list[FundingEvent] = field(default_factory=list)
     # Maker execution profile fields (Phase E S1, additive, default TAKER)
     execution_mode: str = "TAKER"  # TAKER / MAKER / HYBRID
     maker_fill_probability: float = 0.7  # Fill probability for MAKER mode

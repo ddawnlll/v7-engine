@@ -36,6 +36,20 @@ from simulation.engine.exits import (
 )
 
 
+def _resolve_ts(ts: str | int) -> int:
+    """Normalize decision_timestamp to int milliseconds."""
+    if isinstance(ts, int):
+        return ts
+    if isinstance(ts, str):
+        from datetime import datetime, timezone
+        try:
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            return int(dt.timestamp() * 1000)
+        except (ValueError, TypeError):
+            return 0
+    return 0
+
+
 def _build_action_outcome(
     action: str,
     exit_result: ExitResult,
@@ -43,6 +57,8 @@ def _build_action_outcome(
     entry_price: float,
     atr: float,
     profile: SimulationProfile,
+    decision_timestamp: int = 0,
+    side: str = "LONG",
 ) -> ActionOutcome:
     """Build an ActionOutcome from an ExitResult + cost model."""
     # Resolve execution mode from profile
@@ -54,6 +70,21 @@ def _build_action_outcome(
     except KeyError:
         execution_mode = ExecutionMode.TAKER
 
+    # Compute funding: prefer event-based over scalar rate
+    funding_events = getattr(profile, "funding_events", [])
+    if funding_events and decision_timestamp > 0:
+        interval_ms = 3_600_000  # 1h default
+        exit_timestamp = decision_timestamp + exit_result.hold_duration_bars * interval_ms
+        from simulation.engine.funding import funding_cost_r_from_events
+        # Signed notional: positive for LONG, negative for SHORT
+        signed_notional = notional if side == "LONG" else -notional
+        fund_r_via_events = funding_cost_r_from_events(
+            signed_notional, funding_events, decision_timestamp, exit_timestamp,
+            atr * profile.stop_multiplier,
+        )
+    else:
+        fund_r_via_events = None
+
     fcr, scr, fund_r, tcr = total_cost_r(
         notional=notional,
         entry_price=entry_price,
@@ -64,6 +95,10 @@ def _build_action_outcome(
         execution_mode=execution_mode,
         maker_fill_probability=maker_fill,
     )
+    # Override with event-based funding if available
+    if fund_r_via_events is not None:
+        fund_r = fund_r_via_events
+        tcr = fcr + scr + fund_r
     realized_r_net = exit_result.realized_r_gross - tcr
 
     # Path metrics
@@ -261,6 +296,7 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     )
     long_outcome = _build_action_outcome(
         "LONG_NOW", long_exit, notional, input.entry_price, input.atr, profile,
+        decision_timestamp=_resolve_ts(input.decision_timestamp), side="LONG",
     )
 
     # Simulate SHORT_NOW
@@ -270,6 +306,7 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     )
     short_outcome = _build_action_outcome(
         "SHORT_NOW", short_exit, notional, input.entry_price, input.atr, profile,
+        decision_timestamp=_resolve_ts(input.decision_timestamp), side="SHORT",
     )
 
     # NO_TRADE quality
