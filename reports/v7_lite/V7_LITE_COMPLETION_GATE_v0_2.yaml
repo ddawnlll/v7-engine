@@ -1,0 +1,119 @@
+gates:
+- blocking_files: []
+  evidence:
+  - 170 alpha entries in master CSV
+  - 25 unique alpha concepts
+  - 3 positive net_R entries
+  gate_id: G0
+  name: Alpha Discovery Exists
+  next_action: ''
+  score_pct: 100.0
+  status: PASS
+  weight_pct: 10
+  weighted_score: 10.0
+- blocking_files: []
+  evidence:
+  - 'Mean net_R: 0.000851 from 10000 trades'
+  - 'Win rate: 0.4934'
+  - 'Sharpe: 0.1686'
+  gate_id: G1
+  name: Minimum Alpha Viability
+  next_action: ''
+  score_pct: 60.0
+  status: PARTIAL_PASS
+  weight_pct: 10
+  weighted_score: 6.0
+- blocking_files: []
+  evidence:
+  - 'Mean gross_R: -0.001554'
+  - 'Mean cost_R: 0.176000'
+  - 'Mean net_R: 0.000851'
+  - 'Cost ratio: 113.26x'
+  gate_id: G2
+  name: Cost-Adjusted Survival
+  next_action: ''
+  score_pct: 15.0
+  status: FAIL
+  weight_pct: 15
+  weighted_score: 2.25
+- blocking_files: []
+  evidence:
+  - 'OOS mean R: -0.002336 across 5 folds'
+  - 'OOS mean Sharpe: -0.6275'
+  - 'Fold stability: -2.5632'
+  gate_id: G3
+  name: OOS / Walk-Forward / Holdout
+  next_action: ''
+  score_pct: 20.0
+  status: FAIL
+  weight_pct: 15
+  weighted_score: 3.0
+- blocking_files: []
+  evidence:
+  - 7 split dimensions evaluated
+  - 'Best segment R: 0.0231'
+  - 'BTCUSDT edge: True'
+  gate_id: G4
+  name: Regime/Symbol/Session Robustness
+  next_action: ''
+  score_pct: 80.0
+  status: PASS
+  weight_pct: 10
+  weighted_score: 8.0
+- blocking_files: []
+  evidence:
+  - 'Baselines beaten: 4/4'
+  - Beats random
+  - Beats ATR/momentum baseline
+  - Beats mean-reversion baseline
+  - Beats volatility-only baseline
+  gate_id: G5
+  name: Baseline Dominance
+  next_action: ''
+  score_pct: 65.0
+  status: PARTIAL_PASS
+  weight_pct: 10
+  weighted_score: 6.5
+- blocking_files: []
+  evidence:
+  - 'Outcome cache records: 10000'
+  - 'Cache verified working: True'
+  - 'Parity tests passing: 18/18'
+  gate_id: G6
+  name: Replay Infrastructure
+  next_action: ''
+  score_pct: 85.0
+  status: PASS
+  weight_pct: 15
+  weighted_score: 12.75
+- blocking_files: []
+  evidence:
+  - 'Gate registry implemented: True'
+  - 'Evaluators registered: 9'
+  - 'Auto-reporting: True'
+  gate_id: G7
+  name: Calibration Control Plane
+  next_action: ''
+  score_pct: 70.0
+  status: PARTIAL_PASS
+  weight_pct: 10
+  weighted_score: 7.0
+- blocking_files: []
+  evidence:
+  - No alpha reaches cost-adjusted 0.10R
+  - No promoted clusters
+  gate_id: G8
+  name: Revenue / Live Readiness
+  next_action: ''
+  score_pct: 5.0
+  status: FAIL
+  weight_pct: 5
+  weighted_score: 0.25
+generated: '2026-07-08T05:04:42Z'
+hard_blockers:
+- G2
+- G3
+- G8
+name: V7-Lite AlphaForge Completion Gate
+total_score: 55.8
+version: v0.2

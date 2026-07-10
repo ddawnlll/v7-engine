@@ -1,0 +1,136 @@
+{
+  "started_at": "2026-07-09T11:09:46.169665+00:00",
+  "ended_at": "2026-07-09T11:12:12.309118+00:00",
+  "reachability": {
+    "reachable": true,
+    "latency_ms": 266.53,
+    "error": null
+  },
+  "trades": {
+    "BTCUSDT": {
+      "status": "PASS",
+      "rows": 3000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/BTCUSDT_trades_raw.json",
+      "checksum": "a2f5a6b605ee6ca1ce0aa4e9cbaee7f8d54c3c58cc9aadcbc8bbedf751e7120a",
+      "error": null
+    },
+    "ETHUSDT": {
+      "status": "PASS",
+      "rows": 3000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/ETHUSDT_trades_raw.json",
+      "checksum": "3e3cad014e444dcaaaa06c41d82ac9b522ff47bc02f4952054f47d366251e19f",
+      "error": null
+    },
+    "SOLUSDT": {
+      "status": "PASS",
+      "rows": 3000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/SOLUSDT_trades_raw.json",
+      "checksum": "52d5e91a030473c0f2b253baf4eaddf06cab85eb8b82ca2527b54649bc5e937e",
+      "error": null
+    },
+    "BNBUSDT": {
+      "status": "PASS",
+      "rows": 3000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/BNBUSDT_trades_raw.json",
+      "checksum": "b97ecbf355fd55323c8a0b1f57fb4cc5b513ff78f7924a84bea3c90898135039",
+      "error": null
+    },
+    "XRPUSDT": {
+      "status": "PASS",
+      "rows": 3000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/XRPUSDT_trades_raw.json",
+      "checksum": "d533b4366bd9b9f413d2ca737902970d2358226332ec48ba9177a6894f0759e2",
+      "error": null
+    },
+    "DOGEUSDT": {
+      "status": "PASS",
+      "rows": 3000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/DOGEUSDT_trades_raw.json",
+      "checksum": "6de4de63eef9ed83262f8751329e5a131d96a7c4f99ea4df3d325cd2be3d04d2",
+      "error": null
+    },
+    "ADAUSDT": {
+      "status": "PASS",
+      "rows": 3000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/ADAUSDT_trades_raw.json",
+      "checksum": "9dd4912fc3783d846f13e3e82213190b4c678f9fd22a7982c47cb4f93e3910ec",
+      "error": null
+    },
+    "LINKUSDT": {
+      "status": "PASS",
+      "rows": 3000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/LINKUSDT_trades_raw.json",
+      "checksum": "dd54e4811b4306eeabcd18878ae9fb169bbd13d3434ec6cd5b119c9c9eb2bdc4",
+      "error": null
+    }
+  },
+  "funding": {
+    "BTCUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/BTCUSDT_funding_raw.json",
+      "checksum": "33b9ee191b99fdbbb9f8dc9de00de8ee3a9b9c2a612b73996ddfb71be12d8c57",
+      "error": null
+    },
+    "ETHUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/ETHUSDT_funding_raw.json",
+      "checksum": "fd5b9bd49fb93f310cace645067029c5c739b709d91d31f566b8046aa7863f65",
+      "error": null
+    },
+    "SOLUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/SOLUSDT_funding_raw.json",
+      "checksum": "055c7dee933552e2f40c11d5c60aeb869717f8bd65f4610d0f5a607b19ea2f96",
+      "error": null
+    },
+    "BNBUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/BNBUSDT_funding_raw.json",
+      "checksum": "1f2054b23a51bfcda4ac60474e4524414a6dcad267f1934d0c3e6ffdc79ab0b6",
+      "error": null
+    },
+    "XRPUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/XRPUSDT_funding_raw.json",
+      "checksum": "0d45dcf2538572f001f1adbaf9a03535b9f3a0ed09b8a696fdd435e74f03f355",
+      "error": null
+    },
+    "DOGEUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/DOGEUSDT_funding_raw.json",
+      "checksum": "188304e81e73a61ddcb45fe9dd7c39d134ac05161e6ea3a1c124c9d355879e9b",
+      "error": null
+    },
+    "ADAUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/ADAUSDT_funding_raw.json",
+      "checksum": "5d096d0850be8b55fb3c1dd4ee816ca0b065d6c6838668e18d81e140948172c0",
+      "error": null
+    },
+    "LINKUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/staging/okx/LINKUSDT_funding_raw.json",
+      "checksum": "975f8cb7b4301b84ece54323149147c012c3a04480f79ae5d27c7100d684ac72",
+      "error": null
+    }
+  },
+  "status": "PASS",
+  "symbols_with_trades": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "DOGEUSDT",
+    "ADAUSDT",
+    "LINKUSDT"
+  ]
+}

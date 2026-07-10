@@ -1,0 +1,5 @@
+cost_multiplier,fee_per_trade_R,cost_adjusted_R,verdict
+1x,0.052388,0.006288,PASS
+2x,0.104776,-0.046100,FAIL
+5x,0.261940,-0.203265,FAIL
+10x,0.523880,-0.465205,FAIL

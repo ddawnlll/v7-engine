@@ -24,6 +24,7 @@ from alphaforge.features.pipeline import (
     PIPELINE_VERSION,
     cached_compute_features,
     compute_features,
+    compute_time_features_group,
 )
 
 # OrderBook microstructure features (AGGRESSIVE_SCALP primary, all modes supported)
@@ -262,4 +263,6 @@ __all__ = [
     "SWING_BASIS_WINDOW",
     "SCALP_BASIS_WINDOW",
     "AGGRESSIVE_SCALP_BASIS_WINDOW",
+    # Time Features (S3 — calendar/time-based features)
+    "compute_time_features_group",
 ]

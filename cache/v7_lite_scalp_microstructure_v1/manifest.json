@@ -1,0 +1,43 @@
+{
+  "dataset_name": "V7_LITE_SCALP_MICROSTRUCTURE_V1",
+  "created_at": "2026-07-09T07:59:46.974461+00:00",
+  "root": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_microstructure_v1",
+  "permanent_size_bytes": 69070851,
+  "permanent_size_gb": 0.06,
+  "symbols_total": 56,
+  "aggtrade_symbols": [],
+  "timeframes": [
+    "1h",
+    "4h"
+  ],
+  "date_range": {
+    "start": "2021-12-31",
+    "end": "2026-07-09"
+  },
+  "feature_groups": {
+    "ohlcv": {
+      "1h": 2095512,
+      "4h": 523891
+    },
+    "derivatives": {
+      "funding": 680302,
+      "oi": 680302,
+      "premium": 680302,
+      "taker": 0
+    },
+    "microstructure": {
+      "blocked": true,
+      "reason": "Binance API geo-blocked HTTP 451"
+    }
+  },
+  "storage_cap_bytes": 107374182400,
+  "leakage_status": "AUDITED_SAFE",
+  "quality_status": "pass=3, warn=2, fail=0",
+  "central_pipeline_ready": true,
+  "blockers": [
+    "Binance API geo-blocked (HTTP 451)",
+    "No 15m data",
+    "No aggTrade features",
+    "No mark price klines"
+  ]
+}

@@ -158,6 +158,18 @@ class DiscoveryConfig:
     random_seed: int = 42
     """Random seed for reproducibility."""
 
+    execution_mode: str = "TAKER"
+    """Execution mode: TAKER / MAKER / HYBRID (Phase E)."""
+
+    maker_fill_assumption: str = "base"
+    """Maker fill probability tier: pessimistic / base / optimistic."""
+
+    holdout_cutoff: str | None = None
+    """ISO date string (e.g. '2026-04-07') for 3-month holdout reservation.
+    When set, all data BEFORE this date is used for training/WFV, and the
+    model is evaluated ONCE on data AFTER this date. Only the final evaluation
+    on holdout data is reported — no retry, no tuning on holdout."""
+
 
 @dataclass
 class DiscoveryResult:

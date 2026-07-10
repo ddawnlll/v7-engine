@@ -1,0 +1,36 @@
+{
+  "run_status": "COMPLETE",
+  "started_at": "2026-07-08T08:27:57+00:00",
+  "updated_at": "2026-07-08T08:46:00+00:00",
+  "elapsed_minutes": 18,
+  "raw_positive_before": 3,
+  "cost_survivors_before": 0,
+  "promotion_candidates_before": 0,
+  "overall_readiness_cap": 45,
+  "cap_reason": "0 cost-adjusted positive alphas",
+  "current_phase": "CONTINUATION",
+  "completed_tasks": [
+    "SIMULATION_ENTRYPOINT_DISCOVERY",
+    "CENTRAL_SIM_BRIDGE_P0_IMPLEMENTED",
+    "CENTRAL_SIM_BRIDGE_ADAPTER_PLAN",
+    "CENTRAL_SIM_BRIDGE_STATUS",
+    "PROXY_RETEST_UNLOCK_STATUS",
+    "TRUTH_V6_REPLAY_PLAN",
+    "TRUTH_V6_TRADE_LOG_PROBE",
+    "BB_POSITION_V2_REALITY_CHECK"
+  ],
+  "blocked_tasks": [
+    "TRUTH_V6_TRADE_LOG_REGEN (needs ~20-line pipeline hook, run takes 5-30 min)",
+    "PROXY_RETEST_ALL_33 (needs FACTOR_SIGNAL_EVENTS.csv, which needs lib.data_lake.gateway)",
+    "BB_POSITION_V2_RERUN (needs discovery pipeline, ~30 min compute)"
+  ],
+  "genuine_implementations": {
+    "central_sim_bridge_p0": "experiments/v7_lite/central_sim_bridge_p0.py — tested with real BTCUSDT data, produces central simulation results",
+    "truth_v6_trade_log_probe": "experiments/v7_lite/truth_v6_trade_log_probe.py — verified pipeline works end-to-end, identified exact hook for trade log export"
+  },
+  "metric_changes": {
+    "raw_positive_alpha_count": { "before": 3, "after": 3, "delta": 0 },
+    "cost_survivor_candidate_count": { "before": 0, "after": 0, "delta": 0 },
+    "promotion_candidate_count": { "before": 0, "after": 0, "delta": 0 }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "events_input_count": 40091,
+  "events_processed_count": 40090,
+  "central_sim_rows_count": 40090,
+  "raw_positive_directional_trades": 18122,
+  "cost_adjusted_positive_trades": 17912,
+  "mean_directional_R": -0.068699,
+  "cost_adjusted_mean_R": -0.121087,
+  "best_action_distribution": {
+    "NO_TRADE": 17140,
+    "AMBIGUOUS_STATE": 9667,
+    "SHORT_NOW": 6737,
+    "LONG_NOW": 6546
+  },
+  "factor_stats": {
+    "breakdown_n_low": {
+      "count": 7502,
+      "mean_R": -0.084278,
+      "raw_positive": 3291,
+      "cost_adj_mean": -0.136666
+    },
+    "volume_zscore": {
+      "count": 3692,
+      "mean_R": -0.047251,
+      "raw_positive": 1708,
+      "cost_adj_mean": -0.099639
+    },
+    "ret_24h_rank": {
+      "count": 2523,
+      "mean_R": -0.076512,
+      "raw_positive": 1124,
+      "cost_adj_mean": -0.1289
+    },
+    "ret_4h_rank": {
+      "count": 4525,
+      "mean_R": -0.039281,
+      "raw_positive": 2099,
+      "cost_adj_mean": -0.091669
+    },
+    "reversal_4h_zscore": {
+      "count": 1756,
+      "mean_R": -0.074359,
+      "raw_positive": 788,
+      "cost_adj_mean": -0.126747
+    },
+    "trend_pullback_ema": {
+      "count": 3494,
+      "mean_R": -0.076395,
+      "raw_positive": 1582,
+      "cost_adj_mean": -0.128783
+    },
+    "ret_12h_rank": {
+      "count": 2993,
+      "mean_R": -0.036821,
+      "raw_positive": 1389,
+      "cost_adj_mean": -0.089209
+    },
+    "ret_1h_rank": {
+      "count": 5653,
+      "mean_R": -0.083593,
+      "raw_positive": 2512,
+      "cost_adj_mean": -0.135981
+    },
+    "reversal_1h_zscore": {
+      "count": 2707,
+      "mean_R": -0.072321,
+      "raw_positive": 1212,
+      "cost_adj_mean": -0.124709
+    },
+    "range_zscore": {
+      "count": 1408,
+      "mean_R": -0.061024,
+      "raw_positive": 647,
+      "cost_adj_mean": -0.113412
+    },
+    "compression_breakout_regime": {
+      "count": 1266,
+      "mean_R": -0.066866,
+      "raw_positive": 598,
+      "cost_adj_mean": -0.119254
+    },
+    "spread_contraction_signal": {
+      "count": 2568,
+      "mean_R": -0.089506,
+      "raw_positive": 1172,
+      "cost_adj_mean": -0.141894
+    }
+  },
+  "cost_per_trade_R": 0.052388
+}

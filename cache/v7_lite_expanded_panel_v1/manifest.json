@@ -1,0 +1,585 @@
+{
+  "created_at": "2026-07-09T07:15:35.281075+00:00",
+  "version": "v1",
+  "description": "V7-Lite expanded panel cache for specialist alpha discovery",
+  "symbols_count": 56,
+  "symbols": [
+    "AAVEUSDT",
+    "ADAUSDT",
+    "ALGOUSDT",
+    "APEUSDT",
+    "APTUSDT",
+    "ARBUSDT",
+    "ATOMUSDT",
+    "AVAXUSDT",
+    "AXSUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "BTCUSDT",
+    "COMPUSDT",
+    "CRVUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "EOSUSDT",
+    "ETCUSDT",
+    "ETHUSDT",
+    "FILUSDT",
+    "FTMUSDT",
+    "GALAUSDT",
+    "GRTUSDT",
+    "HBARUSDT",
+    "ICPUSDT",
+    "IMXUSDT",
+    "INJUSDT",
+    "KAVAUSDT",
+    "KSMUSDT",
+    "LDOUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "MANAUSDT",
+    "MKRUSDT",
+    "NEARUSDT",
+    "OPUSDT",
+    "QNTUSDT",
+    "RUNEUSDT",
+    "SANDUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "STXUSDT",
+    "SUIUSDT",
+    "THETAUSDT",
+    "TIAUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "WIFUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "YFIUSDT",
+    "ZECUSDT",
+    "ZILUSDT",
+    "ZRXUSDT"
+  ],
+  "timeframe": "1h",
+  "fields": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume"
+  ],
+  "output_files": [
+    "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_expanded_panel_v1/panel_v7lite_expanded_open.parquet",
+    "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_expanded_panel_v1/panel_v7lite_expanded_high.parquet",
+    "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_expanded_panel_v1/panel_v7lite_expanded_low.parquet",
+    "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_expanded_panel_v1/panel_v7lite_expanded_close.parquet",
+    "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_expanded_panel_v1/panel_v7lite_expanded_volume.parquet"
+  ],
+  "panel_metadata": [
+    {
+      "symbol": "AAVEUSDT",
+      "filename": "AAVEUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/AAVEUSDT/AAVEUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "filename": "ADAUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/ADAUSDT/ADAUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "ALGOUSDT",
+      "filename": "ALGOUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/ALGOUSDT/ALGOUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "APEUSDT",
+      "filename": "APEUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/APEUSDT/APEUSDT_1h.parquet",
+      "rows": 37593,
+      "start": "1647529200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "APTUSDT",
+      "filename": "APTUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/APTUSDT/APTUSDT_1h.parquet",
+      "rows": 32422,
+      "start": "1666144800000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "ARBUSDT",
+      "filename": "ARBUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/ARBUSDT/ARBUSDT_1h.parquet",
+      "rows": 28689,
+      "start": "1679583600000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "ATOMUSDT",
+      "filename": "ATOMUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/ATOMUSDT/ATOMUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "AVAXUSDT",
+      "filename": "AVAXUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/AVAXUSDT/AVAXUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "AXSUSDT",
+      "filename": "AXSUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/AXSUSDT/AXSUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "BCHUSDT",
+      "filename": "BCHUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/BCHUSDT/BCHUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "filename": "BNBUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/BNBUSDT/BNBUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "filename": "BTCUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/BTCUSDT/BTCUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "COMPUSDT",
+      "filename": "COMPUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/COMPUSDT/COMPUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "CRVUSDT",
+      "filename": "CRVUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/CRVUSDT/CRVUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "filename": "DOGEUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/DOGEUSDT/DOGEUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "DOTUSDT",
+      "filename": "DOTUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/DOTUSDT/DOTUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "EOSUSDT",
+      "filename": "EOSUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/EOSUSDT/EOSUSDT_1h.parquet",
+      "rows": 29674,
+      "start": "1640995200000",
+      "end": "1747818000000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "ETCUSDT",
+      "filename": "ETCUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/ETCUSDT/ETCUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "filename": "ETHUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/ETHUSDT/ETHUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "FILUSDT",
+      "filename": "FILUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/FILUSDT/FILUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "FTMUSDT",
+      "filename": "FTMUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/FTMUSDT/FTMUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "GALAUSDT",
+      "filename": "GALAUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/GALAUSDT/GALAUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "GRTUSDT",
+      "filename": "GRTUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/GRTUSDT/GRTUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "HBARUSDT",
+      "filename": "HBARUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/HBARUSDT/HBARUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "ICPUSDT",
+      "filename": "ICPUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/ICPUSDT/ICPUSDT_1h.parquet",
+      "rows": 38776,
+      "start": "1640998800000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "IMXUSDT",
+      "filename": "IMXUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/IMXUSDT/IMXUSDT_1h.parquet",
+      "rows": 38300,
+      "start": "1644548400000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "INJUSDT",
+      "filename": "INJUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/INJUSDT/INJUSDT_1h.parquet",
+      "rows": 33934,
+      "start": "1660701600000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "KAVAUSDT",
+      "filename": "KAVAUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/KAVAUSDT/KAVAUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "KSMUSDT",
+      "filename": "KSMUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/KSMUSDT/KSMUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "LDOUSDT",
+      "filename": "LDOUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/LDOUSDT/LDOUSDT_1h.parquet",
+      "rows": 33060,
+      "start": "1663848000000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "LINKUSDT",
+      "filename": "LINKUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/LINKUSDT/LINKUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "LTCUSDT",
+      "filename": "LTCUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/LTCUSDT/LTCUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "MANAUSDT",
+      "filename": "MANAUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/MANAUSDT/MANAUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "MKRUSDT",
+      "filename": "MKRUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/MKRUSDT/MKRUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "NEARUSDT",
+      "filename": "NEARUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/NEARUSDT/NEARUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "OPUSDT",
+      "filename": "OPUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/OPUSDT/OPUSDT_1h.parquet",
+      "rows": 35770,
+      "start": "1654092000000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "QNTUSDT",
+      "filename": "QNTUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/QNTUSDT/QNTUSDT_1h.parquet",
+      "rows": 32398,
+      "start": "1666231200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "RUNEUSDT",
+      "filename": "RUNEUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/RUNEUSDT/RUNEUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "SANDUSDT",
+      "filename": "SANDUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/SANDUSDT/SANDUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "SNXUSDT",
+      "filename": "SNXUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/SNXUSDT/SNXUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "SOLUSDT",
+      "filename": "SOLUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/SOLUSDT/SOLUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "STXUSDT",
+      "filename": "STXUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/STXUSDT/STXUSDT_1h.parquet",
+      "rows": 29410,
+      "start": "1676988000000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "SUIUSDT",
+      "filename": "SUIUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/SUIUSDT/SUIUSDT_1h.parquet",
+      "rows": 27704,
+      "start": "1683129600000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "THETAUSDT",
+      "filename": "THETAUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/THETAUSDT/THETAUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "TIAUSDT",
+      "filename": "TIAUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/TIAUSDT/TIAUSDT_1h.parquet",
+      "rows": 23358,
+      "start": "1698775200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "TRXUSDT",
+      "filename": "TRXUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/TRXUSDT/TRXUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "UNIUSDT",
+      "filename": "UNIUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/UNIUSDT/UNIUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "VETUSDT",
+      "filename": "VETUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/VETUSDT/VETUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "WIFUSDT",
+      "filename": "WIFUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/WIFUSDT/WIFUSDT_1h.parquet",
+      "rows": 21466,
+      "start": "1705586400000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "XLMUSDT",
+      "filename": "XLMUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/XLMUSDT/XLMUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "XMRUSDT",
+      "filename": "XMRUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/XMRUSDT/XMRUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "filename": "XRPUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/XRPUSDT/XRPUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "YFIUSDT",
+      "filename": "YFIUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/YFIUSDT/YFIUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "ZECUSDT",
+      "filename": "ZECUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/ZECUSDT/ZECUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "ZILUSDT",
+      "filename": "ZILUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/ZILUSDT/ZILUSDT_1h.parquet",
+      "rows": 39287,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    },
+    {
+      "symbol": "ZRXUSDT",
+      "filename": "ZRXUSDT_1h.parquet",
+      "source_path": "/teamspace/studios/this_studio/v7-engine/data/raw/ZRXUSDT/ZRXUSDT_1h.parquet",
+      "rows": 39408,
+      "start": "1640995200000",
+      "end": "1782860400000",
+      "columns": "timestamp,open,high,low,close,volume,symbol"
+    }
+  ]
+}

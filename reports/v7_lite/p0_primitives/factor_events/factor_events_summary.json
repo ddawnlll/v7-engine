@@ -1,0 +1,28 @@
+{
+  "run_timestamp": "2026-07-08T09:23:39Z",
+  "total_events": 40099,
+  "factor_count": 12,
+  "symbol_count": 4,
+  "factor_counts": {
+    "breakdown_n_low": 7503,
+    "volume_zscore": 3692,
+    "ret_24h_rank": 2523,
+    "ret_4h_rank": 4526,
+    "reversal_4h_zscore": 1756,
+    "trend_pullback_ema": 3495,
+    "ret_12h_rank": 2994,
+    "ret_1h_rank": 5655,
+    "reversal_1h_zscore": 2708,
+    "range_zscore": 1409,
+    "compression_breakout_regime": 1266,
+    "spread_contraction_signal": 2572
+  },
+  "symbol_counts": {
+    "BTCUSDT": 9665,
+    "ETHUSDT": 10131,
+    "SOLUSDT": 10135,
+    "BNBUSDT": 10168
+  },
+  "elapsed_seconds": 55.44,
+  "csv_path": "/teamspace/studios/this_studio/v7-engine/reports/v7_lite/p0_primitives/factor_events/FACTOR_SIGNAL_EVENTS.csv"
+}

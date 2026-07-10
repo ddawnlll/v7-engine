@@ -1,0 +1,316 @@
+{
+  "started_at": "2026-07-09T11:30:40.612170+00:00",
+  "reachability": {
+    "reachable": true,
+    "latency_ms": 265.37,
+    "error": null
+  },
+  "trades": {
+    "BTCUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/BTCUSDT_trades_raw.json",
+      "checksum": "56ce25e42119807613c10ce1d70b2461a0e07404f15a82bed28a79340025de57",
+      "error": null
+    },
+    "ETHUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/ETHUSDT_trades_raw.json",
+      "checksum": "ebdd63734dc9ba32eca2525b2a8235270da22ff5487442d469cdd79e2292c821",
+      "error": null
+    },
+    "SOLUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/SOLUSDT_trades_raw.json",
+      "checksum": "804d181ded7fc25ca7ccec35a289c39d90bc6bf981a46dd18080aac0d788b99e",
+      "error": null
+    },
+    "BNBUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/BNBUSDT_trades_raw.json",
+      "checksum": "4793de04b49088ddb159396b801e91798846aab48375783c4e5151021233d628",
+      "error": null
+    },
+    "XRPUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/XRPUSDT_trades_raw.json",
+      "checksum": "5478be030cc408bd7ef48735e8b41f4b290b9b94c2c20ca7d5e208344be3617d",
+      "error": null
+    },
+    "DOGEUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/DOGEUSDT_trades_raw.json",
+      "checksum": "4a964609771179ab248c964becf780c33a5cdd0a045c81fbc3377c42bb144ca2",
+      "error": null
+    },
+    "ADAUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/ADAUSDT_trades_raw.json",
+      "checksum": "20b4112e01ce65c0b7b06f90c6d89add09c8e065b7123fa0aa7dd473027a14c1",
+      "error": null
+    },
+    "LINKUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/LINKUSDT_trades_raw.json",
+      "checksum": "d7040a5e133ca48e3bff8e8e8b2cf1269dedf688a161c9ed5bcbaf44cd769cd6",
+      "error": null
+    },
+    "AVAXUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/AVAXUSDT_trades_raw.json",
+      "checksum": "477484daccd1a2ba2e3a76f55aeabbdec5093dcdfd399c065621317aff13ad2c",
+      "error": null
+    },
+    "DOTUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/DOTUSDT_trades_raw.json",
+      "checksum": "ee8c6e93c45a4ef26ebf6c755ed9f1b3664d6afb5efaaa669a5500745023e162",
+      "error": null
+    },
+    "LTCUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/LTCUSDT_trades_raw.json",
+      "checksum": "b7e94829c7abc9cb7f30c5bda235d8bc85185dd3db1ca54d6ca8b67e99289c51",
+      "error": null
+    },
+    "BCHUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/BCHUSDT_trades_raw.json",
+      "checksum": "392fff0642333ddd19c9b34bed1ab85f878dafa0efa7e59cc14879d089536cf1",
+      "error": null
+    },
+    "NEARUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/NEARUSDT_trades_raw.json",
+      "checksum": "ca97b0472177e5e211c2c9cba5638a66a75bd803798c4ecae8deb149f3b03ce6",
+      "error": null
+    },
+    "APTUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/APTUSDT_trades_raw.json",
+      "checksum": "d613f59ac1c3368fa444f394db594170ecf9396fd3df8f196bf22ce979dfa8e3",
+      "error": null
+    },
+    "ARBUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/ARBUSDT_trades_raw.json",
+      "checksum": "54a48b4e25eaa948e94bcd7c079d2d718cbd319eb14aed37668cee3df9c2da64",
+      "error": null
+    },
+    "OPUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/OPUSDT_trades_raw.json",
+      "checksum": "db918989d69b382187838be396fa6e23530970a74fc21b911e9f47c27aaf04f2",
+      "error": null
+    },
+    "FILUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/FILUSDT_trades_raw.json",
+      "checksum": "3797f30df3f131db9633890ffe511390aaa27ca8495eda87661340f14a4f9313",
+      "error": null
+    },
+    "ATOMUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/ATOMUSDT_trades_raw.json",
+      "checksum": "5c76f19f5bdeeca22a672213bdc3b4a9f737f013671cfbad77ff7b9749ea14dc",
+      "error": null
+    },
+    "UNIUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/UNIUSDT_trades_raw.json",
+      "checksum": "25535de8c62d787c79f78c980b3c1a72c72ca9f41976d549fdb86f5b7afe9b21",
+      "error": null
+    },
+    "SUIUSDT": {
+      "status": "PASS",
+      "rows": 5000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/SUIUSDT_trades_raw.json",
+      "checksum": "4fbfe3b0fbed681b9b386592bb2facc9abe1d53c9f9785646f07f9413b73edc3",
+      "error": null
+    }
+  },
+  "funding": {
+    "BTCUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/BTCUSDT_funding_raw.json",
+      "checksum": "2c2d8ef468d58be35e67cf1e53231712863d7bbe382e61a1d8dca04feaef73a2",
+      "error": null
+    },
+    "ETHUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/ETHUSDT_funding_raw.json",
+      "checksum": "80c5d9921799f296aec904efc5d144f67f4dd4a7078a5e30cdca9bb06030e4df",
+      "error": null
+    },
+    "SOLUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/SOLUSDT_funding_raw.json",
+      "checksum": "4c298cace29b2132933b13c8bd8d93990e35c7733fdf863fc685698aba143e2f",
+      "error": null
+    },
+    "BNBUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/BNBUSDT_funding_raw.json",
+      "checksum": "3aedbdd6b3ce0dd1aac5b7737d3756d747dd5346ab8e401044f23daded7dff5d",
+      "error": null
+    },
+    "XRPUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/XRPUSDT_funding_raw.json",
+      "checksum": "d0894f997d0f4b8d7495f4667ad2c675c71712dc5ac7bcadfab87b75cbe5e119",
+      "error": null
+    },
+    "DOGEUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/DOGEUSDT_funding_raw.json",
+      "checksum": "ef2d703d9ba9ab3083f4bc309585666fbda335cdacaa64cd75bd7d22bbd87419",
+      "error": null
+    },
+    "ADAUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/ADAUSDT_funding_raw.json",
+      "checksum": "4c13f049cf9288c140f4451bae5421d7d0d15568b5061bb00a2c6c390341a6c9",
+      "error": null
+    },
+    "LINKUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/LINKUSDT_funding_raw.json",
+      "checksum": "95150b1f2c1a658c1140b1cec2c7ace0a82f5794e7fbf90db1c6056aafa63be7",
+      "error": null
+    },
+    "AVAXUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/AVAXUSDT_funding_raw.json",
+      "checksum": "ded5c94685e37affff932c50a029b19457e28f8e974ffb3461ba10c1ad36b552",
+      "error": null
+    },
+    "DOTUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/DOTUSDT_funding_raw.json",
+      "checksum": "d8f520f18b3dc3dbf064b34f68f00e296bb06410ada7b90d2ad132daf45b0feb",
+      "error": null
+    },
+    "LTCUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/LTCUSDT_funding_raw.json",
+      "checksum": "50221ea30ae195873e590172df667ed52478f39f1a168707749e74ef96b47aaa",
+      "error": null
+    },
+    "BCHUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/BCHUSDT_funding_raw.json",
+      "checksum": "a78f8147c61c240097ad43b8c5125d6db8114bebeef81843a6e3399661d125c3",
+      "error": null
+    },
+    "NEARUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/NEARUSDT_funding_raw.json",
+      "checksum": "cbb89e294ea25b9cd71a92685adc8856369f29ed4b7ffa420900a163de892a71",
+      "error": null
+    },
+    "APTUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/APTUSDT_funding_raw.json",
+      "checksum": "02f7d3132a06ab5f63e1c5b75bb19042d48ea22ab8715047109d546f614b4492",
+      "error": null
+    },
+    "ARBUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/ARBUSDT_funding_raw.json",
+      "checksum": "f3bdeb2fa2bfe09d9d890bab7800d6c771238adf5fe284315ef6cec090752b2b",
+      "error": null
+    },
+    "OPUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/OPUSDT_funding_raw.json",
+      "checksum": "eea118468b35a8caa7c398a61d51bcbbf42be2256b9b6f67ef381326f255b2d1",
+      "error": null
+    },
+    "FILUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/FILUSDT_funding_raw.json",
+      "checksum": "64d161005a4ff1f9fb64646abe38ce4ce19c1bc77c902e817fdf931b9f8430f2",
+      "error": null
+    },
+    "ATOMUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/ATOMUSDT_funding_raw.json",
+      "checksum": "1946ceabafc4a921ab48870bade11d5ec63890ff2fbbcc1904f0c02ef257b1a3",
+      "error": null
+    },
+    "UNIUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/UNIUSDT_funding_raw.json",
+      "checksum": "67e294a8db36f8c3c23d1e43323a938760c8f3ce53e6279711026f7dad655cf9",
+      "error": null
+    },
+    "SUIUSDT": {
+      "status": "PASS",
+      "rows": 5,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p2/staging/okx/SUIUSDT_funding_raw.json",
+      "checksum": "328efa454535aad36746fa785db6755f70c540d2e569f5443799bfdb01391940",
+      "error": null
+    }
+  },
+  "symbols_with_trades": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "DOGEUSDT",
+    "ADAUSDT",
+    "LINKUSDT",
+    "AVAXUSDT",
+    "DOTUSDT",
+    "LTCUSDT",
+    "BCHUSDT",
+    "NEARUSDT",
+    "APTUSDT",
+    "ARBUSDT",
+    "OPUSDT",
+    "FILUSDT",
+    "ATOMUSDT",
+    "UNIUSDT",
+    "SUIUSDT"
+  ],
+  "status": "PASS",
+  "ended_at": "2026-07-09T11:40:22.946614+00:00"
+}

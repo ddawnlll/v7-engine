@@ -1,0 +1,279 @@
+{
+  "registry_size": 25,
+  "confirmed_misdeclared": 13,
+  "not_misdeclared": 12,
+  "unclear": 0,
+  "results": [
+    {
+      "factor_name": "breakdown_n_low",
+      "current_declared_direction": "long",
+      "expected_direction": "short",
+      "evidence": "IC sign=negative (-0.0453), direction=long \u2014 INCONSISTENT \u2717",
+      "best_ic_val": -0.045254,
+      "ic_sign": "negative",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "breakout_n_high",
+      "current_declared_direction": "unstable",
+      "expected_direction": "unstable",
+      "evidence": "Direction-agnostic or unstable by design",
+      "classification": "NOT_MISDECLARED"
+    },
+    {
+      "factor_name": "btc_downtrend_breakdown_short",
+      "current_declared_direction": "short",
+      "expected_direction": "long",
+      "evidence": "IC sign=unknown (0.0000), direction=short \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0,
+      "ic_sign": "unknown",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "btc_lead_lag_alt_long",
+      "current_declared_direction": "unstable",
+      "expected_direction": "unstable",
+      "evidence": "Direction-agnostic or unstable by design",
+      "classification": "NOT_MISDECLARED"
+    },
+    {
+      "factor_name": "btc_lead_lag_alt_short",
+      "current_declared_direction": "unstable",
+      "expected_direction": "unstable",
+      "evidence": "Direction-agnostic or unstable by design",
+      "classification": "NOT_MISDECLARED"
+    },
+    {
+      "factor_name": "btc_uptrend_pullback_long",
+      "current_declared_direction": "long",
+      "expected_direction": "short",
+      "evidence": "IC sign=unknown (0.0000), direction=long \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0,
+      "ic_sign": "unknown",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "compression_breakout_regime",
+      "current_declared_direction": "unstable",
+      "expected_direction": "unstable",
+      "evidence": "Direction-agnostic or unstable by design",
+      "classification": "NOT_MISDECLARED"
+    },
+    {
+      "factor_name": "compression_expansion",
+      "current_declared_direction": "agnostic",
+      "expected_direction": "agnostic",
+      "evidence": "Direction-agnostic or unstable by design",
+      "classification": "NOT_MISDECLARED"
+    },
+    {
+      "factor_name": "corwin_schultz_spread_proxy",
+      "current_declared_direction": "short",
+      "expected_direction": "long",
+      "evidence": "IC sign=unknown (0.0000), direction=short \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0,
+      "ic_sign": "unknown",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "funding_extreme_long",
+      "current_declared_direction": "long",
+      "expected_direction": "short",
+      "evidence": "IC sign=unknown (0.0000), direction=long \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0,
+      "ic_sign": "unknown",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "funding_extreme_short",
+      "current_declared_direction": "short",
+      "expected_direction": "long",
+      "evidence": "IC sign=unknown (0.0000), direction=short \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0,
+      "ic_sign": "unknown",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "funding_momentum_fade",
+      "current_declared_direction": "long",
+      "expected_direction": "short",
+      "evidence": "IC sign=unknown (0.0000), direction=long \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0,
+      "ic_sign": "unknown",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "range_zscore",
+      "current_declared_direction": "long",
+      "expected_direction": "long",
+      "evidence": "IC sign=positive (0.0263), direction=long \u2014 CONSISTENT \u2713",
+      "best_ic_val": 0.026273,
+      "ic_sign": "positive",
+      "ic_consistent": true,
+      "classification": "NOT_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": false
+    },
+    {
+      "factor_name": "ret_12h_rank",
+      "current_declared_direction": "short",
+      "expected_direction": "long",
+      "evidence": "IC sign=positive (0.0242), direction=short \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0.024166,
+      "ic_sign": "positive",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "ret_1h_rank",
+      "current_declared_direction": "short",
+      "expected_direction": "long",
+      "evidence": "IC sign=positive (0.0278), direction=short \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0.027785,
+      "ic_sign": "positive",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "ret_24h_rank",
+      "current_declared_direction": "short",
+      "expected_direction": "long",
+      "evidence": "IC sign=positive (0.0292), direction=short \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0.029173,
+      "ic_sign": "positive",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "ret_4h_rank",
+      "current_declared_direction": "short",
+      "expected_direction": "long",
+      "evidence": "IC sign=positive (0.0291), direction=short \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0.029099,
+      "ic_sign": "positive",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "reversal_1h_zscore",
+      "current_declared_direction": "long",
+      "expected_direction": "long",
+      "evidence": "IC sign=positive (0.0278), direction=long \u2014 CONSISTENT \u2713",
+      "best_ic_val": 0.027785,
+      "ic_sign": "positive",
+      "ic_consistent": true,
+      "classification": "NOT_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": false
+    },
+    {
+      "factor_name": "reversal_4h_zscore",
+      "current_declared_direction": "long",
+      "expected_direction": "long",
+      "evidence": "IC sign=positive (0.0291), direction=long \u2014 CONSISTENT \u2713",
+      "best_ic_val": 0.029099,
+      "ic_sign": "positive",
+      "ic_consistent": true,
+      "classification": "NOT_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": false
+    },
+    {
+      "factor_name": "session_volatility_regime",
+      "current_declared_direction": "unstable",
+      "expected_direction": "unstable",
+      "evidence": "Direction-agnostic or unstable by design",
+      "classification": "NOT_MISDECLARED"
+    },
+    {
+      "factor_name": "spread_contraction_signal",
+      "current_declared_direction": "long",
+      "expected_direction": "short",
+      "evidence": "IC sign=unknown (0.0000), direction=long \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0,
+      "ic_sign": "unknown",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    },
+    {
+      "factor_name": "trend_pullback_ema",
+      "current_declared_direction": "unstable",
+      "expected_direction": "unstable",
+      "evidence": "Direction-agnostic or unstable by design",
+      "classification": "NOT_MISDECLARED"
+    },
+    {
+      "factor_name": "volume_climax_reversal_long",
+      "current_declared_direction": "unstable",
+      "expected_direction": "unstable",
+      "evidence": "Direction-agnostic or unstable by design",
+      "classification": "NOT_MISDECLARED"
+    },
+    {
+      "factor_name": "volume_climax_reversal_short",
+      "current_declared_direction": "unstable",
+      "expected_direction": "unstable",
+      "evidence": "Direction-agnostic or unstable by design",
+      "classification": "NOT_MISDECLARED"
+    },
+    {
+      "factor_name": "volume_zscore",
+      "current_declared_direction": "short",
+      "expected_direction": "long",
+      "evidence": "IC sign=positive (0.0352), direction=short \u2014 INCONSISTENT \u2717",
+      "best_ic_val": 0.035194,
+      "ic_sign": "positive",
+      "ic_consistent": false,
+      "classification": "CONFIRMED_MISDECLARED",
+      "old_raw_R": 0,
+      "old_trade_count": 0,
+      "retest_required": true
+    }
+  ]
+}

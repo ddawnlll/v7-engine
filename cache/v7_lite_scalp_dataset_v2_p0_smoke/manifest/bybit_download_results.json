@@ -1,0 +1,15 @@
+{
+  "started_at": "2026-07-09T10:21:35.098988+00:00",
+  "ended_at": "2026-07-09T10:21:35.132757+00:00",
+  "reachability": {
+    "reachable": false,
+    "ticker_status": 403,
+    "oi_status": null,
+    "funding_status": null,
+    "error": "HTTP 403",
+    "latency_ms": 28.04
+  },
+  "oi": {},
+  "funding": {},
+  "status": "BLOCKED_BYBIT_UNREACHABLE"
+}

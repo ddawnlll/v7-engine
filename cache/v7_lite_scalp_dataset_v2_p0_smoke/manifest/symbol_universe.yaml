@@ -1,0 +1,24 @@
+- binance: BTCUSDT
+  bybit: BTCUSDT
+  canonical: BTCUSDT
+  funding_interval_hours:
+    bybit: null
+    okx: 8
+  okx: BTC-USDT-SWAP
+  tier: A
+- binance: ETHUSDT
+  bybit: ETHUSDT
+  canonical: ETHUSDT
+  funding_interval_hours:
+    bybit: null
+    okx: 8
+  okx: ETH-USDT-SWAP
+  tier: A
+- binance: SOLUSDT
+  bybit: SOLUSDT
+  canonical: SOLUSDT
+  funding_interval_hours:
+    bybit: null
+    okx: 8
+  okx: SOL-USDT-SWAP
+  tier: A

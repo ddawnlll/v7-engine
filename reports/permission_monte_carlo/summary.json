@@ -1,0 +1,23 @@
+{
+  "verdict": "PASS",
+  "total_trials": 100,
+  "passed": 90,
+  "failed": 0,
+  "skipped": 10,
+  "permission_blocks": 0,
+  "seed": 42,
+  "test_timestamp": "2026-07-07T20:56:28Z",
+  "overnight_safe": true,
+  "categories_tested": {
+    "1": "read/write/edit files",
+    "2": "overwrite logs with : > file",
+    "3": "delete generated temp files with rm -f",
+    "4": "delete generated temp directories with rm -rf",
+    "5": "access /tmp",
+    "6": "access /teamspace/studios/this_studio/v7-engine",
+    "7": "start nohup background python jobs",
+    "8": "kill only generated test PIDs",
+    "9": "append ledger rows",
+    "10": "recover from intentional command failures"
+  }
+}

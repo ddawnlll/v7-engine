@@ -1,0 +1,6 @@
+symbol,feature_group,feature_name,row_count,symbols,start_timestamp,end_timestamp,missing_ratio,duplicate_count,quality_status
+ALL,ohlcv,klines_1h,2095512,56,1640995200000.0,1782860400000.0,0.0,0,QUALITY_PASS
+ALL,ohlcv,klines_4h,523891,56,1640995200000.0,1782849600000.0,0.0,0,QUALITY_PASS
+ALL,derivatives,open_interest,680302,19,1640995200000.0,1782860400000.0,0.2464,0,QUALITY_WARN_LARGE_GAPS
+ALL,derivatives,funding_rate,680302,19,1640995200000.0,1782860400000.0,0.0,0,QUALITY_PASS
+ALL,derivatives,premium_index_klines,680302,19,1640995200000.0,1782860400000.0,0.2681,0,QUALITY_WARN_LARGE_GAPS

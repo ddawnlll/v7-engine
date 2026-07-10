@@ -1,0 +1,59 @@
+{
+  "started_at": "2026-07-09T10:21:23.176869+00:00",
+  "ended_at": "2026-07-09T10:21:35.096445+00:00",
+  "reachability": {
+    "reachable": true,
+    "ticker_status": 200,
+    "trades_status": null,
+    "funding_status": null,
+    "error": null,
+    "latency_ms": 263.18
+  },
+  "trades": {
+    "BTCUSDT": {
+      "status": "PASS",
+      "rows": 500,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_p0_smoke/staging/okx/BTCUSDT_trades_raw.json",
+      "checksum": "2f8bc71cb56cdda200f7634430e05ac499d0aafa47a7af1030471744ee3988b2",
+      "error": null
+    },
+    "ETHUSDT": {
+      "status": "PASS",
+      "rows": 500,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_p0_smoke/staging/okx/ETHUSDT_trades_raw.json",
+      "checksum": "dfd4665310b572976597f83775fa1bb3f76bfc6adee5655c3e351428768eebf0",
+      "error": null
+    },
+    "SOLUSDT": {
+      "status": "PASS",
+      "rows": 500,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_p0_smoke/staging/okx/SOLUSDT_trades_raw.json",
+      "checksum": "f83921d1d35319513ee3fd17697953af29db2a9ccaf85d914b5c27f4f44c754d",
+      "error": null
+    }
+  },
+  "funding": {
+    "BTCUSDT": {
+      "status": "PASS",
+      "rows": 3,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_p0_smoke/staging/okx/BTCUSDT_funding_raw.json",
+      "checksum": "55ae1c27a6615d8cdcbb01dcb821014cb4bc9bcb4e7b1c2c8d318272df2f18c8",
+      "error": null
+    },
+    "ETHUSDT": {
+      "status": "PASS",
+      "rows": 3,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_p0_smoke/staging/okx/ETHUSDT_funding_raw.json",
+      "checksum": "fd31ee552c3bf671bbd2deaebba006d8ce648f009e7451123f42a3d1d044d8e7",
+      "error": null
+    },
+    "SOLUSDT": {
+      "status": "PASS",
+      "rows": 3,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_p0_smoke/staging/okx/SOLUSDT_funding_raw.json",
+      "checksum": "f1cd5253a0dee382c84697a5712fe06de757e6f516c568dad3dbac42fb226d01",
+      "error": null
+    }
+  },
+  "status": "PASS"
+}

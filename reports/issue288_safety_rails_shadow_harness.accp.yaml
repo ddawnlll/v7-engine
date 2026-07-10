@@ -1,0 +1,59 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+title: "Safety Rails & Shadow Harness Skeleton — Issue #288"
+created_at: "2026-07-08"
+task_id: "T-safety-rails-288"
+result: "SUCCESS"
+domain: "runtime"
+summary: >
+  Created safety rails (PositionLimiter, KillSwitch, DrawdownGate, SymbolCap) and
+  shadow harness (ShadowHarness + PaperTrade) under runtime/runtime/safety/ and
+  runtime/runtime/shadow/. 40 unit tests all pass. No external dependencies.
+
+scope_confirmation:
+  requested: >
+    Create safety rails and shadow harness skeleton for V7 Engine under
+    runtime/src/runtime/safety/ and runtime/src/runtime/shadow/ with unit tests.
+  delivered: >
+    Adapted to actual project layout (runtime/runtime/ not runtime/src/runtime/).
+    All 7 modules + 1 test file created and verified.
+
+files_changed:
+  - "runtime/runtime/safety/__init__.py"
+  - "runtime/runtime/safety/position_limiter.py"
+  - "runtime/runtime/safety/kill_switch.py"
+  - "runtime/runtime/safety/drawdown_gate.py"
+  - "runtime/runtime/safety/symbol_cap.py"
+  - "runtime/runtime/shadow/__init__.py"
+  - "runtime/runtime/shadow/harness.py"
+  - "runtime/tests/test_safety_rails.py"
+  - "v7/docs/roadmap.md"
+
+decisions_locked:
+  - "PositionLimitConfig: max_positions=10, max_notional_per_position=50k, max_total_notional=200k"
+  - "KillSwitchConfig: auto-trigger on consecutive_losses and drawdown_pct, timed auto-resume"
+  - "DrawdownGate: configurable thresholds (warn/degrade/block) with hysteresis recovery (1e-6 epsilon)"
+  - "SymbolCapConfig: per-symbol notional, per-symbol count, aggregate notional, max distinct symbols"
+  - "ShadowHarness: PaperTrade dataclass with compare_with_sim stub returning deviation metrics"
+  - "All configs frozen dataclasses, zero external dependencies"
+
+remaining_holds:
+  - "Integration into ExecutionOrchestrator gate chain (safety components not wired to execution path)"
+  - "DrawdownGate equity feed from portfolio snapshot (needs PortfolioRepository integration)"
+  - "ShadowHarness sim_pnl feed from SimulationEngine output"
+  - "KillSwitch persistence (currently in-memory only, needs DB state repo)"
+
+safe_next_step: >
+  Wire safety rails into ExecutionOrchestrator as pre-trade gate chain.
+  KillSwitch.check_active → DrawdownGate.block_new_trades →
+  PositionLimiter.reject_if_over_limit → SymbolCap.check_symbol_exposure.
+
+commands_run:
+  - "PYTHONPATH=/teamspace/studios/this_studio/v7-engine/runtime python3 -m pytest runtime/tests/test_safety_rails.py -v → 40 passed"
+  - "PYTHONPATH=/teamspace/studios/this_studio/v7-engine/runtime python3 -m pytest runtime/tests/test_safety_gates.py -v → 14 passed (existing tests still green)"
+
+evidence:
+  - "40/40 tests pass in test_safety_rails.py"
+  - "14/14 existing test_safety_gates.py tests still pass (no regressions)"
+  - "Floating-point hysteresis edge case caught and fixed (1e-6 epsilon in DrawdownGate)"
+  - "All modules follow project patterns: frozen dataclasses, from __future__ import annotations, no external deps"

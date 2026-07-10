@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "started_at": "2026-07-09T11:12:12.873721+00:00",
+  "ended_at": "2026-07-09T11:12:37.319954+00:00",
+  "ohlcv_rows": 315022,
+  "okx_5m_rows": 11,
+  "okx_15m_rows": 8,
+  "okx_1h_rows": 8,
+  "panel_1h_rows": 315022,
+  "enriched_events": 113477
+}

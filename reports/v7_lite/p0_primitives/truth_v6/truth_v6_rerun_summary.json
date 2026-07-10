@@ -1,0 +1,42 @@
+{
+  "run_timestamp": "2026-07-08T09:18:12Z",
+  "mode": "SCALP",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT"
+  ],
+  "confidence_threshold": 0.55,
+  "folds": 6,
+  "execution_mode": "TAKER",
+  "panel_cache": "/teamspace/studios/this_studio/v7-engine/cache/factor_sprint",
+  "trade_count": 204,
+  "raw_mean_R": 0.058676,
+  "median_R": 0.023637,
+  "std_R": 1.006245,
+  "raw_total_R": 11.969939,
+  "gross_mean_R": 0.111064,
+  "estimated_cost_per_trade_R": 0.052388,
+  "fee_per_trade_R": 0.041804,
+  "slippage_per_trade_R": 0.010584,
+  "cost_adjusted_R": 0.006288,
+  "2x_cost_R": -0.0461,
+  "5x_cost_R": -0.203265,
+  "symbol_count": 3,
+  "symbol_breakdown": {
+    "BNBUSDT": 1,
+    "ETHUSDT": 1,
+    "SOLUSDT": 202
+  },
+  "direction_count": {
+    "LONG": 196,
+    "SHORT": 8
+  },
+  "BTCUSDT_SHORT_trade_count": 0,
+  "BTCUSDT_SHORT_raw_R": 0.0,
+  "BTCUSDT_SHORT_cost_adjusted_R": 0.0,
+  "win_rate": 0.5098,
+  "signal_count": 204,
+  "elapsed_seconds": 62.79
+}

@@ -1,0 +1,48 @@
+- binance: BTCUSDT
+  canonical: BTCUSDT
+  funding_interval_hours:
+    okx: 8
+  okx: BTC-USDT-SWAP
+  tier: A
+- binance: ETHUSDT
+  canonical: ETHUSDT
+  funding_interval_hours:
+    okx: 8
+  okx: ETH-USDT-SWAP
+  tier: A
+- binance: SOLUSDT
+  canonical: SOLUSDT
+  funding_interval_hours:
+    okx: 8
+  okx: SOL-USDT-SWAP
+  tier: A
+- binance: BNBUSDT
+  canonical: BNBUSDT
+  funding_interval_hours:
+    okx: 8
+  okx: BNB-USDT-SWAP
+  tier: A
+- binance: XRPUSDT
+  canonical: XRPUSDT
+  funding_interval_hours:
+    okx: 8
+  okx: XRP-USDT-SWAP
+  tier: A
+- binance: DOGEUSDT
+  canonical: DOGEUSDT
+  funding_interval_hours:
+    okx: 8
+  okx: DOGE-USDT-SWAP
+  tier: A
+- binance: ADAUSDT
+  canonical: ADAUSDT
+  funding_interval_hours:
+    okx: 8
+  okx: ADA-USDT-SWAP
+  tier: A
+- binance: LINKUSDT
+  canonical: LINKUSDT
+  funding_interval_hours:
+    okx: 8
+  okx: LINK-USDT-SWAP
+  tier: A

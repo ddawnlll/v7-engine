@@ -1,0 +1,50 @@
+{
+  "status": "PASS",
+  "started_at": "2026-07-09T10:21:35.219433+00:00",
+  "ended_at": "2026-07-09T10:21:35.483056+00:00",
+  "signal_events_count": 168,
+  "enriched_events_count": 168,
+  "join_results": {
+    "okx_trades": {
+      "status": "PASS",
+      "rows": 168,
+      "source": "synthetic_overlay"
+    },
+    "bybit_oi": {
+      "status": "BLOCKED",
+      "rows": 0
+    },
+    "bybit_funding": {
+      "status": "BLOCKED",
+      "rows": 0
+    }
+  },
+  "leakage_audit": {
+    "asof_backward_join": true,
+    "tolerance": "5min",
+    "direction": "backward",
+    "unknown_delay_flags": {
+      "okx": true,
+      "bybit": true
+    },
+    "stale_flags": {
+      "qc_stale_okx": 0
+    },
+    "join_results": {
+      "okx_trades": {
+        "status": "PASS",
+        "rows": 168,
+        "source": "synthetic_overlay"
+      },
+      "bybit_oi": {
+        "status": "BLOCKED",
+        "rows": 0
+      },
+      "bybit_funding": {
+        "status": "BLOCKED",
+        "rows": 0
+      }
+    }
+  },
+  "output_file": "/teamspace/studios/this_studio/v7-engine/reports/v7_lite/dataset_v2_p0_smoke/enriched_signal_events_sample.csv"
+}

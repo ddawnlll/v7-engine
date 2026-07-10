@@ -1,0 +1,11 @@
+created_at: '2026-07-09T12:25:19.566950+00:00'
+dataset_id: v7_lite_okx_historical_resolution
+decision: OKX_RECENT_ONLY_NOT_ENOUGH
+fallback_recommendation: Evaluate Tardis.dev free tier for historical trades
+historical_candle_source: AVAILABLE (375 days)
+historical_funding_source: AVAILABLE (33 days)
+historical_trade_source: BLOCKED
+key_blocker: OKX /v5/market/history-trades returns RECENT ONLY data. No public static
+  archives exist.
+sources_probed: 14
+status: PARTIAL_WITH_FALLBACK_SOURCE_IDENTIFIED

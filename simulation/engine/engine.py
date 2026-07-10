@@ -45,6 +45,15 @@ def _build_action_outcome(
     profile: SimulationProfile,
 ) -> ActionOutcome:
     """Build an ActionOutcome from an ExitResult + cost model."""
+    # Resolve execution mode from profile
+    exec_mode = getattr(profile, "execution_mode", "TAKER")
+    maker_fill = getattr(profile, "maker_fill_probability", 0.7)
+    from simulation.contracts.models import ExecutionMode
+    try:
+        execution_mode = ExecutionMode[exec_mode]
+    except KeyError:
+        execution_mode = ExecutionMode.TAKER
+
     fcr, scr, fund_r, tcr = total_cost_r(
         notional=notional,
         entry_price=entry_price,
@@ -52,6 +61,8 @@ def _build_action_outcome(
         stop_multiplier=profile.stop_multiplier,
         funding_rate=getattr(profile, "funding_rate", 0.0),
         holding_bars=exit_result.hold_duration_bars,
+        execution_mode=execution_mode,
+        maker_fill_probability=maker_fill,
     )
     realized_r_net = exit_result.realized_r_gross - tcr
 

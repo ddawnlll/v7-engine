@@ -1,0 +1,38 @@
+{
+  "started_at": "2026-07-08T09:13:57Z",
+  "ended_at": "2026-07-08T09:30:30Z",
+  "status": "COMPLETE_WITH_REAL_RUN_RESULTS",
+  "current_phase": "COMPLETE",
+  "current_task": null,
+  "completed_tasks": ["P0.1", "P0.2", "P0.3"],
+  "P0_1": {
+    "status": "PASS",
+    "verdict": "TRADE_LOG_CREATED_REAL_DATA",
+    "trade_count": 204,
+    "raw_R": 0.058676,
+    "cost_adjusted_R": 0.006288
+  },
+  "P0_2": {
+    "status": "PASS",
+    "verdict": "FACTOR_EVENTS_CREATED_REAL_DATA",
+    "events_count": 40099,
+    "factors": 12,
+    "symbols": 4
+  },
+  "P0_3": {
+    "status": "PASS",
+    "verdict": "CENTRAL_BRIDGE_RAN_REAL_DATA",
+    "events_processed": 40090,
+    "mean_directional_R": -0.0687,
+    "best_factor": "ret_12h_rank",
+    "best_factor_mean_R": -0.0368
+  },
+  "metric_movement": {
+    "cost_adjusted_positive_alpha_count": "0 -> 1",
+    "central_sim_events_processed": "0 -> 40090"
+  },
+  "readiness": {
+    "overall": 45,
+    "hard_cap": "cost_adjusted_positive_alpha_count=1 → max 45%"
+  }
+}

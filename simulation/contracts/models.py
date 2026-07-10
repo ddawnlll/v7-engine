@@ -105,6 +105,10 @@ class SimulationProfile:
     cost_penalty_weight: float = 1.0
     time_penalty_weight: float = 0.3
     funding_rate: float = 0.0
+    # Maker execution profile fields (Phase E S1, additive, default TAKER)
+    execution_mode: str = "TAKER"  # TAKER / MAKER / HYBRID
+    maker_fill_probability: float = 0.7  # Fill probability for MAKER mode
+    maker_fill_assumption: str = "base"  # pessimistic / base / optimistic
 
 
 @dataclass

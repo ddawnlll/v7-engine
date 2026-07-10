@@ -1,0 +1,495 @@
+# Symbol Cluster Map - V7-Lite Dataset Expansion
+# Generated: 2026-07-09T07:12:12.669086+00:00
+
+AI_DATA:
+  description: Ai Data
+  symbols:
+    - symbol: FETUSDT
+      priority: P2_OPTIONAL
+      available: UNAVAILABLE_IN_CURRENT_DATA
+      rows: 0
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: RENDERUSDT
+      priority: P2_OPTIONAL
+      available: UNAVAILABLE_IN_CURRENT_DATA
+      rows: 0
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: OCEANUSDT
+      priority: P2_OPTIONAL
+      available: UNAVAILABLE_IN_CURRENT_DATA
+      rows: 0
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: WLDUSDT
+      priority: P2_OPTIONAL
+      available: UNAVAILABLE_IN_CURRENT_DATA
+      rows: 0
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+
+DEFI:
+  description: Defi
+  symbols:
+    - symbol: UNIUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 78816
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: True
+    - symbol: AAVEUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 39408
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: MKRUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 39287
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: LDOUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 33060
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+
+DERIVATIVES_RICH:
+  description: Derivatives Rich
+  symbols:
+    - symbol: SUIUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 55408
+      liquidity: HIGH
+      cost: LOW
+      has_derivatives: True
+    - symbol: APTUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 64844
+      liquidity: HIGH
+      cost: LOW
+      has_derivatives: True
+    - symbol: FILUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 78574
+      liquidity: HIGH
+      cost: LOW
+      has_derivatives: True
+
+EXCHANGE_INFRA:
+  description: Exchange Infra
+  symbols:
+    - symbol: BNBUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 201408
+      liquidity: HIGH
+      cost: LOW
+      has_derivatives: True
+    - symbol: LINKUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 78816
+      liquidity: HIGH
+      cost: LOW
+      has_derivatives: True
+
+GAMING_METAVERSE:
+  description: Gaming Metaverse
+  symbols:
+    - symbol: AXSUSDT
+      priority: P2_OPTIONAL
+      available: YES
+      rows: 39408
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: SANDUSDT
+      priority: P2_OPTIONAL
+      available: YES
+      rows: 39287
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: MANAUSDT
+      priority: P2_OPTIONAL
+      available: YES
+      rows: 39287
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: GALAUSDT
+      priority: P2_OPTIONAL
+      available: YES
+      rows: 39408
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+
+HIGH_BETA_L1:
+  description: High Beta L1
+  symbols:
+    - symbol: SOLUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 201166
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: True
+    - symbol: AVAXUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 78816
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: True
+    - symbol: NEARUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 39287
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: DOTUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 78816
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: True
+    - symbol: ADAUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 78816
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: True
+    - symbol: OPUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 71540
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: True
+    - symbol: ARBUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 57378
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: True
+
+INFRA_MID:
+  description: Infra Mid
+  symbols:
+    - symbol: ATOMUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 78816
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: True
+    - symbol: KAVAUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 39408
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: KSMUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 39287
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: ALGOUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 39408
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: ICPUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 38776
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: HBARUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 39287
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+
+LAYER2_SCALING:
+  description: Layer2 Scaling
+  symbols:
+    - symbol: IMXUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 38300
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+
+MAJORS:
+  description: Majors
+  symbols:
+    - symbol: BTCUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 201408
+      liquidity: ULTRA_HIGH
+      cost: LOW
+      has_derivatives: True
+    - symbol: ETHUSDT
+      priority: P0_CORE
+      available: YES
+      rows: 201408
+      liquidity: ULTRA_HIGH
+      cost: LOW
+      has_derivatives: True
+
+MEME_RETAIL:
+  description: Meme Retail
+  symbols:
+    - symbol: DOGEUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 78816
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: True
+    - symbol: SHIBUSDT
+      priority: P1_EXPANSION
+      available: UNAVAILABLE_IN_CURRENT_DATA
+      rows: 0
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: PEPEUSDT
+      priority: P1_EXPANSION
+      available: UNAVAILABLE_IN_CURRENT_DATA
+      rows: 0
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: FLOKIUSDT
+      priority: P1_EXPANSION
+      available: UNAVAILABLE_IN_CURRENT_DATA
+      rows: 0
+      liquidity: HIGH
+      cost: MEDIUM
+      has_derivatives: False
+
+OLD_ALT_MID:
+  description: Old Alt Mid
+  symbols:
+    - symbol: XRPUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 78574
+      liquidity: HIGH
+      cost: LOW
+      has_derivatives: True
+    - symbol: LTCUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 78574
+      liquidity: HIGH
+      cost: LOW
+      has_derivatives: True
+    - symbol: BCHUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 78816
+      liquidity: HIGH
+      cost: LOW
+      has_derivatives: True
+    - symbol: ETCUSDT
+      priority: P1_EXPANSION
+      available: YES
+      rows: 39408
+      liquidity: HIGH
+      cost: LOW
+      has_derivatives: False
+
+PRIVACY_MID:
+  description: Privacy Mid
+  symbols:
+    - symbol: XMRUSDT
+      priority: P2_OPTIONAL
+      available: YES
+      rows: 39408
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+    - symbol: ZECUSDT
+      priority: P2_OPTIONAL
+      available: YES
+      rows: 39287
+      liquidity: MEDIUM
+      cost: MEDIUM
+      has_derivatives: False
+
+UNCLASSIFIED:
+  description: Unclassified
+  symbols:
+    - symbol: APEUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 37593
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: COMPUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39408
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: CRVUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39408
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: EOSUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 29674
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: FTMUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39287
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: GRTUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39287
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: INJUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 33934
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: QNTUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 32398
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: RUNEUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39408
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: SNXUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39408
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: STXUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 29410
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: THETAUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39408
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: TIAUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 23358
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: TRXUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39287
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: VETUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39287
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: WIFUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 21466
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: XLMUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39287
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: YFIUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39287
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: ZILUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39287
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False
+    - symbol: ZRXUSDT
+      priority: P3_LATER
+      available: YES
+      rows: 39408
+      liquidity: LOW
+      cost: HIGH
+      has_derivatives: False

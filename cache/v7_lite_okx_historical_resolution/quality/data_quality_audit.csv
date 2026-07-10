@@ -1,0 +1,4 @@
+source,feature_group,symbol,bucket_or_timeframe,row_count,start_ts,end_ts,missing_ratio,duplicate_ts_count,negative_value_count,quality_status,notes
+okx,funding_funding_8h,BTCUSDT,funding_8h,199,1780732800000,1783584000000,0.0,99,67,QUALITY_PASS,"historical funding, 33 days coverage"
+okx,funding_funding_8h,ETHUSDT,funding_8h,199,1780732800000,1783584000000,0.0,99,79,QUALITY_PASS,"historical funding, 33 days coverage"
+okx,funding_funding_8h,SOLUSDT,funding_8h,199,1780732800000,1783584000000,0.0,99,93,QUALITY_PASS,"historical funding, 33 days coverage"

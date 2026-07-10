@@ -1,0 +1,23 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "FAIL"
+scope_confirmation: "Issue #287 — SOL Truth V6 OOS walk-forward + cost stress. SOL edge does NOT survive OOS validation."
+files_changed:
+  - "scripts/v7_lite/sol_oos_test.py"
+  - "reports/v7_lite/sol_oos/SOL_OOS_RESULTS.json"
+  - "reports/v7_lite/sol_oos/SOL_OOS_REPORT.md"
+  - "reports/v7_lite/sol_oos/sol_oos_trade_log.csv"
+decisions_locked:
+  - "SOL Truth V6 edge is noise — KIRMIZI"
+  - "cost_adj_R = -0.049 at 1x cost, fails all stress levels"
+  - "Raw R = +0.003 (essentially zero, p=0.49 vs random)"
+  - "Symbol-specialist mining approach terminated"
+remaining_holds: []
+safe_next_step: "Proceed to #290 (mechanism-gudumlu discovery from scratch)"
+commands_run:
+  - "PYTHONPATH=alphaforge/src:v7/src:. python3 scripts/v7_lite/sol_oos_test.py"
+evidence:
+  - "262 SOL trades, raw_R=+0.003, cost_adj_R=-0.049"
+  - "Fails 1.0x/1.25x/1.5x/2.0x/3.0x/5.0x cost stress"
+  - "z_score=0.22 vs random baseline (p=0.49)"
+  - "Verdict: KIRMIZI"

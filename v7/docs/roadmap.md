@@ -1517,3 +1517,28 @@ GPU path behind `force_gpu=True` opt-in flag.
 ### Reports
 - `simulation/docs/gpu_cuda_migration_plan.md`
 - `reports/accp/accp_v7_gpu_cuda_migration.yaml`
+
+---
+
+## Safety Rails & Shadow Harness Skeleton (Issue #288, 2026-07-08)
+
+**What changed:**
+- Created `runtime/runtime/safety/` package: PositionLimiter, KillSwitch, DrawdownGate, SymbolCap
+- Created `runtime/runtime/shadow/` package: ShadowHarness with PaperTrade tracking and compare_with_sim stub
+- 40 unit tests in `runtime/tests/test_safety_rails.py` — all passing
+- Zero external dependencies; all configs are frozen dataclasses
+
+**Modules delivered:**
+- `position_limiter.py`: PositionLimitConfig + PositionLimiter.reject_if_over_limit() — max_positions, max_notional_per_position, max_total_notional
+- `kill_switch.py`: KillSwitchConfig + KillSwitch.trigger()/release()/is_active()/check_auto_conditions() — auto-trigger on consecutive losses and drawdown, timed auto-resume
+- `drawdown_gate.py`: DrawdownGate.update_equity()/check_drawdown()/block_new_trades() — configurable thresholds (warn/degrade/block), hysteresis recovery
+- `symbol_cap.py`: SymbolCapConfig + SymbolCap.check_symbol_exposure() — per-symbol notional, per-symbol position count, aggregate notional, max distinct symbols
+- `harness.py`: ShadowHarness + PaperTrade — record/close/compare_with_sim (stub)/get_summary
+
+**Lock status:** LOCKED_INITIAL_BASELINE — skeleton implementations ready for integration into execution_orchestrator and autonomous_loop. No live-trading impact yet; these are guard components awaiting wiring.
+
+**Remaining holds:**
+- Integration into ExecutionOrchestrator gate chain (not wired yet)
+- DrawdownGate equity feed from portfolio snapshot (needs portfolio repo integration)
+- ShadowHarness sim_pnl feed from SimulationEngine output
+- KillSwitch persistence (currently in-memory only)

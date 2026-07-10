@@ -1,0 +1,192 @@
+{
+  "started_at": "2026-07-09T11:12:12.311299+00:00",
+  "ended_at": "2026-07-09T11:12:12.872171+00:00",
+  "symbols": {
+    "BTCUSDT": {
+      "symbol": "BTCUSDT",
+      "status": "PASS",
+      "total_input_rows": 3000,
+      "timeframes": {
+        "5m": {
+          "status": "PASS",
+          "rows": 2,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_5m/BTCUSDT_okx_trades_5m.parquet"
+        },
+        "15m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_15m/BTCUSDT_okx_trades_15m.parquet"
+        },
+        "1h": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_1h/BTCUSDT_okx_trades_1h.parquet"
+        }
+      },
+      "error": null
+    },
+    "ETHUSDT": {
+      "symbol": "ETHUSDT",
+      "status": "PASS",
+      "total_input_rows": 3000,
+      "timeframes": {
+        "5m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_5m/ETHUSDT_okx_trades_5m.parquet"
+        },
+        "15m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_15m/ETHUSDT_okx_trades_15m.parquet"
+        },
+        "1h": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_1h/ETHUSDT_okx_trades_1h.parquet"
+        }
+      },
+      "error": null
+    },
+    "SOLUSDT": {
+      "symbol": "SOLUSDT",
+      "status": "PASS",
+      "total_input_rows": 3000,
+      "timeframes": {
+        "5m": {
+          "status": "PASS",
+          "rows": 2,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_5m/SOLUSDT_okx_trades_5m.parquet"
+        },
+        "15m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_15m/SOLUSDT_okx_trades_15m.parquet"
+        },
+        "1h": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_1h/SOLUSDT_okx_trades_1h.parquet"
+        }
+      },
+      "error": null
+    },
+    "BNBUSDT": {
+      "symbol": "BNBUSDT",
+      "status": "PASS",
+      "total_input_rows": 3000,
+      "timeframes": {
+        "5m": {
+          "status": "PASS",
+          "rows": 2,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_5m/BNBUSDT_okx_trades_5m.parquet"
+        },
+        "15m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_15m/BNBUSDT_okx_trades_15m.parquet"
+        },
+        "1h": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_1h/BNBUSDT_okx_trades_1h.parquet"
+        }
+      },
+      "error": null
+    },
+    "XRPUSDT": {
+      "symbol": "XRPUSDT",
+      "status": "PASS",
+      "total_input_rows": 3000,
+      "timeframes": {
+        "5m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_5m/XRPUSDT_okx_trades_5m.parquet"
+        },
+        "15m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_15m/XRPUSDT_okx_trades_15m.parquet"
+        },
+        "1h": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_1h/XRPUSDT_okx_trades_1h.parquet"
+        }
+      },
+      "error": null
+    },
+    "DOGEUSDT": {
+      "symbol": "DOGEUSDT",
+      "status": "PASS",
+      "total_input_rows": 3000,
+      "timeframes": {
+        "5m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_5m/DOGEUSDT_okx_trades_5m.parquet"
+        },
+        "15m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_15m/DOGEUSDT_okx_trades_15m.parquet"
+        },
+        "1h": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_1h/DOGEUSDT_okx_trades_1h.parquet"
+        }
+      },
+      "error": null
+    },
+    "ADAUSDT": {
+      "symbol": "ADAUSDT",
+      "status": "PASS",
+      "total_input_rows": 3000,
+      "timeframes": {
+        "5m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_5m/ADAUSDT_okx_trades_5m.parquet"
+        },
+        "15m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_15m/ADAUSDT_okx_trades_15m.parquet"
+        },
+        "1h": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_1h/ADAUSDT_okx_trades_1h.parquet"
+        }
+      },
+      "error": null
+    },
+    "LINKUSDT": {
+      "symbol": "LINKUSDT",
+      "status": "PASS",
+      "total_input_rows": 3000,
+      "timeframes": {
+        "5m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_5m/LINKUSDT_okx_trades_5m.parquet"
+        },
+        "15m": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_15m/LINKUSDT_okx_trades_15m.parquet"
+        },
+        "1h": {
+          "status": "PASS",
+          "rows": 1,
+          "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_scalp_dataset_v2_okx_p1/microstructure/okx_trades_features_1h/LINKUSDT_okx_trades_1h.parquet"
+        }
+      },
+      "error": null
+    }
+  },
+  "pass_count": 8,
+  "total_input": 24000
+}

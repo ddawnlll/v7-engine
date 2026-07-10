@@ -1,0 +1,43 @@
+{
+  "run_status": "COMPLETE",
+  "started_at": "2026-07-08T07:46:26+00:00",
+  "updated_at": "2026-07-08T07:59:00+00:00",
+  "elapsed_minutes": 38,
+  "raw_positive_before": 3,
+  "cost_survivors_before": 0,
+  "promotion_candidates_before": 0,
+  "overall_readiness_cap": 45,
+  "cap_reason": "0 cost-adjusted positive alphas",
+  "current_phase": "COMPLETE",
+  "completed_tasks": [
+    "DIRECTION_FIX_AUDIT",
+    "SIMULATION_ENTRYPOINT_DISCOVERY",
+    "PROXY_CENTRAL_SIM_BRIDGE_PLAN",
+    "TRUTH_V6_SPECIALIST_RESCUE",
+    "TRUTH_V6_CONFIDENCE_RESCUE",
+    "BB_POSITION_V2_REVALIDATION",
+    "FAILURE_DRIVEN_DISCOVERY",
+    "CANDIDATE_OUTCOMES_ANALYSIS",
+    "MINING_PIPELINE_OOS_REVIEW"
+  ],
+  "blocked_tasks": [
+    "PROXY_RETEST_ALL_33",
+    "TRUTH_V6_CONFIDENCE_PERCENTILE",
+    "SCALP_005_REGIME_GATE",
+    "CENTRAL_SIM_BRIDGE_IMPLEMENTATION"
+  ],
+  "genuine_discoveries": {
+    "atr_gating_confirmed": "HIGH ATR trades have +0.221 net_R (cost-adj), survive 5x cost stress. Market structure property, not alpha.",
+    "mining_rules_no_costs": "All 50 exported top rules have fee_r=0.0. Gross edge 0.019-0.033R is below 0.062R cost threshold.",
+    "mining_oos_survivors": "full_002: 577 rules, OOS=0.708, survived holdout. But costs kill them.",
+    "direction_audit_resolved": "6 factors misdeclared but direction not root cause.",
+    "bb_position_v2_resolved": "Pipeline already fixed. V2 is phantom placeholder."
+  },
+  "metric_changes": {
+    "raw_positive_alpha_count": { "before": 3, "after": 3, "delta": 0 },
+    "cost_survivor_candidate_count": { "before": 0, "after": 0, "delta": 0 },
+    "promotion_candidate_count": { "before": 0, "after": 0, "delta": 0 },
+    "retest_required_count": { "before": 87, "after": 87, "delta": 0 },
+    "blocked_count": { "before": 0, "after": 4, "delta": 4 }
+  }
+}

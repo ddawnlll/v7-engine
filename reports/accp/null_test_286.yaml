@@ -1,0 +1,22 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: "Issue #286 — Null test harness. Validated that shuffled/random signals are never promoted by the central simulation pipeline."
+files_changed:
+  - "scripts/v7_lite/null_test_harness.py"
+  - "scripts/v7_lite/null_test_fast.py"
+  - "reports/v7_lite/null_test/null_test_results.json"
+  - "reports/v7_lite/null_test/NULL_TEST_REPORT.md"
+decisions_locked:
+  - "Validator is trustworthy: 0/30 shuffled iterations produced promotion"
+  - "False positive rate = 0.0% (within acceptable <=5% threshold)"
+  - "Pipeline correctly rejects noise signals"
+remaining_holds: []
+safe_next_step: "Proceed to #287 (SOL OOS walk-forward + cost stress) — now unblocked"
+commands_run:
+  - "PYTHONPATH=simulation/src:alphaforge/src:v7/src:. python3 scripts/v7_lite/null_test_fast.py --iterations 30 --sample-size 2000"
+evidence:
+  - "30/30 iterations completed, 0 promoted"
+  - "Real baseline cost_adj_R = -0.167517 (not promoted)"
+  - "Null cost_adj_R range: -0.107 to -0.169 (all negative)"
+  - "Verdict: TEMIZ"

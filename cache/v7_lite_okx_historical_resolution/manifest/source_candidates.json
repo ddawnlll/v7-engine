@@ -1,0 +1,208 @@
+{
+  "probed_at": "2026-07-09T12:20:42.351437+00:00",
+  "candidates": [
+    {
+      "source_name": "OKX Trades API (BTC, 5 pages)",
+      "url": "https://www.okx.com/api/v5/market/trades",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "limit": "100"
+      },
+      "status_code": 200,
+      "error": null,
+      "is_historical": true,
+      "content_preview": "['code', 'msg', 'data']",
+      "data_types": [
+        "trades"
+      ],
+      "response_size_bytes": 12491
+    },
+    {
+      "source_name": "OKX Trades API (BTC, 'before' param test)",
+      "url": "https://www.okx.com/api/v5/market/trades",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "limit": "100",
+        "before": "1700000000000"
+      },
+      "status_code": 200,
+      "error": null,
+      "is_historical": true,
+      "content_preview": "['code', 'msg', 'data']",
+      "data_types": [
+        "trades"
+      ],
+      "response_size_bytes": 12491
+    },
+    {
+      "source_name": "OKX History Candles (1h, BTC, limit 100)",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "100"
+      },
+      "status_code": 200,
+      "error": null,
+      "is_historical": true,
+      "content_preview": "['code', 'msg', 'data']",
+      "data_types": [
+        "unknown"
+      ],
+      "response_size_bytes": 10186
+    },
+    {
+      "source_name": "OKX History Candles (1h, with 'after' back to 2023)",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "100",
+        "after": "1672531200000"
+      },
+      "status_code": 200,
+      "error": null,
+      "is_historical": true,
+      "content_preview": "['code', 'msg', 'data']",
+      "data_types": [
+        "unknown"
+      ],
+      "response_size_bytes": 9386
+    },
+    {
+      "source_name": "OKX Funding Rate History",
+      "url": "https://www.okx.com/api/v5/public/funding-rate",
+      "params": {
+        "instId": "BTC-USDT-SWAP"
+      },
+      "status_code": 200,
+      "error": null,
+      "is_historical": true,
+      "content_preview": "['code', 'data', 'msg']",
+      "data_types": [
+        "unknown"
+      ],
+      "response_size_bytes": 524
+    },
+    {
+      "source_name": "OKX Funding Rate History (with 'after')",
+      "url": "https://www.okx.com/api/v5/public/funding-rate",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "after": "1672531200000"
+      },
+      "status_code": 200,
+      "error": null,
+      "is_historical": true,
+      "content_preview": "['code', 'data', 'msg']",
+      "data_types": [
+        "unknown"
+      ],
+      "response_size_bytes": 524
+    },
+    {
+      "source_name": "OKX Static Archive",
+      "url": "https://static.okx.com/cdn/okex/traderecords/trades/",
+      "params": null,
+      "status_code": 404,
+      "error": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Error>\n\t<Code>NoSuchKey</Code>\n</Error>",
+      "is_historical": false,
+      "content_preview": null,
+      "data_types": [],
+      "response_size_bytes": 79
+    },
+    {
+      "source_name": "OKX Static Archive",
+      "url": "https://www.okx.com/static/okex/traderecords/trades/BTC-USDT-SWAP/2026-07/",
+      "params": null,
+      "status_code": 404,
+      "error": "<!DOCTYPE html><html lang=\"en\" dir=\"ltr\" class=\"  \"><head><meta charSet=\"UTF-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><title>Buy Bitcoin &amp; Crypto | Crypto Exchange, App &amp; Wallet | OKX</title><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge,chrome=1\"/><meta name=\"description\" content=\"OKX is the new OKEx. We&#x27;re reimagining crypto with our commitment to the advancement of DeFi and Web 3.0 \u2014 Join the world&#x27;s leading cryptocurrency exchange and cr",
+      "is_historical": false,
+      "content_preview": null,
+      "data_types": [],
+      "response_size_bytes": 63037
+    },
+    {
+      "source_name": "OKX Static Archive",
+      "url": "https://okx.com/static/okex/traderecords/",
+      "params": null,
+      "status_code": 404,
+      "error": "<!DOCTYPE html><html lang=\"en\" dir=\"ltr\" class=\"  \"><head><meta charSet=\"UTF-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><title>Buy Bitcoin &amp; Crypto | Crypto Exchange, App &amp; Wallet | OKX</title><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge,chrome=1\"/><meta name=\"description\" content=\"OKX is the new OKEx. We&#x27;re reimagining crypto with our commitment to the advancement of DeFi and Web 3.0 \u2014 Join the world&#x27;s leading cryptocurrency exchange and cr",
+      "is_historical": false,
+      "content_preview": null,
+      "data_types": [],
+      "response_size_bytes": 37431
+    },
+    {
+      "source_name": "OKX Static Archive",
+      "url": "https://archive.okx.com/",
+      "params": null,
+      "status_code": null,
+      "error": "HTTPSConnectionPool(host='archive.okx.com', port=443): Max retries exceeded with url: / (Caused by NameResolutionError(\"<urllib3.connection.HTTPSConnection object at 0x75dba020b080>: Failed to resolve 'archive.okx.com' ([Errno -5] No address associated with hostname)\"))",
+      "is_historical": false,
+      "content_preview": null,
+      "data_types": []
+    },
+    {
+      "source_name": "OKX Market Data Page",
+      "url": "https://www.okx.com/market-data/instruments",
+      "params": null,
+      "status_code": 404,
+      "error": "<!DOCTYPE html><html lang=\"en\" dir=\"ltr\" class=\"  \"><head><meta charSet=\"UTF-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><title>Buy Bitcoin &amp; Crypto | Crypto Exchange, App &amp; Wallet | OKX</title><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge,chrome=1\"/><meta name=\"description\" content=\"OKX is the new OKEx. We&#x27;re reimagining crypto with our commitment to the advancement of DeFi and Web 3.0 \u2014 Join the world&#x27;s leading cryptocurrency exchange and cr",
+      "is_historical": false,
+      "content_preview": null,
+      "data_types": [],
+      "response_size_bytes": 61259
+    },
+    {
+      "source_name": "OKX Index Candles (BTC-USDT, 1H, historical)",
+      "url": "https://www.okx.com/api/v5/market/index-candles",
+      "params": {
+        "instId": "BTC-USDT",
+        "bar": "1H",
+        "limit": "100",
+        "after": "1672531200000"
+      },
+      "status_code": 200,
+      "error": null,
+      "is_historical": true,
+      "content_preview": "['code', 'msg', 'data']",
+      "data_types": [
+        "unknown"
+      ],
+      "response_size_bytes": 31
+    },
+    {
+      "source_name": "Bybit History Candles (1h, BTC back to 2023)",
+      "url": "https://api.bybit.com/v5/market/kline",
+      "params": {
+        "category": "linear",
+        "symbol": "BTCUSDT",
+        "interval": "60",
+        "limit": "200",
+        "start": 1672531200000
+      },
+      "status_code": 403,
+      "error": "{\n    error:The Amazon CloudFront distribution is configured to block access from your country\n}",
+      "is_historical": false,
+      "content_preview": null,
+      "data_types": [],
+      "response_size_bytes": 96
+    },
+    {
+      "source_name": "CryptoCompare Trades (BTC, 2 days back)",
+      "url": "https://min-api.cryptocompare.com/data/v2/trade",
+      "params": {
+        "fsym": "BTC",
+        "tsym": "USDT",
+        "toTs": 1783426842.320214
+      },
+      "status_code": 401,
+      "error": "{\"Data\":{},\"Err\":{\"type\":2,\"message\":\"API key required, please refer to the documentation at https://developers.coindesk.com/\",\"http_status_code\":401,\"frontend\":{\"type\":2,\"message\":\"API key required, please refer to the documentation at https://developers.coindesk.com/\"}}}",
+      "is_historical": false,
+      "content_preview": null,
+      "data_types": [],
+      "response_size_bytes": 273
+    }
+  ]
+}

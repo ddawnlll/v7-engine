@@ -1,0 +1,10 @@
+feature_group,feature_name,row_count,symbols,available,blocker
+ohlcv,klines_1h,2095512,56,True,
+ohlcv,klines_4h,523891,56,True,
+derivatives,open_interest,680302,19,True,
+derivatives,funding_rate,680302,19,True,
+derivatives,premium_index_klines,680302,19,True,
+microstructure,aggtrade_features_5m,0,0,False,Binance API geo-blocked (HTTP 451)
+microstructure,aggtrade_features_15m,0,0,False,Binance API geo-blocked (HTTP 451)
+microstructure,aggtrade_features_1h,0,0,False,Binance API geo-blocked (HTTP 451)
+derivatives,mark_price_klines,0,0,False,Binance API geo-blocked (HTTP 451)

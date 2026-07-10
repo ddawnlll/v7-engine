@@ -1,0 +1,20 @@
+{
+  "old_870_source_file": "alphaforge_report/alpha_ledger.json (line 99-136)",
+  "new_204_source_file": "reports/v7_lite/p0_primitives/truth_v6/truth_v6_trade_log.csv",
+  "old_symbol_universe": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"],
+  "new_symbol_universe": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"],
+  "old_date_range": "2023-09-01 to 2026-05-31",
+  "new_date_range": "2023-09-01 to 2026-05-31",
+  "old_filters": "confidence_threshold ~0.50 (inferred from 870 trade count)",
+  "new_filters": "confidence_threshold=0.55",
+  "old_pipeline": "Discovery Pipeline V6",
+  "new_pipeline": "Discovery Pipeline V6",
+  "old_cost_model": "TAKER",
+  "new_cost_model": "TAKER",
+  "why_trade_count_differs": "Confidence threshold 0.50 vs 0.55 produces 4.8x more signals, translating to ~983 vs 204 trades",
+  "which_result_is_more_trustworthy": "204 trades (threshold 0.55) — positive cost-adjusted R",
+  "can_870_be_reproduced_now": true,
+  "reproduction_command": "PYTHONPATH=alphaforge/src:v7/src:. python3 scripts/v7_lite/truth_v6_expansion.py --symbols BTCUSDT ETHUSDT SOLUSDT BNBUSDT --threshold 0.50 --folds 6",
+  "reproduction_result": "983 trades, raw_R=+0.0091, cost_adjusted_R=-0.0479",
+  "verdict": "RECONCILED_CONFIG_DIFFERENCE"
+}

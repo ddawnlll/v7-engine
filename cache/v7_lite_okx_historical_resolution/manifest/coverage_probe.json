@@ -1,0 +1,1672 @@
+{
+  "started_at": "2026-07-09T12:22:32.919606+00:00",
+  "funding": {
+    "BTCUSDT": {
+      "rows": 199,
+      "start": 1780732800000,
+      "end": 1783584000000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_okx_historical_resolution/staging/okx/BTCUSDT_funding_historical.json"
+    },
+    "ETHUSDT": {
+      "rows": 199,
+      "start": 1780732800000,
+      "end": 1783584000000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_okx_historical_resolution/staging/okx/ETHUSDT_funding_historical.json"
+    },
+    "SOLUSDT": {
+      "rows": 199,
+      "start": 1780732800000,
+      "end": 1783584000000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_okx_historical_resolution/staging/okx/SOLUSDT_funding_historical.json"
+    }
+  },
+  "candles": {
+    "BTCUSDT": {
+      "rows": 9000,
+      "start": 1783598400000,
+      "end": 1751202000000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_okx_historical_resolution/staging/okx/BTCUSDT_candles_historical_1h.json",
+      "days": 375.0
+    },
+    "ETHUSDT": {
+      "rows": 9000,
+      "start": 1783598400000,
+      "end": 1751202000000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_okx_historical_resolution/staging/okx/ETHUSDT_candles_historical_1h.json",
+      "days": 375.0
+    },
+    "SOLUSDT": {
+      "rows": 9000,
+      "start": 1783598400000,
+      "end": 1751202000000,
+      "file": "/teamspace/studios/this_studio/v7-engine/cache/v7_lite_okx_historical_resolution/staging/okx/SOLUSDT_candles_historical_1h.json",
+      "days": 375.0
+    }
+  },
+  "ended_at": "2026-07-09T12:23:29.027781+00:00",
+  "attempts": [
+    {
+      "name": "funding-BTCUSDT-p0",
+      "url": "https://www.okx.com/api/v5/public/funding-rate-history",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "limit": "100"
+      },
+      "status": null,
+      "error": null,
+      "rows": 100,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 19658
+    },
+    {
+      "name": "funding-BTCUSDT-p1",
+      "url": "https://www.okx.com/api/v5/public/funding-rate-history",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "limit": "100",
+        "before": "1780732800000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 99,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 19459
+    },
+    {
+      "name": "funding-ETHUSDT-p0",
+      "url": "https://www.okx.com/api/v5/public/funding-rate-history",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "limit": "100"
+      },
+      "status": null,
+      "error": null,
+      "rows": 100,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 19792
+    },
+    {
+      "name": "funding-ETHUSDT-p1",
+      "url": "https://www.okx.com/api/v5/public/funding-rate-history",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "limit": "100",
+        "before": "1780732800000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 99,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 19593
+    },
+    {
+      "name": "funding-SOLUSDT-p0",
+      "url": "https://www.okx.com/api/v5/public/funding-rate-history",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "limit": "100"
+      },
+      "status": null,
+      "error": null,
+      "rows": 100,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 19580
+    },
+    {
+      "name": "funding-SOLUSDT-p1",
+      "url": "https://www.okx.com/api/v5/public/funding-rate-history",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "limit": "100",
+        "before": "1780732800000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 99,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 19381
+    },
+    {
+      "name": "candles-BTCUSDT-p0",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1783599756303"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30529
+    },
+    {
+      "name": "candles-BTCUSDT-p1",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1782522000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30560
+    },
+    {
+      "name": "candles-BTCUSDT-p2",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1781442000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30595
+    },
+    {
+      "name": "candles-BTCUSDT-p3",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1780362000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30478
+    },
+    {
+      "name": "candles-BTCUSDT-p4",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1779282000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30392
+    },
+    {
+      "name": "candles-BTCUSDT-p5",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1778202000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30397
+    },
+    {
+      "name": "candles-BTCUSDT-p6",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1777122000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30497
+    },
+    {
+      "name": "candles-BTCUSDT-p7",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1776042000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30446
+    },
+    {
+      "name": "candles-BTCUSDT-p8",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1774962000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30460
+    },
+    {
+      "name": "candles-BTCUSDT-p9",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1773882000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30529
+    },
+    {
+      "name": "candles-BTCUSDT-p10",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1772802000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30650
+    },
+    {
+      "name": "candles-BTCUSDT-p11",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1771722000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30509
+    },
+    {
+      "name": "candles-BTCUSDT-p12",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1770642000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30650
+    },
+    {
+      "name": "candles-BTCUSDT-p13",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1769562000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30263
+    },
+    {
+      "name": "candles-BTCUSDT-p14",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1768482000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30305
+    },
+    {
+      "name": "candles-BTCUSDT-p15",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1767402000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30316
+    },
+    {
+      "name": "candles-BTCUSDT-p16",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1766322000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30411
+    },
+    {
+      "name": "candles-BTCUSDT-p17",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1765242000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30411
+    },
+    {
+      "name": "candles-BTCUSDT-p18",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1764162000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30573
+    },
+    {
+      "name": "candles-BTCUSDT-p19",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1763082000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31564
+    },
+    {
+      "name": "candles-BTCUSDT-p20",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1762002000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31626
+    },
+    {
+      "name": "candles-BTCUSDT-p21",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1760922000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31757
+    },
+    {
+      "name": "candles-BTCUSDT-p22",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1759842000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31548
+    },
+    {
+      "name": "candles-BTCUSDT-p23",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1758762000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31457
+    },
+    {
+      "name": "candles-BTCUSDT-p24",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1757682000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31559
+    },
+    {
+      "name": "candles-BTCUSDT-p25",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1756602000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31609
+    },
+    {
+      "name": "candles-BTCUSDT-p26",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1755522000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31580
+    },
+    {
+      "name": "candles-BTCUSDT-p27",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1754442000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31628
+    },
+    {
+      "name": "candles-BTCUSDT-p28",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1753362000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31527
+    },
+    {
+      "name": "candles-BTCUSDT-p29",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "BTC-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1752282000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31597
+    },
+    {
+      "name": "candles-ETHUSDT-p0",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1783599773786"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31147
+    },
+    {
+      "name": "candles-ETHUSDT-p1",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1782522000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31176
+    },
+    {
+      "name": "candles-ETHUSDT-p2",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1781442000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31226
+    },
+    {
+      "name": "candles-ETHUSDT-p3",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1780362000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30900
+    },
+    {
+      "name": "candles-ETHUSDT-p4",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1779282000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30910
+    },
+    {
+      "name": "candles-ETHUSDT-p5",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1778202000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30906
+    },
+    {
+      "name": "candles-ETHUSDT-p6",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1777122000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31008
+    },
+    {
+      "name": "candles-ETHUSDT-p7",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1776042000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31002
+    },
+    {
+      "name": "candles-ETHUSDT-p8",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1774962000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31005
+    },
+    {
+      "name": "candles-ETHUSDT-p9",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1773882000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31129
+    },
+    {
+      "name": "candles-ETHUSDT-p10",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1772802000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31222
+    },
+    {
+      "name": "candles-ETHUSDT-p11",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1771722000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31078
+    },
+    {
+      "name": "candles-ETHUSDT-p12",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1770642000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31256
+    },
+    {
+      "name": "candles-ETHUSDT-p13",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1769562000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30811
+    },
+    {
+      "name": "candles-ETHUSDT-p14",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1768482000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30823
+    },
+    {
+      "name": "candles-ETHUSDT-p15",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1767402000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30776
+    },
+    {
+      "name": "candles-ETHUSDT-p16",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1766322000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30832
+    },
+    {
+      "name": "candles-ETHUSDT-p17",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1765242000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30878
+    },
+    {
+      "name": "candles-ETHUSDT-p18",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1764162000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31148
+    },
+    {
+      "name": "candles-ETHUSDT-p19",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1763082000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31057
+    },
+    {
+      "name": "candles-ETHUSDT-p20",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1762002000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30850
+    },
+    {
+      "name": "candles-ETHUSDT-p21",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1760922000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30995
+    },
+    {
+      "name": "candles-ETHUSDT-p22",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1759842000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30803
+    },
+    {
+      "name": "candles-ETHUSDT-p23",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1758762000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30744
+    },
+    {
+      "name": "candles-ETHUSDT-p24",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1757682000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 30725
+    },
+    {
+      "name": "candles-ETHUSDT-p25",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1756602000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31057
+    },
+    {
+      "name": "candles-ETHUSDT-p26",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1755522000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31069
+    },
+    {
+      "name": "candles-ETHUSDT-p27",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1754442000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31003
+    },
+    {
+      "name": "candles-ETHUSDT-p28",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1753362000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31074
+    },
+    {
+      "name": "candles-ETHUSDT-p29",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "ETH-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1752282000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 31106
+    },
+    {
+      "name": "candles-SOLUSDT-p0",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1783599791426"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 28032
+    },
+    {
+      "name": "candles-SOLUSDT-p1",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1782522000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 27990
+    },
+    {
+      "name": "candles-SOLUSDT-p2",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1781442000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 28033
+    },
+    {
+      "name": "candles-SOLUSDT-p3",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1780362000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 27856
+    },
+    {
+      "name": "candles-SOLUSDT-p4",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1779282000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 27878
+    },
+    {
+      "name": "candles-SOLUSDT-p5",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1778202000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 27852
+    },
+    {
+      "name": "candles-SOLUSDT-p6",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1777122000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 27957
+    },
+    {
+      "name": "candles-SOLUSDT-p7",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1776042000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 27970
+    },
+    {
+      "name": "candles-SOLUSDT-p8",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1774962000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 27943
+    },
+    {
+      "name": "candles-SOLUSDT-p9",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1773882000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 28029
+    },
+    {
+      "name": "candles-SOLUSDT-p10",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1772802000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 28097
+    },
+    {
+      "name": "candles-SOLUSDT-p11",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1771722000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 28061
+    },
+    {
+      "name": "candles-SOLUSDT-p12",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1770642000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 28760
+    },
+    {
+      "name": "candles-SOLUSDT-p13",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1769562000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29085
+    },
+    {
+      "name": "candles-SOLUSDT-p14",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1768482000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29172
+    },
+    {
+      "name": "candles-SOLUSDT-p15",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1767402000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29163
+    },
+    {
+      "name": "candles-SOLUSDT-p16",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1766322000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29197
+    },
+    {
+      "name": "candles-SOLUSDT-p17",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1765242000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29168
+    },
+    {
+      "name": "candles-SOLUSDT-p18",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1764162000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29254
+    },
+    {
+      "name": "candles-SOLUSDT-p19",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1763082000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29217
+    },
+    {
+      "name": "candles-SOLUSDT-p20",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1762002000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29254
+    },
+    {
+      "name": "candles-SOLUSDT-p21",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1760922000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29387
+    },
+    {
+      "name": "candles-SOLUSDT-p22",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1759842000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29268
+    },
+    {
+      "name": "candles-SOLUSDT-p23",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1758762000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29239
+    },
+    {
+      "name": "candles-SOLUSDT-p24",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1757682000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29285
+    },
+    {
+      "name": "candles-SOLUSDT-p25",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1756602000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29318
+    },
+    {
+      "name": "candles-SOLUSDT-p26",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1755522000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29248
+    },
+    {
+      "name": "candles-SOLUSDT-p27",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1754442000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29218
+    },
+    {
+      "name": "candles-SOLUSDT-p28",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1753362000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29299
+    },
+    {
+      "name": "candles-SOLUSDT-p29",
+      "url": "https://www.okx.com/api/v5/market/history-candles",
+      "params": {
+        "instId": "SOL-USDT-SWAP",
+        "bar": "1H",
+        "limit": "300",
+        "after": "1752282000000"
+      },
+      "status": null,
+      "error": null,
+      "rows": 300,
+      "is_historical": true,
+      "file": null,
+      "status_code": 200,
+      "response_size": 29206
+    }
+  ]
+}

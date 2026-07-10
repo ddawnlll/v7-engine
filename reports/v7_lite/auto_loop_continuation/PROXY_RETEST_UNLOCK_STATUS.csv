@@ -1,0 +1,2 @@
+proxy_id,alpha_name,cluster,proxy_R,required_fields_present,missing_fields,can_convert_to_central_candidate,blocked_reason,next_action
+PROXY_PROXY_ALL,"All 33 proxy entries",mixed,negative,"symbol, factor_name, direction, entry context","timestamp (per-event), entry_price (per-event), atr (per-event), future_path",NO_MISSING_EVENTS,"FACTOR_SIGNAL_EVENTS.csv not generated. scripts/factor_signal_events.py requires lib.data_lake.gateway (not implemented).","Build lib.data_lake.gateway module first, then generate signal events, then run central_sim_bridge_p0.py"

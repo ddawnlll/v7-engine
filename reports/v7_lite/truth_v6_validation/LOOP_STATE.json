@@ -1,0 +1,47 @@
+{
+  "started_at": "2026-07-08T10:53:53Z",
+  "ended_at": "2026-07-08T11:20:00Z",
+  "status": "COMPLETE_WITH_EXPANSION_RESULTS",
+  "completed_tasks": ["Task 1", "Task 2", "Task 3", "Task 4", "Task 5", "Task 6"],
+  "verdict": "TRUTH_V6_SPECIALIST_WATCH_ONLY",
+  "readiness_before": "45%",
+  "readiness_after": "45%",
+  "readiness_change": "UNCHANGED — no scalable cost-survivor found",
+  "truth_v6_p0": {
+    "trade_count": 204,
+    "raw_R": 0.058676,
+    "cost_adjusted_R": 0.006288,
+    "top_symbol": "SOLUSDT",
+    "top_symbol_share": 0.99
+  },
+  "reconciliation": {
+    "verdict": "RECONCILED_CONFIG_DIFFERENCE",
+    "original_870_threshold": 0.50,
+    "p0_204_threshold": 0.55,
+    "th_0.50_reproduces_983_trades": true,
+    "th_0.50_cost_adjusted_R": -0.0479
+  },
+  "expansion_12": {
+    "trades": 152,
+    "raw_R": -0.3217,
+    "cost_adjusted_R": -0.3678
+  },
+  "expansion_19": {
+    "trades": 408,
+    "raw_R": -0.1653,
+    "cost_adjusted_R": -0.2310,
+    "positive_symbols": 8,
+    "negative_symbols": 8
+  },
+  "specialist": {
+    "solusdt_trades": 202,
+    "solusdt_raw_R": 0.0698,
+    "solusdt_cost_adjusted_R": 0.0174,
+    "verdict": "SOLUSDT_SPECIALIST_WATCH"
+  },
+  "central_bridge_p0": {
+    "events_processed": 40090,
+    "best_factor": "ret_12h_rank",
+    "best_factor_mean_R": -0.0368
+  }
+}

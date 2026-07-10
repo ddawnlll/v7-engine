@@ -1,0 +1,3 @@
+symbol,filename,extreme_return_count,zero_negative_ohlcv_count,high_lt_low_count,zero_volume_count
+UNIUSDT,UNIUSDT_1h.parquet,1,0,0,1
+UNIUSDT,UNIUSDT_1h_with_derivatives.parquet,1,0,0,1

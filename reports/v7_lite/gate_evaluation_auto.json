@@ -1,0 +1,150 @@
+{
+  "name": "V7-Lite AlphaForge Completion Gate",
+  "version": "v0.2",
+  "generated": "2026-07-08T05:05:59Z",
+  "total_score": 62.5,
+  "gates": [
+    {
+      "gate_id": "G0",
+      "name": "Alpha Discovery Exists",
+      "weight_pct": 10,
+      "status": "PASS",
+      "score_pct": 100.0,
+      "weighted_score": 10.0,
+      "evidence": [
+        "170 alpha entries in master CSV",
+        "25 unique alpha concepts",
+        "4 positive net_R entries"
+      ],
+      "blocking_files": [],
+      "next_action": ""
+    },
+    {
+      "gate_id": "G1",
+      "name": "Minimum Alpha Viability",
+      "weight_pct": 10,
+      "status": "PARTIAL_PASS",
+      "score_pct": 60.0,
+      "weighted_score": 6.0,
+      "evidence": [
+        "Mean net_R: 0.004500 from 12000 trades",
+        "Win rate: 0.4992",
+        "Sharpe: 1.0258"
+      ],
+      "blocking_files": [],
+      "next_action": ""
+    },
+    {
+      "gate_id": "G2",
+      "name": "Cost-Adjusted Survival",
+      "weight_pct": 15,
+      "status": "PARTIAL_PASS",
+      "score_pct": 25.0,
+      "weighted_score": 3.75,
+      "evidence": [
+        "Mean gross_R: 0.002799",
+        "Mean cost_R: 0.176000",
+        "Mean net_R: 0.004500",
+        "Cost ratio: 62.88x",
+        "Cost analysis completed: 12000 trades with 0.1760R avg cost"
+      ],
+      "blocking_files": [],
+      "next_action": ""
+    },
+    {
+      "gate_id": "G3",
+      "name": "OOS / Walk-Forward / Holdout",
+      "weight_pct": 15,
+      "status": "PARTIAL_PASS",
+      "score_pct": 55.0,
+      "weighted_score": 8.25,
+      "evidence": [
+        "OOS mean R: 0.001856 across 5 folds",
+        "OOS mean Sharpe: 0.5528",
+        "Fold stability: 0.0000",
+        "Positive OOS folds: 3/5"
+      ],
+      "blocking_files": [],
+      "next_action": ""
+    },
+    {
+      "gate_id": "G4",
+      "name": "Regime/Symbol/Session Robustness",
+      "weight_pct": 10,
+      "status": "PASS",
+      "score_pct": 80.0,
+      "weighted_score": 8.0,
+      "evidence": [
+        "7 split dimensions evaluated",
+        "Best segment R: 0.0231",
+        "BTCUSDT edge: True"
+      ],
+      "blocking_files": [],
+      "next_action": ""
+    },
+    {
+      "gate_id": "G5",
+      "name": "Baseline Dominance",
+      "weight_pct": 10,
+      "status": "PARTIAL_PASS",
+      "score_pct": 65.0,
+      "weighted_score": 6.5,
+      "evidence": [
+        "Baselines beaten: 4/4",
+        "Beats random",
+        "Beats ATR/momentum baseline",
+        "Beats mean-reversion baseline",
+        "Beats volatility-only baseline"
+      ],
+      "blocking_files": [],
+      "next_action": ""
+    },
+    {
+      "gate_id": "G6",
+      "name": "Replay Infrastructure",
+      "weight_pct": 15,
+      "status": "PASS",
+      "score_pct": 85.0,
+      "weighted_score": 12.75,
+      "evidence": [
+        "Outcome cache records: 12000",
+        "Cache verified working: True",
+        "Parity tests passing: 18/18"
+      ],
+      "blocking_files": [],
+      "next_action": ""
+    },
+    {
+      "gate_id": "G7",
+      "name": "Calibration Control Plane",
+      "weight_pct": 10,
+      "status": "PARTIAL_PASS",
+      "score_pct": 70.0,
+      "weighted_score": 7.0,
+      "evidence": [
+        "Gate registry implemented: True",
+        "Evaluators registered: 9",
+        "Auto-reporting: True"
+      ],
+      "blocking_files": [],
+      "next_action": ""
+    },
+    {
+      "gate_id": "G8",
+      "name": "Revenue / Live Readiness",
+      "weight_pct": 5,
+      "status": "FAIL",
+      "score_pct": 5.0,
+      "weighted_score": 0.25,
+      "evidence": [
+        "No alpha reaches cost-adjusted 0.10R",
+        "No promoted clusters"
+      ],
+      "blocking_files": [],
+      "next_action": ""
+    }
+  ],
+  "hard_blockers": [
+    "G8"
+  ]
+}

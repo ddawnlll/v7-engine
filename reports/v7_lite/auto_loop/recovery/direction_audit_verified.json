@@ -1,0 +1,291 @@
+{
+  "results": [
+    {
+      "factor_name": "breakdown_n_low",
+      "current_declared_direction": "long",
+      "best_ic": -0.0453,
+      "ic_sign": "negative",
+      "ic_consistent": false,
+      "flipped_tag": "",
+      "classification": "CONFIRMED_MISDECLARED",
+      "reasoning": "IC=-0.0453 (negative), direction='long' \u2192 INCONSISTENT",
+      "best_r": -1.0195,
+      "retest_required": true
+    },
+    {
+      "factor_name": "breakout_n_high",
+      "current_declared_direction": "unstable",
+      "best_ic": null,
+      "ic_consistent": null,
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "Direction is 'unstable' by design \u2014 not testable for misdeclaration",
+      "best_ic_entry": null,
+      "best_r_entry": null
+    },
+    {
+      "factor_name": "btc_downtrend_breakdown_short",
+      "current_declared_direction": "short",
+      "best_ic": null,
+      "ic_sign": "N/A",
+      "ic_consistent": null,
+      "flipped_tag": "",
+      "classification": "BLOCKED_DATA_MISSING",
+      "reasoning": "No IC data available for factor 'btc_downtrend_breakdown_short'",
+      "best_r": -1.0207,
+      "retest_required": false
+    },
+    {
+      "factor_name": "btc_lead_lag_alt_long",
+      "current_declared_direction": "unstable",
+      "best_ic": null,
+      "ic_consistent": null,
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "Direction is 'unstable' by design \u2014 not testable for misdeclaration",
+      "best_ic_entry": null,
+      "best_r_entry": null
+    },
+    {
+      "factor_name": "btc_lead_lag_alt_short",
+      "current_declared_direction": "unstable",
+      "best_ic": null,
+      "ic_consistent": null,
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "Direction is 'unstable' by design \u2014 not testable for misdeclaration",
+      "best_ic_entry": null,
+      "best_r_entry": null
+    },
+    {
+      "factor_name": "btc_uptrend_pullback_long",
+      "current_declared_direction": "long",
+      "best_ic": null,
+      "ic_sign": "N/A",
+      "ic_consistent": null,
+      "flipped_tag": "",
+      "classification": "BLOCKED_DATA_MISSING",
+      "reasoning": "No IC data available for factor 'btc_uptrend_pullback_long'",
+      "best_r": -1.479,
+      "retest_required": false
+    },
+    {
+      "factor_name": "compression_breakout_regime",
+      "current_declared_direction": "unstable",
+      "best_ic": null,
+      "ic_consistent": null,
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "Direction is 'unstable' by design \u2014 not testable for misdeclaration",
+      "best_ic_entry": null,
+      "best_r_entry": null
+    },
+    {
+      "factor_name": "compression_expansion",
+      "current_declared_direction": "agnostic",
+      "best_ic": null,
+      "ic_consistent": null,
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "Direction is 'agnostic' by design \u2014 not testable for misdeclaration",
+      "best_ic_entry": null,
+      "best_r_entry": null
+    },
+    {
+      "factor_name": "corwin_schultz_spread_proxy",
+      "current_declared_direction": "short",
+      "best_ic": null,
+      "ic_sign": "N/A",
+      "ic_consistent": null,
+      "flipped_tag": "",
+      "classification": "BLOCKED_DATA_MISSING",
+      "reasoning": "No IC data available for factor 'corwin_schultz_spread_proxy'",
+      "best_r": -0.1549,
+      "retest_required": false
+    },
+    {
+      "factor_name": "funding_extreme_long",
+      "current_declared_direction": "long",
+      "best_ic": null,
+      "ic_sign": "N/A",
+      "ic_consistent": null,
+      "flipped_tag": "",
+      "classification": "BLOCKED_DATA_MISSING",
+      "reasoning": "No IC data available for factor 'funding_extreme_long'",
+      "best_r": null,
+      "retest_required": false
+    },
+    {
+      "factor_name": "funding_extreme_short",
+      "current_declared_direction": "short",
+      "best_ic": null,
+      "ic_sign": "N/A",
+      "ic_consistent": null,
+      "flipped_tag": "",
+      "classification": "BLOCKED_DATA_MISSING",
+      "reasoning": "No IC data available for factor 'funding_extreme_short'",
+      "best_r": null,
+      "retest_required": false
+    },
+    {
+      "factor_name": "funding_momentum_fade",
+      "current_declared_direction": "long",
+      "best_ic": null,
+      "ic_sign": "N/A",
+      "ic_consistent": null,
+      "flipped_tag": "",
+      "classification": "BLOCKED_DATA_MISSING",
+      "reasoning": "No IC data available for factor 'funding_momentum_fade'",
+      "best_r": null,
+      "retest_required": false
+    },
+    {
+      "factor_name": "range_zscore",
+      "current_declared_direction": "long",
+      "best_ic": 0.0263,
+      "ic_sign": "positive",
+      "ic_consistent": true,
+      "flipped_tag": "",
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "IC=0.0263 (positive), direction='long' \u2192 CONSISTENT",
+      "best_r": -1.3535,
+      "retest_required": false
+    },
+    {
+      "factor_name": "ret_12h_rank",
+      "current_declared_direction": "short",
+      "best_ic": 0.0242,
+      "ic_sign": "positive",
+      "ic_consistent": false,
+      "flipped_tag": "",
+      "classification": "CONFIRMED_MISDECLARED",
+      "reasoning": "IC=0.0242 (positive), direction='short' \u2192 INCONSISTENT",
+      "best_r": -0.5496,
+      "retest_required": true
+    },
+    {
+      "factor_name": "ret_1h_rank",
+      "current_declared_direction": "short",
+      "best_ic": 0.0278,
+      "ic_sign": "positive",
+      "ic_consistent": false,
+      "flipped_tag": "",
+      "classification": "CONFIRMED_MISDECLARED",
+      "reasoning": "IC=0.0278 (positive), direction='short' \u2192 INCONSISTENT",
+      "best_r": -0.8394,
+      "retest_required": true
+    },
+    {
+      "factor_name": "ret_24h_rank",
+      "current_declared_direction": "short",
+      "best_ic": 0.0292,
+      "ic_sign": "positive",
+      "ic_consistent": false,
+      "flipped_tag": "",
+      "classification": "CONFIRMED_MISDECLARED",
+      "reasoning": "IC=0.0292 (positive), direction='short' \u2192 INCONSISTENT",
+      "best_r": -0.8128,
+      "retest_required": true
+    },
+    {
+      "factor_name": "ret_4h_rank",
+      "current_declared_direction": "short",
+      "best_ic": 0.0291,
+      "ic_sign": "positive",
+      "ic_consistent": false,
+      "flipped_tag": "",
+      "classification": "CONFIRMED_MISDECLARED",
+      "reasoning": "IC=0.0291 (positive), direction='short' \u2192 INCONSISTENT",
+      "best_r": -0.8288,
+      "retest_required": true
+    },
+    {
+      "factor_name": "reversal_1h_zscore",
+      "current_declared_direction": "long",
+      "best_ic": 0.0278,
+      "ic_sign": "positive",
+      "ic_consistent": true,
+      "flipped_tag": "",
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "IC=0.0278 (positive), direction='long' \u2192 CONSISTENT",
+      "best_r": -0.729,
+      "retest_required": false
+    },
+    {
+      "factor_name": "reversal_4h_zscore",
+      "current_declared_direction": "long",
+      "best_ic": 0.0291,
+      "ic_sign": "positive",
+      "ic_consistent": true,
+      "flipped_tag": "",
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "IC=0.0291 (positive), direction='long' \u2192 CONSISTENT",
+      "best_r": -0.8213,
+      "retest_required": false
+    },
+    {
+      "factor_name": "session_volatility_regime",
+      "current_declared_direction": "unstable",
+      "best_ic": null,
+      "ic_consistent": null,
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "Direction is 'unstable' by design \u2014 not testable for misdeclaration",
+      "best_ic_entry": null,
+      "best_r_entry": null
+    },
+    {
+      "factor_name": "spread_contraction_signal",
+      "current_declared_direction": "long",
+      "best_ic": null,
+      "ic_sign": "N/A",
+      "ic_consistent": null,
+      "flipped_tag": "",
+      "classification": "BLOCKED_DATA_MISSING",
+      "reasoning": "No IC data available for factor 'spread_contraction_signal'",
+      "best_r": -0.1523,
+      "retest_required": false
+    },
+    {
+      "factor_name": "trend_pullback_ema",
+      "current_declared_direction": "unstable",
+      "best_ic": null,
+      "ic_consistent": null,
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "Direction is 'unstable' by design \u2014 not testable for misdeclaration",
+      "best_ic_entry": null,
+      "best_r_entry": null
+    },
+    {
+      "factor_name": "volume_climax_reversal_long",
+      "current_declared_direction": "unstable",
+      "best_ic": null,
+      "ic_consistent": null,
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "Direction is 'unstable' by design \u2014 not testable for misdeclaration",
+      "best_ic_entry": null,
+      "best_r_entry": null
+    },
+    {
+      "factor_name": "volume_climax_reversal_short",
+      "current_declared_direction": "unstable",
+      "best_ic": null,
+      "ic_consistent": null,
+      "classification": "NOT_MISDECLARED",
+      "reasoning": "Direction is 'unstable' by design \u2014 not testable for misdeclaration",
+      "best_ic_entry": null,
+      "best_r_entry": null
+    },
+    {
+      "factor_name": "volume_zscore",
+      "current_declared_direction": "short",
+      "best_ic": 0.0352,
+      "ic_sign": "positive",
+      "ic_consistent": false,
+      "flipped_tag": "",
+      "classification": "CONFIRMED_MISDECLARED",
+      "reasoning": "IC=0.0352 (positive), direction='short' \u2192 INCONSISTENT",
+      "best_r": -1.2782,
+      "retest_required": true
+    }
+  ],
+  "summary": {
+    "CONFIRMED_MISDECLARED": 6,
+    "NOT_MISDECLARED": 12,
+    "BLOCKED_DATA_MISSING": 7
+  }
+}

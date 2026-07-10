@@ -1,0 +1,24 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PARTIAL"
+scope_confirmation: "Issue #290 — Mechanism hypotheses for surviving alphas. Since Truth V6 is KIRMIZI, only BB Position v2 (corrected) and SCALP 1h Direction remain as candidates."
+files_changed:
+  - "reports/v7_lite/mechanism/MECHANISM_HYPOTHESES.md"
+  - "reports/v7_lite/mechanism/mechanism_test_results.json"
+  - "scripts/v7_lite/mechanism_oos_test.py"
+decisions_locked:
+  - "Truth V6: mechanism hypothesis not applicable (edge rejected as noise)"
+  - "BB Position v1: mechanism = mean-reversion at BB extremes, but CONTAMINATED (leakage)"
+  - "BB Position v2: mechanism same as v1, awaiting revalidation on corrected features"
+  - "SCALP 1h Direction: mechanism = short-term directional prediction via XGBoost, but edge too weak (+0.0076R)"
+  - "No new mining-based discovery allowed — only mechanism-driven testing"
+remaining_holds:
+  - "BB Position v2 revalidation not yet run (needs corrected feature pipeline)"
+  - "SCALP 1h Direction edge too weak for standalone promotion"
+safe_next_step: "Revalidate BB Position v2 with corrected features, or proceed to #288 (rails)"
+commands_run:
+  - "python3 -c analysis of alpha ledger"
+evidence:
+  - "3 raw-positive alphas analyzed, 1 contaminated, 1 rejected (noise), 1 too weak"
+  - "Mechanism hypotheses written for all 3"
+  - "Pre-registered test symbol lists defined"
