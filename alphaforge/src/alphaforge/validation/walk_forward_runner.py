@@ -344,24 +344,25 @@ def generate_net_r_from_ohlcv(
     n_bars: int,
     mode: str = "SWING",
     fee_pct: float = _ROUND_TRIP_COST,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Generate synthetic net_R and gross_R values from OHLCV data.
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Generate separate long/short gross_R and net_R values from OHLCV data.
 
     Uses triple-barrier simulation on each symbol group:
     - For each bar, simulates LONG and SHORT scenarios looking forward
       up to max_hold bars
     - Applies stop-loss and take-profit barriers
     - Subtracts round-trip cost from gross_R to get net_R
-    - Picks the better of LONG/SHORT (or NO_TRADE if both negative after cost)
+    - Returns LONG and SHORT values SEPARATELY (no oracle selection)
 
     Args:
         ohlcv_data: OHLCV data dict with close/high/low/symbol arrays.
         n_bars: Number of bars per symbol (symbols are concatenated).
         mode: Trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
-        fee_pct: Round-trip cost as fraction of return (default 0.0008 = 8 bps, authority).
+        fee_pct: Round-trip cost as fraction of return.
 
     Returns:
-        Tuple of (gross_r_values, net_r_values) arrays aligned with input.
+        Tuple of (long_gross_r, short_gross_r, long_net_r, short_net_r)
+        Each array aligned with input, zero where simulation not possible.
     """
     params = MODE_RUNNER_TRIPLE_BARRIER.get(mode, MODE_RUNNER_TRIPLE_BARRIER["SWING"])
     max_hold = params["max_hold"]
@@ -374,8 +375,11 @@ def generate_net_r_from_ohlcv(
     n = len(close_arr)
     round_trip_cost = fee_pct  # authority: 0.0008 (8 bps) in fractional return space
 
-    gross_r = np.zeros(n, dtype=np.float64)
-    net_r = np.zeros(n, dtype=np.float64)
+    # Compute LONG and SHORT results separately (no oracle selection)
+    long_gross_arr = np.zeros(n, dtype=np.float64)
+    short_gross_arr = np.zeros(n, dtype=np.float64)
+    long_net_arr = np.zeros(n, dtype=np.float64)
+    short_net_arr = np.zeros(n, dtype=np.float64)
 
     # Process per symbol group (symbols are concatenated sequentially)
     for sym_start in range(0, n, n_bars):
@@ -386,10 +390,10 @@ def generate_net_r_from_ohlcv(
             lookback_start = max(sym_start, i - 14)
             if i - lookback_start < 3:
                 continue
-            # True Range: max(high-low, |high-prev_close|, |low-prev_close|)
+            # True Range:
             high_slice = high_arr[lookback_start + 1:i + 1]
             low_slice = low_arr[lookback_start + 1:i + 1]
-            close_prev = close_arr[lookback_start:i]  # close[t-1]
+            close_prev = close_arr[lookback_start:i]
             tr = np.maximum(
                 high_slice - low_slice,
                 np.maximum(
@@ -426,19 +430,12 @@ def generate_net_r_from_ohlcv(
                     break
                 short_gross = (entry_price - close_arr[i + j]) / entry_price
 
-            # Pick best net_R (cost-aware)
-            net_long = long_gross - round_trip_cost
-            net_short = short_gross - round_trip_cost
+            long_net_arr[i] = long_gross - round_trip_cost
+            short_net_arr[i] = short_gross - round_trip_cost
+            long_gross_arr[i] = long_gross
+            short_gross_arr[i] = short_gross
 
-            if net_long > net_short and net_long > 0.0:
-                gross_r[i] = long_gross
-                net_r[i] = net_long
-            elif net_short > net_long and net_short > 0.0:
-                gross_r[i] = short_gross
-                net_r[i] = net_short
-            # else: NO_TRADE — both zero
-
-    return gross_r, net_r
+    return long_gross_arr, short_gross_arr, long_net_arr, short_net_arr
 
 
 # ---------------------------------------------------------------------------
@@ -765,8 +762,8 @@ def run_walk_forward(
     feature_matrix: Any | None = None,
     y_labels: np.ndarray | None = None,
     y_int: np.ndarray | None = None,
-    net_r: np.ndarray | None = None,
-    gross_r: np.ndarray | None = None,
+    long_net_r: np.ndarray | None = None,
+    short_net_r: np.ndarray | None = None,
     timestamp_list: list[str] | None = None,
     symbol_list: list[str] | None = None,
     feature_names: list[str] | None = None,
@@ -838,19 +835,21 @@ def run_walk_forward(
         logger.info(f"[{mode_str}] Generated {total_bars} bars across {len(symbols)} symbols")
 
     # ------------------------------------------------------------------
-    # 1b. Generate or accept net_R values
+    # 1b. Generate or accept long/short net_R values
     # ------------------------------------------------------------------
-    if net_r is not None and gross_r is not None:
-        logger.info(f"[{mode_str}] Using provided net_R/gross_R arrays")
-        gross_r_raw, net_r_raw = gross_r, net_r
+    if long_net_r is not None and short_net_r is not None:
+        logger.info(f"[{mode_str}] Using provided long/short net_R arrays")
+        long_gross_raw, short_gross_raw, long_net_raw, short_net_raw = (
+            None, None, long_net_r, short_net_r,
+        )
     else:
-        gross_r_raw, net_r_raw = generate_net_r_from_ohlcv(
-            ohlcv_data, n_bars=n_bars, mode=mode_str,
+        long_gross_raw, short_gross_raw, long_net_raw, short_net_raw = (
+            generate_net_r_from_ohlcv(ohlcv_data, n_bars=n_bars, mode=mode_str)
         )
         logger.info(
-            f"[{mode_str}] Generated net_R: "
-            f"mean={float(np.mean(net_r_raw[net_r_raw != 0])):.6f} "
-            f"(non-zero), {int(np.sum(net_r_raw != 0))} active bars"
+            f"[{mode_str}] Generated long/short net_R: "
+            f"long_mean={float(np.mean(long_net_raw[long_net_raw != 0])):.6f}, "
+            f"short_mean={float(np.mean(short_net_raw[short_net_raw != 0])):.6f}"
         )
 
     # ------------------------------------------------------------------
@@ -894,19 +893,48 @@ def run_walk_forward(
                 symbol_list.append(all_symbols_list[i])
                 timestamp_list.append(f"2025-01-01T{i:06d}")
 
-    # Align net_R with valid rows
-    if net_r is None or gross_r is None:
-        net_r_arr = net_r_raw[~nan_mask]
-        gross_r_arr = gross_r_raw[~nan_mask]
+    # Align long/short R values with valid rows
+    if long_net_r is not None and short_net_r is not None:
+        long_net_valid, short_net_valid = long_net_r, short_net_r
+        long_gross_valid, short_gross_valid = None, None
     else:
-        net_r_arr = net_r
-        gross_r_arr = gross_r
+        long_net_valid = long_net_raw[~nan_mask]
+        short_net_valid = short_net_raw[~nan_mask]
+        long_gross_valid = long_gross_raw[~nan_mask] if long_gross_raw is not None else None
+        short_gross_valid = short_gross_raw[~nan_mask] if short_gross_raw is not None else None
+
     # Use provided labels or generate random ones
     if y_labels is not None and y_int is not None:
         logger.info(f"[{mode_str}] Using provided labels ({len(y_labels)} rows)")
+        # Align labels with valid feature rows
+        y_valid = y_int[~nan_mask] if len(y_int) > len(X) else y_int
     else:
         y_labels = generate_walk_forward_labels(len(X), random_seed=random_seed)
-        y_int = np.array([_LABEL_TO_INT[str(lbl)] for lbl in y_labels], dtype=int)
+        y_valid = np.array([_LABEL_TO_INT[str(lbl)] for lbl in y_labels], dtype=int)
+
+    # ====== CANONICAL ALIGNMENT ASSERTIONS ======
+    assert len(X) == len(y_valid), (
+        f"Feature/label mismatch: X={len(X)}, y={len(y_valid)}"
+    )
+    assert len(X) == len(timestamp_list), (
+        f"Feature/timestamp mismatch: X={len(X)}, ts={len(timestamp_list)}"
+    )
+    assert len(X) == len(symbol_list), (
+        f"Feature/symbol mismatch: X={len(X)}, sym={len(symbol_list)}"
+    )
+    if long_net_valid is not None:
+        assert len(X) == len(long_net_valid), (
+            f"Feature/long_net mismatch: X={len(X)}, ln={len(long_net_valid)}"
+        )
+    if short_net_valid is not None:
+        assert len(X) == len(short_net_valid), (
+            f"Feature/short_net mismatch: X={len(X)}, sn={len(short_net_valid)}"
+        )
+    logger.info(
+        f"[{mode_str}] Aligned dataset: {len(X)} rows, "
+        f"{len(set(symbol_list))} symbols, "
+        f"{len(set(timestamp_list))} timestamps"
+    )
 
     # ------------------------------------------------------------------
     # 4. Build chronological dataset for WalkForwardValidator
@@ -978,11 +1006,11 @@ def run_walk_forward(
             continue
 
         X_train = X[train_idx]
-        y_train = y_int[train_idx]
+        y_train = y_valid[train_idx]
         X_val = X[val_idx]
-        y_val = y_int[val_idx]
+        y_val = y_valid[val_idx]
         X_oos = X[oos_idx]
-        y_oos = y_int[oos_idx]
+        y_oos = y_valid[oos_idx]
 
         # Train XGBoost with mode-specific hyperparameters
         dtrain = xgb.DMatrix(X_train, label=y_train)
@@ -1040,9 +1068,20 @@ def run_walk_forward(
         except (ValueError, AttributeError):
             pass
 
-        # OOS financial metrics
-        oos_net_r = net_r_arr[oos_idx]
-        oos_gross_r = gross_r_arr[oos_idx]
+        # OOS financial metrics — realized R from prediction vs long/short values
+        if long_net_valid is not None and short_net_valid is not None:
+            oos_long_r = long_net_valid[oos_idx]
+            oos_short_r = short_net_valid[oos_idx]
+            # Realized net_R: LONG predicted → use long_net, SHORT predicted → use short_net
+            oos_net_r = np.where(
+                oos_pred == 0,  # LONG
+                oos_long_r,
+                np.where(oos_pred == 1, oos_short_r, 0.0),  # SHORT, else NO_TRADE
+            )
+            oos_gross_r = None  # Gross metrics computed from net inside compute_economic_metrics
+        else:
+            oos_net_r = None
+            oos_gross_r = None
         oos_fin_metrics = compute_economic_metrics(
             oos_pred, y_oos,
             net_r_values=oos_net_r,

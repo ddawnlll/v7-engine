@@ -1168,37 +1168,66 @@ class PipelineRunner:
             from alphaforge.validation.walk_forward_runner import run_walk_forward
             from alphaforge.validation.walk_forward_runner import generate_net_r_from_ohlcv
 
-            # Compute net_r from pipeline OHLCV data (needed for economic metrics)
             ctx = self._ctx
-            if ctx.ohlcv_data is not None:
-                # Determine equal-length bars from concatenated data
-                n_symbols = len(ctx.symbol_list) if ctx.symbol_list else 1
-                n_total = len(ctx.ohlcv_data.get("close", []))
-                pipe_n_bars = n_total // max(n_symbols, 1)
-                gross_r_raw, net_r_raw = generate_net_r_from_ohlcv(
-                    ctx.ohlcv_data, n_bars=pipe_n_bars, mode=self._config.mode,
-                )
-            else:
-                gross_r_raw, net_r_raw = None, None
 
-            label_ints = ctx.label_ints if ctx.label_ints is not None else None
-            y_labels = ctx.labels if ctx.labels is not None else None
+            # Pre-compute net_R and align everything with the canonical nan_mask
+            long_net_raw = short_net_raw = None
+            feature_names = ctx.feature_names if ctx.feature_names else None
+            feature_matrix = ctx.feature_matrix
+            pipe_symbols = ctx.symbol_list
+            pipe_timestamps = ctx.timestamp_list
+            y_labels = ctx.labels
+            y_int = ctx.label_ints
+
+            if feature_matrix is not None and feature_names and ctx.ohlcv_data is not None:
+                # Recompute nan_mask from pipeline features (same as _step_train)
+                X_all = np.column_stack([
+                    feature_matrix.features[name] for name in feature_names
+                ])
+                valid_mask = ~np.isnan(X_all).any(axis=1)
+                X_valid = X_all[valid_mask]
+
+                # Align labels with nan_mask
+                if y_int is not None and len(y_int) > len(X_valid):
+                    y_int = y_int[valid_mask]
+                if y_labels is not None and len(y_labels) > len(X_valid):
+                    y_labels = y_labels[valid_mask]
+
+                # Align symbols and timestamps
+                if pipe_symbols and len(pipe_symbols) > len(X_valid):
+                    pipe_symbols = [s for i, s in enumerate(pipe_symbols) if i < len(valid_mask) and valid_mask[i]]
+                if pipe_timestamps and len(pipe_timestamps) > len(X_valid):
+                    pipe_timestamps = [t for i, t in enumerate(pipe_timestamps) if i < len(valid_mask) and valid_mask[i]]
+
+                # Compute net_R from pipeline OHLCV data, then align with same mask
+                unique_syms = set(pipe_symbols) if pipe_symbols else set(ctx.ohlcv_data.get("symbol", []))
+                n_syms = len(unique_syms)
+                n_total = len(ctx.ohlcv_data.get("close", []))
+                pipe_n_bars = n_total // max(n_syms, 1)
+                if pipe_n_bars > 0:
+                    lg, sg, ln, sn = generate_net_r_from_ohlcv(
+                        ctx.ohlcv_data, n_bars=pipe_n_bars, mode=self._config.mode,
+                    )
+                    long_net_raw = ln[valid_mask] if len(ln) > X_valid.shape[0] else ln
+                    short_net_raw = sn[valid_mask] if len(sn) > X_valid.shape[0] else sn
+            else:
+                X_valid = None
 
             result = run_walk_forward(
                 n_bars=self._config.n_bars,
-                n_symbols=len(self._config.symbols),
+                n_symbols=len(set(ctx.symbol_list)) if ctx.symbol_list else len(self._config.symbols),
                 random_seed=self._config.random_seed,
                 min_folds=3,
                 mode=self._config.mode,
                 ohlcv_data=ctx.ohlcv_data,
-                feature_matrix=ctx.feature_matrix,
+                feature_matrix=feature_matrix,
                 y_labels=y_labels,
-                y_int=label_ints,
-                net_r=net_r_raw,
-                gross_r=gross_r_raw,
-                timestamp_list=ctx.timestamp_list if ctx.timestamp_list else None,
-                symbol_list=ctx.symbol_list if ctx.symbol_list else None,
-                feature_names=ctx.feature_names if ctx.feature_names else None,
+                y_int=y_int,
+                long_net_r=long_net_raw,
+                short_net_r=short_net_raw,
+                timestamp_list=pipe_timestamps,
+                symbol_list=pipe_symbols,
+                feature_names=feature_names,
             )
             self._ctx.wfv_result = result
 
