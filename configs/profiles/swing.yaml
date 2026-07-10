@@ -1,0 +1,23 @@
+# =============================================================================
+# V7 Engine — SWING Simulation Profile
+# =============================================================================
+# Source: simulation/docs/profiles.md
+# Canonical config — simulation engine uses this for mode-specific parameters.
+# =============================================================================
+profile_version: "1.0.0"
+mode: "SWING"
+primary_interval: "4h"
+context_intervals: ["1d", "1h"]
+refinement_intervals: ["1h"]
+max_holding_bars: 30
+stop_method: "atr_wide"
+stop_multiplier: 2.0
+target_method: "atr_wide"
+target_multiplier: 2.5
+ambiguity_margin_r: 0.20
+min_action_edge_r: 0.35
+mae_penalty_weight: 1.0
+cost_penalty_weight: 1.0
+time_penalty_weight: 0.3
+funding_rate: 0.0
+no_trade_default: false

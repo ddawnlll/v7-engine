@@ -1,0 +1,25 @@
+# =============================================================================
+# V7 Engine — SCALP Simulation Profile
+# =============================================================================
+# Source: simulation/docs/profiles.md
+# Canonical config — simulation engine uses this for mode-specific parameters.
+# Note: Primary interval is 1h per simulation profile. Training scope
+# (see configs/training.yaml) defines which intervals to download/train on.
+# =============================================================================
+profile_version: "1.0.0"
+mode: "SCALP"
+primary_interval: "1h"
+context_intervals: ["4h", "15m"]
+refinement_intervals: ["15m"]
+max_holding_bars: 12
+stop_method: "atr_medium"
+stop_multiplier: 1.75
+target_method: "atr_medium"
+target_multiplier: 1.75
+ambiguity_margin_r: 0.10
+min_action_edge_r: 0.15
+mae_penalty_weight: 2.0
+cost_penalty_weight: 2.0
+time_penalty_weight: 1.5
+funding_rate: 0.0
+no_trade_default: true

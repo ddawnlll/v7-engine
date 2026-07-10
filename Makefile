@@ -1,6 +1,17 @@
-.PHONY: help install test check-lib-boundaries check-boundaries check-contracts test-system test-all clean lint typecheck setup data-health download test-training test-training-full candidate diagnostic candidate-lightgbm af-report menu check-authority
+.PHONY: help install test check-lib-boundaries check-boundaries check-contracts test-system test-all clean lint typecheck setup data-health download test-training test-training-full candidate diagnostic candidate-lightgbm af-report menu check-authority research full
 
 PYTHON ?= $(shell if [ -x .venv/bin/python3 ]; then echo .venv/bin/python3; else echo python3; fi)
+
+# ====================================================================
+# Config-driven defaults — read from configs/training.yaml
+# Override any of these at the CLI (e.g. make train MODE=SWING)
+# ====================================================================
+YAML_CONFIG := configs/training.yaml
+
+# Helper: read a YAML value via python3 (requires pyyaml)
+_yaml = $(shell $(PYTHON) -c "import yaml,sys; c=yaml.safe_load(open('$(YAML_CONFIG)')); print(eval('c.'+sys.argv[1]) if '.' in sys.argv[1] else c[sys.argv[1]])" $(1) 2>/dev/null)
+
+MODE ?= SCALP
 
 help:
 	@echo "V7 Engine Monorepo — Makefile"
@@ -17,7 +28,7 @@ help:
 	@echo "  make lint             Run ruff linting"
 	@echo "  make typecheck        Run mypy type checking"
 	@echo ""
-	@echo "--- Pipeline targets (TR-03-PIPELINE-CLI-MAKEFILE-RUNBOOK) ---"
+	@echo "--- Pipeline targets (config-driven via configs/training.yaml) ---"
 	@echo "  make validate         Run contract + boundary checks + test suite"
 	@echo "  make backfill         Download and backfill market data"
 	@echo "  make simulate         Run simulation with cost model"
@@ -28,15 +39,23 @@ help:
 	@echo "  make pipeline         End-to-end: validate > backfill > simulate > build-dataset > train > wfv > report"
 	@echo "  make pipeline-v0.2    v0.2 profitability evidence pipeline (ISSUE #35)"
 	@echo ""
+	@echo "--- GPU Provider (Google Colab) ---"
+	@echo "  make colab-prepare    Bundle code + config for Colab upload"
+	@echo "  make colab            Prepare + show Colab notebook instructions"
+	@echo ""
+	@echo "--- Config-driven build targets ---"
+	@echo "  make research         	Research scope (symbols/intervals from configs/training.yaml)"
+	@echo "  make full             	Full build scope (symbols/intervals from configs/training.yaml)"
+	@echo ""
 	@echo "--- v0.30E — Real Data Baseline ---"
 	@echo "  make data-health      	Verify + auto-repair downloaded Binance data"
-	@echo "  make download         	Download Binance Vision data (BTC/ETH/SOL/BNB, 1h/4h, 2023-2026)"
+	@echo "  make download         	Download Binance Vision data (config-driven intervals)"
 	@echo "  make diagnostic      	Run v0.31A failure diagnostic report (read-only)"
 	@echo "  make candidate       	Run candidate v0.2 (2-class + no confidence threshold)"
-	@echo "  make test-training    	Health check > train > verify (SCALP, BTC/ETH/SOL/BNB)"
+	@echo "  make test-training    	Health check > train > verify (config-driven defaults)"
 	@echo "  make test-training-full   Same + Optuna hyperparameter search"
-	@echo "  make MODE=SWING ...   	Override trading mode"
-	@echo "  make SYMBOLS=BTCUSDT  	Override symbol list"
+	@echo "  make MODE=SWING ...   	Override trading mode (default: SCALP)"
+	@echo "  make SYMBOLS=BTCUSDT  	Override symbol list (default from config)"
 	@echo "  make DRY_RUN=1 <tgt>  	Dry-run mode (echo what would run)"
 	@echo ""
 
@@ -240,6 +259,36 @@ pipeline-v0.2:
 	fi
 
 # ====================================================================
+# Config-driven build targets — read scope from configs/training.yaml
+#   make research     → research scope (8-20 symbols, 5m/15m, 1-3 months)
+#   make full         → full scope (60 symbols, all scalp intervals)
+# ====================================================================
+.PHONY: research full
+
+research:
+	@echo "=== Research build (config-driven) ==="; \
+	if [ "$(DRY_RUN)" = "1" ]; then \
+		echo "[DRY RUN] Would run: download + simulate + build-dataset + train with research scope"; \
+	else \
+		$(MAKE) download && \
+		$(MAKE) simulate && \
+		$(MAKE) build-dataset && \
+		$(MAKE) train; \
+	fi
+
+full:
+	@echo "=== Full build (config-driven) ==="; \
+	if [ "$(DRY_RUN)" = "1" ]; then \
+		echo "[DRY RUN] Would run: download + simulate + build-dataset + train + wfv with full scope"; \
+	else \
+		$(MAKE) download && \
+		$(MAKE) simulate && \
+		$(MAKE) build-dataset && \
+		$(MAKE) train && \
+		$(MAKE) wfv; \
+	fi
+
+# ====================================================================
 # v0.30E — Real Data Baseline Pipeline (test-training profile)
 # ====================================================================
 # Targets:
@@ -248,16 +297,16 @@ pipeline-v0.2:
 #   make test-training-full   Same + Optuna hyperparameter search
 #
 # Profile: configs/profiles/test-training.yaml
-# Overrides: MODE=SCALP, SYMBOLS=BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT
+# Defaults (from configs/training.yaml):
+#   MODE=SCALP, SYMBOLS=BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT
 # ====================================================================
 
 .PHONY: data-health download test-training test-training-full candidate diagnostic candidate-lightgbm
 
-MODE ?= SCALP
-SYMBOLS ?= BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT
 TRAIN_PYTHONPATH := alphaforge/src:.
 SCRIPTS_PYTHONPATH := .
 DATA_DIR ?= data_lake
+SYMBOLS ?= BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT
 
 data-health:
 	@echo "=== v0.30E | Data Health Check ==="
@@ -309,8 +358,8 @@ test-training: data-health
 download:
 	@echo "=== v0.30E | Download Binance Vision Data ==="
 	@echo "  Symbols:   $(SYMBOLS)"
-	@echo "  Intervals: 1h, 4h"
-	@echo "  Period:    2023-01 to 2026-12"
+	@echo "  Intervals: $(call _yaml,research.intervals)"
+	@echo "  Period:    config-driven"
 	@echo ""
 	@if [ "$(DRY_RUN)" = "1" ]; then \
 		echo "[DRY RUN] $(PYTHON) scripts/download_binance.py --symbols $(SYMBOLS)"; \
@@ -377,6 +426,29 @@ candidate-lightgbm:
 af-report:
 	@echo "=== AlphaForge Report CLI ==="
 	PYTHONPATH=alphaforge/src:. $(PYTHON) -m cli.alphaforge report $(ARGS)
+
+# ====================================================================
+# GPU Provider — Google Colab
+# ====================================================================
+#   make colab-prepare        Bundle code + config for Colab
+#   make colab-prepare ARGS="--symbols BTCUSDT,ETHUSDT --mode SCALP"
+#   make colab-prepare ARGS="--upload"    + rclone upload to Drive
+#   make colab                  Shortcut: prepare + open notebook URL
+# ====================================================================
+
+.PHONY: colab colab-prepare
+
+colab-prepare:
+	@echo "=== AF | Colab Bundle ==="
+	@PYTHONPATH=. $(PYTHON) scripts/colab/prepare.py $(ARGS)
+	@echo ""
+
+colab: colab-prepare
+	@echo "=== AF | Colab Notebook ==="
+	@echo "  Open: https://colab.research.google.com/"
+	@echo "  File > Upload notebook > scripts/colab/af_leverage_train.ipynb"
+	@echo "  Runtime > Change runtime type > T4 GPU"
+	@echo ""
 
 # ====================================================================
 # Main Menu — centralized TUI

@@ -44,7 +44,7 @@ For cross-domain conflicts, `docs/architecture/governance.md` wins.
 | [vision.md](vision.md) | What simulation is, why it exists, success definition, what it is NOT |
 | [architecture.md](architecture.md) | Component design, data flow, module structure, dependency rules |
 | [contracts.md](contracts.md) | SimulationInput, SimulationOutput, ActionOutcome, NoTradeOutcome, PathMetrics, SimulationProfile — all typed schemas |
-| [profiles.md](profiles.md) | Mode-specific config: SWING (4h), SCALP (1h), AGGRESSIVE_SCALP (15m) — all parameters |
+| [profiles.md](profiles.md) | Mode-specific config: SWING (4h), SCALP (1h), AGGRESSIVE_SCALP (15m) — all parameters. **Canonical YAML at `configs/profiles/`** |
 | [cost_model.md](cost_model.md) | Fee (maker/taker bps), slippage (volatility-adjusted), net R formula |
 | [exits_and_horizons.md](exits_and_horizons.md) | Stop, target, time-exit, horizon-end, unresolved, invalidated — precedence rules |
 | [no_trade_quality.md](no_trade_quality.md) | NO_TRADE as first-class: saved-loss, missed-opportunity, quality classification |

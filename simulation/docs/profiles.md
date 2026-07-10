@@ -9,6 +9,17 @@ Profile changes bump `simulation_profile_version`. No silent profile drift.
 ## Configuration Architecture
 
 ```
+configs/profiles/           ← CANONICAL source (physical YAML)
+├── swing.yaml              ← SWING profile
+├── scalp.yaml              ← SCALP profile
+├── aggressive_scalp.yaml   ← AGGRESSIVE_SCALP profile
+```
+
+The inline YAML blocks below are **documentation mirrors** — the physical files
+in `configs/profiles/` are the canonical config. Simulation engine reads from
+those files. Profile changes must update the physical YAML first.
+
+```
 simulation_configs:
   swing:            ← SimulationProfile for SWING mode
   scalp:            ← SimulationProfile for SCALP mode
@@ -51,7 +62,7 @@ simulation_configs:
     stop_method: "atr_wide"
     stop_multiplier: 2.0
     target_method: "atr_wide"
-    target_multiplier: 2.0
+    target_multiplier: 2.5
     ambiguity_margin_r: 0.20
     min_action_edge_r: 0.35
     mae_penalty_weight: 1.0
@@ -72,9 +83,9 @@ simulation_configs:
 | Refinement interval | `15m` | 15-minute refinement |
 | Max holding bars | `12` | Up to 12 hours |
 | Stop method | `atr_medium` | Medium ATR-based stop |
-| Stop multiplier (ATR) | `1.5` | Tighter than SWING |
-| Target method | `atr_medium` | Medium ATR-based target |
-| Target multiplier (ATR) | `1.5` | Proportional to stop |
+|| Stop multiplier (ATR) | `1.75` | Slightly tighter than wide |
+|| Target method | `atr_medium` | Medium ATR-based target |
+|| Target multiplier (ATR) | `1.75` | Proportional to stop |
 | Ambiguity margin (R) | `0.10` | Actions within 0.10R utility are ambiguous |
 | Min action edge (R) | `0.15` | Directional must beat NO_TRADE by 0.15R |
 | MAE penalty weight | `2.0` | Higher MAE sensitivity |
@@ -93,9 +104,9 @@ simulation_configs:
     refinement_intervals: ["15m"]
     max_holding_bars: 12
     stop_method: "atr_medium"
-    stop_multiplier: 1.5
+    stop_multiplier: 1.75
     target_method: "atr_medium"
-    target_multiplier: 1.5
+    target_multiplier: 1.75
     ambiguity_margin_r: 0.10
     min_action_edge_r: 0.15
     mae_penalty_weight: 2.0
@@ -139,9 +150,9 @@ simulation_configs:
     refinement_intervals: ["5m"]
     max_holding_bars: 5
     stop_method: "atr_tight"
-    stop_multiplier: 1.0
+    stop_multiplier: 1.25
     target_method: "atr_tight"
-    target_multiplier: 1.0
+    target_multiplier: 1.25
     ambiguity_margin_r: 0.05
     min_action_edge_r: 0.08
     mae_penalty_weight: 3.0

@@ -1,0 +1,91 @@
+# =============================================================================
+# V7 Engine — Training Configuration (ACTIVE)
+# =============================================================================
+# Centralized training profile config — Makefile and pipeline scripts read
+# from this file. Research and Full builds share the same profile references.
+#
+#   python3 -c "import yaml; c=yaml.safe_load(open('configs/training.yaml')); print(c['research']['intervals'])"
+#   make train MODE=SCALP
+#   make research
+# =============================================================================
+
+# ── Simulation profile references ───────────────────────────────────
+# Each mode maps to a simulation profile in configs/profiles/<mode>.yaml.
+# These define stop/target/holding/fee semantics for the simulation engine.
+profiles:
+  swing:           "configs/profiles/swing.yaml"
+  scalp:           "configs/profiles/scalp.yaml"
+  aggressive_scalp: "configs/profiles/aggressive_scalp.yaml"
+
+# ── Research scope (AF-DATA-003, updated 2026-07-10) ────────────────
+# Scalp-focused. 5m/15m primary research intervals. 1m/3m for full build.
+research:
+  symbols:
+    min: 8
+    max: 20
+  intervals:
+    - 5m
+    - 15m
+  time_range_months:
+    min: 1
+    max: 3
+  default_start: ~    # TBD per symbol backfill audit
+
+# ── Full build scope (TBD — research çıktısına göre) ───────────────
+full:
+  symbols:
+    min: 60
+  intervals:
+    - 1m
+    - 3m
+    - 5m
+    - 15m
+  time_range_months:
+    min: 12
+
+# ── Training defaults ───────────────────────────────────────────────
+training:
+  # Primary mode for research
+  mode: "SCALP"
+
+  # Available alternate modes
+  alternate_modes:
+    - "SWING"
+    - "AGGRESSIVE_SCALP"
+
+  # Walk-forward validation folds
+  wfv_folds: 6
+
+  # Algorithm
+  algorithm: "xgboost"
+
+  # Feature groups (all = use all available)
+  features: "all"
+
+  # Confidence threshold
+  confidence_threshold: 0.55
+
+  # Model hyperparameters
+  xgboost:
+    max_depth: 4
+    learning_rate: 0.05
+    n_estimators: 200
+    subsample: 0.8
+    colsample_bytree: 0.8
+    early_stopping_rounds: 20
+    tree_method: "hist"
+    n_jobs: -1
+
+  # LightGBM (alternate)
+  lightgbm:
+    max_depth: 6
+    learning_rate: 0.05
+    n_estimators: 500
+    subsample: 0.8
+    colsample_bytree: 0.8
+    early_stopping_rounds: 50
+
+# ── Gate safety ─────────────────────────────────────────────────────
+gates:
+  training_authorized: false
+  wfv_authorized: false

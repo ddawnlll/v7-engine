@@ -28,6 +28,7 @@ This is the **repo-root entry point** for any AI agent or LLM code agent loading
   alphaforge/                  alphaforge subsystem
   data/                        generated data artifacts
   lib/                         shared library code
+  configs/                     centralized training config, profiles, gates, data scope
   scripts/                     operational scripts
   test.sh                      top-level test runner
 ```
@@ -44,7 +45,8 @@ This is the **repo-root entry point** for any AI agent or LLM code agent loading
 | **Simulation** | `simulation/docs/ai_summary.md` | Simulation truth engine: stop/target multipliers, fee/slippage, R computation, MFE/MAE, path quality, monte carlo | You need simulation output semantics, profile schema, or simulation-to-v7 field mappings. |
 | **Contract schemas** | *(no ai_summary — use `contracts/registry.json` + schema files)* | Cross-domain contract schemas, version compatibility, field mapping | You need canonical TradeOutcome or SimulationOutput schema definitions. |
 | **AlphaForge** | `alphaforge/docs/ai_summary.md` | Alpha discovery authority, label engine, validation, V7 handoff | You work on alpha discovery, label contracts, feature research, validation, or handoff packages. |
-| **Policy Critic** | `v7/docs/policy_critic/ai_summary.md` (canonical) + `policycritic/docs/README.md` (supplementary) | Advisory offline-RL component: research, design, business plan | You need critic design, RL research, phase plans, or business case. |
+|| **Policy Critic** | `v7/docs/policy_critic/ai_summary.md` (canonical) + `policycritic/docs/README.md` (supplementary) | Advisory offline-RL component: research, design, business plan | You need critic design, RL research, phase plans, or business case. |
+|| **Training Config** | **`configs/training.yaml`** + **`configs/profiles/`** | Centralized training profiles: research/full scope, simulation profile references, Makefile defaults | You need to change training scope, symbols, intervals, or simulation profile parameters. |
 
 ---
 

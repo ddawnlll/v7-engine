@@ -53,22 +53,23 @@ Timeframes are LOCKED from `simulation/docs/profiles.md`. P0.8E corrected previo
 
 ## Doc Map
 
-| Doc | Purpose |
-|-----|---------|
-| [discovery_authority.md](discovery_authority.md) | What AlphaForge owns, consumes, produces, and is forbidden from doing |
-| [alpha_thesis_lifecycle.md](alpha_thesis_lifecycle.md) | Alpha thesis states from PROPOSED to V7_CANDIDATE |
-| [data_contract.md](data_contract.md) | Data layers: raw â†’ normalized â†’ feature â†’ label â†’ manifest. P0.8E: timeframes corrected |
-| [feature_contract.md](feature_contract.md) | FeatureSetSpec, feature groups, leakage rules. P0.8E: timeframes corrected |
-| [label_contract.md](label_contract.md) | SimulationOutput â†’ AlphaForge label transformation |
-| [report_contracts.md](report_contracts.md) | ModeResearchReport, AlphaForgeResearchReport format and verdicts |
-| [validation_contract.md](validation_contract.md) | Walk-forward, OOS, cost stress, overfit detection, MHT control |
-| [model_artifact_contract.md](model_artifact_contract.md) | ModelArtifact and CalibrationCandidate formats |
-| [handoff_to_v7.md](handoff_to_v7.md) | V7HandoffPackage: what AlphaForge delivers to V7. P0.8E: gate mapping corrected |
-| [storage_policy.md](storage_policy.md) | What stays in repo vs. external storage |
-| [phase_plan.md](phase_plan.md) | Implementation phases P0.8B through P1.0 |
-| [decision_log.md](decision_log.md) | Locked AlphaForge decisions |
-| [discovered_alphas/](discovered_alphas/) | Validated alpha candidates with full feature definitions, formulas, ablation metrics, and V7 handoff packages |
-| `alphaforge/src/alphaforge/tuning/search_space.py` | XGBoost search space definitions per mode + Optuna integration (Issue #146) |
+|| Doc | Purpose |
+||-----|---------|
+|| [discovery_authority.md](discovery_authority.md) | What AlphaForge owns, consumes, produces, and is forbidden from doing |
+|| [alpha_thesis_lifecycle.md](alpha_thesis_lifecycle.md) | Alpha thesis states from PROPOSED to V7_CANDIDATE |
+|| [data_contract.md](data_contract.md) | Data layers: raw → normalized → feature → label → manifest. P0.8E: timeframes corrected |
+|| [feature_contract.md](feature_contract.md) | FeatureSetSpec, feature groups, leakage rules. P0.8E: timeframes corrected |
+|| [label_contract.md](label_contract.md) | SimulationOutput → AlphaForge label transformation |
+|| [report_contracts.md](report_contracts.md) | ModeResearchReport, AlphaForgeResearchReport format and verdicts |
+|| [validation_contract.md](validation_contract.md) | Walk-forward, OOS, cost stress, overfit detection, MHT control |
+|| [model_artifact_contract.md](model_artifact_contract.md) | ModelArtifact and CalibrationCandidate formats |
+|| [handoff_to_v7.md](handoff_to_v7.md) | V7HandoffPackage: what AlphaForge delivers to V7. P0.8E: gate mapping corrected |
+|| [storage_policy.md](storage_policy.md) | What stays in repo vs. external storage |
+|| [phase_plan.md](phase_plan.md) | Implementation phases P0.8B through P1.0 |
+|| [decision_log.md](decision_log.md) | Locked AlphaForge decisions |
+|| [discovered_alphas/](discovered_alphas/) | Validated alpha candidates with full feature definitions, formulas, ablation metrics, and V7 handoff packages |
+|| `alphaforge/src/alphaforge/tuning/search_space.py` | XGBoost search space definitions per mode + Optuna integration (Issue #146) |
+|| **Training profiles (centralized)** | Research/full scope, simulation profile references at **`configs/training.yaml`** + **`configs/profiles/`** |
 
 **Legacy docs (historical reference only):**
 - `ai_summary__v7_alphaforge_xgb.md` (625KB) â€” pre-authority-lock combined doc. SUPERSEDED by the 12 canonical docs above.
