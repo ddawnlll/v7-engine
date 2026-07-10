@@ -987,8 +987,9 @@ class PipelineRunner:
             print(f"  Feature groups: {feature_matrix.feature_group_ids}")
             print(f"  Bars: {feature_matrix.bar_count()}")
 
-            # Build chrono dataset for WFV
+            # Build chrono dataset for WFV from real timestamps
             all_symbols = self._ctx.ohlcv_data.get("symbol", [])
+            all_timestamps = self._ctx.ohlcv_data.get("timestamp", None)
             symbol_list = []
             timestamp_list = []
 
@@ -1002,7 +1003,20 @@ class PipelineRunner:
             for i in range(len(all_symbols)):
                 if not nan_mask[i]:
                     symbol_list.append(str(all_symbols[i]))
-                    timestamp_list.append(f"2025-01-01T{i:06d}")
+                    if all_timestamps is not None and i < len(all_timestamps):
+                        ts = all_timestamps[i]
+                        # Convert to ISO string for WalkForwardValidator compatibility
+                        if isinstance(ts, (int, float, np.integer)):
+                            from datetime import datetime, timezone
+                            timestamp_list.append(
+                                datetime.fromtimestamp(ts / 1000, tz=timezone.utc).isoformat()
+                                if ts > 1e12 else  # ms timestamp
+                                datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+                            )
+                        else:
+                            timestamp_list.append(str(ts))
+                    else:
+                        timestamp_list.append(f"2025-01-01T{i:06d}")
 
             self._ctx.symbol_list = symbol_list
             self._ctx.timestamp_list = timestamp_list
@@ -1178,12 +1192,13 @@ class PipelineRunner:
 
         try:
             from alphaforge.validation.walk_forward_runner import run_walk_forward
-            from alphaforge.validation.walk_forward_runner import generate_net_r_from_ohlcv
+            from alphaforge.validation.walk_forward_runner import generate_directional_r_from_ohlcv
 
             ctx = self._ctx
 
-            # Pre-compute net_R and align everything with the canonical nan_mask
+            # Pre-compute R values and align everything with the canonical nan_mask
             long_net_raw = short_net_raw = None
+            long_gross_raw = short_gross_raw = None
             feature_names = ctx.feature_names if ctx.feature_names else None
             feature_matrix = ctx.feature_matrix
             pipe_symbols = ctx.symbol_list
@@ -1211,17 +1226,14 @@ class PipelineRunner:
                 if pipe_timestamps and len(pipe_timestamps) > len(X_valid):
                     pipe_timestamps = [t for i, t in enumerate(pipe_timestamps) if i < len(valid_mask) and valid_mask[i]]
 
-                # Compute net_R from pipeline OHLCV data, then align with same mask
-                unique_syms = set(pipe_symbols) if pipe_symbols else set(ctx.ohlcv_data.get("symbol", []))
-                n_syms = len(unique_syms)
-                n_total = len(ctx.ohlcv_data.get("close", []))
-                pipe_n_bars = n_total // max(n_syms, 1)
-                if pipe_n_bars > 0:
-                    lg, sg, ln, sn = generate_net_r_from_ohlcv(
-                        ctx.ohlcv_data, n_bars=pipe_n_bars, mode=self._config.mode,
-                    )
-                    long_net_raw = ln[valid_mask] if len(ln) > X_valid.shape[0] else ln
-                    short_net_raw = sn[valid_mask] if len(sn) > X_valid.shape[0] else sn
+                # Compute directional R from symbol-aware generator (no n_bars needed)
+                result = generate_directional_r_from_ohlcv(
+                    ctx.ohlcv_data, mode=self._config.mode,
+                )
+                long_net_raw = result.long_net_r[valid_mask]
+                short_net_raw = result.short_net_r[valid_mask]
+                long_gross_raw = result.long_gross_r[valid_mask]
+                short_gross_raw = result.short_gross_r[valid_mask]
             else:
                 X_valid = None
 
@@ -1237,6 +1249,8 @@ class PipelineRunner:
                 y_int=y_int,
                 long_net_r=long_net_raw,
                 short_net_r=short_net_raw,
+                long_gross_r=long_gross_raw,
+                short_gross_r=short_gross_raw,
                 timestamp_list=pipe_timestamps,
                 symbol_list=pipe_symbols,
                 feature_names=feature_names,

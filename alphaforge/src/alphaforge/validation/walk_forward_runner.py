@@ -253,6 +253,34 @@ class WalkForwardResult:
     data_summary: Dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class DirectionalRResult:
+    """Directional long/short R values for one decision bar.
+
+    Separates LONG and SHORT outcomes (no oracle best-direction selection).
+    All arrays are aligned with the input OHLCV rows.
+    """
+    long_gross_r: np.ndarray
+    short_gross_r: np.ndarray
+    long_net_r: np.ndarray
+    short_net_r: np.ndarray
+
+
+def validate_aligned_lengths(expected: int, **arrays: np.ndarray | list) -> None:
+    """Fail-fast alignment check for pre-computed WFV dataset arrays.
+
+    Raises ValueError with descriptive message on mismatch.
+    Works under Python -O (not reliant on assert).
+    """
+    for name, arr in arrays.items():
+        if arr is not None and len(arr) != expected:
+            raise ValueError(
+                f"Alignment mismatch: {name} has {len(arr)} elements, "
+                f"expected {expected}. All pre-computed arrays must have "
+                f"the same length after NaN filtering."
+            )
+
+
 # ---------------------------------------------------------------------------
 # Synthetic data generation
 # ---------------------------------------------------------------------------
@@ -339,30 +367,26 @@ def generate_walk_forward_labels(
     return labels
 
 
-def generate_net_r_from_ohlcv(
+def generate_directional_r_from_ohlcv(
     ohlcv_data: Dict[str, np.ndarray],
-    n_bars: int,
     mode: str = "SWING",
     fee_pct: float = _ROUND_TRIP_COST,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Generate separate long/short gross_R and net_R values from OHLCV data.
+) -> DirectionalRResult:
+    """Generate separate long/short R values using symbol-aware grouping.
 
-    Uses triple-barrier simulation on each symbol group:
-    - For each bar, simulates LONG and SHORT scenarios looking forward
-      up to max_hold bars
-    - Applies stop-loss and take-profit barriers
-    - Subtracts round-trip cost from gross_R to get net_R
-    - Returns LONG and SHORT values SEPARATELY (no oracle selection)
+    Uses the symbol array from ohlcv_data to group bars by symbol —
+    does NOT assume equal-length symbol blocks. For each symbol,
+    simulates LONG and SHORT triple-barrier scenarios looking forward.
+    Returns LONG and SHORT values separately (no oracle selection).
 
     Args:
         ohlcv_data: OHLCV data dict with close/high/low/symbol arrays.
-        n_bars: Number of bars per symbol (symbols are concatenated).
         mode: Trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
         fee_pct: Round-trip cost as fraction of return.
 
     Returns:
-        Tuple of (long_gross_r, short_gross_r, long_net_r, short_net_r)
-        Each array aligned with input, zero where simulation not possible.
+        DirectionalRResult with long_gross_r, short_gross_r,
+        long_net_r, short_net_r arrays aligned with input.
     """
     params = MODE_RUNNER_TRIPLE_BARRIER.get(mode, MODE_RUNNER_TRIPLE_BARRIER["SWING"])
     max_hold = params["max_hold"]
@@ -372,33 +396,39 @@ def generate_net_r_from_ohlcv(
     close_arr = ohlcv_data["close"]
     high_arr = ohlcv_data["high"]
     low_arr = ohlcv_data["low"]
+    symbols = np.asarray(ohlcv_data.get("symbol", []))
     n = len(close_arr)
-    round_trip_cost = fee_pct  # authority: 0.0008 (8 bps) in fractional return space
+    round_trip_cost = fee_pct
 
-    # Compute LONG and SHORT results separately (no oracle selection)
     long_gross_arr = np.zeros(n, dtype=np.float64)
     short_gross_arr = np.zeros(n, dtype=np.float64)
     long_net_arr = np.zeros(n, dtype=np.float64)
     short_net_arr = np.zeros(n, dtype=np.float64)
 
-    # Process per symbol group (symbols are concatenated sequentially)
-    for sym_start in range(0, n, n_bars):
-        sym_end = min(sym_start + n_bars, n)
-        for i in range(sym_start, sym_end - max_hold - 1):
+    # Group by symbol using the actual symbol array
+    unique_symbols = np.unique(symbols) if len(symbols) > 0 else ["DEFAULT"]
+    for sym in unique_symbols:
+        sym_indices = np.flatnonzero(symbols == sym)
+        sym_start = sym_indices[0]
+        sym_end = sym_indices[-1] + 1
+
+        for idx_pos, i in enumerate(sym_indices):
+            if idx_pos < 15 or idx_pos >= len(sym_indices) - max_hold - 1:
+                continue  # skip lookback start and last max_hold bars
             entry_price = float(close_arr[i])
-            # Simple ATR over last 14 bars
-            lookback_start = max(sym_start, i - 14)
-            if i - lookback_start < 3:
+
+            # ATR from same-symbol lookback
+            lookback_indices = sym_indices[max(0, idx_pos - 14):idx_pos + 1]
+            if len(lookback_indices) < 4:
                 continue
-            # True Range:
-            high_slice = high_arr[lookback_start + 1:i + 1]
-            low_slice = low_arr[lookback_start + 1:i + 1]
-            close_prev = close_arr[lookback_start:i]
+            look_high = high_arr[lookback_indices]
+            look_low = low_arr[lookback_indices]
+            look_close = close_arr[lookback_indices]
             tr = np.maximum(
-                high_slice - low_slice,
+                look_high[1:] - look_low[1:],
                 np.maximum(
-                    np.abs(high_slice - close_prev),
-                    np.abs(low_slice - close_prev),
+                    np.abs(look_high[1:] - look_close[:-1]),
+                    np.abs(look_low[1:] - look_close[:-1]),
                 ),
             )
             atr = float(np.mean(tr))
@@ -408,34 +438,44 @@ def generate_net_r_from_ohlcv(
             stop_dist = atr * stop_mult
             target_dist = atr * target_mult
 
+            # Future bars — must be same symbol
+            future_indices = sym_indices[idx_pos + 1:idx_pos + 1 + max_hold]
+            if len(future_indices) == 0:
+                continue
+
             # Simulate LONG
             long_gross = 0.0
-            for j in range(1, min(max_hold + 1, sym_end - i)):
-                if low_arr[i + j] <= entry_price - stop_dist:
+            for j, fj in enumerate(future_indices):
+                if low_arr[fj] <= entry_price - stop_dist:
                     long_gross = -stop_dist / entry_price
                     break
-                if high_arr[i + j] >= entry_price + target_dist:
+                if high_arr[fj] >= entry_price + target_dist:
                     long_gross = target_dist / entry_price
                     break
-                long_gross = (close_arr[i + j] - entry_price) / entry_price
+                long_gross = (close_arr[fj] - entry_price) / entry_price
 
             # Simulate SHORT
             short_gross = 0.0
-            for j in range(1, min(max_hold + 1, sym_end - i)):
-                if high_arr[i + j] >= entry_price + stop_dist:
+            for j, fj in enumerate(future_indices):
+                if high_arr[fj] >= entry_price + stop_dist:
                     short_gross = -stop_dist / entry_price
                     break
-                if low_arr[i + j] <= entry_price - target_dist:
+                if low_arr[fj] <= entry_price - target_dist:
                     short_gross = target_dist / entry_price
                     break
-                short_gross = (entry_price - close_arr[i + j]) / entry_price
+                short_gross = (entry_price - close_arr[fj]) / entry_price
 
             long_net_arr[i] = long_gross - round_trip_cost
             short_net_arr[i] = short_gross - round_trip_cost
             long_gross_arr[i] = long_gross
             short_gross_arr[i] = short_gross
 
-    return long_gross_arr, short_gross_arr, long_net_arr, short_net_arr
+    return DirectionalRResult(
+        long_gross_r=long_gross_arr,
+        short_gross_r=short_gross_arr,
+        long_net_r=long_net_arr,
+        short_net_r=short_net_arr,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -764,6 +804,8 @@ def run_walk_forward(
     y_int: np.ndarray | None = None,
     long_net_r: np.ndarray | None = None,
     short_net_r: np.ndarray | None = None,
+    long_gross_r: np.ndarray | None = None,
+    short_gross_r: np.ndarray | None = None,
     timestamp_list: list[str] | None = None,
     symbol_list: list[str] | None = None,
     feature_names: list[str] | None = None,
@@ -838,19 +880,15 @@ def run_walk_forward(
     # 1b. Generate or accept long/short net_R values
     # ------------------------------------------------------------------
     if long_net_r is not None and short_net_r is not None:
-        logger.info(f"[{mode_str}] Using provided long/short net_R arrays")
-        long_gross_raw, short_gross_raw, long_net_raw, short_net_raw = (
-            None, None, long_net_r, short_net_r,
-        )
+        logger.info(f"[{mode_str}] Using provided long/short R arrays")
+        long_net_raw, short_net_raw = long_net_r, short_net_r
+        long_gross_raw, short_gross_raw = long_gross_r, short_gross_r
     else:
-        long_gross_raw, short_gross_raw, long_net_raw, short_net_raw = (
-            generate_net_r_from_ohlcv(ohlcv_data, n_bars=n_bars, mode=mode_str)
-        )
-        logger.info(
-            f"[{mode_str}] Generated long/short net_R: "
-            f"long_mean={float(np.mean(long_net_raw[long_net_raw != 0])):.6f}, "
-            f"short_mean={float(np.mean(short_net_raw[short_net_raw != 0])):.6f}"
-        )
+        result = generate_directional_r_from_ohlcv(ohlcv_data, mode=mode_str)
+        long_gross_raw = result.long_gross_r
+        short_gross_raw = result.short_gross_r
+        long_net_raw = result.long_net_r
+        short_net_raw = result.short_net_r
 
     # ------------------------------------------------------------------
     # 2. Compute or accept features
@@ -912,24 +950,17 @@ def run_walk_forward(
         y_labels = generate_walk_forward_labels(len(X), random_seed=random_seed)
         y_valid = np.array([_LABEL_TO_INT[str(lbl)] for lbl in y_labels], dtype=int)
 
-    # ====== CANONICAL ALIGNMENT ASSERTIONS ======
-    assert len(X) == len(y_valid), (
-        f"Feature/label mismatch: X={len(X)}, y={len(y_valid)}"
+    # ====== CANONICAL ALIGNMENT VALIDATION ======
+    validate_aligned_lengths(
+        len(X),
+        y=y_valid,
+        timestamp=timestamp_list,
+        symbol=symbol_list,
+        long_net=long_net_valid,
+        short_net=short_net_valid,
+        long_gross=long_gross_valid,
+        short_gross=short_gross_valid,
     )
-    assert len(X) == len(timestamp_list), (
-        f"Feature/timestamp mismatch: X={len(X)}, ts={len(timestamp_list)}"
-    )
-    assert len(X) == len(symbol_list), (
-        f"Feature/symbol mismatch: X={len(X)}, sym={len(symbol_list)}"
-    )
-    if long_net_valid is not None:
-        assert len(X) == len(long_net_valid), (
-            f"Feature/long_net mismatch: X={len(X)}, ln={len(long_net_valid)}"
-        )
-    if short_net_valid is not None:
-        assert len(X) == len(short_net_valid), (
-            f"Feature/short_net mismatch: X={len(X)}, sn={len(short_net_valid)}"
-        )
     logger.info(
         f"[{mode_str}] Aligned dataset: {len(X)} rows, "
         f"{len(set(symbol_list))} symbols, "
@@ -1072,15 +1103,23 @@ def run_walk_forward(
         if long_net_valid is not None and short_net_valid is not None:
             oos_long_r = long_net_valid[oos_idx]
             oos_short_r = short_net_valid[oos_idx]
-            # Realized net_R: LONG predicted → use long_net, SHORT predicted → use short_net
             oos_net_r = np.where(
                 oos_pred == 0,  # LONG
                 oos_long_r,
-                np.where(oos_pred == 1, oos_short_r, 0.0),  # SHORT, else NO_TRADE
+                np.where(oos_pred == 1, oos_short_r, 0.0),
             )
-            oos_gross_r = None  # Gross metrics computed from net inside compute_economic_metrics
         else:
             oos_net_r = None
+
+        if long_gross_valid is not None and short_gross_valid is not None:
+            oos_long_gross = long_gross_valid[oos_idx]
+            oos_short_gross = short_gross_valid[oos_idx]
+            oos_gross_r = np.where(
+                oos_pred == 0,
+                oos_long_gross,
+                np.where(oos_pred == 1, oos_short_gross, 0.0),
+            )
+        else:
             oos_gross_r = None
         oos_fin_metrics = compute_economic_metrics(
             oos_pred, y_oos,
