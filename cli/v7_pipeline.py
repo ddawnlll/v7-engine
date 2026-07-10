@@ -244,8 +244,10 @@ class PipelineContext:
 
     ohlcv_data: Optional[Dict[str, np.ndarray]] = None
     feature_matrix: Any = None  # FeatureMatrix from features.pipeline
-    labels: Optional[np.ndarray] = None  # String label array
-    label_ints: Optional[np.ndarray] = None  # Integer label array
+    labels: Optional[np.ndarray] = None  # String label array (OHLCV-length)
+    label_ints: Optional[np.ndarray] = None  # Integer label array (OHLCV-length)
+    label_valid_mask: Optional[np.ndarray] = None  # bool mask (OHLCV-length)
+    label_status: Optional[np.ndarray] = None  # status per row (OHLCV-length)
     training_result: Any = None  # TrainingResult from xgb_trainer
     wfv_result: Any = None  # WalkForwardResult from walk_forward_runner
     feature_names: List[str] = field(default_factory=list)
@@ -844,17 +846,20 @@ class PipelineRunner:
         n_bars = len(self._ctx.ohlcv_data["close"])
 
         if self._config.use_synthetic:
-            # Generate synthetic labels for each bar
-            labels = _generate_synthetic_labels(
+            # Generate synthetic labels for each bar — all bars are valid
+            n_bars = len(self._ctx.ohlcv_data["close"])
+            label_str = _generate_synthetic_labels(
                 n_samples=n_bars,
-                random_seed=self._config.random_seed + 1,  # Offset seed from OHLCV
+                random_seed=self._config.random_seed + 1,
             )
-            self._ctx.labels = labels
+            self._ctx.labels = np.array(label_str, dtype=object)
             self._ctx.label_ints = np.array(
-                [_LABEL_TO_INT[str(lbl)] for lbl in labels], dtype=int
+                [_LABEL_TO_INT[str(lbl)] for lbl in label_str], dtype=np.int16,
             )
+            self._ctx.label_valid_mask = np.ones(n_bars, dtype=bool)
+            self._ctx.label_status = np.full(n_bars, "COMPLETE", dtype=object)
 
-            unique, counts = np.unique(labels, return_counts=True)
+            unique, counts = np.unique(label_str, return_counts=True)
             distribution = {str(k): int(v) for k, v in zip(unique, counts)}
 
             metrics.update({
@@ -887,20 +892,27 @@ class PipelineRunner:
                 stop_mult = 1.5 if mode != "SWING" else 2.0
                 target_mult = 2.0 if mode != "SWING" else 3.0
 
-                # Group bars by symbol for proper future-path isolation
+                # Initialize OHLCV-length sentinel arrays
                 symbols_arr = np.asarray(ohlcv.get("symbol", ["DEFAULT"] * n))
                 unique_symbols = np.unique(symbols_arr)
-
-                labels_list = []
-                label_ints_list = []
+                labels_arr = np.full(n, "__INVALID__", dtype=object)
+                label_ints_arr = np.full(n, -1, dtype=np.int16)
+                label_valid = np.zeros(n, dtype=bool)
+                label_status_arr = np.full(n, "UNRESOLVED", dtype=object)
                 error_count = 0
+                sim_error_count = 0
+                adapter_error_count = 0
                 error_details = []
 
                 for sym in unique_symbols:
                     sym_indices = np.flatnonzero(symbols_arr == sym)
                     for idx_pos, i in enumerate(sym_indices):
-                        if idx_pos < 15 or idx_pos >= len(sym_indices) - max_hold - 1:
-                            continue  # need lookback + future room
+                        if idx_pos < 15:
+                            label_status_arr[i] = "INSUFFICIENT_LOOKBACK"
+                            continue
+                        if idx_pos >= len(sym_indices) - max_hold - 1:
+                            label_status_arr[i] = "INSUFFICIENT_HORIZON"
+                            continue
 
                         entry_price = float(ohlcv["close"][i])
 
@@ -913,13 +925,14 @@ class PipelineRunner:
                         )
                         atr_val = float(np.mean(tr))
                         if atr_val <= 0 or atr_val > entry_price * 0.5:
+                            label_status_arr[i] = "INVALID_ATR"
                             continue
 
                         # Future candles — same symbol only
                         future_idx = sym_indices[idx_pos + 1:idx_pos + 1 + max_hold]
                         candles = [
                             Candle(
-                                open=float(ohlcv["open"][fj]) if "open" in ohlcv and fj < len(ohlcv["open"]) else entry_price,
+                                open=float(ohlcv["open"][fj]) if "open" in ohlcv else entry_price,
                                 high=float(ohlcv["high"][fj]),
                                 low=float(ohlcv["low"][fj]),
                                 close=float(ohlcv["close"][fj]),
@@ -961,6 +974,7 @@ class PipelineRunner:
                             sim_out = simulate(sim_input)
                         except Exception as e:
                             error_count += 1
+                            label_status_arr[i] = "SIMULATION_ERROR"
                             error_details.append(f"bar {i} ({sym}): {type(e).__name__}: {e}")
                             continue
 
@@ -968,33 +982,44 @@ class PipelineRunner:
                         try:
                             ld = sim_out.model_dump() if hasattr(sim_out, "model_dump") else vars(sim_out)
                             label = adapter.adapt_simulation_output(ld)
-                            best = label.get("best_action_after_cost", "NO_TRADE")
+                            best = label.get("best_action_after_cost")
+                            if best is None:
+                                raise ValueError("best_action_after_cost missing from label output")
                         except Exception as e:
                             error_count += 1
+                            label_status_arr[i] = "ADAPTER_ERROR"
                             error_details.append(f"label adapt bar {i} ({sym}): {type(e).__name__}: {e}")
                             continue
 
-                        labels_list.append(best)
-                        label_ints_list.append(_LABEL_TO_INT.get(best, _LABEL_TO_INT["NO_TRADE"]))
+                        labels_arr[i] = best
+                        label_ints_arr[i] = _LABEL_TO_INT.get(best, _LABEL_TO_INT["NO_TRADE"])
+                        label_valid[i] = True
+                        label_status_arr[i] = "COMPLETE"
 
-                self._ctx.labels = np.array(labels_list) if labels_list else np.array([])
-                self._ctx.label_ints = np.array(label_ints_list, dtype=int) if label_ints_list else np.array([], dtype=int)
+                valid_count = int(label_valid.sum())
+                self._ctx.labels = labels_arr
+                self._ctx.label_ints = label_ints_arr
+                self._ctx.label_valid_mask = label_valid
+                self._ctx.label_status = label_status_arr
 
-                unique, counts = np.unique(labels_list, return_counts=True)
+                unique, counts = np.unique(labels_arr[label_valid], return_counts=True)
                 dist = {str(k): int(v) for k, v in zip(unique, counts)}
                 metrics.update({
-                    "n_labels": len(labels_list),
+                    "n_labels": valid_count,
+                    "n_total_rows": n,
                     "n_errors": error_count,
                     "label_distribution": dist,
                     "label_source": "simulation",
                 })
-                print(f"  Generated {len(labels_list)} simulation labels from {len(unique_symbols)} symbols")
+                print(f"  Generated {valid_count} valid labels / {n} rows from {len(unique_symbols)} symbols")
                 print(f"  Distribution: {dist}")
+                attempted = valid_count + error_count
+                error_rate = error_count / attempted if attempted else 1.0
                 if error_count > 0:
                     print(f"  Errors: {error_count} — first 3: {error_details[:3]}")
-                    if error_count > len(labels_list) * 0.5:
+                    if error_rate > 0.5:
                         errors.append(
-                            f"High error rate: {error_count}/{len(labels_list) + error_count} bars failed"
+                            f"High error rate: {error_rate:.1%} ({error_count}/{attempted})"
                         )
 
             except ImportError as e:
