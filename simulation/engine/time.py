@@ -196,6 +196,8 @@ def _parse_iso(value: str) -> datetime:
 
 def _datetime_to_ms(dt: datetime) -> int:
     """Convert an aware datetime to UTC milliseconds."""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
     epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
     total_seconds = (dt - epoch).total_seconds()
     if total_seconds <= 0:
