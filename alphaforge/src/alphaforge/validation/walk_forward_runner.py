@@ -23,9 +23,12 @@ Usage:
 
 from __future__ import annotations
 
+import logging
+
 import json
 import os
 import sys
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -758,6 +761,7 @@ def run_walk_forward(
     test_window_bars: int | None = None,
     min_folds: int = WFV_MIN_FOLDS,
     mode: str = "SWING",
+    ohlcv_data: dict | None = None,
 ) -> WalkForwardResult:
     """Run complete walk-forward validation for a specified trading mode.
 
@@ -801,16 +805,29 @@ def run_walk_forward(
     annualization = MODE_ANNUALIZATION.get(mode_str, 2190.0)
 
     # ------------------------------------------------------------------
-    # 1. Generate synthetic data
+    # 1. Get or generate OHLCV data
     # ------------------------------------------------------------------
-    symbols = ("BTCUSDT", "ETHUSDT", "SOLUSDT")[:n_symbols]
-    ohlcv_data = generate_walk_forward_ohlcv(
-        n_bars=n_bars,
-        symbols=symbols,
-        random_seed=random_seed,
-    )
-    total_bars = n_bars * len(symbols)
-    logger.info(f"[{mode_str}] Generated {total_bars} bars across {len(symbols)} symbols")
+    if ohlcv_data is not None:
+        logger.info(f"[{mode_str}] Using provided OHLCV data from pipeline context")
+        # Derive n_symbols and n_bars from provided data
+        symbol_arr = ohlcv_data.get("symbol", [])
+        unique_symbols = sorted(set(symbol_arr)) if symbol_arr else []
+        n_symbols = len(unique_symbols)
+        n_bars = len(symbol_arr) // max(n_symbols, 1) if n_symbols > 0 else 0
+        symbols = tuple(unique_symbols)
+        logger.info(
+            f"[{mode_str}] Pipeline data: {len(symbol_arr)} bars, "
+            f"{n_symbols} symbols, {n_bars} bars/symbol"
+        )
+    else:
+        symbols = ("BTCUSDT", "ETHUSDT", "SOLUSDT")[:n_symbols]
+        ohlcv_data = generate_walk_forward_ohlcv(
+            n_bars=n_bars,
+            symbols=symbols,
+            random_seed=random_seed,
+        )
+        total_bars = n_bars * len(symbols)
+        logger.info(f"[{mode_str}] Generated {total_bars} bars across {len(symbols)} symbols")
 
     # ------------------------------------------------------------------
     # 1b. Generate net_R values from OHLCV (for economic metrics)
@@ -872,9 +889,8 @@ def run_walk_forward(
     # ------------------------------------------------------------------
     # 4. Build chronological dataset for WalkForwardValidator
     # ------------------------------------------------------------------
-    from dataclasses import dataclass as _dc
 
-    @_dc
+    @dataclass
     class _ChronoRow:
         feature_timestamp: str
         symbol: str
@@ -1215,7 +1231,7 @@ def run_walk_forward(
     }
 
     data_summary = {
-        "total_bars": total_bars,
+        "total_bars": n_bars * len(symbols),
         "n_symbols": len(symbols),
         "n_features": len(feature_names),
         "feature_names": feature_names,

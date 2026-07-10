@@ -1172,6 +1172,7 @@ class PipelineRunner:
                 n_symbols=len(self._config.symbols),
                 random_seed=self._config.random_seed,
                 min_folds=3,  # Per issue spec
+                ohlcv_data=self._ctx.ohlcv_data,  # Use pipeline data, not synthetic
             )
             self._ctx.wfv_result = result
 
