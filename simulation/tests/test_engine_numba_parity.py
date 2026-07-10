@@ -94,7 +94,6 @@ def _gen_random_signal(rng, mode="SCALP", max_bars=None):
 # Test 1: GPU=CPU path parity (11 fields, 1e-9 tolerance)
 # ═══════════════════════════════════════════════════════════════════════
 
-@pytest.mark.skipif(not is_cuda_available(), reason="CUDA not available")
 class TestGPUCPUParity:
     """GPU path vs CPU path: must be bit-identical (1e-9)."""
 
@@ -109,6 +108,7 @@ class TestGPUCPUParity:
                 raise AssertionError(f"{key}: {mismatches}/{len(gpu_vals)} mismatched integers")
             return 0.0
 
+    @pytest.mark.skipif(not is_cuda_available(), reason="CUDA not available")
     def test_batch_parity_500_fields(self):
         """500 random cases: GPU=CPU for all 11 fields with 1e-9 tolerance."""
         rng = np.random.RandomState(42)

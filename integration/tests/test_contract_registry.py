@@ -16,6 +16,8 @@ import pytest
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CONTRACTS_DIR = os.path.join(REPO_ROOT, "contracts")
 KNOWN_DOMAINS = {"lib", "simulation", "alphaforge", "v7", "runtime"}
+# Contracts with intentionally null schema_file (no schema defined yet)
+SCHEMA_OPTIONAL_CONTRACTS = {"Alpha1FrozenArtifact"}
 
 
 def _load_json(path: str) -> dict:
@@ -51,6 +53,9 @@ class TestContractRegistry:
         for contract in registry["contracts"]:
             schema_path = contract.get("schema_file")
             if schema_path is None:
+                assert contract["object_name"] in SCHEMA_OPTIONAL_CONTRACTS, (
+                    f"Unexpected null schema_file for {contract['object_name']}"
+                )
                 continue  # no schema yet (e.g. Alpha1FrozenArtifact)
             assert _file_exists(schema_path), (
                 f"Schema file missing for {contract['object_name']}: {schema_path}"
@@ -90,6 +95,9 @@ class TestContractRegistry:
         for contract in registry["contracts"]:
             schema_path = contract.get("schema_file")
             if schema_path is None:
+                assert contract["object_name"] in SCHEMA_OPTIONAL_CONTRACTS, (
+                    f"Unexpected null schema_file for {contract['object_name']}"
+                )
                 continue  # no schema yet (e.g. Alpha1FrozenArtifact)
             schema = _load_json(os.path.join(REPO_ROOT, schema_path))
             assert "$schema" in schema, (

@@ -127,9 +127,10 @@ class TestCalibration:
     def test_calibration_consistent_with_benchmark(self):
         """Calibration should return a valid winner — accepts cpu or gpu."""
         result = calibrate_hardware(force=True)
+        gpu_msg = f"gpu={result['gpu_time']:.4f}s" if result['gpu_time'] is not None else "gpu=None"
         assert result["winner"] in ("cpu", "gpu"), (
             f"Expected cpu or gpu winner, got {result['winner']} "
-            f"(cpu={result['cpu_time']:.4f}s, gpu={result['gpu_time']:.4f}s)"
+            f"(cpu={result['cpu_time']:.4f}s, {gpu_msg})"
         )
         assert result["cpu_time"] > 0
         if result["gpu_time"] is not None:

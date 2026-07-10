@@ -885,9 +885,21 @@ class PipelineRunner:
                 label_ints_list = []
 
                 for i in range(n):
-                    atr_val = float(
-                        np.mean(np.abs(np.diff(ohlcv["close"][max(0, i-14):i+1])))
-                    ) if i >= 14 else float(ohlcv["high"][i] - ohlcv["low"][i])
+                    if i >= 14:
+                        # True Range: max(high-low, |high-prev_close|, |low-prev_close|)
+                        hs = ohlcv["high"][i-14:i+1]
+                        ls = ohlcv["low"][i-14:i+1]
+                        cs = ohlcv["close"][i-14:i+1]
+                        tr = np.maximum(
+                            hs[1:] - ls[1:],
+                            np.maximum(
+                                np.abs(hs[1:] - cs[:-1]),
+                                np.abs(ls[1:] - cs[:-1]),
+                            ),
+                        )
+                        atr_val = float(np.mean(tr))
+                    else:
+                        atr_val = float(ohlcv["high"][i] - ohlcv["low"][i])
 
                     inp = SimulationInput(
                         symbol=str(ohlcv["symbol"][i]) if isinstance(ohlcv["symbol"], list) else "S",
