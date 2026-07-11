@@ -5,12 +5,14 @@
 This is the **repo-root entry point** for any AI agent or LLM code agent loading into `/home/erfolg/src/v7-engine/`. It is NOT a dense synthesis. It is a **thin map** that tells you which subsystem's `ai_summary.md` to read for your task, and provides cross-domain rules that span all subsystems.
 
 **Reading order for an AI:**
-1. Read `CLAUDE.md` for working instructions (design lock semantics, task completion protocol, forbidden actions, domain boundaries).
-2. Read this file to orient yourself.
-3. Then read the ai_summary.md for the subsystem(s) you are working on.
-4. Return here for cross-domain conflict resolution.
+1. Read `.agent/CONTEXT_INDEX.md` for the agent context layer protocol — this is the **shared memory system** across all AI sessions (Claude, DeepSeek, GPT, Hermes).
+2. Read the 8 context files in order (CONTEXT_INDEX.md → project_context.md → DECISIONS.md → FINDINGS_LEDGER.md → OPEN_QUESTIONS.md → HANDOFF.md → CURRENT_TASK.md → EVIDENCE_REQUIREMENTS.md) for locked decisions, confirmed findings, and current state.
+3. Read `CLAUDE.md` for working instructions (design lock semantics, task completion protocol, forbidden actions, domain boundaries).
+4. Read this file to orient yourself.
+5. Then read the ai_summary.md for the subsystem(s) you are working on.
+6. Return here for cross-domain conflict resolution.
 
-**If you read only one doc, read `CLAUDE.md`.** It encodes how to work safely in this repo. If this doc conflicts with a subsystem authority doc, the subsystem authority doc wins.
+**If you read only two docs, read `.agent/CONTEXT_INDEX.md` then `CLAUDE.md`.** The agent context layer is now the canonical entry point; `CLAUDE.md` encodes how to work safely in this repo. If this doc conflicts with a subsystem authority doc, the subsystem authority doc wins.
 
 ---
 
@@ -20,7 +22,8 @@ This is the **repo-root entry point** for any AI agent or LLM code agent loading
 /                              (this hub)
   ai_summary.md                ← you are here
   contracts/                   cross-domain contract schemas & registry
-  docs/                        cross-domain governance & runbook
+  .agent/                      agent context layer (shared memory across AI sessions)
+  docs/                        cross-domain governance, runbook, decisions, audits
   v7/                          V7 pipeline docs, sources, ai_summary
   runtime/                     operational Python backend, scan loop, analyzer, learning, schema, API
   interface/                   React + TypeScript + Vite operator UI
@@ -44,7 +47,8 @@ This is the **repo-root entry point** for any AI agent or LLM code agent loading
 | **Interface** | `interface/docs/ai_summary.md` | React UI: workspace structure, page ownership, component architecture, migration plan, data freshness, current-state report | You need UI routing rules, page responsibilities, data freshness cadence, or the interface rework plan. |
 | **Simulation** | `simulation/docs/ai_summary.md` | Simulation truth engine: stop/target multipliers, fee/slippage, R computation, MFE/MAE, path quality, monte carlo | You need simulation output semantics, profile schema, or simulation-to-v7 field mappings. |
 | **Contract schemas** | *(no ai_summary — use `contracts/registry.json` + schema files)* | Cross-domain contract schemas, version compatibility, field mapping | You need canonical TradeOutcome or SimulationOutput schema definitions. |
-| **AlphaForge** | `alphaforge/docs/ai_summary.md` | Alpha discovery authority, label engine, validation, V7 handoff | You work on alpha discovery, label contracts, feature research, validation, or handoff packages. |
+|| **Agent Context Layer** | `.agent/CONTEXT_INDEX.md` | Shared memory across AI sessions: locked decisions (`docs/decisions/DECISIONS.md`), verified findings (`docs/audits/FINDINGS_LEDGER.md`), open questions, assumptions, per-session handoff, current task, evidence standards | You enter the repo as an AI agent — read this before anything else |
+|| **AlphaForge** | `alphaforge/docs/ai_summary.md` | Alpha discovery authority, label engine, validation, V7 handoff | You work on alpha discovery, label contracts, feature research, validation, or handoff packages. |
 || **Policy Critic** | `v7/docs/policy_critic/ai_summary.md` (canonical) + `policycritic/docs/README.md` (supplementary) | Advisory offline-RL component: research, design, business plan | You need critic design, RL research, phase plans, or business case. |
 || **Training Config** | **`configs/training.yaml`** + **`configs/profiles/`** | Centralized training profiles: research/full scope, simulation profile references, Makefile defaults | You need to change training scope, symbols, intervals, or simulation profile parameters. |
 
@@ -52,9 +56,16 @@ This is the **repo-root entry point** for any AI agent or LLM code agent loading
 
 ## Quick-Start Decision Tree
 
-| Your Task | Read First |
-|---|---|
-| How does the V7 pipeline work end-to-end? | `v7/docs/ai_summary.md` (all 42 sections) |
+|| Your Task | Read First |
+|---|---|---|
+|| I just entered the repo — where do I start? | `.agent/CONTEXT_INDEX.md` → full reading order protocol |
+|| What locked decisions exist? | `docs/decisions/DECISIONS.md` |
+|| What audit findings have been confirmed? | `docs/audits/FINDINGS_LEDGER.md` |
+|| What's currently being investigated? | `docs/audits/OPEN_QUESTIONS.md` |
+|| Where did the last agent leave off? | `.agent/HANDOFF.md` |
+|| What should I work on now? | `.agent/CURRENT_TASK.md` |
+|| How do I prove I'm done? | `.agent/EVIDENCE_REQUIREMENTS.md` |
+|| How does the V7 pipeline work end-to-end? | `v7/docs/ai_summary.md` (all 42 sections) |
 | What API routes exist and what do they return? | `runtime/docs/ai_summary.md` → R.7 API Surface |
 | How does the analyzer make trading decisions? | `runtime/docs/ai_summary.md` → R.3 Analyzer |
 | What tables are in the operational database? | `runtime/docs/ai_summary.md` → R.6 Operational Schema |
@@ -73,6 +84,7 @@ This is the **repo-root entry point** for any AI agent or LLM code agent loading
 ## Cross-Domain Authority & Governance
 
 ### Root Authorities
+- **Agent context layer:** `.agent/CONTEXT_INDEX.md` (entry protocol), `docs/decisions/DECISIONS.md` (locked decisions), `docs/audits/FINDINGS_LEDGER.md` (verified findings)
 - **Contract schemas:** `contracts/registry.json`, `contracts/schemas/*.schema.json`
 - **Governance:** `docs/architecture/governance.md`
 - **Simulation truth semantics:** `/simulation/`
