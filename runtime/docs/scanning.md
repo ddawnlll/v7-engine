@@ -6,14 +6,14 @@ It is intended as an LLM handoff document for analyzing scan-time improvements.
 
 Primary source files:
 
-- [/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py](/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/market_data.py](/Users/hootie/src/trading-bot/v4/runtime/market_data.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/autonomous_loop.py](/Users/hootie/src/trading-bot/v4/runtime/autonomous_loop.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/scan_control.py](/Users/hootie/src/trading-bot/v4/runtime/scan_control.py)
-- [/Users/hootie/src/trading-bot/v4/api/routes/scans.py](/Users/hootie/src/trading-bot/v4/api/routes/scans.py)
-- [/Users/hootie/src/trading-bot/v4/services/universe_filter_service.py](/Users/hootie/src/trading-bot/v4/services/universe_filter_service.py)
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_service.py](/Users/hootie/src/trading-bot/v4/services/analyzer_service.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py](/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py)
+- [../runtime/scan_runtime.py](../runtime/scan_runtime.py)
+- [../runtime/market_data.py](../runtime/market_data.py)
+- [../runtime/autonomous_loop.py](../runtime/autonomous_loop.py)
+- [../runtime/scan_control.py](../runtime/scan_control.py)
+- [../api/routes/scans.py](../api/routes/scans.py)
+- [../services/universe_filter_service.py](../services/universe_filter_service.py)
+- [../services/analyzer_service.py](../services/analyzer_service.py)
+- [../runtime/paper_execution.py](../runtime/paper_execution.py)
 
 ## Executive Summary
 

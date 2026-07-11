@@ -29,9 +29,9 @@ Purpose:
 
 Primary files:
 
-- [/Users/hootie/src/trading-bot/v4/services/decision_attribution_service.py](/Users/hootie/src/trading-bot/v4/services/decision_attribution_service.py)
-- [/Users/hootie/src/trading-bot/v4/services/learning_service.py](/Users/hootie/src/trading-bot/v4/services/learning_effectiveness_service.py)
-- [/Users/hootie/src/trading-bot/v4/services/improvement_analytics_service.py](/Users/hootie/src/trading-bot/v4/services/improvement_analytics_service.py)
+- [../services/decision_attribution_service.py](../services/decision_attribution_service.py)
+- [../services/learning_service.py](../services/learning_service.py)
+- [../services/improvement_analytics_service.py](../services/improvement_analytics_service.py)
 
 ### Stop model rebuild
 
@@ -47,9 +47,9 @@ Primary files:
 
 Primary files:
 
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_factors.py](/Users/hootie/src/trading-bot/v4/services/analyzer_factors.py)
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_core.py](/Users/hootie/src/trading-bot/v4/services/analyzer_core.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py](/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py)
+- [../services/analyzer_factors.py](../services/analyzer_factors.py)
+- [../services/analyzer_core.py](../services/analyzer_core.py)
+- [../runtime/paper_execution.py](../runtime/paper_execution.py)
 
 ### Entry timing and environment gating
 
@@ -64,9 +64,9 @@ Primary files:
 
 Primary files:
 
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_core.py](/Users/hootie/src/trading-bot/v4/services/analyzer_core.py)
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_config.py](/Users/hootie/src/trading-bot/v4/services/analyzer_config.py)
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_factors.py](/Users/hootie/src/trading-bot/v4/services/analyzer_factors.py)
+- [../services/analyzer_core.py](../services/analyzer_core.py)
+- [../services/analyzer_config.py](../services/analyzer_config.py)
+- [../services/analyzer_factors.py](../services/analyzer_factors.py)
 
 ### Time-stop analysis
 
@@ -84,10 +84,10 @@ Primary files:
 
 Primary files:
 
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_reporting.py](/Users/hootie/src/trading-bot/v4/services/analyzer_reporting.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py](/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py)
-- [/Users/hootie/src/trading-bot/v4/services/trade_analytics_service.py](/Users/hootie/src/trading-bot/v4/services/trade_analytics_service.py)
-- [/Users/hootie/src/trading-bot/v4/services/failure_classifier.py](/Users/hootie/src/trading-bot/v4/services/failure_classifier.py)
+- [../services/analyzer_reporting.py](../services/analyzer_reporting.py)
+- [../runtime/paper_execution.py](../runtime/paper_execution.py)
+- [../services/trade_analytics_service.py](../services/trade_analytics_service.py)
+- [../services/failure_classifier.py](../services/failure_classifier.py)
 
 ### Universe throttling
 
@@ -102,11 +102,11 @@ Primary files:
 
 Primary files:
 
-- [/Users/hootie/src/trading-bot/v4/services/universe_filter_service.py](/Users/hootie/src/trading-bot/v4/services/universe_filter_service.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py](/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py)
-- [/Users/hootie/src/trading-bot/v4/api/routes/health.py](/Users/hootie/src/trading-bot/v4/api/routes/health.py)
-- [/Users/hootie/src/trading-bot/interface/src/routes/AdminRoute.tsx](/Users/hootie/src/trading-bot/interface/src/routes/AdminRoute.tsx)
-- [/Users/hootie/src/trading-bot/interface/src/routes/AnalyticsRoute.tsx](/Users/hootie/src/trading-bot/interface/src/routes/AnalyticsRoute.tsx)
+- [../services/universe_filter_service.py](../services/universe_filter_service.py)
+- [../runtime/scan_runtime.py](../runtime/scan_runtime.py)
+- [../api/routes/health.py](../api/routes/health.py)
+- [Legacy: interface/src/routes/AdminRoute.tsx (original trading-bot repo)]
+- [Legacy: interface/src/routes/AnalyticsRoute.tsx (original trading-bot repo)]
 
 ### Observability additions
 

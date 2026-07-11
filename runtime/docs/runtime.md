@@ -4,15 +4,15 @@ This document describes the active `v4` scan runtime path.
 
 For a dedicated scan-engine handoff focused on timing, control flow, and performance analysis, see:
 
-- [/Users/hootie/src/trading-bot/v4/docs/scanning.md](/Users/hootie/src/trading-bot/v4/docs/scanning.md)
+- [./scanning.md](./scanning.md)
 
 Source files:
 
-- [/Users/hootie/src/trading-bot/v4/runtime/market_data.py](/Users/hootie/src/trading-bot/v4/runtime/market_data.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py](/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/autonomous_loop.py](/Users/hootie/src/trading-bot/v4/runtime/autonomous_loop.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py](/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py)
-- [/Users/hootie/src/trading-bot/v4/api/routes/scans.py](/Users/hootie/src/trading-bot/v4/api/routes/scans.py)
+- [../runtime/market_data.py](../runtime/market_data.py)
+- [../runtime/scan_runtime.py](../runtime/scan_runtime.py)
+- [../runtime/autonomous_loop.py](../runtime/autonomous_loop.py)
+- [../runtime/paper_execution.py](../runtime/paper_execution.py)
+- [../api/routes/scans.py](../api/routes/scans.py)
 
 ## Runtime Components
 
@@ -76,7 +76,7 @@ The request provides:
 
 In:
 
-- [/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py](/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py)
+- [../runtime/scan_runtime.py](../runtime/scan_runtime.py)
 
 The runtime persists a `v4_scan_runs` row immediately with:
 

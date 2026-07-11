@@ -13,18 +13,18 @@ Primary goals:
 
 Primary implementation files:
 
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_core.py](/Users/hootie/src/trading-bot/v4/services/analyzer_core.py)
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_config.py](/Users/hootie/src/trading-bot/v4/services/analyzer_config.py)
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_factors.py](/Users/hootie/src/trading-bot/v4/services/analyzer_factors.py)
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_probability.py](/Users/hootie/src/trading-bot/v4/services/analyzer_probability.py)
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_reporting.py](/Users/hootie/src/trading-bot/v4/services/analyzer_reporting.py)
-- [/Users/hootie/src/trading-bot/v4/services/analyzer_helpers.py](/Users/hootie/src/trading-bot/v4/services/analyzer_helpers.py)
-- [/Users/hootie/src/trading-bot/v4/services/learning_service.py](/Users/hootie/src/trading-bot/v4/services/learning_service.py)
-- [/Users/hootie/src/trading-bot/v4/services/circuit_breaker_service.py](/Users/hootie/src/trading-bot/v4/services/circuit_breaker_service.py)
-- [/Users/hootie/src/trading-bot/v4/services/audit_service.py](/Users/hootie/src/trading-bot/v4/services/audit_service.py)
-- [/Users/hootie/src/trading-bot/v4/services/universe_filter_service.py](/Users/hootie/src/trading-bot/v4/services/universe_filter_service.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py](/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py](/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py)
+- [../services/analyzer_core.py](../services/analyzer_core.py)
+- [../services/analyzer_config.py](../services/analyzer_config.py)
+- [../services/analyzer_factors.py](../services/analyzer_factors.py)
+- [../services/analyzer_probability.py](../services/analyzer_probability.py)
+- [../services/analyzer_reporting.py](../services/analyzer_reporting.py)
+- [../services/analyzer_helpers.py](../services/analyzer_helpers.py)
+- [../services/learning_service.py](../services/learning_service.py)
+- [../services/circuit_breaker_service.py](../services/circuit_breaker_service.py)
+- [../services/audit_service.py](../services/audit_service.py)
+- [../services/universe_filter_service.py](../services/universe_filter_service.py)
+- [../runtime/scan_runtime.py](../runtime/scan_runtime.py)
+- [../runtime/paper_execution.py](../runtime/paper_execution.py)
 
 ## Executive Summary
 
@@ -135,8 +135,8 @@ It can suppress symbols before analysis when they meet throttle rules:
 
 This is handled in:
 
-- [/Users/hootie/src/trading-bot/v4/services/universe_filter_service.py](/Users/hootie/src/trading-bot/v4/services/universe_filter_service.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py](/Users/hootie/src/trading-bot/v4/runtime/scan_runtime.py)
+- [../services/universe_filter_service.py](../services/universe_filter_service.py)
+- [../runtime/scan_runtime.py](../runtime/scan_runtime.py)
 
 The analyzer itself does not know a symbol was skipped. The runtime records that as:
 

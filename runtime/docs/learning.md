@@ -4,11 +4,11 @@ This document describes the adaptive learning and self-correction layer added on
 
 Primary code:
 
-- [/Users/hootie/src/trading-bot/v4/services/learning_service.py](/Users/hootie/src/trading-bot/v4/services/learning_service.py)
-- [/Users/hootie/src/trading-bot/v4/services/learning_effectiveness_service.py](/Users/hootie/src/trading-bot/v4/services/learning_effectiveness_service.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/learning_loop.py](/Users/hootie/src/trading-bot/v4/runtime/learning_loop.py)
-- [/Users/hootie/src/trading-bot/v4/api/routes/learning.py](/Users/hootie/src/trading-bot/v4/api/routes/learning.py)
-- [/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py](/Users/hootie/src/trading-bot/v4/runtime/paper_execution.py)
+- [../services/learning_service.py](../services/learning_service.py)
+- [../services/learning_effectiveness_service.py](../services/learning_effectiveness_service.py)
+- [../runtime/learning_loop.py](../runtime/learning_loop.py)
+- [../api/routes/learning.py](../api/routes/learning.py)
+- [../runtime/paper_execution.py](../runtime/paper_execution.py)
 
 ## Purpose
 
@@ -198,7 +198,7 @@ This is intended for repeated bad execution patterns, not weak cosmetic nudges.
 
 The learning profile is refreshed by a background loop:
 
-- [/Users/hootie/src/trading-bot/v4/runtime/learning_loop.py](/Users/hootie/src/trading-bot/v4/runtime/learning_loop.py)
+- [../runtime/learning_loop.py](../runtime/learning_loop.py)
 
 Current behavior:
 

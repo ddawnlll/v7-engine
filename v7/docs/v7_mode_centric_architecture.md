@@ -101,7 +101,7 @@ Dataset row now includes:
 
 | Parameter | SWING | SCALP | AGGRESSIVE_SCALP |
 |-----------|-------|-------|------------------|
-| Primary interval | 4h | 30m/1h | 15m |
+| Primary interval | 4h | 1h | 15m |
 | Context interval | 1d | 4h | 1h |
 | Refinement interval | 1h | 15m | 5m |
 | Max holding bars | 12-30 | 3-12 | 1-5 |

@@ -2,7 +2,7 @@
 
 Source document:
 
-- `/Users/hootie/Downloads/v4_engine_deep_diagnostic.docx`
+- *Legacy: `v4_engine_deep_diagnostic.docx` (original diagnostic workbook, not in this repo)*
 
 Source snapshot covered:
 

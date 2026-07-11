@@ -47,7 +47,7 @@ V7-local pipeline docs in `v7/docs/runtime/` (simulation_engine, runtime_integra
 - `v7/docs/policy_critic/ai_summary.md` — Policy Critic RL architecture, IQL critic design, codebase maps (V7/V6, AlphaForge, Simulation, Contracts), literature (offline RL, calibration, reward design, finance RL failures)
 - `ai_summary.md` at repo root — meta-hub linking all subsystem summaries
 
-**Migration status:** Cross-doc links in the migrated trees still reference the V4 layout (e.g. `/Users/hootie/src/trading-bot/v4/...`); those are legacy anchors awaiting path normalization. The operational semantics are authoritative for the V7 operational stack going forward and supersede the V4 originals for V7-internal work.
+**Migration status:** Cross-doc links in the migrated trees previously referenced the V4 layout (e.g. `/Users/hootie/src/trading-bot/v4/...`); those have been normalized to relative paths within the runtime tree. The operational semantics are authoritative for the V7 operational stack going forward and supersede the V4 originals for V7-internal work.
 
 ---
 
@@ -283,7 +283,7 @@ Rules: one request targets one model scope (not all scopes competing). primary_i
 
 ### 4.7 Scope Defaults
 SWING: primary_interval 4h, context_intervals [1d], refinement_intervals [1h], label_horizon_family swing_horizon.
-SCALP: primary_interval 1h (or 30m), context_intervals [4h], refinement_intervals [15m], label_horizon_family scalp_horizon.
+SCALP: primary_interval 1h, context_intervals [4h], refinement_intervals [15m], label_horizon_family scalp_horizon.
 AGGRESSIVE_SCALP: primary_interval 15m, context_intervals [1h], refinement_intervals [5m], label_horizon_family aggressive_scalp_horizon.
 
 ### 4.8 Canonical State Section
