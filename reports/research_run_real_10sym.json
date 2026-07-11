@@ -1,0 +1,45 @@
+{
+  "run_timestamp": "2026-07-11T08:41:41Z",
+  "sha": "1220af962832aa67c621494b4e75e77f8ea3f0cb",
+  "data": {
+    "symbols": [
+      "ADAUSDT",
+      "AVAXUSDT",
+      "BNBUSDT",
+      "BTCUSDT",
+      "DOGEUSDT",
+      "DOTUSDT",
+      "ETHUSDT",
+      "LINKUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "bars_per_symbol": 2160,
+    "n_samples": 21600
+  },
+  "training": {
+    "duration_s": 0.86,
+    "hp_lr": 0.1,
+    "hp_depth": 4,
+    "val_accuracy": 0.6916666666666667,
+    "class_counts": {
+      "0": 6938,
+      "1": 7240,
+      "2": 3102
+    },
+    "class_weights": {
+      "0": 1.0435283943499567,
+      "1": 1.0,
+      "2": 2.3339780786589297
+    }
+  },
+  "signal": {
+    "IC": 0.77406,
+    "RankIC": 0.773574
+  },
+  "trading": {
+    "n_signals": 4758,
+    "directional_accuracy": 0.9248,
+    "avg_signal_strength": 0.671958
+  }
+}
