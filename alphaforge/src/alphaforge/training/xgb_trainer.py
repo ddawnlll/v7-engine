@@ -128,7 +128,12 @@ def _detect_gpu() -> dict[str, str]:
 
 GPU_PARAMS: dict[str, str] = _detect_gpu()
 
-# Conservative SWING hyperparameters (LOCKED_INITIAL_BASELINE)
+# ── Mode-specific default hyperparameters (LOCKED_INITIAL_BASELINE) ──
+# Each mode's defaults are derived from the canonical tuning profile
+# mid-points (see alphaforge.tuning.mode_profiles).
+#
+# SWING — secondary baseline, conservative (4h timeframe)
+#   Shallow trees (max_depth=4), low learning rate, strong regularisation.
 SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "objective": "multi:softprob",
     "num_class": NUM_CLASSES,
@@ -146,6 +151,57 @@ SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "random_state": 42,
     "verbosity": 0,
     **GPU_PARAMS,
+}
+
+# SCALP — primary mode, medium-frequency (1h timeframe)
+#   Faster learning rate (0.1), shallower trees (max_depth=4),
+#   medium regularisation — adapts to noisier 1h data.
+SCALP_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
+    "objective": "multi:softprob",
+    "num_class": NUM_CLASSES,
+    "max_depth": 4,
+    "learning_rate": 0.1,
+    "n_estimators": 120,
+    "subsample": 0.9,
+    "colsample_bytree": 0.9,
+    "min_child_weight": 3,
+    "gamma": 0.05,
+    "reg_alpha": 0.05,
+    "reg_lambda": 0.5,
+    "eval_metric": "mlogloss",
+    "early_stopping_rounds": 20,
+    "random_state": 42,
+    "verbosity": 0,
+    **GPU_PARAMS,
+}
+
+# AGGRESSIVE_SCALP — primary mode, high-frequency (15m/5m timeframe)
+#   Fastest learning rate (0.15), shallowest trees (max_depth=3),
+#   lighter regularisation for rapid adaptation to microstructure.
+AGGRESSIVE_SCALP_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
+    "objective": "multi:softprob",
+    "num_class": NUM_CLASSES,
+    "max_depth": 3,
+    "learning_rate": 0.15,
+    "n_estimators": 150,
+    "subsample": 0.95,
+    "colsample_bytree": 0.95,
+    "min_child_weight": 2,
+    "gamma": 0.02,
+    "reg_alpha": 0.01,
+    "reg_lambda": 0.2,
+    "eval_metric": "mlogloss",
+    "early_stopping_rounds": 20,
+    "random_state": 42,
+    "verbosity": 0,
+    **GPU_PARAMS,
+}
+
+# Lookup table for mode → default hyperparameters
+_MODE_DEFAULT_HP: Dict[str, Dict[str, Any]] = {
+    "SWING": SWING_DEFAULT_HYPERPARAMS,
+    "SCALP": SCALP_DEFAULT_HYPERPARAMS,
+    "AGGRESSIVE_SCALP": AGGRESSIVE_SCALP_DEFAULT_HYPERPARAMS,
 }
 
 # Test fraction for hold-out validation within training
@@ -214,7 +270,7 @@ class XGBoostTrainer:
             mode: Trading mode (SWING, SCALP, AGGRESSIVE_SCALP).
             random_seed: Random seed for reproducibility.
             hyperparameters: Training hyperparameters. If None, uses
-                SWING_DEFAULT_HYPERPARAMS.
+                mode-specific defaults from _MODE_DEFAULT_HP.
         """
         if mode not in ("SWING", "SCALP", "AGGRESSIVE_SCALP"):
             raise ValueError(
@@ -222,7 +278,10 @@ class XGBoostTrainer:
             )
         self._mode = mode
         self._random_seed = random_seed
-        self._hyperparameters = hyperparameters or SWING_DEFAULT_HYPERPARAMS.copy()
+        if hyperparameters is not None:
+            self._hyperparameters = hyperparameters.copy()
+        else:
+            self._hyperparameters = _MODE_DEFAULT_HP.get(mode, SWING_DEFAULT_HYPERPARAMS).copy()
         self._rng = np.random.RandomState(random_seed)
 
     @property
@@ -282,19 +341,47 @@ class XGBoostTrainer:
         X_val = X[val_indices]
         y_val = y_int[val_indices]
 
+        # ── Class imbalance weighting (inverse frequency) ────────────────
+        # Compute per-class frequency on TRAIN fold only.
+        # Apply inverse-frequency weight to each training sample so that
+        # minority classes are not dominated by majority class during
+        # gradient computation. Validation set uses NO sample weights.
+        classes, counts = np.unique(y_train, return_counts=True)
+        n_classes = len(classes)
+        if n_classes < 2:
+            # Single class — no meaningful weighting
+            sample_weight_train = np.ones(len(y_train), dtype=np.float64)
+            class_weight_map = {int(c): 1.0 for c in classes}
+        else:
+            max_count = float(counts.max())
+            # Inverse frequency: minority classes get weight > 1
+            class_weight_map = {
+                int(c): max_count / float(cnt) for c, cnt in zip(classes, counts)
+            }
+            sample_weight_train = np.array(
+                [class_weight_map[int(y)] for y in y_train], dtype=np.float64
+            )
+        # Normalise weights so mean = 1 (scale-preserving)
+        n_train = len(sample_weight_train)
+        if n_train > 0:
+            sample_weight_train *= float(n_train) / sample_weight_train.sum()
+
+        self._last_class_weights = class_weight_map
+        self._last_class_counts = dict(zip(classes, counts))
+
         # Prepare DMatrix — use QuantileDMatrix for GPU (lower memory, faster binning)
         _device = self._hyperparameters.get("device", "cpu")
         if _device == "cuda":
             _X_train_32 = X_train.astype(np.float32, copy=False)
             _X_val_32 = X_val.astype(np.float32, copy=False)
-            dtrain = xgb.QuantileDMatrix(_X_train_32, label=y_train)
+            dtrain = xgb.QuantileDMatrix(_X_train_32, label=y_train, weight=sample_weight_train)
             if feature_names:
                 dtrain.feature_names = feature_names
             dval = xgb.QuantileDMatrix(_X_val_32, label=y_val, ref=dtrain)
             if feature_names:
                 dval.feature_names = feature_names
         else:
-            dtrain = xgb.DMatrix(X_train, label=y_train)
+            dtrain = xgb.DMatrix(X_train, label=y_train, weight=sample_weight_train)
             if feature_names:
                 dtrain.feature_names = feature_names
             dval = xgb.DMatrix(X_val, label=y_val)
@@ -355,7 +442,7 @@ class XGBoostTrainer:
             "checksum_algorithm": "SHA-256",
             "created_at": now_iso,
             "limitations": [
-                "SWING baseline model — conservative hyperparameters",
+                f"{self._mode} baseline model — mode-specific hyperparameters",
                 "Trained on synthetic/deterministic feature data only",
                 "Walk-forward fold metrics not yet populated — placeholder only",
                 "Calibration not applied — model outputs are raw probabilities",
@@ -369,6 +456,8 @@ class XGBoostTrainer:
                 "train_logloss": train_metrics.get("logloss", 0.0),
                 "val_logloss": val_metrics.get("logloss", 0.0),
             },
+            "class_weights": getattr(self, "_last_class_weights", {}),
+            "class_counts": getattr(self, "_last_class_counts", {}),
             "model_size_bytes": len(model_binary),
             "framework_version": f"xgboost=={xgb.__version__}",
             "training_duration_seconds": training_duration,
@@ -767,12 +856,12 @@ class MetaLabelingTrainer:
             mode: Trading mode.
             random_seed: Random seed for reproducibility.
             primary_hyperparams: Hyperparameters for the primary classifier.
-                If None, uses SWING_DEFAULT_HYPERPARAMS.
+                If None, uses mode-specific defaults.
             meta_hyperparams: Hyperparameters for the meta classifier.
-                If None, uses SWING_DEFAULT_HYPERPARAMS with binary objective.
+                If None, uses mode-specific defaults with binary objective.
         """
-        primary_hp = (primary_hyperparams or SWING_DEFAULT_HYPERPARAMS).copy()
-        meta_hp = (meta_hyperparams or SWING_DEFAULT_HYPERPARAMS).copy()
+        primary_hp = (primary_hyperparams or _MODE_DEFAULT_HP.get(mode, SWING_DEFAULT_HYPERPARAMS)).copy()
+        meta_hp = (meta_hyperparams or _MODE_DEFAULT_HP.get(mode, SWING_DEFAULT_HYPERPARAMS)).copy()
         meta_hp["objective"] = "binary:logistic"
         meta_hp.pop("num_class", None)
 

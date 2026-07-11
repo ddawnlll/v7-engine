@@ -613,3 +613,97 @@ def test_random_seed_is_fixed():
     """RANDOM_SEED is a fixed integer for reproducibility."""
     assert isinstance(RANDOM_SEED, int)
     assert RANDOM_SEED == 42
+
+
+# ── Mode-specific hyperparameter tests (#263) ────────────────────────
+
+
+def test_swing_uses_swing_defaults():
+    """SWING mode trainer uses SWING_DEFAULT_HYPERPARAMS."""
+    trainer = XGBoostTrainer(mode="SWING")
+    hp = trainer.hyperparameters
+    assert hp["learning_rate"] == 0.05
+    assert hp["max_depth"] == 4
+
+
+def test_scalp_uses_scalp_defaults_not_swing():
+    """SCALP mode trainer uses SCALP_DEFAULT_HYPERPARAMS, not SWING."""
+    trainer = XGBoostTrainer(mode="SCALP")
+    hp = trainer.hyperparameters
+    assert hp["learning_rate"] == 0.1, "SCALP should have higher lr than SWING"
+    assert hp["max_depth"] == 4
+    assert hp["subsample"] == 0.9
+    assert hp["n_estimators"] == 120
+
+
+def test_aggressive_scalp_uses_aggressive_defaults():
+    """AGGRESSIVE_SCALP mode trainer uses AGGRESSIVE_SCALP_DEFAULT_HYPERPARAMS."""
+    trainer = XGBoostTrainer(mode="AGGRESSIVE_SCALP")
+    hp = trainer.hyperparameters
+    assert hp["learning_rate"] == 0.15
+    assert hp["max_depth"] == 3
+    assert hp["n_estimators"] == 150
+
+
+def test_mode_defaults_differ():
+    """Each mode has distinct default hyperparameters."""
+    swing_hp = XGBoostTrainer(mode="SWING").hyperparameters
+    scalp_hp = XGBoostTrainer(mode="SCALP").hyperparameters
+    aggro_hp = XGBoostTrainer(mode="AGGRESSIVE_SCALP").hyperparameters
+    assert swing_hp["learning_rate"] != scalp_hp["learning_rate"]
+    assert scalp_hp["learning_rate"] != aggro_hp["learning_rate"]
+
+
+def test_explicit_hyperparams_override_mode_defaults():
+    """Explicit hyperparameters override mode-specific defaults."""
+    custom_hp = {"learning_rate": 0.5, "max_depth": 10}
+    trainer = XGBoostTrainer(mode="SCALP", hyperparameters=custom_hp)
+    hp = trainer.hyperparameters
+    assert hp["learning_rate"] == 0.5
+    assert hp["max_depth"] == 10
+
+
+# ── Class imbalance weighting tests (#264) ──────────────────────────
+
+
+def test_class_weights_balance_imbalanced_data():
+    """Inverse-frequency weighting gives minority classes higher weight."""
+    trainer = XGBoostTrainer(mode="SCALP")
+    rng = np.random.RandomState(42)
+    X = rng.randn(200, 5).astype(np.float64)
+    labels = ["LONG_NOW"] * 160 + ["SHORT_NOW"] * 40
+    rng.shuffle(labels)
+    y = np.array(labels, dtype="U")
+    result = trainer.train(X, y)
+    cw = result.model_artifact.get("class_weights", {})
+    assert len(cw) >= 2, f"Expected >=2 classes, got {cw}"
+    weight_0 = cw.get(0, 0)
+    weight_1 = cw.get(1, 0)
+    assert weight_1 > weight_0
+
+
+def test_class_weights_single_class_no_weighting():
+    """Single-class input should not fail and weights should be uniform."""
+    trainer = XGBoostTrainer(mode="SWING")
+    X = np.random.randn(50, 3).astype(np.float64)
+    y = np.array(["LONG_NOW"] * 50, dtype="U")
+    result = trainer.train(X, y)
+    cw = result.model_artifact.get("class_weights", {})
+    assert len(cw) == 1
+    assert cw[0] == 1.0
+
+
+def test_class_weights_in_artifact_metadata():
+    """Model artifact contains class_weights and class_counts."""
+    trainer = XGBoostTrainer(mode="SCALP")
+    rng = np.random.RandomState(42)
+    X = rng.randn(200, 5).astype(np.float64)
+    labels = ["LONG_NOW"] * 120 + ["SHORT_NOW"] * 40 + ["NO_TRADE"] * 40
+    rng.shuffle(labels)
+    y = np.array(labels, dtype="U")
+    result = trainer.train(X, y)
+    assert "class_weights" in result.model_artifact
+    assert "class_counts" in result.model_artifact
+    cc = result.model_artifact["class_counts"]
+    total = sum(int(v) for v in cc.values())
+    assert 120 <= total <= 200
