@@ -106,7 +106,7 @@ Exchange Data → Runtime Market Ingestion → Canonical State
 
 ### V4→V7 Migration Status
 - `runtime/` and `interface/` have been promoted from V4 into the V7 authority tree
-- Cross-doc links within those trees still reference legacy V4 paths (e.g. `/Users/hootie/src/trading-bot/v4/...`); these are legacy anchors awaiting path normalization
+- Cross-doc links within those trees previously referenced legacy V4 paths (e.g. `/Users/hootie/src/trading-bot/v4/...`); those have been normalized to relative paths within the runtime tree.
 - Operational semantics from these trees supersede the V4 originals for V7-internal work
 - `/simulation/` was previously under V7 runtime docs and has been promoted to a top-level authority
 

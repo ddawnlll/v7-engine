@@ -6,31 +6,24 @@ The `v4` plan keeps the React interface and moves the operational engine back to
 
 ## Start Here
 
-- [`/Users/hootie/src/trading-bot/v4/docs/architecture.md`](/Users/hootie/src/trading-bot/v4/docs/architecture.md)
-  Target `v4` component map and ownership boundaries.
-- [`/Users/hootie/src/trading-bot/TODO_V4.md`](/Users/hootie/src/trading-bot/TODO_V4.md)
-  Active `v4` delivery plan.
-- [`/Users/hootie/src/trading-bot/v4/docs/analyzer.md`](/Users/hootie/src/trading-bot/v4/docs/analyzer.md)
+- [./architecture.md](./architecture.md)
+  Runtime component map and ownership boundaries.
+- [./analyzer.md](./analyzer.md)
   Python analyzer and trade decision flow.
-- [`/Users/hootie/src/trading-bot/v4/docs/learning.md`](/Users/hootie/src/trading-bot/v4/docs/learning.md)
+- [./learning.md](./learning.md)
   Adaptive learning, self-correction, and effectiveness tracking.
-- [`/Users/hootie/src/trading-bot/v4/docs/api.md`](/Users/hootie/src/trading-bot/v4/docs/api.md)
+- [./api.md](./api.md)
   Current and target API contract baseline.
-- [`/Users/hootie/src/trading-bot/v4/docs/schema.md`](/Users/hootie/src/trading-bot/v4/docs/schema.md)
+- [./schema.md](./schema.md)
   Current PostgreSQL schema baseline.
-- [`/Users/hootie/src/trading-bot/v4/docs/runtime.md`](/Users/hootie/src/trading-bot/v4/docs/runtime.md)
+- [./runtime.md](./runtime.md)
   Scan loop and autonomous runtime flow.
-- [`/Users/hootie/src/trading-bot/v4/docs/runbook.md`](/Users/hootie/src/trading-bot/v4/docs/runbook.md)
+- [./runbook.md](./runbook.md)
   Startup, DB, exchange, and stuck-scan recovery notes.
 
 ## Reference Material
 
-- [`/Users/hootie/src/trading-bot/v1/CURRENT_API_SURFACE.md`](/Users/hootie/src/trading-bot/v1/CURRENT_API_SURFACE.md)
-  Current Python API reference surface.
-- [`/Users/hootie/src/trading-bot/v1/PERSISTENCE_POLICY.md`](/Users/hootie/src/trading-bot/v1/PERSISTENCE_POLICY.md)
-  Existing persistence expectations and rules.
-- [`/Users/hootie/src/trading-bot/v3/docs/README.md`](/Users/hootie/src/trading-bot/v3/docs/README.md)
-  Archived `v3` Rust-first architecture notes.
+- *Legacy v1 and v3 references (CURRENT_API_SURFACE, PERSISTENCE_POLICY, v3 README) from the original trading-bot repo have been superseded by the documents above and the V7 authority tree.*
 
 ## Intent
 

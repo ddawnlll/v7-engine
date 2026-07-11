@@ -294,8 +294,7 @@ accp_onefile_chain:
       - engine_diagnostic_fix_plan.md
       legacy_references:
         count: 68
-        note: 68 legacy V4 path references (e.g. /Users/hootie/src/trading-bot/v4/...)
-          in runtime/docs/*.md files. No legacy refs in .py files.
+        note: 68 legacy V4 path references (e.g. /Users/hootie/src/trading-bot/v4/...) were normalized to relative paths. No legacy refs in .py files.
     contracts_and_schemas:
       produced:
       - DecisionEvent (runtime lifecycle, persisted)

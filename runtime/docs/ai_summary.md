@@ -20,7 +20,7 @@ This document is the **runtime-local** authority summary for the operational Pyt
 - For the repo-wide entry point: see **`ai_summary.md`** at the repo root.
 - For the React operator interface: see **`interface/docs/ai_summary.md`** (workspace structure, page ownership, component architecture).
 
-The V4 runtime has been promoted into the V7 authority tree. Cross-doc links within this tree still reference the legacy V4 layout (e.g. `/Users/hootie/src/trading-bot/v4/...`); those are legacy anchors awaiting path normalization.
+The V4 runtime has been promoted into the V7 authority tree. Cross-doc links within this tree previously referenced the legacy V4 layout (e.g. `/Users/hootie/src/trading-bot/v4/...`); those have been normalized to relative paths within the runtime tree.
 
 ---
 

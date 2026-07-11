@@ -153,7 +153,7 @@ These assumptions are repeated throughout the docs and should be treated as defa
 - first model scopes: `SWING`, `SCALP`, and `AGGRESSIVE_SCALP` (mode-centric architecture, see `v7_mode_centric_architecture.md`)
 - scope defaults:
   - `SWING`: `primary_interval` **4h**, `context_intervals` **1d**, `refinement_intervals` **1h**
-  - `SCALP`: `primary_interval` **1h** (or 30m), `context_intervals` **4h**, `refinement_intervals` **15m**
+  - `SCALP`: `primary_interval` **1h**, `context_intervals` **4h**, `refinement_intervals` **15m**
   - `AGGRESSIVE_SCALP`: `primary_interval` **15m**, `context_intervals` **1h**, `refinement_intervals` **5m**
 - runtime hosts the simulation engine; training/evaluation consume it through side-effect-free adapters with scope-specific profiles
 - Monte Carlo robustness mode runs on top of the runtime simulation engine and is not live execution truth

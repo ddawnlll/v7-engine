@@ -4,8 +4,8 @@ This document describes the active `v4` operational PostgreSQL schema.
 
 Source of truth:
 
-- [/Users/hootie/src/trading-bot/v4/db/models.py](/Users/hootie/src/trading-bot/v4/db/models.py)
-- [/Users/hootie/src/trading-bot/v4/migrations/versions/20260331_0001_v4_foundation.py](/Users/hootie/src/trading-bot/v4/migrations/versions/20260331_0001_v4_foundation.py)
+- [../db/models.py](../db/models.py)
+- [../migrations/versions/20260331_0001_v4_foundation.py](../migrations/versions/20260331_0001_v4_foundation.py)
 
 The `v4` rule is:
 
@@ -339,13 +339,13 @@ Main columns:
 
 Repository mapping:
 
-- [/Users/hootie/src/trading-bot/v4/db/repos/settings_repo.py](/Users/hootie/src/trading-bot/v4/db/repos/settings_repo.py)
-- [/Users/hootie/src/trading-bot/v4/db/repos/candle_repo.py](/Users/hootie/src/trading-bot/v4/db/repos/candle_repo.py)
-- [/Users/hootie/src/trading-bot/v4/db/repos/scan_repo.py](/Users/hootie/src/trading-bot/v4/db/repos/scan_repo.py)
-- [/Users/hootie/src/trading-bot/v4/db/repos/signal_repo.py](/Users/hootie/src/trading-bot/v4/db/repos/signal_repo.py)
-- [/Users/hootie/src/trading-bot/v4/db/repos/order_repo.py](/Users/hootie/src/trading-bot/v4/db/repos/order_repo.py)
-- [/Users/hootie/src/trading-bot/v4/db/repos/portfolio_repo.py](/Users/hootie/src/trading-bot/v4/db/repos/portfolio_repo.py)
-- [/Users/hootie/src/trading-bot/v4/db/repos/alert_repo.py](/Users/hootie/src/trading-bot/v4/db/repos/alert_repo.py)
+- [../db/repos/settings_repo.py](../db/repos/settings_repo.py)
+- [../db/repos/candle_repo.py](../db/repos/candle_repo.py)
+- [../db/repos/scan_repo.py](../db/repos/scan_repo.py)
+- [../db/repos/signal_repo.py](../db/repos/signal_repo.py)
+- [../db/repos/order_repo.py](../db/repos/order_repo.py)
+- [../db/repos/portfolio_repo.py](../db/repos/portfolio_repo.py)
+- [../db/repos/alert_repo.py](../db/repos/alert_repo.py)
 
 Each repository should expose only obvious operations:
 
