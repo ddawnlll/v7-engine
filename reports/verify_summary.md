@@ -78,3 +78,18 @@ XFailed:    22 (expected: funding real-data scenarios)
 | 179B | Economic objective | ❌ Wave 2 | Not started |
 | 183 | Evidence handoff | ❌ Wave 2 | Not started |
 | 268 | Feature pruning | ❌ Wave 2 | Not started |
+
+## 6. Issue Closure Status (2026-07-11)
+
+| # | Issue | Status | Closed By |
+|---|---|---|---|
+| 263 | Mode-specific HP | ✅ CLOSED | gh CLI @ 8e636dc |
+| 264 | Class imbalance | ✅ CLOSED | gh CLI @ 8e636dc |
+| 266 | Profit thresholds | ✅ CLOSED | gh CLI @ 8e636dc |
+| 309 | Safety wiring | ✅ CLOSED | gh CLI @ 8e636dc |
+| 68 | Profile registry | ✅ CLOSED | gh CLI @ 8e636dc |
+| 304 | Funding flow | 🔄 Reopened | Owner — code done, needs re-review |
+| 315 | Funding hardcodes | 🔄 Reopened | Owner — code done, needs re-review |
+| 179A | IC/RankIC metrics | ✅ main | Part of signal-metrics merge |
+| 307 | Data sync | ✅ main | Part of ci-docs-hygiene merge |
+| 58/66/71/73 | CI/Docs/Hygiene | ✅ main | All on main |
