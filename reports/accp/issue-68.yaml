@@ -1,0 +1,21 @@
+accp_version: "2.0.0"
+issue: 68
+title: "SimulationProfile registry and versioning"
+result: PASS
+evidence:
+  - "14 passed (test_profile_registry.py)"
+  - "Register/get_profile/list_profiles/profile_exists API"
+  - "Deterministic SHA-256 hash per profile"
+  - "Unknown mode/version → ValueError fail-fast"
+  - "Duplicate registration detection (hash collision check)"
+  - "Canonical SWING/SCALP/AGGRESSIVE_SCALP v1.0.0 profiles"
+  - "Research profile: SCALP v1.0.0-research hash=dea28c66"
+commits:
+  - "a7868a8 — feat(#68): deterministic SimulationProfile registry"
+  - "68edde4 — merge into main"
+files_changed:
+  - simulation/profile_registry/registry.py
+  - simulation/tests/test_profile_registry.py
+commands_run:
+  - "pytest simulation/tests/test_profile_registry.py -q"
+exit_code: 0

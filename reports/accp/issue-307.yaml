@@ -1,0 +1,19 @@
+accp_version: "2.0.0"
+issue: 307
+title: "Data lake sync script"
+result: PASS
+evidence:
+  - "sync.py: Parquet-based data lake sync with symbol/timeframe partitioning"
+  - "sync_data.py: Binance download script"
+  - "test_data_lake_sync.py: offline deterministic integration test"
+  - "Downloaded 10 symbols × 90 days Binance 1h data"
+commits:
+  - "1ba683a — feat(#58,#66,#71,#73): CI/docs/hygiene"
+  - "68edde4 — merge into main"
+files_changed:
+  - lib/data_lake/sync.py
+  - lib/tests/test_data_lake_sync.py
+  - scripts/sync_data.py
+commands_run:
+  - "pytest lib/tests/test_data_lake_sync.py -q"
+exit_code: 0

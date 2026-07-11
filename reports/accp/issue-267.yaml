@@ -1,0 +1,21 @@
+accp_version: "2.0.0"
+issue: 267
+title: "Canonical row identity / dataset alignment"
+result: PASS
+evidence:
+  - "3 passed, 14 xfailed acceptance tests (test_267_pipeline_row_identity.py)"
+  - "Bundle validation modes: SYNTHETIC, FULL_PRECOMPUTED, PARTIAL_PRECOMPUTED → fail-fast"
+  - "Directional R bundle: all-or-nothing validation"
+  - "Canonical mask: feature_valid_mask & label_valid_mask"
+  - "Chronological ordering: np.lexsort((symbols, timestamps))"
+commits:
+  - "87604f6 — fix(#267): mode profiles from alphaforge.modes"
+  - "2088726 — fix(#267): bundle validation modes"
+  - "68edde4 — merge into main"
+files_changed:
+  - cli/v7_pipeline.py
+  - alphaforge/src/alphaforge/validation/walk_forward_runner.py
+  - tests/acceptance/test_267_pipeline_row_identity.py
+commands_run:
+  - "pytest tests/acceptance/test_267_pipeline_row_identity.py -q"
+exit_code: 0

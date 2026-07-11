@@ -1,0 +1,25 @@
+accp_version: "2.0.0"
+issue: 66
+title: "V4→V7 path normalization"
+result: PASS
+evidence:
+  - "10 doc files normalized (68 legacy /Users/hootie/src/trading-bot/v4/ refs)"
+  - "Files: runtime/docs/*.md, reports/accp/*.accp.yaml, ai_summary.md"
+  - "All paths converted to relative references"
+commits:
+  - "1ba683a — feat(#58,#66,#71,#73): CI/docs/hygiene"
+  - "68edde4 — merge into main"
+files_changed:
+  - runtime/docs/README.md
+  - runtime/docs/schema.md
+  - runtime/docs/scanning.md
+  - runtime/docs/runtime.md
+  - runtime/docs/learning.md
+  - runtime/docs/analyzer.md
+  - runtime/docs/runbook.md
+  - ai_summary.md
+  - v7/docs/ai_summary.md
+  - reports/accp/V7-COMPONENT-SCORE-001/source/*.accp.yaml
+commands_run:
+  - "grep -r '/Users/hootie/' docs/ runtime/docs/ --include='*.md' | wc -l"
+exit_code: 0

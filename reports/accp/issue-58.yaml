@@ -1,0 +1,18 @@
+accp_version: "2.0.0"
+issue: 58
+title: "CLI tests in CI"
+result: PARTIAL_PASS
+evidence:
+  - "61/62 CLI tests passed (1 pre-existing alphaforge.features import error)"
+  - "CLI test step added to .github/workflows/ci.yml"
+  - "⚠️ Cannot push workflow change: token lacks 'workflow' scope"
+commits:
+  - "1ba683a — feat(#58,#66,#71,#73): CI/docs/hygiene"
+  - "68edde4 — merge into main"
+files_changed:
+  - .github/workflows/ci.yml
+commands_run:
+  - "pytest cli/tests/ -q"
+exit_code: 0
+remaining_blockers:
+  - "Push CI workflow change requires workflow-scoped token"

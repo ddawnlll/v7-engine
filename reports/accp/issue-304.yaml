@@ -1,0 +1,26 @@
+accp_version: "2.0.0"
+issue: 304
+title: "Funding cost not flowing into backtests"
+result: PARTIAL_PASS
+evidence:
+  - "8 passed negative control tests (test_304_negative_controls.py)"
+  - "3 passed E2E tests (test_funding_end_to_end.py)"
+  - "funding_cost_r_from_events() verified with proper LONG/SHORT signs"
+  - "Cross-symbol isolation verified"
+  - "⚠️ Pipeline entry point (cli/v7_pipeline.py:711) still funding_service=None"
+  - "⚠️ Engine can consume events but pipeline does not populate funding_events on profiles"
+commits:
+  - "93241a3 — fix(#304,#315): acceptance test fixes"
+  - "68edde4 — merge into main"
+files_changed:
+  - simulation/engine/engine.py
+  - simulation/engine/funding.py
+  - tests/acceptance/test_304_negative_controls.py
+  - integration/tests/test_funding_end_to_end.py
+commands_run:
+  - "pytest tests/acceptance/test_304_negative_controls.py -q"
+  - "pytest integration/tests/test_funding_end_to_end.py -q"
+exit_code: 0
+remaining_blockers:
+  - "Pipeline wiring: funding_service=None → must load from data lake"
+  - "simulation_adapter.py does not populate funding_events on profiles"

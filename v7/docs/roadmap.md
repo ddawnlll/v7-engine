@@ -1514,3 +1514,42 @@ GPU path behind `force_gpu=True` opt-in flag.
 - DrawdownGate equity feed from portfolio snapshot (needs portfolio repo integration)
 - ShadowHarness sim_pnl feed from SimulationEngine output
 - KillSwitch persistence (currently in-memory only)
+
+---
+
+## Wave 0/1 — Economic Truth Foundation + Active Infrastructure (2026-07-10/11)
+
+**Base SHA:** `68edde4` (merged from `integration/267-315-304`)
+
+### What changed
+
+**Wave 0 — Economic truth:**
+- `#267` — Canonical row identity: bundle validation (SYNTHETIC/FULL/FAIL), chronological reorder, canonical mask, mode profile authority
+- `#315` — Funding pipeline: `lib/data_lake/funding.py` (Parquet persistence), `funding_resolver.py` (233-line resolver), `FundingDataStatus` enum (APPLIED/AVAILABLE_EMPTY/MISSING_DATA/LEGACY_SCALAR), truthful lineage (\`TRUTHFUL_FUNDING_STATUS_DEFAULT="MISSING_DATA"\`)
+- `#304` — Funding acceptance: event-based E2E tests, negative controls (sign, symbol isolation, exit timestamp), 24 acceptance tests passing
+
+**Wave 1 — Active infrastructure (6 lanes, 10 issues):**
+| Lane | Issue | Module | Status |
+|---|---|---|---|
+| Training correctness | `#263` mode-specific HP | `xgb_trainer.py` | CLOSED |
+| Training correctness | `#264` class imbalance | `xgb_trainer.py` | CLOSED |
+| Profit thresholds | `#266` net R primary | `train.py` | CLOSED |
+| Signal metrics | `#179A` IC/RankIC | `ic_metrics.py` | ✅ main |
+| Safety wiring | `#309` orchestrator gates | `gate_chain.py` | CLOSED |
+| Profile registry | `#68` versioning | `profile_registry/` | CLOSED |
+| CI/Docs/Hygiene | `#58` CI, `#66` V4 paths, `#71` interval, `#73` TODO | docs/CI | ✅ main |
+| Data sync | `#307` sync script | `sync.py`, `sync_data.py` | ✅ main |
+
+### Lock status
+All Wave 0/1 modules: `LOCKED_INITIAL_BASELINE` — implemented, tested, and merged to main. Issues `#263, #264, #266, #309, #68` closed via `gh issue close`. Issues `#304, #315` remain open: engine/label fix complete but pipeline entry point (`cli/v7_pipeline.py:711`) still uses `funding_service=None`.
+
+### Remaining holds (Wave 2 not started)
+- `#179B` — P0: net R as primary training objective
+- `#183` — EvidenceAdapter → V7 handoff wiring
+- `#268` — Feature importance → closed-loop pruning
+
+### Real data research run
+- 10 symbols × 90 days Binance 1h OHLCV, 14 causal features
+- OOS IC=0.117, RankIC=0.110, directional accuracy=0.55
+- All features causal (trailing window only, `mode="valid"` + NaN padding)
+- Results: `reports/research_run_real_10sym_causal.json`

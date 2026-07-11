@@ -1,0 +1,19 @@
+accp_version: "2.0.0"
+issue: 71
+title: "SCALP primary interval authority"
+result: PASS
+evidence:
+  - "All docs/configs normalized: SCALP primary=1h, context=4h, refine=15m"
+  - "30m ambiguity resolved in v7/docs/* and reports/accp/*"
+  - "Label test assertion: LABEL_SPECS[SCALP].primary_interval == '1h'"
+commits:
+  - "1ba683a — feat(#58,#66,#71,#73): CI/docs/hygiene"
+  - "68edde4 — merge into main"
+files_changed:
+  - v7/docs/v7_mode_centric_architecture.md
+  - v7/docs/README.md
+  - v7/docs/ai_summary.md
+  - configs/profiles/scalp.yaml
+commands_run:
+  - "grep -r '30m' v7/docs/ --include='*.md' --include='*.yaml'"
+exit_code: 0

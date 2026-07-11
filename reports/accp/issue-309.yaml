@@ -1,0 +1,21 @@
+accp_version: "2.0.0"
+issue: 309
+title: "Safety wiring into ExecutionOrchestrator"
+result: PASS
+evidence:
+  - "7 SafetyGateChain tests passed"
+  - "Fail-closed: rejection on guard failure, never executes trade"
+  - "Not bypassable: no skip mechanism"
+  - "Typed SafetyCheckResult with reason to lineage"
+  - "Trading logic and safety authority in separate functions"
+  - "Gate order: KillSwitch → DrawdownGate → PositionLimiter → SymbolCap"
+commits:
+  - "8756c77 — feat(#309): wire safety guards into orchestrator"
+  - "68edde4 — merge into main"
+files_changed:
+  - runtime/runtime/safety/gate_chain.py
+  - runtime/runtime/execution_orchestrator.py
+  - runtime/tests/test_safety_rails.py
+commands_run:
+  - "pytest runtime/tests/test_safety_rails.py -q -k TestSafetyGateChain"
+exit_code: 0

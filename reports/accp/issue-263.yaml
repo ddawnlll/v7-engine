@@ -1,0 +1,20 @@
+accp_version: "2.0.0"
+issue: 263
+title: "Mode-specific XGBoost hyperparameters"
+result: PASS
+evidence:
+  - "44 passed (test_xgb_trainer.py)"
+  - "SCALP: lr=0.1, depth=4, subsample=0.9 (distinct from SWING)"
+  - "AGGRESSIVE_SCALP: lr=0.15, depth=3, subsample=0.95"
+  - "SWING: lr=0.05, depth=4, subsample=0.8 (unchanged)"
+  - "Explicit hyperparameters override mode defaults"
+  - "MetaLabelingTrainer also uses mode-specific defaults"
+commits:
+  - "d8b45ff — feat(#263,#264): mode-specific HP + class weighting"
+  - "68edde4 — merge into main"
+files_changed:
+  - alphaforge/src/alphaforge/training/xgb_trainer.py
+  - alphaforge/tests/test_xgb_trainer.py
+commands_run:
+  - "pytest alphaforge/tests/test_xgb_trainer.py -q"
+exit_code: 0

@@ -1,0 +1,33 @@
+accp_version: "2.0.0"
+issue: 315
+title: "Funding hardcodes — adapter + label + lineage"
+result: PARTIAL_PASS
+evidence:
+  - "24 passed acceptance tests (test_315_funding_real_call_chain.py)"
+  - "14 passed funding cost unit tests"
+  - "FUNDING_STATUS_DEFAULT removed → TRUTHFUL_FUNDING_STATUS_DEFAULT='MISSING_DATA'"
+  - "FundingDataStatus enum: APPLIED/AVAILABLE_EMPTY/MISSING_DATA/LEGACY_SCALAR"
+  - "resolve_funding_status() priority chain: engine→lineage→MISSING_DATA"
+  - "lib/data_lake/funding.py: Parquet persistence layer exists"
+  - "simulation/engine/resolvers/funding_resolver.py: 233-line resolver exists"
+  - "test_scalar_short_sign_correct PASS (was XPASS/strict)"
+  - "test_lineage_from_engine_not_hardcoded PASS (was XPASS/strict)"
+commits:
+  - "9992a7b — feat(#315): funding persistence + 4 blockers"
+  - "93241a3 — fix(#304,#315): acceptance test fixes"
+  - "68edde4 — merge into main"
+files_changed:
+  - lib/data_lake/funding.py
+  - simulation/engine/resolvers/funding_resolver.py
+  - alphaforge/src/alphaforge/labels/adapter.py
+  - simulation/engine/funding.py
+  - simulation/contracts/models.py
+  - tests/acceptance/test_315_funding_real_call_chain.py
+  - lib/tests/test_funding_persistence.py
+commands_run:
+  - "pytest tests/acceptance/test_315_funding_real_call_chain.py -q"
+  - "pytest simulation/tests/test_funding_costs.py -q"
+exit_code: 0
+remaining_blockers:
+  - "Pipeline entry point still uses funding_service=None"
+  - "simulation_adapter.py doesn't populate funding_events → profiles"

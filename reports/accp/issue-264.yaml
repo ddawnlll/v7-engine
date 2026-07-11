@@ -1,0 +1,20 @@
+accp_version: "2.0.0"
+issue: 264
+title: "Class imbalance handling"
+result: PASS
+evidence:
+  - "3 focused imbalance tests passed"
+  - "Inverse-frequency weighting: NO_TRADE=2.33, LONG=1.04, SHORT=1.00"
+  - "Train-fold-only weights (no validation leakage)"
+  - "Mean=1 normalization (scale-preserving)"
+  - "Division-by-zero guarded, single-class handled"
+  - "Class weights and counts in model artifact metadata"
+commits:
+  - "d8b45ff — feat(#263,#264): mode-specific HP + class weighting"
+  - "68edde4 — merge into main"
+files_changed:
+  - alphaforge/src/alphaforge/training/xgb_trainer.py
+  - alphaforge/tests/test_xgb_trainer.py
+commands_run:
+  - "pytest alphaforge/tests/test_xgb_trainer.py -q -k 'class_weight or imbalance'"
+exit_code: 0

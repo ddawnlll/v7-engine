@@ -93,3 +93,21 @@ XFailed:    22 (expected: funding real-data scenarios)
 | 179A | IC/RankIC metrics | ✅ main | Part of signal-metrics merge |
 | 307 | Data sync | ✅ main | Part of ci-docs-hygiene merge |
 | 58/66/71/73 | CI/Docs/Hygiene | ✅ main | All on main |
+
+## 7. ACCP-YAML Backfill (2026-07-11)
+
+| # | ACCP File | Result |
+|---|---|---|
+| 267 | reports/accp/issue-267.yaml | PASS |
+| 304 | reports/accp/issue-304.yaml | PARTIAL_PASS (pipeline wiring missing) |
+| 315 | reports/accp/issue-315.yaml | PARTIAL_PASS (pipeline wiring missing) |
+| 263 | reports/accp/issue-263.yaml | PASS |
+| 264 | reports/accp/issue-264.yaml | PASS |
+| 266 | reports/accp/issue-266.yaml | PASS |
+| 309 | reports/accp/issue-309.yaml | PASS |
+| 68 | reports/accp/issue-68.yaml | PASS |
+| 58 | reports/accp/issue-58.yaml | PARTIAL_PASS (CI workflow scope) |
+| 66 | reports/accp/issue-66.yaml | PASS |
+| 71 | reports/accp/issue-71.yaml | PASS |
+| 73 | reports/accp/issue-73.yaml | PASS |
+| 307 | reports/accp/issue-307.yaml | PASS |

@@ -1,0 +1,19 @@
+accp_version: "2.0.0"
+issue: 266
+title: "Profit-aware threshold sweep"
+result: PASS
+evidence:
+  - "4 passed (test_nested_threshold_sweep.py)"
+  - "nested threshold selector optimizes avg_net_R_per_active_trade"
+  - "walk_forward_validate() now reports net R as primary verdict"
+  - "collect_metrics(): profit_factor, min_trade_count, drawdown_guard added"
+  - "main() prints net R first, accuracy second"
+  - "Leakage-free selection verified: fold k only uses folds 0..k-1"
+commits:
+  - "38d5956 — feat(#266): profit-aware thresholds"
+  - "68edde4 — merge into main"
+files_changed:
+  - alphaforge/src/alphaforge/train.py
+commands_run:
+  - "pytest alphaforge/tests/test_nested_threshold_sweep.py -q"
+exit_code: 0

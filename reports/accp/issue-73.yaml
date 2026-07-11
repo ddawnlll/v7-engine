@@ -1,0 +1,15 @@
+accp_version: "2.0.0"
+issue: 73
+title: "Remove TODO_V4 reference"
+result: PASS
+evidence:
+  - "runtime/docs/README.md line 11: TODO_V4 reference removed"
+  - "No remaining TODO_V4 references in runtime/docs/"
+commits:
+  - "1ba683a — feat(#58,#66,#71,#73): CI/docs/hygiene"
+  - "68edde4 — merge into main"
+files_changed:
+  - runtime/docs/README.md
+commands_run:
+  - "grep -r 'TODO_V4' runtime/docs/"
+exit_code: 0
