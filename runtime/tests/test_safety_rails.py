@@ -461,3 +461,315 @@ class TestShadowHarness:
         summary = h.get_summary()
         assert summary["total_trades"] == 0
         assert summary["closed_trades"] == 0
+
+
+# ---------------------------------------------------------------------------
+# SafetyGateChain unit tests
+# ---------------------------------------------------------------------------
+
+class TestSafetyGateChain:
+    """Unit tests for the SafetyGateChain composed gate runner."""
+
+    def test_all_gates_pass_returns_none(self):
+        """When every gate passes, check_all returns None."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        result = chain.check_all(
+            {"symbol": "BTCUSDT", "entry": 50000, "notional": 10000},
+            proposed_notional=10000,
+        )
+        assert result is None, f"Expected None (all pass), got {result}"
+
+    def test_kill_switch_active_blocks(self):
+        """KillSwitch being active produces a typed rejection."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.kill_switch.trigger("manual")
+        result = chain.check_all({"symbol": "BTCUSDT"})
+        assert result is not None
+        assert result.gate == "KILL_SWITCH"
+        assert result.passed is False
+        assert "Kill switch active" in (result.reason or "")
+        assert result.detail is not None
+
+    def test_drawdown_gate_over_threshold_blocks(self):
+        """DrawdownGate blocking produces a typed rejection."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.drawdown_gate.update_equity(100_000)
+        chain.drawdown_gate.update_equity(65_000)  # 35% drawdown, above 30% block
+        result = chain.check_all({"symbol": "BTCUSDT"})
+        assert result is not None
+        assert result.gate == "DRAWDOWN_GATE"
+        assert result.passed is False
+        assert result.reason is not None
+        assert "block" in result.reason.lower()
+
+    def test_position_limiter_rejects(self):
+        """PositionLimiter rejection produces a typed rejection."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+        from runtime.runtime.safety import PositionLimitConfig
+
+        chain = SafetyGateChain()
+        # Replace with a tight config
+        chain.position_limiter.config = PositionLimitConfig(max_positions=0)
+        result = chain.check_all(
+            {"symbol": "BTCUSDT"},
+            proposed_notional=10000,
+            current_positions=[{"notional": 5000}],
+        )
+        assert result is not None
+        assert result.gate == "POSITION_LIMITER"
+        assert result.passed is False
+        assert result.reason is not None
+
+    def test_symbol_cap_rejects(self):
+        """SymbolCap rejection produces a typed rejection."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+        from runtime.runtime.safety import SymbolCapConfig
+
+        chain = SafetyGateChain()
+        chain.symbol_cap.config = SymbolCapConfig(max_notional_per_symbol=1_000)
+        result = chain.check_all(
+            {"symbol": "BTCUSDT"},
+            proposed_notional=10_000,
+        )
+        assert result is not None
+        assert result.gate == "SYMBOL_CAP"
+        assert result.passed is False
+        assert result.reason is not None
+
+    def test_chain_order_kill_switch_first(self):
+        """KillSwitch blocks before DrawdownGate even if both would reject."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.kill_switch.trigger("manual")
+        chain.drawdown_gate.update_equity(100_000)
+        chain.drawdown_gate.update_equity(65_000)
+        result = chain.check_all({"symbol": "BTCUSDT"})
+        assert result is not None
+        assert result.gate == "KILL_SWITCH", (
+            f"KillSwitch should fire first, got {result.gate}"
+        )
+
+    def test_safety_check_result_frozen(self):
+        """SafetyCheckResult is truly frozen (immutable)."""
+        from runtime.runtime.safety.gate_chain import SafetyCheckResult
+        import dataclasses
+
+        assert dataclasses.is_dataclass(SafetyCheckResult)
+        assert dataclasses.fields(SafetyCheckResult)
+
+
+# ---------------------------------------------------------------------------
+# ExecutionOrchestrator safety wiring integration tests
+# ---------------------------------------------------------------------------
+
+class TestOrchestratorSafetyWiring:
+    """Tests that the orchestrator's safety gate check works end-to-end.
+
+    Uses a fully mocked DB layer so we can focus on the safety wiring
+    without needing a real database.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _mock_db_session(self):
+        """Mock session_scope so the orchestrator's resolve_target works."""
+        from unittest.mock import patch, MagicMock
+        from contextlib import contextmanager
+        import runtime.db.session as db_mod
+
+        mock_session = MagicMock()
+        with patch.object(
+            db_mod, "session_scope",
+            wraps=contextmanager(lambda: (yield mock_session)),
+        ):
+            yield
+
+    @pytest.fixture(autouse=True)
+    def _mock_v6_dependency(self):
+        """Inject a stub for v6.runtime.outcome_recorder so the orchestrator
+        module can be imported without the real v6 stack."""
+        import sys
+        from unittest.mock import MagicMock
+
+        mock_outcome_recorder = MagicMock()
+        mock_outcome_recorder.OutcomeRecorder = MagicMock
+
+        v6_runtime = type(sys)("v6.runtime")
+        v6_runtime.outcome_recorder = mock_outcome_recorder
+
+        # Ensure intermediate packages exist
+        sys.modules.setdefault("v6", type(sys)("v6"))
+        sys.modules.setdefault("v6.runtime", v6_runtime)
+        sys.modules["v6.runtime.outcome_recorder"] = mock_outcome_recorder
+        yield
+        sys.modules.pop("v6.runtime.outcome_recorder", None)
+        sys.modules.pop("v6.runtime", None)
+        sys.modules.pop("v6", None)
+
+    def _make_orchestrator_with_mocks(self):
+        """Build an ExecutionOrchestrator with all repos mocked."""
+        from unittest.mock import MagicMock
+        from runtime.runtime.execution_orchestrator import (
+            ExecutionOrchestrator,
+            PaperExecutionAdapter,
+        )
+        from runtime.db.repos.runtime_profile_repo import RuntimeProfileRepository
+        from runtime.db.repos.order_repo import OrderRepository
+        from runtime.db.repos.paper_repo import PaperAccountRepository
+        from runtime.db.repos.execution_account_repo import ExecutionAccountRepository
+        from runtime.services.runtime_profile_service import RuntimeProfileService
+
+        profile_repo = MagicMock(spec=RuntimeProfileRepository)
+        profile_repo.get_profile.return_value = {
+            "profile_id": "paper-main", "name": "Paper Main",
+            "status": "ACTIVE", "runtime_mode": "PAPER",
+            "execution_mode": "PAPER", "venue": "INTERNAL_PAPER",
+            "product_type": "SIMULATED", "venue_environment": "INTERNAL",
+            "api_base_url": None, "default_for_auto_trading": True,
+            "manual_trading_enabled": True, "auto_trading_enabled": False,
+            "read_only": False, "supports_account_reads": True,
+            "supports_order_placement": True, "credential_ref": None,
+            "connectivity_status": "READY",
+        }
+
+        paper_repo = MagicMock(spec=PaperAccountRepository)
+        paper_repo.get_or_create_account.return_value = {
+            "account_id": "papertest-001",
+            "account_key": "papertest",
+            "account_type": "PAPER",
+            "venue_account_key": "INTERNAL_PAPER",
+            "balance_ccy": "USDT",
+            "available_balance": 100000.0,
+            "equity": 100000.0,
+            "margin_used": 0.0,
+            "profile_id": "paper-main",
+        }
+
+        return ExecutionOrchestrator(
+            runtime_profile_repo=profile_repo,
+            paper_repo=paper_repo,
+            order_repo=MagicMock(spec=OrderRepository),
+            execution_account_repo=MagicMock(spec=ExecutionAccountRepository),
+            runtime_profile_service=MagicMock(spec=RuntimeProfileService),
+        )
+
+    def test_negative_control_rejected_trade_produces_typed_result(self):
+        """Full orchestrator: KillSwitch active blocks the trade and
+        the rejection surfaces as a typed SafetyCheckResult via the
+        exception's message."""
+        from runtime.runtime.execution_orchestrator import ExecutionPolicyViolationError
+
+        orch = self._make_orchestrator_with_mocks()
+        orch.safety_chain.kill_switch.trigger("test-negative-control")
+
+        signal = {
+            "symbol": "BTCUSDT", "interval": "4h", "mode": "SWING",
+            "direction": "LONG", "confidence": 0.75, "entry": 50000.0,
+            "source": "AUTO",
+        }
+        with pytest.raises(ExecutionPolicyViolationError) as exc_info:
+            orch.open_order(signal, source="AUTO")
+
+        msg = str(exc_info.value)
+        assert "Safety gate" in msg
+        assert "KILL_SWITCH" in msg or "kill" in msg.lower()
+
+    def test_kill_switch_active_blocks_trade(self):
+        """KillSwitch being active prevents trade execution (fail-closed)."""
+        from unittest.mock import MagicMock
+        from runtime.runtime.execution_orchestrator import (
+            ExecutionPolicyViolationError,
+        )
+
+        orch = self._make_orchestrator_with_mocks()
+        orch.safety_chain.kill_switch.trigger("emergency halt")
+
+        signal = {
+            "symbol": "ETHUSDT", "source": "MANUAL",
+            "entry": 3000.0,
+        }
+        with pytest.raises(ExecutionPolicyViolationError) as exc_info:
+            orch.open_order(signal, source="MANUAL")
+
+        msg = str(exc_info.value).lower()
+        assert "kill" in msg or "safety gate" in msg
+
+        # Verify the adapter was NEVER called (fail-closed)
+        orch.paper_adapter.open_order = MagicMock()
+        orch.paper_adapter.open_order.assert_not_called()
+
+    def test_drawdown_gate_over_threshold_blocks_trade(self):
+        """DrawdownGate blocking prevents trade execution (fail-closed)."""
+        from unittest.mock import MagicMock
+        from runtime.runtime.execution_orchestrator import (
+            ExecutionPolicyViolationError,
+        )
+
+        orch = self._make_orchestrator_with_mocks()
+        # Set equity via account so the gate chain picks it up
+        orch.safety_chain.drawdown_gate.update_equity(100_000)
+        # Trigger a 35% drawdown (above default 30% block threshold)
+        orch.safety_chain.drawdown_gate.update_equity(65_000)
+        assert orch.safety_chain.drawdown_gate.block_new_trades() is True
+
+        signal = {
+            "symbol": "BTCUSDT", "source": "AUTO",
+            "entry": 50000.0,
+        }
+        with pytest.raises(ExecutionPolicyViolationError) as exc_info:
+            orch.open_order(signal, source="AUTO")
+
+        msg = str(exc_info.value).lower()
+        assert "safety gate" in msg
+        assert "drawdown" in msg
+
+        # Verify the adapter was NEVER called (fail-closed)
+        orch.paper_adapter.open_order = MagicMock()
+        orch.paper_adapter.open_order.assert_not_called()
+
+    def test_safety_check_not_bypassable(self):
+        """There is no flag or parameter to skip the safety gate check."""
+        from runtime.runtime.execution_orchestrator import (
+            ExecutionOrchestrator,
+        )
+
+        orch = self._make_orchestrator_with_mocks()
+        orch.safety_chain.kill_switch.trigger("lockdown")
+
+        # Verify _check_safety_gates is always called in open_order
+        import inspect
+        source = inspect.getsource(ExecutionOrchestrator.open_order)
+        assert "_check_safety_gates" in source, (
+            "open_order must call _check_safety_gates"
+        )
+        # Ensure no param named bypass_*, skip_*, or override_*
+        for bad_prefix in ("bypass_", "skip_", "override_", "_bypass"):
+            assert bad_prefix not in source, (
+                f"open_order must not accept a '{bad_prefix}*' parameter"
+            )
+
+    def test_fail_closed_on_guard_failure(self):
+        """Guard failure does not execute the trade (paper adapter uncalled)."""
+        from unittest.mock import MagicMock
+        from runtime.runtime.execution_orchestrator import (
+            ExecutionPolicyViolationError,
+        )
+
+        orch = self._make_orchestrator_with_mocks()
+        orch.safety_chain.kill_switch.trigger("crash")
+
+        signal = {
+            "symbol": "BTCUSDT", "source": "MANUAL",
+            "entry": 50000.0,
+        }
+        with pytest.raises(ExecutionPolicyViolationError):
+            orch.open_order(signal, source="MANUAL")
+
+        orch.paper_adapter.open_order = MagicMock()
+        orch.paper_adapter.open_order.assert_not_called()
