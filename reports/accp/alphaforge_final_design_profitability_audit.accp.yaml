@@ -336,7 +336,7 @@ architecture_assessment:
     - "V7 Policy Critic correctly scoped as advisory offline-RL with explicit domain-boundary compliance table (policy_critic/ai_summary.md:67-80)."
   weaknesses:
     - "Two legacy oversized combined docs (625KB + 578KB) in alphaforge/docs/ with stale src/v7/alpha paths risk agent confusion; phase_plan claims 13 docs but 15 exist."
-    - "Timeframe stack defined 4 different ways (thesis 1h/15m/4h; mode_centric 30m-1h/15m/4h; roadmap 15m-1h-5m / 1m-or-3m; AlphaForge data_contract 1m-5m / 1m-3m-5m / 1h-4h) — must be reconciled to one canonical anchor."
+    - "Timeframe stack defined 4 different ways (thesis 1h/15m/4h; mode_centric 1h/15m/4h; roadmap 15m-1h-5m / 1m-or-3m; AlphaForge data_contract 1m-5m / 1m-3m-5m / 1h-4h) — must be reconciled to one canonical anchor."
     - "Makefile test-all omits simulation/tests/ (drift vs CI ci.yml and CLAUDE.md)."
     - "No contract enforcement layer: zero jsonschema.validate anywhere; 10 AlphaForge schemas are unenforced paper contracts."
   authority_separation_status: pass
@@ -505,7 +505,7 @@ critical_blockers:
       68,112) and V7 profitability_thesis.md:118-120 define SCALP=1h,
       AGGRESSIVE_SCALP=15m, SWING=4h. Additionally roadmap.md:145
       (SCALP 15m/1h/5m, AGGR 1m-or-3m) and mode_centric_architecture.md:104
-      (SCALP 30m/1h) drift from the canonical anchor — a 4-document drift.
+      (SCALP 30m/1h — resolved to 1h) drift from the canonical anchor — a 4-document drift.
       Features would be built for timeframes the simulation layer does not
       produce labels for; 1m/5m features vs 1h labels is a leakage/misalignment
       risk.
@@ -831,7 +831,7 @@ evidence:
     confidence: high
   - id: EV-006
     file_path: "v7/docs/roadmap.md:145 + v7/docs/v7_mode_centric_architecture.md:104"
-    finding: "V7-internal timeframe drift: roadmap SCALP 15m/1h/5m + AGGR 1m-or-3m; mode_centric SCALP 30m/1h — both drift from canonical (EV-004). Multi-source drift, not just AlphaForge-side."
+    finding: "V7-internal timeframe drift: roadmap SCALP 15m/1h/5m + AGGR 1m-or-3m; mode_centric SCALP 1h — both drift from canonical (EV-004). Multi-source drift, not just AlphaForge-side."
     confidence: high
   - id: EV-007
     file_path: "alphaforge/docs/phase_plan.md:15 + alphaforge/docs/ai_summary.md:128 + v7/docs/roadmap.md:89"

@@ -337,13 +337,13 @@ mode_inventory:
       - "EVIDENCE-005"
     status: "LOCKED"
 
-  - mode_id: "scalp (30m variant)"
-    mode_name: "SCALP (30m primary variant)"
+  - mode_id: "scalp"
+    mode_name: "SCALP"
     exists_in_docs: true
-    definition: "SCALP mode default is 1h primary. 30m is supported as a config/profile choice (not a separate validated mode). The docs explicitly note this is not an architecture contradiction."
+    definition: "SCALP mode default is 1h primary. SCALP mode authority: primary_interval=1h, context_intervals=[4h], refinement_intervals=[15m]. The previously mentioned 30m config variant has been removed; 1h is the sole canonical primary interval (see #71 normalization)."
     evidence_refs:
       - "EVIDENCE-013"
-    status: "PARTIAL — 30m variant mentioned but not independently validated"
+    status: "RESOLVED — 30m variant removed; SCALP canonical primary is 1h per #71"
 
 timeframe_matrix:
   - mode_id: "SWING"
@@ -920,11 +920,10 @@ partial_decisions:
       - "EVIDENCE-004"
 
   - id: "PDEC-002"
-    decision_area: "30m SCALP variant"
-    current_doc_state: "SCALP primary interval is 1h. 30m mentioned as config-supported variant but labeled 'not an architecture contradiction.'"
-    missing_piece: "30m variant not independently validated or profiled. No separate simulation profile for 30m SCALP."
-    evidence_refs:
-      - "EVIDENCE-013"
+    decision_area: "30m SCALP variant (resolved)"
+    current_doc_state: "SCALP primary interval is 1h. 30m has been removed as a variant per #71 normalization."
+    missing_piece: "RESOLVED — 30m variant no longer present in authority docs."
+    resolution: "SCALP canonical: primary=1h, context=4h, refine=15m"
 
   - id: "PDEC-003"
     decision_area: "Promotion gate ordering"
@@ -1157,8 +1156,7 @@ evidence_index:
   - id: "EVIDENCE-013"
     file_path: "simulation/docs/profiles.md"
     section_or_heading: "SWING/SCALP/AGGRESSIVE_SCALP Profiles / Success Thresholds"
-    quoted_or_paraphrased_evidence: "Complete mode profiles: primary intervals, context intervals, holding bars, stop/target multipliers (ranges), ambiguity margins, min action edges, penalty weights, no_trade_default. SWING no_trade_default:false, SCALP no_trade_default:true, AGGRESSIVE_SCALP no_trade_default:true. Notes 30m SCALP variant as config choice."
-    confidence: "high"
+    quoted_or_paraphrased_evidence: "Complete mode profiles: primary intervals, context intervals, holding bars, stop/target multipliers (ranges), ambiguity margins, min action edges, penalty weights, no_trade_default. SWING no_trade_default:false, SCALP no_trade_default:true, AGGRESSIVE_SCALP no_trade_default:true. SCALP canonical: primary=1h, context=4h, refine=15m (30m variant removed per #71)."
 
   - id: "EVIDENCE-014"
     file_path: "simulation/docs/cost_model.md"
