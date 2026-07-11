@@ -83,6 +83,8 @@ reports/**/candidate_dataset.parquet
 
 # --- Data lake ---
 data_lake/
+!lib/data_lake/
+
 .worktrees/
 
 # --- Simulation hardware calibration (environment-specific, never committed) ---

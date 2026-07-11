@@ -31,16 +31,55 @@ class Action(str, Enum):
     AMBIGUOUS_STATE = "AMBIGUOUS_STATE"
 
 
-@dataclass
+class FundingDataStatus(str, Enum):
+    """Truthful funding data status for simulation lineage and label propagation.
+
+    - ``APPLIED``: One or more funding events were applied within the position window.
+    - ``AVAILABLE_EMPTY``: Funding data was available but no events fell within the
+      position's entry-exit window.
+    - ``MISSING_DATA``: No funding data was provided and no scalar fallback is configured.
+    - ``NOT_APPLICABLE``: Funding is not applicable (e.g. spot trading).
+    - ``LEGACY_SCALAR``: A backward-compatible scalar funding rate was used instead of
+      event-based funding.
+    """
+    APPLIED = "APPLIED"
+    AVAILABLE_EMPTY = "AVAILABLE_EMPTY"
+    MISSING_DATA = "MISSING_DATA"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    LEGACY_SCALAR = "LEGACY_SCALAR"
+
+
+def _require_finite_rate(rate: float) -> None:
+    """Validate that a funding rate is finite (not NaN, not inf)."""
+    import math
+    if math.isnan(rate):
+        raise ValueError("funding rate is NaN")
+    if math.isinf(rate):
+        raise ValueError(f"funding rate is infinite: {rate}")
+
+
+@dataclass(frozen=True)
 class FundingEvent:
-    """A single funding rate event for perpetual swap positions.
+    """A single immutable validated funding rate event.
 
     timestamp: Unix timestamp in milliseconds (same convention as OHLCV).
-    rate: Funding rate as decimal (e.g. 0.0001 = 1 bp).
+               Must be > 0.
+    rate: Funding rate as decimal (e.g. 0.0001 = 1 bp). Must be finite.
           Positive → longs pay shorts. Negative → shorts pay longs.
     """
     timestamp: int
     rate: float
+
+    def __post_init__(self) -> None:
+        import math
+        if not isinstance(self.timestamp, int):
+            raise TypeError(f"FundingEvent.timestamp must be int, got {type(self.timestamp).__name__}")
+        if self.timestamp <= 0:
+            raise ValueError(f"FundingEvent.timestamp must be > 0, got {self.timestamp}")
+        if math.isnan(self.rate):
+            raise ValueError("FundingEvent.rate is NaN")
+        if math.isinf(self.rate):
+            raise ValueError(f"FundingEvent.rate is infinite: {self.rate}")
 
 
 class ResolutionStatus(str, Enum):
@@ -183,6 +222,10 @@ class ActionOutcome:
     action_utility: float = 0.0
     path_metrics: PathMetrics = field(default_factory=PathMetrics)
     same_candle_ambiguity: bool = False
+    # Funding truth (populated by engine, consumed by LabelAdapter)
+    funding_status: str = ""
+    funding_event_count: int = 0
+    funding_source: str = ""
 
 
 @dataclass
@@ -210,6 +253,12 @@ class SimulationLineage:
     target_family: str = ""
     time_exit_family: str = ""
     adapter_kind: str = "TRAINING"
+    # Funding data truth
+    funding_status: str = ""
+    funding_event_count: int = 0
+    funding_source: str = ""
+    funding_window_start_ms: int = 0
+    funding_window_end_ms: int = 0
 
 
 @dataclass

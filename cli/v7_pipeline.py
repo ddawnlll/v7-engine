@@ -885,12 +885,21 @@ class PipelineRunner:
                 n = len(ohlcv["close"])
 
                 mode = self._config.mode.upper()
+                from alphaforge.modes import CANONICAL_PROFILES, get_profile
                 mode_enum = TradingMode.SCALP if mode == "SCALP" else (
                     TradingMode.AGGRESSIVE_SCALP if mode == "AGGRESSIVE_SCALP" else TradingMode.SWING
                 )
-                max_hold = 12 if mode in ("SCALP", "AGGRESSIVE_SCALP") else 30
-                stop_mult = 1.5 if mode != "SWING" else 2.0
-                target_mult = 2.0 if mode != "SWING" else 3.0
+                # Use authoritative profile factory
+                canonical = get_profile(mode)
+                max_hold = canonical.max_holding_bars if hasattr(canonical, 'max_holding_bars') else (
+                    12 if mode in ("SCALP", "AGGRESSIVE_SCALP") else 30
+                )
+                stop_mult = canonical.stop_multiplier if hasattr(canonical, 'stop_multiplier') else (
+                    1.5 if mode != "SWING" else 2.0
+                )
+                target_mult = canonical.target_multiplier if hasattr(canonical, 'target_multiplier') else (
+                    2.0 if mode != "SWING" else 3.0
+                )
 
                 # Initialize OHLCV-length sentinel arrays
                 symbols_arr = np.asarray(ohlcv.get("symbol", ["DEFAULT"] * n))

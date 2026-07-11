@@ -1,5 +1,4 @@
-"""
-Comparative simulation engine.
+"""Comparative simulation engine.
 
 Evaluates LONG_NOW, SHORT_NOW, and NO_TRADE under the same cost/exit
 semantics. This is the core of the /simulation economic truth authority.
@@ -11,7 +10,7 @@ Output: SimulationOutput (comparative outcomes, best action, regret)
 from __future__ import annotations
 
 import uuid
-from typing import Optional
+from typing import Optional, Sequence
 
 import numpy as np
 
@@ -34,20 +33,7 @@ from simulation.engine.exits import (
     simulate_path,
     simulate_path_from_arrays,
 )
-
-
-def _resolve_ts(ts: str | int) -> int:
-    """Normalize decision_timestamp to int milliseconds."""
-    if isinstance(ts, int):
-        return ts
-    if isinstance(ts, str):
-        from datetime import datetime, timezone
-        try:
-            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-            return int(dt.timestamp() * 1000)
-        except (ValueError, TypeError):
-            return 0
-    return 0
+from simulation.engine.time import normalize_timestamp_ms
 
 
 def _build_action_outcome(
@@ -59,8 +45,16 @@ def _build_action_outcome(
     profile: SimulationProfile,
     decision_timestamp: int = 0,
     side: str = "LONG",
+    future_candles: Sequence[Candle] | None = None,
 ) -> ActionOutcome:
-    """Build an ActionOutcome from an ExitResult + cost model."""
+    """Build an ActionOutcome from an ExitResult + cost model.
+
+    Parameters
+    ----------
+    future_candles : Sequence[Candle] | None
+        The full future candle path, used to resolve the *real* exit timestamp
+        from the candle at ``exit_result.exit_bar_index``.
+    """
     # Resolve execution mode from profile
     exec_mode = getattr(profile, "execution_mode", "TAKER")
     maker_fill = getattr(profile, "maker_fill_probability", 0.7)
@@ -70,36 +64,106 @@ def _build_action_outcome(
     except KeyError:
         execution_mode = ExecutionMode.TAKER
 
-    # Compute funding: prefer event-based over scalar rate
-    funding_events = getattr(profile, "funding_events", [])
-    if funding_events and decision_timestamp > 0:
-        interval_ms = 3_600_000  # 1h default
-        exit_timestamp = decision_timestamp + exit_result.hold_duration_bars * interval_ms
-        from simulation.engine.funding import funding_cost_r_from_events
-        # Signed notional: positive for LONG, negative for SHORT
-        signed_notional = notional if side == "LONG" else -notional
-        fund_r_via_events = funding_cost_r_from_events(
-            signed_notional, funding_events, decision_timestamp, exit_timestamp,
-            atr * profile.stop_multiplier,
-        )
-    else:
-        fund_r_via_events = None
+    # ── Real exit timestamp from candle close_time_utc ──────────────
+    exit_timestamp_ms: int | None = None
+    if future_candles and exit_result.exit_bar_index < len(future_candles):
+        exit_candle = future_candles[exit_result.exit_bar_index]
+        if exit_candle.close_time_utc:
+            try:
+                exit_timestamp_ms = normalize_timestamp_ms(exit_candle.close_time_utc)
+            except ValueError:
+                pass  # leave as None → will fall back to bar-based approx
 
-    fcr, scr, fund_r, tcr = total_cost_r(
+    # ── Compute funding: prefer event-based over scalar rate ────────
+    funding_events = getattr(profile, "funding_events", None)
+    legacy_scalar_rate = getattr(profile, "funding_rate", 0.0)
+
+    # Signed notional: positive for LONG, negative for SHORT
+    signed_notional = notional if side == "LONG" else -notional
+
+    # Determine entry timestamp for event matching
+    entry_timestamp_ms = decision_timestamp
+
+    from simulation.engine.funding import (
+        FUNDING_MODEL_VERSION,
+        funding_cost_r as scalar_funding_cost,
+        funding_cost_r_from_events,
+        resolve_funding_status,
+    )
+    from simulation.contracts.models import FundingDataStatus
+
+    fund_r = 0.0
+    matching_event_count = 0
+    funding_source_str = ""
+    funding_window_start = 0
+    funding_window_end = 0
+
+    if funding_events is not None and len(funding_events) > 0 and entry_timestamp_ms > 0:
+        # Use real exit timestamp from candle if available
+        effective_exit_ms = exit_timestamp_ms
+        if effective_exit_ms is None:
+            # Fallback: bar-based approximation (legacy behaviour)
+            interval_ms = _interval_ms_for_profile(profile)
+            effective_exit_ms = decision_timestamp + exit_result.hold_duration_bars * interval_ms
+
+        funding_window_start = entry_timestamp_ms
+        funding_window_end = effective_exit_ms
+
+        # Count matching events
+        for evt in funding_events:
+            if entry_timestamp_ms < evt.timestamp <= effective_exit_ms:
+                matching_event_count += 1
+
+        # Compute event-based funding cost (signed notional already applied)
+        fund_quote = funding_cost_r_from_events(
+            signed_notional, funding_events, entry_timestamp_ms, effective_exit_ms,
+        )
+        risk = atr * profile.stop_multiplier
+        fund_r = fund_quote / risk if risk > 0 else 0.0
+        funding_source_str = "event"
+    elif legacy_scalar_rate != 0.0 and entry_timestamp_ms > 0:
+        # Scalar funding path — now side-aware
+        fund_quote = scalar_funding_cost(
+            notional, legacy_scalar_rate, exit_result.hold_duration_bars, side=side,
+        )
+        risk = atr * profile.stop_multiplier
+        fund_r = fund_quote / risk if risk > 0 else 0.0
+        funding_source_str = "legacy_scalar"
+
+    # ── Fee & slippage (always with positive notional) ──────────────
+    fcr, scr, _, tcr = total_cost_r(
         notional=notional,
         entry_price=entry_price,
         atr=atr,
         stop_multiplier=profile.stop_multiplier,
-        funding_rate=getattr(profile, "funding_rate", 0.0),
+        funding_rate=0.0,  # funding already handled above
         holding_bars=exit_result.hold_duration_bars,
         execution_mode=execution_mode,
         maker_fill_probability=maker_fill,
     )
-    # Override with event-based funding if available
-    if fund_r_via_events is not None:
-        fund_r = fund_r_via_events
-        tcr = fcr + scr + fund_r
+    tcr = fcr + scr + fund_r
+
     realized_r_net = exit_result.realized_r_gross - tcr
+
+    # ── Determine truthful funding status for lineage ───────────────
+    if funding_events is not None:
+        has_legacy = (legacy_scalar_rate != 0.0)
+    else:
+        has_legacy = (legacy_scalar_rate != 0.0)
+
+    funding_status = resolve_funding_status(
+        events=funding_events if hasattr(profile, 'funding_events') else None,
+        has_legacy_scalar=has_legacy,
+        matching_count=matching_event_count,
+    )
+
+    # If we took the event path, re-check status with matching count
+    if funding_events is not None:
+        if matching_event_count > 0:
+            funding_status = FundingDataStatus.APPLIED.value
+        else:
+            # Events list exists but no events in window
+            funding_status = FundingDataStatus.AVAILABLE_EMPTY.value
 
     # Path metrics
     pm = PathMetrics(
@@ -130,7 +194,18 @@ def _build_action_outcome(
         action_utility=utility,
         path_metrics=pm,
         same_candle_ambiguity=exit_result.same_candle_ambiguity,
+        funding_status=funding_status,
+        funding_event_count=matching_event_count,
+        funding_source=funding_source_str,
     )
+
+
+def _interval_ms_for_profile(profile: SimulationProfile) -> int:
+    """Return interval in ms for the profile's primary_interval."""
+    interval = getattr(profile, "primary_interval", "1h")
+    # Simple mapping
+    mapping = {"15m": 900_000, "1h": 3_600_000, "4h": 14_400_000}
+    return mapping.get(interval, 3_600_000)
 
 
 def _build_no_trade_outcome(
@@ -151,10 +226,7 @@ def _build_no_trade_outcome(
     )
 
     # Classify no-trade quality per no_trade_quality.md:84-101
-    # Uses saved_loss_r and missed_opportunity_r (not best_r) for
-    # classification, matching the authoritative doc.
     if saved_loss_r == 0.0 and missed_opportunity_r == 0.0:
-        # Neither direction lost money, neither produced a clear edge
         quality = "CORRECT_NO_TRADE"
         was_correct = True
     elif saved_loss_r > 0.0 and missed_opportunity_r == 0.0:
@@ -164,8 +236,6 @@ def _build_no_trade_outcome(
         quality = "MISSED_OPPORTUNITY"
         was_correct = False
     elif saved_loss_r > 0.0 and missed_opportunity_r > 0.0:
-        # Contradictory: one direction lost, the other won.
-        # Use ambiguity margin to decide — close scores → AMBIGUOUS.
         if abs(saved_loss_r - missed_opportunity_r) < profile.ambiguity_margin_r:
             quality = "AMBIGUOUS_NO_TRADE"
             was_correct = False
@@ -219,14 +289,7 @@ def _select_best_action(
     no_trade_outcome: NoTradeOutcome,
     profile: SimulationProfile,
 ) -> tuple[str, str, float, float, bool]:
-    """Select best action from comparative outcomes.
-
-    NO_TRADE utility = saved_loss_score (normalized 0-1 scale, mapped to R-scale via profile).
-
-    Returns:
-        (best_action, second_best_action, action_gap_r, regret_r, is_ambiguous)
-    """
-    # NO_TRADE utility: saved-loss quality in R-comparable terms
+    """Select best action from comparative outcomes."""
     nt_utility = no_trade_outcome.saved_loss_r - no_trade_outcome.missed_opportunity_r * 0.5
 
     utilities = {
@@ -240,8 +303,7 @@ def _select_best_action(
     second_best_label, second_utility = ranked[1]
     action_gap = best_utility - second_utility
 
-    # Regret: difference between chosen best and theoretical best
-    regret_r = 0.0  # best action is the one recommended
+    regret_r = 0.0
 
     is_ambiguous = action_gap < profile.ambiguity_margin_r
     if is_ambiguous and profile.no_trade_default:
@@ -255,14 +317,7 @@ def _select_best_action(
 
 
 def simulate(input: SimulationInput) -> SimulationOutput:
-    """Run comparative simulation for LONG_NOW, SHORT_NOW, and NO_TRADE.
-
-    Args:
-        input: SimulationInput with entry price, ATR, future candles, profile.
-
-    Returns:
-        SimulationOutput with all three action outcomes compared.
-    """
+    """Run comparative simulation for LONG_NOW, SHORT_NOW, and NO_TRADE."""
     profile = input.profile
     entry_risk = input.atr * profile.stop_multiplier
     notional = input.entry_price  # 1 unit of base currency
@@ -289,6 +344,12 @@ def simulate(input: SimulationInput) -> SimulationOutput:
         lows = np.array([], dtype=float)
         close_price = input.entry_price
 
+    # Normalize decision timestamp
+    try:
+        decision_ms = normalize_timestamp_ms(input.decision_timestamp)
+    except ValueError:
+        decision_ms = 0
+
     # Simulate LONG_NOW
     long_exit = simulate_path_from_arrays(
         "LONG", input.entry_price, long_stop, long_target,
@@ -296,7 +357,8 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     )
     long_outcome = _build_action_outcome(
         "LONG_NOW", long_exit, notional, input.entry_price, input.atr, profile,
-        decision_timestamp=_resolve_ts(input.decision_timestamp), side="LONG",
+        decision_timestamp=decision_ms, side="LONG",
+        future_candles=candles,
     )
 
     # Simulate SHORT_NOW
@@ -306,7 +368,8 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     )
     short_outcome = _build_action_outcome(
         "SHORT_NOW", short_exit, notional, input.entry_price, input.atr, profile,
-        decision_timestamp=_resolve_ts(input.decision_timestamp), side="SHORT",
+        decision_timestamp=decision_ms, side="SHORT",
+        future_candles=candles,
     )
 
     # NO_TRADE quality
@@ -323,7 +386,14 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     if not candles:
         resolution = "UNRESOLVED"
     elif len(candles) < max_bars and long_exit.exit_reason == "TIME_EXIT":
-        resolution = "COMPLETE"  # partial path but exit resolved
+        resolution = "COMPLETE"
+
+    # Truthful funding lineage — derive from the LONG outcome (both sides use same funding data)
+    funding_status = getattr(long_outcome, "funding_status", "")
+    funding_event_count = getattr(long_outcome, "funding_event_count", 0)
+    funding_source_str = getattr(long_outcome, "funding_source", "")
+    funding_window_start = 0
+    funding_window_end = 0
 
     # Lineage
     lineage = SimulationLineage(
@@ -332,12 +402,17 @@ def simulate(input: SimulationInput) -> SimulationOutput:
         cost_model_version=input.cost_model_version,
         fee_model_version="fee-1.0.0",
         slippage_model_version="slippage-1.0.0",
-        funding_model_version="funding-1.0.0",
+        funding_model_version="funding-2.0.0",
         horizon_family=f"{profile.mode.value.lower()}_horizon",
         stop_family=profile.stop_method,
         target_family=profile.target_method,
         time_exit_family="hold_then_exit",
         adapter_kind="TRAINING",
+        funding_status=funding_status,
+        funding_event_count=funding_event_count,
+        funding_source=funding_source_str,
+        funding_window_start_ms=funding_window_start,
+        funding_window_end_ms=funding_window_end,
     )
 
     return SimulationOutput(

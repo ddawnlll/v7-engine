@@ -20,7 +20,9 @@ from typing import Any, Dict, List, Optional, Tuple
 # ---------------------------------------------------------------------------
 
 LABEL_INTERPRETATION_VERSION: str = "1.0.0"
-FUNDING_STATUS_DEFAULT: str = "APPLIED"  # Engine has funding as LOCKED_INITIAL_BASELINE
+# FUNDING_STATUS_DEFAULT removed in #315 — truthful funding status
+# is now propagated from simulation lineage.  If lineage has no funding
+# status, MISSING_DATA is used (backward-compatible truthful default).
 
 VALID_MODES: Tuple[str, ...] = ("SWING", "SCALP", "AGGRESSIVE_SCALP")
 VALID_BEST_ACTIONS: Tuple[str, ...] = ("LONG_NOW", "SHORT_NOW", "NO_TRADE", "AMBIGUOUS_STATE")
@@ -37,6 +39,9 @@ LABEL_VALIDITY_AMBIGUOUS_EXCLUDED: str = "ambiguous_excluded"
 
 # Cost-consumed-edge tolerance (R units)
 COST_NET_TOLERANCE: float = 0.0001
+
+# Truthful default when lineage has no funding information
+TRUTHFUL_FUNDING_STATUS_DEFAULT: str = "MISSING_DATA"
 
 
 class NoTradeQuality(str, enum.Enum):
@@ -194,6 +199,17 @@ class LabelAdapter:
         cost_impact_long: float = total_cost_r_long
         cost_impact_short: float = total_cost_r_short
 
+        # ── Truthful funding status from lineage ──────────────────────
+        # Priority: long_outcome.funding_status → lineage.funding_status → MISSING_DATA
+        funding_status: str = self._resolve_funding_status(long_out, lineage)
+
+        # Additional funding lineage fields
+        funding_event_count: int = self._get_int(long_out, "funding_event_count", 0)
+        funding_source: str = str(long_out.get("funding_source", lineage.get("funding_source", "")))
+        funding_model_version: str = lineage.get("funding_model_version", "unknown")
+        funding_window_start_ms: int = self._get_int(lineage, "funding_window_start_ms", 0)
+        funding_window_end_ms: int = self._get_int(lineage, "funding_window_end_ms", 0)
+
         # Assemble label dict
         label: Dict[str, Any] = {
             "symbol": symbol,
@@ -233,7 +249,12 @@ class LabelAdapter:
             "long_mfe_R": long_mfe_R,
             "short_mfe_R": short_mfe_R,
             "path_quality_score": path_quality_score,
-            "funding_status": FUNDING_STATUS_DEFAULT,
+            "funding_status": funding_status,
+            "funding_event_count": funding_event_count,
+            "funding_source": funding_source,
+            "funding_model_version": funding_model_version,
+            "funding_window_start_ms": funding_window_start_ms,
+            "funding_window_end_ms": funding_window_end_ms,
             "cost_edge_warning": cost_edge_warning,
             "cost_impact_long": cost_impact_long,
             "cost_impact_short": cost_impact_short,
@@ -348,12 +369,41 @@ class LabelAdapter:
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _resolve_funding_status(long_out: dict, lineage: dict) -> str:
+        """Resolve truthful funding status from available sources.
+
+        Priority:
+          1. ``long_outcome.funding_status`` (engine-level, most truthful)
+          2. ``lineage.funding_status`` (propagated lineage)
+          3. ``TRUTHFUL_FUNDING_STATUS_DEFAULT`` (MISSING_DATA) as fallback
+        """
+        # Check action outcome first (engine source of truth)
+        outcome_status = long_out.get("funding_status")
+        if outcome_status and isinstance(outcome_status, str) and outcome_status.strip():
+            return outcome_status.strip()
+
+        # Check lineage next
+        lineage_status = lineage.get("funding_status")
+        if lineage_status and isinstance(lineage_status, str) and lineage_status.strip():
+            return lineage_status.strip()
+
+        return TRUTHFUL_FUNDING_STATUS_DEFAULT
+
+    @staticmethod
     def _get_number(obj: dict, key: str, default: float = 0.0) -> float:
         """Safely extract a numeric field from a dict with a default."""
         val = obj.get(key, default)
         if val is None:
             return default
         return float(val)
+
+    @staticmethod
+    def _get_int(obj: dict, key: str, default: int = 0) -> int:
+        """Safely extract an integer field from a dict with a default."""
+        val = obj.get(key, default)
+        if val is None:
+            return default
+        return int(val)
 
     @staticmethod
     def _get_nested_number(obj: dict, sub_key: str, field: str, default: float = 0.0) -> float:
