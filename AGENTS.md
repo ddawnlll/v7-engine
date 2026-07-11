@@ -8,9 +8,28 @@ This file tells Codex how to work in this repo. Read it first.
 
 ---
 
+## Before You Start: The Agent Context Layer
+
+This repo has a **shared memory layer** that persists across AI agent sessions.
+**Always read the agent context BEFORE reading the ai_summary.**
+
+Reading order:
+1. `.agent/CONTEXT_INDEX.md` — Protocol, reading order, rules
+2. `docs/project_context.md` — Project overview, boundaries, architecture
+3. `docs/decisions/DECISIONS.md` — Locked decisions and rationale
+4. `docs/audits/FINDINGS_LEDGER.md` — All verified audit findings
+5. `docs/audits/OPEN_QUESTIONS.md` — Unverified suspicions
+6. `.agent/HANDOFF.md` — Last agent's working summary
+7. `.agent/CURRENT_TASK.md` — Current single task
+8. `.agent/EVIDENCE_REQUIREMENTS.md` — Evidence standard
+
+**After** the agent context, read the relevant `ai_summary.md`:
+
+**Why this exists:** Different AI models (Claude, DeepSeek, GPT, Hermes) work on this repo at different times. Without a shared context layer, each session starts from zero, contradicts previous findings, and wastes time rediscovering known facts. These files are the **source of truth** — not the chat history.
+
 ## Start Here: The ai_summary Pattern
 
-Every subsystem has an `ai_summary.md` that is the canonical dense-synthesis entry point. **Always read the relevant ai_summary before touching any file in that subsystem.**
+Every subsystem has an `ai_summary.md` that is the canonical dense-synthesis entry point. **Always read the relevant ai_summary after the agent context and before touching any file in that subsystem.**
 
 | Subsystem | ai_summary | When to read |
 |-----------|-----------|-------------|
@@ -29,6 +48,14 @@ Every subsystem has an `ai_summary.md` that is the canonical dense-synthesis ent
 ## Task Completion Protocol
 
 After EVERY non-trivial task (design patch, implementation, audit, fix), you MUST:
+
+### 0. Update agent context files
+Before any other step, update the `.agent/` and `docs/audits/` context files:
+- Update `docs/audits/FINDINGS_LEDGER.md` with new or revised findings
+- Update `docs/audits/OPEN_QUESTIONS.md` with remaining unknowns
+- Rewrite `.agent/HANDOFF.md` with work completed, files inspected/changed, commands, blockers, next action
+- If a locked decision changed, update `docs/decisions/DECISIONS.md`
+- These files are the **source of truth** — not the chat history
 
 ### 1. Update related docs
 - If a task changes design decisions, update the relevant domain docs to reflect the new state.
