@@ -24,9 +24,16 @@ try:
     import cupy as cp
 
     _HAS_CUPY = True
+    def _asnumpy(arr):
+        """Convert cupy array to numpy; passthrough for numpy arrays."""
+        if _HAS_CUPY:
+            return cp.asnumpy(arr)
+        return np.asarray(arr)
 except ImportError:
     cp = np
     _HAS_CUPY = False
+    def _asnumpy(arr):
+        return np.asarray(arr)
 
 
 def _rolling_std_cupy(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
@@ -39,7 +46,7 @@ def _rolling_std_cupy(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray
     arr_g = cp.asarray(arr)
     windows = cp.lib.stride_tricks.sliding_window_view(arr_g, window)
     std_g = cp.std(windows, axis=1, ddof=ddof)
-    result[window - 1:] = cp.asnumpy(std_g)
+    result[window - 1:] = _asnumpy(std_g)
     return result
 
 
@@ -52,7 +59,7 @@ def _rolling_median_cupy(arr: np.ndarray, window: int) -> np.ndarray:
     arr_g = cp.asarray(arr)
     windows = cp.lib.stride_tricks.sliding_window_view(arr_g, window)
     med_g = cp.median(windows, axis=1)
-    result[window - 1:] = cp.asnumpy(med_g)
+    result[window - 1:] = _asnumpy(med_g)
     return result
 
 
@@ -65,7 +72,7 @@ def _rolling_mean_cupy(arr: np.ndarray, window: int) -> np.ndarray:
     arr_g = cp.asarray(arr)
     windows = cp.lib.stride_tricks.sliding_window_view(arr_g, window)
     mean_g = cp.mean(windows, axis=1)
-    result[window - 1:] = cp.asnumpy(mean_g)
+    result[window - 1:] = _asnumpy(mean_g)
     return result
 
 
@@ -78,7 +85,7 @@ def _count_positive_cupy(arr: np.ndarray, window: int) -> np.ndarray:
     arr_g = cp.asarray(arr)
     windows = cp.lib.stride_tricks.sliding_window_view(arr_g, window)
     count_g = cp.sum(windows > 0, axis=1).astype(cp.float64)
-    result[window - 1:] = cp.asnumpy(count_g)
+    result[window - 1:] = _asnumpy(count_g)
     return result
 
 
@@ -182,7 +189,7 @@ def compute_scalp_momentum_group(
             cp.where(recent_log_ret_g < 0, -cp.abs(drawup_g), 0.0),
         )
         mom_div = np.full(n, np.nan, dtype=np.float64)
-        mom_div[N - 1:] = cp.asnumpy(div)
+        mom_div[N - 1:] = _asnumpy(div)
     else:
         mom_div = np.full(n, np.nan, dtype=np.float64)
         for i in range(N, n):
