@@ -142,6 +142,8 @@ def compute_calibration_error(
     occurred, 0.0 otherwise).  Probabilities are binned into *n_bins*
     equally-spaced intervals over [0, 1].
 
+    NaN values in either array are filtered pairwise before binning.
+
     For each bin *b*:
         ``confidence[b] = mean(probability in bin)``
         ``accuracy[b] = mean(outcome in bin)``
@@ -164,7 +166,12 @@ def compute_calibration_error(
     probs = np.asarray(probabilities, dtype=np.float64)
     outc = np.asarray(outcomes, dtype=np.float64)
 
-    if probs.shape[0] == 0:
+    # Pairwise NaN filter.
+    valid = ~(np.isnan(probs) | np.isnan(outc))
+    probs = probs[valid]
+    outc = outc[valid]
+
+    if probs.shape[0] < 2:
         return 0.0, 0.0
 
     # Clamp probabilities to [0, 1] to avoid edge bin artefacts.
@@ -200,14 +207,14 @@ def compute_calibration_error(
 def compute_expected_r_from_probabilities(
     probs_3class: np.ndarray,
     r_per_class: np.ndarray,
-) -> np.ndarray:
+) -> float:
     """Compute expected R-multiple from 3-class probability distribution.
 
-    Element-wise dot product over the three classes:
+    Element-wise dot product over the three classes, then averaged across
+    all samples to produce a single scalar.
 
-        ``expected_R[i] = sum_c probs_3class[i, c] * r_per_class[i, c]``
-
-    for class index *c* in {0, 1, 2}.
+    NaN values in the per-sample dot product are excluded from the final
+    average.  Returns 0.0 when zero valid samples remain.
 
     Args:
         probs_3class:
@@ -218,8 +225,17 @@ def compute_expected_r_from_probabilities(
             for each sample.
 
     Returns:
-        1-D array of shape ``(N,)`` — element-wise expected R-multiple.
+        Scalar expected R-multiple averaged across valid samples.
     """
     probs = np.asarray(probs_3class, dtype=np.float64)
     rvals = np.asarray(r_per_class, dtype=np.float64)
-    return np.sum(probs * rvals, axis=1)
+
+    # Element-wise expected R per sample.
+    per_sample = np.sum(probs * rvals, axis=1)
+
+    # Filter NaN.
+    valid = ~np.isnan(per_sample)
+    if np.sum(valid) == 0:
+        return 0.0
+
+    return float(np.mean(per_sample[valid]))

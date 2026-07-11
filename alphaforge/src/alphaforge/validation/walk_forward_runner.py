@@ -43,6 +43,7 @@ _FEE_FRACTIONAL = _AUTHORITY["taker_fee_bps"] / 10000.0  # 0.0004 per side
 _ROUND_TRIP_COST = _FEE_FRACTIONAL * 2  # 0.0008 round trip
 import xgboost as xgb
 
+from alphaforge.reports.ic_metrics import compute_ic, compute_rank_ic
 from alphaforge.validation.contracts import (
     DEFAULT_FOLD_CONFIGS,
     DEFAULT_PURGE_POLICIES,
@@ -236,6 +237,9 @@ class FoldMetrics:
     gross_sharpe: float = 0.0
     gross_profit_factor: float = 0.0
     gross_expectancy: float = 0.0
+    # IC / Rank IC metrics
+    oos_ic: float = 0.0
+    oos_rank_ic: float = 0.0
 
 
 @dataclass
@@ -1169,6 +1173,28 @@ def run_walk_forward(
         except (ValueError, AttributeError):
             pass
 
+        # ---- IC / Rank IC computation ----
+        # Directional signal = prob(LONG) - prob(SHORT) as continuous predictor
+        oos_probs = booster.predict(doos, output_margin=False)
+        oos_directional = oos_probs[:, 0] - oos_probs[:, 1]
+
+        # Realized R based on TRUE labels (not predictions)
+        oos_realized_r: np.ndarray | None = None
+        if long_net_valid is not None and short_net_valid is not None:
+            oos_y_long_r = long_net_valid[oos_idx]
+            oos_y_short_r = short_net_valid[oos_idx]
+            oos_realized_r = np.where(
+                y_oos == 0,  # TRUE LONG
+                oos_y_long_r,
+                np.where(y_oos == 1, oos_y_short_r, 0.0),
+            )
+        else:
+            # Fallback to classification returns when R-values unavailable
+            oos_realized_r = _class_predictions_to_returns(oos_pred, y_oos)
+
+        fold_oos_ic = compute_ic(oos_directional, oos_realized_r)
+        fold_oos_rank_ic = compute_rank_ic(oos_directional, oos_realized_r)
+
         # OOS financial metrics — realized R from prediction vs long/short values
         if long_net_valid is not None and short_net_valid is not None:
             oos_long_r = long_net_valid[oos_idx]
@@ -1249,6 +1275,8 @@ def run_walk_forward(
             gross_sharpe=oos_fin_metrics["gross_sharpe"],
             gross_profit_factor=oos_fin_metrics["gross_profit_factor"],
             gross_expectancy=oos_fin_metrics["gross_expectancy"],
+            oos_ic=fold_oos_ic,
+            oos_rank_ic=fold_oos_rank_ic,
         )
         fold_metrics.append(fm)
         last_booster = booster
@@ -1315,6 +1343,13 @@ def run_walk_forward(
         for f in fold_metrics
     ]))
     avg_net_expectancy = float(np.mean([f.net_expectancy for f in fold_metrics]))
+
+    # IC / Rank IC aggregate metrics
+    avg_oos_ic = float(np.mean([f.oos_ic for f in fold_metrics]))
+    avg_oos_rank_ic = float(np.mean([f.oos_rank_ic for f in fold_metrics]))
+    oos_ic_ir = float(np.mean([f.oos_ic for f in fold_metrics])) / (
+        float(np.std([f.oos_ic for f in fold_metrics], ddof=1)) + 1e-10
+    ) if len(fold_metrics) >= 2 else 0.0
 
     # Sharpe stability (std of Sharpe across folds)
     sharpe_std = float(np.std([f.sharpe for f in fold_metrics], ddof=1)) if len(fold_metrics) > 1 else 0.0
@@ -1383,6 +1418,9 @@ def run_walk_forward(
         "net_sharpe_stability_std": net_sharpe_std,
         "avg_net_profit_factor": avg_net_pf,
         "avg_net_expectancy": avg_net_expectancy,
+        "oos_ic": avg_oos_ic,
+        "oos_rank_ic": avg_oos_rank_ic,
+        "oos_ic_ir": oos_ic_ir,
         "fold_stability_score": fold_stability_score,
         "folds_passing": folds_passing,
         "majority_pass": majority_pass,
@@ -1465,6 +1503,8 @@ def walk_forward_result_to_dict(result: WalkForwardResult) -> Dict[str, Any]:
                     "gross_sharpe": fm.gross_sharpe,
                     "gross_profit_factor": fm.gross_profit_factor,
                     "gross_expectancy": fm.gross_expectancy,
+                    "oos_ic": fm.oos_ic,
+                    "oos_rank_ic": fm.oos_rank_ic,
                 },
                 "oos_trade_counts": {
                     "total_trades": fm.total_trades,
