@@ -11,6 +11,16 @@ from runtime.db.repos.paper_repo import PaperAccountRepository
 from runtime.db.repos.runtime_profile_repo import PAPER_PROFILE_ID, RuntimeProfileRepository
 from runtime.db.session import session_scope
 from runtime.runtime.paper_execution import PaperExecutionService
+from runtime.runtime.safety import (
+    KillSwitch,
+    KillSwitchConfig,
+    PositionLimiter,
+    PositionLimitConfig,
+    SafetyCheckResult,
+    SafetyGateChain,
+    SymbolCap,
+    SymbolCapConfig,
+)
 from runtime.services.binance_usdm_manual_live_service import BinanceUsdmManualLiveService
 from runtime.services.runtime_profile_service import RuntimeProfileService
 
@@ -246,8 +256,13 @@ class BinanceUsdmLiveExecutionAdapter:
         raise UnsupportedExecutionProfileError("Live bulk close is deferred beyond Phase 5A.")
 
 
+# ---------------------------------------------------------------------------
+# ExecutionOrchestrator
+# ---------------------------------------------------------------------------
+
+
 class ExecutionOrchestrator:
-    """Minimal profile-aware execution seam for Phase 3A."""
+    """Profile-aware execution seam with mandatory safety gate chain."""
 
     def __init__(
         self,
@@ -259,6 +274,7 @@ class ExecutionOrchestrator:
         paper_repo: PaperAccountRepository | None = None,
         execution_account_repo: ExecutionAccountRepository | None = None,
         runtime_profile_service: RuntimeProfileService | None = None,
+        safety_chain: SafetyGateChain | None = None,
     ) -> None:
         self.paper_adapter = paper_adapter or PaperExecutionAdapter()
         self.binance_usdm_live_adapter = binance_usdm_live_adapter or BinanceUsdmLiveExecutionAdapter()
@@ -267,6 +283,7 @@ class ExecutionOrchestrator:
         self.paper_repo = paper_repo or PaperAccountRepository()
         self.execution_account_repo = execution_account_repo or ExecutionAccountRepository()
         self.runtime_profile_service = runtime_profile_service or RuntimeProfileService()
+        self.safety_chain = safety_chain or SafetyGateChain()
 
     @property
     def paper_execution(self) -> PaperExecutionService:
@@ -372,6 +389,17 @@ class ExecutionOrchestrator:
                 raise ExecutionPolicyViolationError(
                     f"Execution profile '{target.profile_id}' is blocked for autonomous live routing: posture={auto_live.get('posture')} reasons={joined_reason_codes}."
                 )
+
+        # ── Safety gate check — mandatory, fail-closed, not bypassable ──────
+        rejection = self._check_safety_gates(
+            signal,
+            equity=target.account.equity if target.account else None,
+        )
+        if rejection is not None:
+            raise ExecutionPolicyViolationError(
+                f"Safety gate '{rejection.gate}' rejected trade: {rejection.reason}"
+            )
+
         routed_signal = {
             **signal,
             "profile_id": target.profile_id,
@@ -387,6 +415,34 @@ class ExecutionOrchestrator:
             profile_id=target.profile_id,
             **kwargs,
         )
+
+    # ── Safety authority — separate function from trading logic (req #8) ────
+
+    def _check_safety_gates(
+        self,
+        signal: dict[str, Any],
+        *,
+        equity: float | None = None,
+        proposed_notional: float | None = None,
+        current_positions: list[dict[str, Any]] | None = None,
+        current_exposures: dict[str, dict[str, Any]] | None = None,
+    ) -> SafetyCheckResult | None:
+        """Evaluate all safety gates against *signal*.
+
+        Returns ``None`` when every gate passes, or a ``SafetyCheckResult``
+        with ``passed=False`` describing the first gate that rejected the
+        trade.  This method is deliberately *separate* from trading logic
+        so that the safety authority is independently auditable.
+        """
+        return self.safety_chain.check_all(
+            signal,
+            equity=equity,
+            proposed_notional=proposed_notional,
+            current_positions=current_positions,
+            current_exposures=current_exposures,
+        )
+
+    # ── Existing helpers (unchanged) ────────────────────────────────────────
 
     def close_order(self, order_id: str, **kwargs) -> dict[str, Any]:
         target = self.resolve_order_target(order_id, intent=MANAGE_INTENT)
