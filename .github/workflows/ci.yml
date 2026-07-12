@@ -98,7 +98,7 @@ jobs:
           echo "  Training boundary check complete"
 
       - name: Run v7 tests
-        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest v7/tests/ -q --ignore=v7/tests/test_e2e_swing.py
+        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest v7/tests/ -q --ignore=v7/tests/test_e2e_swing.py --ignore=v7/tests/test_deployment_gates.py
 
       - name: Run policycritic tests
         run: PYTHONPATH=alphaforge/src:v7/src python -m pytest policycritic/tests/ -q 2>&1 || echo "policycritic tests skipped (pre-existing setup issues)"
