@@ -17,6 +17,7 @@ import logging
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -38,6 +39,44 @@ _AUTHORITY = get_cost_constants()
 _FEE_FRACTIONAL = _AUTHORITY["taker_fee_bps"] / 10000.0  # 0.0004
 _ROUND_TRIP_COST_FRACTIONAL = _FEE_FRACTIONAL * 2  # 0.0008
 
+# Centralized training config loader — single source of truth
+# Replaces the old MODE_CONFIG dict which was hardcoded and drifted from simulation registry.
+from lib.config_training import load_training_config, TrainingConfig
+
+_training_config_cache: dict[str, TrainingConfig] = {}
+
+
+def _get_training_config(mode: str) -> TrainingConfig:
+    """Get cached training config for mode.
+
+    Loads from simulation profile registry + configs/training.yaml.
+    Replaces old MODE_CONFIG lookups.
+    """
+    mode_upper = mode.upper()
+    if mode_upper not in _training_config_cache:
+        _training_config_cache[mode_upper] = load_training_config(mode_upper)
+    return _training_config_cache[mode_upper]
+
+
+# ── Backward-compatible MODE_CONFIG dict ────────────────────────────
+# Old code (scripts/v7_lite/*.py, tests) imports MODE_CONFIG from
+# alphaforge.train.  Build it from the canonical registry so existing
+# imports keep working with correct values (Issue #319).
+MODE_CONFIG: dict[str, dict] = {}
+for _m in ["SWING", "SCALP", "AGGRESSIVE_SCALP"]:
+    _c = _get_training_config(_m)
+    MODE_CONFIG[_m] = {
+        "primary": _c.primary_interval,
+        "max_hold": _c.max_holding_bars,
+        "stop_mult": _c.stop_multiplier,
+        "target_mult": _c.target_multiplier,
+        "ambiguity_margin_r": _c.ambiguity_margin_r,
+        "min_edge_r": _c.min_action_edge_r,
+        "label_horizon": _c.label_horizon,
+        "label_threshold": _c.label_threshold,
+    }
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s %(message)s",
@@ -45,28 +84,6 @@ logging.basicConfig(
 logger = logging.getLogger("alphaforge.train")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-
-MODE_CONFIG = {
-    "SWING": {
-        "primary": "4h", "max_hold": 30, "stop_mult": 2.0, "target_mult": 3.0,
-        "ambiguity_margin_r": 0.15, "min_edge_r": 0.25,
-        "label_horizon": 24, "label_threshold": 0.005,  # 4 days × 4h bars, 0.5% threshold
-    },
-    "SCALP": {
-        "primary": "1h", "max_hold": 12, "stop_mult": 1.5, "target_mult": 2.0,
-        "ambiguity_margin_r": 0.10, "min_edge_r": 0.15,
-        "label_horizon": 12, "label_threshold": 0.003,  # 12 hours (1 trading day), 0.3% threshold
-    },
-    "AGGRESSIVE_SCALP": {
-        "primary": "15m", "max_hold": 5, "stop_mult": 1.5, "target_mult": 2.0,
-        "ambiguity_margin_r": 0.05, "min_edge_r": 0.10,
-        "label_horizon": 8, "label_threshold": 0.002,  # 2 hours, 0.2% threshold
-    },
-}
-
-# Confidence threshold for trade filtering: if max softprob < this, force NO_TRADE
-# 0.45 filters out low-confidence predictions, improves net R per trade
-CONFIDENCE_THRESHOLD = 0.50
 
 
 # ---------------------------------------------------------------------------
@@ -486,11 +503,11 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
     Label DECISION uses net_R (cost-aware); gross_R is exported for analysis
     and net_R is exported for downstream economic metrics.
     """
-    cfg = MODE_CONFIG[mode]
-    label_horizon = cfg["label_horizon"]
-    label_threshold = cfg["label_threshold"]
-    min_edge_r = cfg.get("min_edge_r", 0.15)
-    ambiguity_margin_r = cfg.get("ambiguity_margin_r", 0.10)
+    cfg = _get_training_config(mode)
+    label_horizon = cfg.label_horizon
+    label_threshold = cfg.label_threshold
+    min_edge_r = cfg.min_action_edge_r
+    ambiguity_margin_r = cfg.ambiguity_margin_r
 
     # Split by symbol to prevent cross-symbol contamination
     close_arr = ohlcv["close"].astype(np.float64)
@@ -592,7 +609,8 @@ def _compute_single_symbol_frame(
             ohlcv_input["open_interest"] = open_interest
         if premium_index is not None:
             ohlcv_input["premium_index"] = premium_index
-        _interval = MODE_CONFIG[mode]["primary"]
+        _cfg = _get_training_config(mode)
+        _interval = _cfg.primary_interval
         fm = cached_compute_features(
             ohlcv_input, mode=mode, interval=_interval,
             feature_groups=feature_groups,
@@ -638,6 +656,43 @@ def compute_all_features(ohlcv: dict, mode: str) -> Tuple[np.ndarray, List[str]]
     return compute_features_selected(ohlcv, mode)
 
 
+def _compute_one_symbol(
+    sym: str,
+    ohlcv: dict,
+    symbols_array: np.ndarray,
+    mode: str,
+    feature_groups: Optional[List[str]],
+) -> Tuple[str, np.ndarray, List[str]]:
+    """Compute features for a single symbol.
+
+    Imports compute_features inside the function body so it can be pickled
+    across process boundaries by ProcessPoolExecutor.
+    """
+    from alphaforge.features.pipeline import compute_features
+
+    mask = symbols_array == sym
+    sym_ohlcv = {
+        "close": ohlcv["close"][mask],
+        "high": ohlcv["high"][mask],
+        "low": ohlcv["low"][mask],
+        "open": ohlcv["open"][mask],
+        "volume": ohlcv["volume"][mask],
+    }
+    if "funding_rate" in ohlcv:
+        sym_ohlcv["funding_rate"] = ohlcv["funding_rate"][mask]
+    if "open_interest" in ohlcv:
+        sym_ohlcv["open_interest"] = ohlcv["open_interest"][mask]
+    if "premium_index" in ohlcv:
+        sym_ohlcv["premium_index"] = ohlcv["premium_index"][mask]
+    if feature_groups is None or feature_groups == ["all"]:
+        fm = compute_features(sym_ohlcv, mode=mode)
+    else:
+        fm = compute_features(sym_ohlcv, mode=mode, feature_groups=feature_groups)
+    fn = sorted(fm.features.keys())
+    Xs = np.column_stack([fm.features[k] for k in fn])
+    return sym, Xs, fn
+
+
 def compute_features_selected(ohlcv: dict, mode: str, feature_groups: Optional[List[str]] = None) -> Tuple[np.ndarray, List[str]]:
     """Compute selected feature groups, per-symbol to avoid cross-symbol contamination."""
     from alphaforge.features.pipeline import compute_features
@@ -651,32 +706,30 @@ def compute_features_selected(ohlcv: dict, mode: str, feature_groups: Optional[L
             unique_syms.append(s)
 
     all_X, feat_names = [], None
-    for sym in unique_syms:
-        mask = symbols == sym
-        sym_ohlcv = {
-            "close": ohlcv["close"][mask],
-            "high": ohlcv["high"][mask],
-            "low": ohlcv["low"][mask],
-            "open": ohlcv["open"][mask],
-            "volume": ohlcv["volume"][mask],
-        }
-        if "funding_rate" in ohlcv:
-            sym_ohlcv["funding_rate"] = ohlcv["funding_rate"][mask]
-        if "open_interest" in ohlcv:
-            sym_ohlcv["open_interest"] = ohlcv["open_interest"][mask]
-        if "premium_index" in ohlcv:
-            sym_ohlcv["premium_index"] = ohlcv["premium_index"][mask]
-        if feature_groups is None or feature_groups == ["all"]:
-            fm = compute_features(sym_ohlcv, mode=mode)
-        else:
-            fm = compute_features(sym_ohlcv, mode=mode, feature_groups=feature_groups)
-        fn = sorted(fm.features.keys())
-        if feat_names is None:
-            feat_names = fn
-        Xs = np.column_stack([fm.features[k] for k in fn])
+
+    if len(unique_syms) == 1:
+        # Single symbol — skip multiprocessing overhead
+        _, Xs, fn = _compute_one_symbol(unique_syms[0], ohlcv, symbols, mode, feature_groups)
+        feat_names = fn
         all_X.append(Xs)
+    else:
+        max_workers = min(os.cpu_count() or 4, len(unique_syms))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            fut_map = {
+                executor.submit(_compute_one_symbol, sym, ohlcv, symbols, mode, feature_groups): i
+                for i, sym in enumerate(unique_syms)
+            }
+            ordered = [None] * len(unique_syms)
+            for fut, i in fut_map.items():
+                _, Xs, fn = fut.result()
+                ordered[i] = (Xs, fn)
+            for Xs, fn in ordered:
+                if feat_names is None:
+                    feat_names = fn
+                all_X.append(Xs)
 
     X = np.vstack(all_X) if all_X else np.empty((0, len(feat_names or [])))
+    X = X.astype(np.float32)
     logger.info("Features: %d columns from mode=%s groups=%s (per-symbol)", X.shape[1], mode, feature_groups or "all")
     return X, feat_names or []
 
@@ -728,9 +781,9 @@ def build_aligned_training_frame(
     close_price_parts: list[np.ndarray] = []
     feat_names: list[str] | None = None
 
-    cfg = MODE_CONFIG[mode]
-    min_edge_r = cfg.get("min_edge_r", 0.15)
-    ambiguity_margin_r = cfg.get("ambiguity_margin_r", 0.10)
+    _cfg_t = _get_training_config(mode)
+    min_edge_r = _cfg_t.min_action_edge_r
+    ambiguity_margin_r = _cfg_t.ambiguity_margin_r
 
     # Build per-symbol extra column dicts (masked per symbol)
     sym_extras: dict[str, dict[str, np.ndarray]] = {}
@@ -756,8 +809,8 @@ def build_aligned_training_frame(
             sym_volume=volume_arr[symbols == sym],
             sym_ts=timestamps[symbols == sym],
             mode=mode,
-            label_horizon=cfg["label_horizon"],
-            label_threshold=cfg["label_threshold"],
+            label_horizon=_cfg_t.label_horizon,
+            label_threshold=_cfg_t.label_threshold,
             min_edge_r=min_edge_r,
             ambiguity_margin_r=ambiguity_margin_r,
             symbol_order=symbol_order[sym],
@@ -900,6 +953,7 @@ def build_aligned_training_frame(
         }
 
     X = np.vstack(x_parts)
+    X = X.astype(np.float32)
     y_int = np.concatenate(y_parts)
     label_gross_r = np.concatenate(label_gross_parts)
     label_net_r = np.concatenate(label_net_parts)
@@ -1134,7 +1188,8 @@ def walk_forward_validate(
     # P0.9F: purge/embargo tied to label_horizon (the actual forward lookahead
     # of the label function — was previously bound to max_hold, which was wrong
     # because max_hold is the position-sizing horizon, not the label horizon).
-    label_horizon = MODE_CONFIG.get(mode, {}).get("label_horizon", 12)
+    _wfv_cfg = _get_training_config(mode)
+    label_horizon = _wfv_cfg.label_horizon
     k = 2  # HOLD: multiplier requires empirical calibration
     purge_bars = max(fold_size // 4, k * label_horizon)
     embargo_bars = max(fold_size // 8, k * label_horizon)
@@ -1216,7 +1271,8 @@ def walk_forward_validate(
             walk_forward_validate._fold_y_val.append(y_val.copy())
 
         # Apply confidence threshold: force NO_TRADE when model is uncertain
-        _threshold = threshold if threshold is not None else float(CONFIDENCE_THRESHOLD)
+        _default_threshold = _get_training_config(mode).confidence_threshold
+        _threshold = threshold if threshold is not None else float(_default_threshold)
         low_conf_count = int(np.sum(y_pred_prob_max < _threshold))
         low_conf_pct = float(low_conf_count / len(y_pred_prob_max) * 100)
         y_pred[y_pred_prob_max < _threshold] = 2  # NO_TRADE
@@ -1421,6 +1477,9 @@ def collect_metrics(
         total_gross_r = float(trade_metrics["total_gross_R"])
         total_net_r = float(trade_metrics["total_net_R"])
         total_decisions = len(decision_labels)
+        _profit_factor = float(trade_metrics.get("profit_factor", 0.0))
+        _min_trade_count = float(trade_metrics.get("min_trade_count", 0))
+        _drawdown_guard = float(trade_metrics.get("max_drawdown_r", 0.0))
     else:
         net_r_exps = [r.get("net_r_expectancy", 0.0) for r in wfv_results]
         gross_r_exps = [nr + round_trip_cost_r for nr in net_r_exps]
@@ -1434,6 +1493,9 @@ def collect_metrics(
         exposure_pct = (total_active / total_decisions * 100) if total_decisions > 0 else 0.0
         total_gross_r = sum((r.get("active_metrics", {}) or {}).get("total_gross_R", 0.0) for r in wfv_results)
         total_net_r = sum((r.get("active_metrics", {}) or {}).get("total_net_R", 0.0) for r in wfv_results)
+        _profit_factor = 0.0
+        _min_trade_count = 0
+        _drawdown_guard = 0.0
 
     # Confidence threshold metrics
     low_conf_counts = [r.get("low_conf_count", 0) for r in wfv_results]
@@ -1454,9 +1516,9 @@ def collect_metrics(
         "gross_expectancy_r": round(gross_expectancy_r, 6),
         "total_gross_R": round(total_gross_r, 6),
         "total_net_R": round(total_net_r, 6),
-        "profit_factor": profit_factor,
-        "min_trade_count": min_trade_count,
-        "drawdown_guard": drawdown_guard,
+        "profit_factor": _profit_factor,
+        "min_trade_count": _min_trade_count,
+        "drawdown_guard": _drawdown_guard,
         "overfit_gap": overfit["overfit_gap"],
         "train_oos_correlation": overfit["train_oos_correlation"],
         "pbo_risk": overfit["pbo_risk"],
@@ -1468,7 +1530,7 @@ def collect_metrics(
         "total_short": total_short,
         "total_no_trade": total_no_trade,
         "exposure_pct": round(exposure_pct, 2),
-        "confidence_threshold": CONFIDENCE_THRESHOLD,
+        "confidence_threshold": _get_training_config(mode).confidence_threshold,
         "low_conf_rate_pct": round(low_conf_rate, 2),
         "cost_decomposition": {
             "fee_pct (already in decision_gross_r)": 0.0,
@@ -1582,8 +1644,8 @@ def main():
     global mode
     mode = args.mode.upper()
     symbols = [s.strip().upper() for s in args.symbols.split(",")]
-    cfg = MODE_CONFIG[mode]
-    interval = cfg["primary"]
+    _main_cfg = _get_training_config(mode)
+    interval = _main_cfg.primary_interval
 
     print(f"\n{'='*60}")
     print(f"  AlphaForge Training Pipeline")

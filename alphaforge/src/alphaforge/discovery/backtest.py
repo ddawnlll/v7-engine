@@ -27,7 +27,7 @@ from simulation.contracts.models import (
     SimulationProfile,
     TradingMode,
 )
-from alphaforge.train import MODE_CONFIG
+from lib.config_training import load_training_config
 
 logger = logging.getLogger("alphaforge.discovery.backtest")
 
@@ -243,10 +243,10 @@ def backtest_signals(
     list[BacktestTradeResult]
         One result per successfully simulated trade.
     """
-    cfg = MODE_CONFIG[mode]
-    stop_mult = cfg["stop_mult"]
-    target_mult = cfg["target_mult"]
-    max_hold = cfg["max_hold"]
+    _bt_cfg = load_training_config(mode)
+    stop_mult = _bt_cfg.stop_multiplier
+    target_mult = _bt_cfg.target_multiplier
+    max_hold = _bt_cfg.max_holding_bars
 
     profile = _build_profile(mode, stop_mult, target_mult, max_hold,
                              execution_mode=execution_mode,

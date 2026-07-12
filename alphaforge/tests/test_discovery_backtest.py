@@ -14,7 +14,7 @@ from alphaforge.discovery.backtest import (
     _extract_future_candles,
     backtest_signals,
 )
-from alphaforge.train import MODE_CONFIG
+from lib.config_training import load_training_config
 
 
 # ---------------------------------------------------------------------------

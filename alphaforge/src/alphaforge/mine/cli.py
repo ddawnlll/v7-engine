@@ -9,6 +9,9 @@ Usage:
         --output reports/alphaforge/mining/run_001/
 
 Pipeline: CandidateOutcomeDataset → Bucketizer → BitsetEngine → Scorer → MTC → OOS → AlphaRuleSpec
+
+⚠️ DEPRECATED (v0.4): isolated mining pipeline, superseded by centralized
+``alphaforge.train.main()`` entrypoint.  Will be removed after v0.4 (tracked in #319).
 """
 
 from __future__ import annotations

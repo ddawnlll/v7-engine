@@ -78,47 +78,31 @@ def cmd_backfill(args: argparse.Namespace) -> int:
 
 
 def cmd_simulate(args: argparse.Namespace) -> int:
-    """Run simulation."""
-    if args.dry_run:
-        mode = args.mode or "default"
-        symbols = args.symbols or "default"
-        _log("simulate", f"--mode {mode} --symbols {symbols}")
-        return 0
-    print("Not yet implemented — use --dry-run for now")
-    return 0
+    """Run simulation via alphaforge.train pipeline."""
+    _check_gate("simulate", args)
+    _log("simulate", "Delegating to alphaforge.train (centralized entrypoint)")
+    return _run_alphaforge_train(args, steps=["labels", "features"])
 
 
 def cmd_build_dataset(args: argparse.Namespace) -> int:
     """Build training dataset."""
-    if args.dry_run:
-        _log("build-dataset", "Would assemble feature + label dataset")
-        return 0
-    print("Not yet implemented — use --dry-run for now")
-    return 0
+    _check_gate("build-dataset", args)
+    _log("build-dataset", "Delegating to alphaforge.train (centralized entrypoint)")
+    return _run_alphaforge_train(args, steps=["labels", "features", "dataset"])
 
 
 def cmd_train(args: argparse.Namespace) -> int:
-    """Train model (gated — requires --force to bypass)."""
-    if args.dry_run:
-        if args.force:
-            _log("train", "--force bypasses gate; model training would proceed")
-        else:
-            print("[DRY RUN] GATE: Training not yet authorized — use --force to override")
-        return 0
-    if not args.force:
-        print("GATE: Training not authorized in legacy CLI — no-op. Use pipeline-v0.2 ARGS=--force for executable training.")
-        return 0
-    print("Legacy train command is not wired to production training — use make pipeline-v0.2 ARGS='--real --synthetic --force'.")
-    return 0
+    """Train model via centralized alphaforge.train entrypoint (gated)."""
+    _check_gate("train", args)
+    _log("train", "Delegating to alphaforge.train (centralized entrypoint)")
+    return _run_alphaforge_train(args)
 
 
 def cmd_wfv(args: argparse.Namespace) -> int:
-    """Run walk-forward validation (legacy gated no-op)."""
-    if args.dry_run:
-        print("[DRY RUN] WFV would run after a trained model exists")
-        return 0
-    print("GATE: WFV requires a trained model — no-op in legacy CLI. Use pipeline-v0.2 with train,wfv steps.")
-    return 0
+    """Run walk-forward validation via centralized entrypoint (gated)."""
+    _check_gate("wfv", args)
+    _log("wfv", "Delegating to alphaforge.train (centralized entrypoint)")
+    return _run_alphaforge_train(args, steps=["labels", "features", "train", "wfv"])
 
 
 def cmd_report(args: argparse.Namespace) -> int:
@@ -514,6 +498,75 @@ def _parse_comma_list(value: Optional[str]) -> Optional[list[str]]:
     if not value:
         return None
     return [part.strip() for part in value.split(",") if part.strip()]
+
+
+# ── Gate safety check ──────────────────────────────────────────────
+
+
+def _check_gate(step_name: str, args: argparse.Namespace) -> None:
+    """Check training gate.  Hard-fails if training not authorized and --force not set.
+
+    Called by ``cmd_simulate``, ``cmd_build_dataset``, ``cmd_train``, ``cmd_wfv``.
+    Previously these commands were silent no-ops — now they either delegate
+    to the real pipeline or fail loudly.
+    """
+    if getattr(args, "dry_run", False):
+        print(f"[DRY RUN] Gate check for {step_name}: would proceed (--dry-run)")
+        return
+    if getattr(args, "force", False):
+        return  # --force bypasses gate
+    # Check config gating
+    try:
+        from lib.config_training import load_training_config
+
+        mode = getattr(args, "mode", "SCALP") or "SCALP"
+        cfg = load_training_config(mode.upper())
+        if step_name in ("train", "wfv") and not cfg.gates.get("training_authorized", False):
+            print(
+                f"GATE: {step_name} not authorized in configs/training.yaml.  "
+                f"Set gates.training_authorized=true or use --force to override."
+            )
+            sys.exit(1)
+    except ImportError:
+        pass  # config loader not available — fall back to --force check only
+
+
+def _run_alphaforge_train(
+    args: argparse.Namespace,
+    steps: list[str] | None = None,
+) -> int:
+    """Delegate to alphaforge.train main with args reconstructed.
+
+    This is the centralized training entrypoint.  All ``cli/v7_engine.py``
+    training commands now route through here instead of being no-ops.
+    """
+    try:
+        mode = getattr(args, "mode", "SCALP") or "SCALP"
+        symbols = getattr(args, "symbols", None) or "BTCUSDT,ETHUSDT,SOLUSDT"
+        folds = getattr(args, "folds", 6)
+        force = getattr(args, "force", False)
+
+        # Build argv for alphaforge.train.main()
+        import sys as _sys
+
+        _argv = ["--mode", mode, "--symbols", symbols, "--folds", str(folds)]
+        if force:
+            _argv.append("--force")
+        if getattr(args, "synthetic", False):
+            _argv.append("--synthetic")
+
+        # Save and override sys.argv
+        _saved_argv = _sys.argv
+        _sys.argv = ["alphaforge.train"] + _argv
+
+        from alphaforge.train import main as _af_train_main
+
+        _ret = _af_train_main()
+        _sys.argv = _saved_argv
+        return _ret
+    except Exception as e:
+        print(f"ERROR in centralized training entrypoint: {e}")
+        return 1
 
 
 def _parse_date(value: Optional[str]) -> Optional[datetime]:

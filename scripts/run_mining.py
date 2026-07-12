@@ -61,6 +61,7 @@ from simulation.contracts.models import (
     SimulationLineage,
     SimulationOutput,
 )
+from simulation.profile_registry.registry import get_profile as _get_profile
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,19 +73,29 @@ logger = logging.getLogger("run_mining")
 # SCALP mode config
 # ---------------------------------------------------------------------------
 
-MODE_CONFIG = {
-    "SWING": {
-        "primary": "4h", "max_hold": 30, "stop_mult": 2.0, "target_mult": 3.0,
-        "context": "1d", "refinement": "1h",
-    },
-    "SCALP": {
-        "primary": "1h", "max_hold": 12, "stop_mult": 1.5, "target_mult": 2.0,
-        "context": "4h", "refinement": "15m",
-    },
-    "AGGRESSIVE_SCALP": {
-        "primary": "15m", "max_hold": 5, "stop_mult": 1.5, "target_mult": 2.0,
-        "context": "1h", "refinement": "5m",
-    },
+def _build_mining_config(mode: str) -> dict:
+    """Build mining config from the canonical profile registry.
+
+    Replaces the old hardcoded MODE_CONFIG dict (Issue #319).
+    Derives context/refinement from the profile's interval lists.
+    """
+    p = _get_profile(mode)
+    ctx = p.context_intervals[0] if p.context_intervals else p.primary_interval
+    ref = p.refinement_intervals[0] if p.refinement_intervals else p.primary_interval
+    return {
+        "primary": p.primary_interval,
+        "max_hold": p.max_holding_bars,
+        "stop_mult": p.stop_multiplier,
+        "target_mult": p.target_multiplier,
+        "context": ctx,
+        "refinement": ref,
+    }
+
+
+# Module-level dict for backward compatibility.
+# Built once at import time from the canonical profile registry.
+MODE_CONFIG: dict[str, dict] = {
+    m: _build_mining_config(m) for m in ["SWING", "SCALP", "AGGRESSIVE_SCALP"]
 }
 
 # Full 20-symbol universe

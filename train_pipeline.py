@@ -2,6 +2,11 @@
 End-to-end AlphaForge training pipeline.
 
 Orchestrates: simulation → labels → features → dataset → model → calibration → evaluation
+
+⚠️ DEPRECATED: This module is a spec-correct reference implementation.
+Its sole consumer is ``alphaforge.tests.test_pipeline``.
+Production training uses ``alphaforge.train.main()`` via the centralized entrypoint.
+Will be removed after v0.4 consolidation (tracked in #319).
 """
 
 from __future__ import annotations

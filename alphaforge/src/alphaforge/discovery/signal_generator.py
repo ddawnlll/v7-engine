@@ -18,6 +18,7 @@ from typing import Any
 import numpy as np
 
 from alphaforge.discovery import TradeSignal
+from lib.config_training import TrainingConfig
 
 logger = logging.getLogger("alphaforge.discovery.signal_generator")
 
@@ -35,7 +36,7 @@ def generate_trade_signals(
     fold_preds: list[np.ndarray],
     fold_y_class: list[np.ndarray],
     ohlcv: dict,
-    mode_cfg: dict,
+    mode_cfg: TrainingConfig,
     timestamps: np.ndarray,
     symbols: np.ndarray,
     close_arr: np.ndarray | None = None,
@@ -62,8 +63,9 @@ def generate_trade_signals(
         OHLCV data dict with keys ``close``, ``high``, ``low``, ``open``,
         ``volume`` (concatenated per-symbol, same length as training frame).
     mode_cfg:
-        Mode configuration dict from ``MODE_CONFIG[mode]`` — must contain
-        ``stop_mult``, ``target_mult``, ``max_hold``, ``min_edge_r``.
+        TrainingConfig from ``load_training_config(mode)`` — provides
+        ``stop_multiplier``, ``target_multiplier``, ``max_holding_bars``,
+        ``min_action_edge_r``.
     timestamps:
         Aligned timestamps array from the training frame (same length as
         feature matrix rows).
@@ -76,19 +78,18 @@ def generate_trade_signals(
         Minimum softmax probability for a directional trade.
     min_edge_r:
         Minimum edge in R for a signal to be actionable.  Defaults to
-        ``mode_cfg['min_edge_r']``.
-
+        ``mode_cfg.min_action_edge_r``.
     Returns
     -------
     list[TradeSignal]
         One entry per qualifying OOS prediction, ordered by fold then bar.
     """
     if min_edge_r is None:
-        min_edge_r = mode_cfg.get("min_edge_r", 0.15)
+        min_edge_r = mode_cfg.min_action_edge_r
 
-    stop_mult = mode_cfg["stop_mult"]
-    target_mult = mode_cfg["target_mult"]
-    max_hold = mode_cfg["max_hold"]
+    stop_mult = mode_cfg.stop_multiplier
+    target_mult = mode_cfg.target_multiplier
+    max_hold = mode_cfg.max_holding_bars
 
     use_close = close_arr if close_arr is not None else ohlcv["close"]
     high_arr = ohlcv["high"].astype(np.float64)
