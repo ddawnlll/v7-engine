@@ -1,49 +1,47 @@
-"""#179: Economic regression objective wire test.
-
-Verifies that --regression-objective flag switches XGBoostTrainer
-to reg:squarederror and the training pipeline accepts it.
-"""
+"""#179: Economic regression objective wire test."""
 
 import numpy as np
 import pytest
 
-from alphaforge.training.xgb_trainer import XGBoostTrainer
+try:
+    import xgboost  # noqa: F401
+    _has_xgboost = True
+except ImportError:
+    _has_xgboost = False
 
 
+def _trainer(*a, **kw):
+    from alphaforge.training.xgb_trainer import XGBoostTrainer
+    return XGBoostTrainer(*a, **kw)
+
+
+def _extract(*a, **kw):
+    return _trainer(*a, **kw)._extract_xgb_params()
+
+
+@pytest.mark.skipif(not _has_xgboost, reason="xgboost not installed")
 class TestRegressionObjectiveWire:
-    """The objective parameter is wired through constructor to XGB params."""
 
     def test_default_objective_is_multi_softprob(self):
-        trainer = XGBoostTrainer(mode="SWING")
-        params = trainer._extract_xgb_params()
-        assert params["objective"] == "multi:softprob"
+        assert _extract(mode="SWING")["objective"] == "multi:softprob"
 
     def test_regression_objective_overrides_param(self):
-        trainer = XGBoostTrainer(mode="SWING", objective="reg:squarederror")
-        params = trainer._extract_xgb_params()
-        assert params["objective"] == "reg:squarederror"
+        assert _extract(mode="SWING", objective="reg:squarederror")["objective"] == "reg:squarederror"
 
-    def test_regression_objective_no_num_class(self):
-        """Regression objective doesn't need num_class."""
-        trainer = XGBoostTrainer(mode="SWING", objective="reg:squarederror")
-        params = trainer._extract_xgb_params()
-        assert "num_class" not in params or params.get("objective") != "multi:softprob"
+    def test_regression_no_num_class(self):
+        p = _extract(mode="SWING", objective="reg:squarederror")
+        assert "num_class" not in p
 
     def test_train_with_regression_accepts_continuous_y(self):
-        """Regression train call accepts float targets (simulates net R)."""
-        trainer = XGBoostTrainer(mode="SWING", objective="reg:squarederror")
-        np.random.seed(42)
+        t = _trainer(mode="SWING", objective="reg:squarederror")
         X = np.random.randn(100, 5).astype(np.float64)
-        y = np.random.randn(100).astype(np.float64)  # continuous values like net R
-        result = trainer.train(X, y)
-        assert result.model is not None
-        assert "rmse" in result.val_metrics, f"Expected rmse in regression metrics, got {result.val_metrics.keys()}"
+        y = np.random.randn(100).astype(np.float64)
+        r = t.train(X, y)
+        assert r.model is not None
+        assert "rmse" in r.val_metrics
 
-    def test_train_with_default_objective_still_classifies(self):
-        """Default multi:softprob still works with integer labels."""
-        trainer = XGBoostTrainer(mode="SWING")
-        np.random.seed(42)
+    def test_train_with_default_still_classifies(self):
+        t = _trainer(mode="SWING")
         X = np.random.randn(100, 5).astype(np.float64)
         y = np.random.randint(0, 3, size=100).astype(np.int32)
-        result = trainer.train(X, y)
-        assert result.model is not None
+        assert t.train(X, y).model is not None
