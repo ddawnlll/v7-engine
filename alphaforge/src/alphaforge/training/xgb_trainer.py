@@ -617,6 +617,9 @@ class XGBoostTrainer:
                 params[k] = self._hyperparameters[k]
         # Override objective from constructor (enables regression mode)
         params["objective"] = self._objective
+        # Regression: single output, no num_class
+        if self._objective == "reg:squarederror":
+            params.pop("num_class", None)
         return params
 
     def _compute_metrics(

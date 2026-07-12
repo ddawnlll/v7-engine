@@ -16,31 +16,14 @@ import pytest
 
 def _run_train(args: list[str]) -> dict:
     """Run alphaforge.train.main() with given args, return metrics."""
+    import sys
     from alphaforge.train import main
-    import argparse
-
-    # Build args namespace
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", default="SWING")
-    parser.add_argument("--features", default="all")
-    parser.add_argument("--symbols", default="BTCUSDT,ETHUSDT")
-    parser.add_argument("--synthetic", action="store_true")
-    parser.add_argument("--folds", type=int, default=4)
-    parser.add_argument("--output", default=None)
-    parser.add_argument("--prune-features", type=float, default=0.0)
-    parser.add_argument("--passport", default=None)
-    parser.add_argument("--holdout-cutoff", default=None)
-    parser.add_argument("--discovery", action="store_true")
-    parser.add_argument("--discovery-confidence-threshold", type=float, default=0.55)
-    parser.add_argument("--discovery-output", default=None)
-    parser.add_argument("--dump-softmax", default=None)
-    parser.add_argument("--panel-cache", default=None)
-    parser.add_argument("--dump-features", default=None)
-    parser.add_argument("--positive-control", action="store_true")
-    parser.add_argument("--threshold-sweep", default=None)
-
-    ns, _ = parser.parse_known_args(args)
-    return main(args=ns)
+    _old_argv = sys.argv
+    sys.argv = ["train"] + args
+    try:
+        return main()
+    finally:
+        sys.argv = _old_argv
 
 
 class TestFeaturePruning:
