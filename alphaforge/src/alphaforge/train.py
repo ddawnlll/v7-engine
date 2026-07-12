@@ -1553,6 +1553,7 @@ def _run_discovery_after_training(
     folds: int = 6,
     confidence_threshold: float = 0.55,
     output: str | None = None,
+    holdout_cutoff: str | None = None,
     precomputed_frame: dict | None = None,
     precomputed_wfv: tuple | None = None,
 ) -> None:
@@ -1582,6 +1583,7 @@ def _run_discovery_after_training(
         use_synthetic=False,
         output_dir=str(Path(output).parent) if output else "artifacts/discovery",
         create_handoff=True,
+        holdout_cutoff=holdout_cutoff,
     )
 
     result = run_discovery(
@@ -1632,6 +1634,14 @@ def main():
     parser.add_argument("--threshold-sweep", default=None,
                         help="Comma-separated threshold values to sweep (e.g., '0.1,0.3,0.45,0.55,0.7'). "
                              "Reports accuracy-exposure tradeoff for each.")
+    parser.add_argument("--holdout-cutoff", default=None,
+                        help="ISO date (e.g. '2026-04-07') for 3-month holdout reservation. "
+                             "Data AFTER this date is held out — model evaluated once, no retuning.")
+    parser.add_argument("--prune-features", type=float, default=0.0,
+                        help="Feature importance pruning threshold (0=disabled). "
+                             "Features with gain below threshold are dropped before final training.")
+    parser.add_argument("--passport", default=None,
+                        help="Output path for EvidencePassport JSON (V7 handoff package).")
     parser.add_argument("--discovery", action="store_true",
                         help="Run full discovery pipeline after training (signal generation, "
                              "simulation backtest, profitability analysis, rejection evaluation)")
@@ -1843,6 +1853,30 @@ def main():
     except Exception as e:
         logger.warning("Could not extract feature importance: %s", e)
 
+    # Feature importance pruning (Issue #268)
+    _pruned = False
+    if args.prune_features > 0 and feat_names and imp:
+        _keep = [n for n, v in imp.items() if v >= args.prune_features]
+        _drop = len(feat_names) - len(_keep)
+        if _drop > 0 and _keep:
+            _keep_set = set(_keep)
+            _keep_idx = [i for i, n in enumerate(feat_names) if n in _keep_set]
+            X_clean = X_clean[:, _keep_idx]
+            feat_names = [feat_names[i] for i in _keep_idx]
+            print(f"  Feature pruning (threshold={args.prune_features}): "
+                  f"dropped {_drop}/{len(imp)}, kept {len(_keep)}")
+            # Retrain with pruned features
+            final_trainer = XGBoostTrainer(mode=mode)
+            final_result = final_trainer.train(X_clean, y_clean)
+            final_acc = float(final_result.val_metrics.get("accuracy", 0))
+            print(f"  Retrained (pruned) model accuracy: {final_acc:.4f}")
+            _pruned = True
+        elif _drop == 0:
+            print(f"  Feature pruning: all {len(feat_names)} features above threshold "
+                  f"{args.prune_features} — no pruning needed")
+    elif args.prune_features > 0 and not imp:
+        print(f"  Feature pruning requested but no importance values available — skipping")
+
     # Step 6: Collect metrics
     print("\n[6/6] Collecting metrics...")
     metrics = collect_metrics(wfv_results, X_clean, feat_names)
@@ -1870,6 +1904,32 @@ def main():
     print(f"  Authority round-trip cost: {cd['authority_round_trip_cost_bps']:.0f} bps (already in decision_gross_r)")
     print(f"{'='*60}\n")
 
+    # Build EvidencePassport if requested (Issue #183)
+    if args.passport:
+        try:
+            from dataclasses import asdict
+            from alphaforge.evidence_adapter import build_alphaforge_passport
+            _labels_list = y_clean.tolist() if isinstance(y_clean, np.ndarray) else list(y_clean)
+            _gross_list = (label_gross_clean.tolist() if isinstance(label_gross_clean, np.ndarray)
+                           else list(label_gross_clean))
+            wfv_data = {
+                "metrics": metrics,
+                "per_fold_results": wfv_results,
+                "candidate_id": f"{mode.lower()}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
+                "labels": _labels_list,
+                "gross_r": _gross_list,
+                "fee_pct": _ROUND_TRIP_COST_FRACTIONAL,
+                "feature_names": feat_names,
+            }
+            passport = build_alphaforge_passport(wfv_data, mode)
+            pp_path = Path(args.passport)
+            pp_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(pp_path, "w") as f:
+                json.dump(asdict(passport), f, indent=2, default=str)
+            print(f"  EvidencePassport saved: {pp_path.resolve()}")
+        except Exception as e:
+            logger.warning("Could not build EvidencePassport: %s", e)
+
     # Save report if requested
     if args.output:
         output_path = Path(args.output)
@@ -1893,6 +1953,7 @@ def main():
             folds=args.folds,
             confidence_threshold=args.discovery_confidence_threshold,
             output=args.discovery_output,
+            holdout_cutoff=args.holdout_cutoff,
             precomputed_frame=training_frame,
             precomputed_wfv=_wfv_tuple,
         )
