@@ -1,0 +1,336 @@
+# PRAXIS v1.0 Plan Template (PlanSpec v5 alpha2)
+# Profile: praxis-v1.0 | Kind: ImplementationPlan
+# Reference: https://github.com/ddawnlll/praxis
+# Schema: contracts/schemas/planspec.v5alpha2.schema.json (symlink to praxis repo)
+#
+# Usage: Copy to .praxis/issue-N.plan.yaml and fill fields.
+#   - Keep top-level keys in order as listed below.
+#   - Run `praxis verify --plan .praxis/issue-N.plan.yaml` to validate.
+
+$schema: "../../praxis/schemas/planspec.v5alpha2.schema.json"
+planSpecVersion: "5.0.0-alpha2"
+kind: "ImplementationPlan"
+
+# ── Identity ──────────────────────────────────────────────────────────
+metadata:
+  phaseId: "HERMES-N"                      # Unique issue number, e.g. HERMES-319
+  title: "Short title — matches issue title"
+  description: >
+    One-paragraph summary of what this plan implements and why.
+  createdAt: "2026-07-12T00:00:00Z"        # ISO 8601
+  status: "draft"                           # draft | locked | verified | closed
+  sourceDocument: "https://github.com/ddawnlll/v7-engine/issues/N"
+
+# ── Compatibility ─────────────────────────────────────────────────────
+compatibility:
+  praxisVersion: "1.0.0"
+  planSpecVersion: "5.0.0-alpha2"
+  minAgentVersion: "1.0.0"
+  maxAgentVersion: null
+
+# ── Intent ────────────────────────────────────────────────────────────
+intent:
+  executionClass: "implementation"          # implementation | research | audit
+  safetyLevel: "standard"                   # standard | high | critical
+  executionMode: "single_session"           # single_session | multi_session
+  parallelism: 1
+
+# ── Authority ─────────────────────────────────────────────────────────
+authority:
+  executionState:
+    executor: "HermesAgent"                 # Who is authorised to execute
+    executionAuthority: "human"             # human | auto
+    completionAuthority: "PraxisTruthKernel"
+    agentSelfReportIsClaimOnly: true
+  completion:
+    criteriaSourceRequired: "human"
+    reportsAreEvidenceOnly: true
+    pluginOwnsTruth: false
+  repositoryMutation:
+    canCreateFiles: true
+    canModifyFiles: true
+    canDeleteFiles: false
+    requiresBranch: true
+  reports:
+    protocol: "ACCP"
+    artifactDirectory: "reports/"
+    reportsAreEvidenceOnly: true
+
+# ── Enforcement ───────────────────────────────────────────────────────
+enforcementRegistry:
+  mechanisms:
+    - "schemaGate"
+    - "lockGate"
+    - "evidenceGate"
+    - "execGate"
+    - "finalGate"
+
+# ── Security ──────────────────────────────────────────────────────────
+security:
+  schemaValidationRequired: true
+  lockRequiredForExecution: true
+  canonicalJsonHashRequired: true
+  signatureRequired: false                  # Ed25519 — enable when pipeline matures
+  hardStops:
+    - "FORBIDDEN_FILE_MODIFIED"
+    - "AC_CRITERIA_CHANGED_AFTER_LOCK"
+  forbiddenFiles:
+    - ".env"
+    - ".env.*"
+    - "**/__pycache__/**"
+    - "*.pyc"
+
+# ── Commands ──────────────────────────────────────────────────────────
+commands:
+  policy: "strict"                          # strict | permissive
+  defaultMode: "foreground"
+  shellDefault: false
+  exactAllowedCommands:
+    - id: "CMD-TEST"
+      kind: "final_validation"
+      command: "make test"
+      evidenceRequired: true
+      timeoutSeconds: 300
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+
+    - id: "CMD-LINT"
+      kind: "static_analysis"
+      command: "make lint"
+      evidenceRequired: true
+      timeoutSeconds: 120
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+
+    - id: "CMD-IMPORT-SMOKE"
+      kind: "smoke_test"
+      command: "python -m pytest tests/test_pipeline_imports.py -v -q"
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+
+  commandClasses:
+    finalValidation: ["CMD-TEST"]
+    staticAnalysis: ["CMD-LINT"]
+    smokeTest: ["CMD-IMPORT-SMOKE"]
+
+  runtimeCommandGrant:
+    enabled: false
+    grantStates: []
+
+  hardDeniedCommands:
+    - command: "git push --force"
+      reason: "Force push prohibited — use --force-with-lease"
+    - command: "rm -rf /"
+      reason: "Destructive filesystem operation"
+    - command: "DROP TABLE"
+      pattern: "DROP\\s+TABLE"
+      reason: "Database destruction prohibited"
+
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+
+# ── Locking ───────────────────────────────────────────────────────────
+locking:
+  lockVersion: "praxis-plan-lock/v1"
+  lockFile: ".praxis/planspec.lock"
+  lockRequired: true
+  workerMustEchoPlanLockHash: true
+  workerMustEchoWorkspaceLockHash: true
+  hashes:
+    - "planHash"
+    - "acceptanceCriteriaHash"
+    - "commandPolicyHash"
+    - "allowedFilesHash"
+    - "forbiddenFilesHash"
+  lifecycle:
+    - "draft"
+    - "locked"
+    - "verifying"
+    - "verified"
+    - "closed"
+  mutationRules:
+    allowedBeforeLock: true
+    allowedAfterLock: false
+    requireNewLockOnMutation: true
+    requireHumanApprovalForLockMutation: true
+
+# ── Brief (standalone summary for non-human readers) ──────────────────
+brief:
+  - type: "context"
+    body: >
+      One-line summary of what this plan addresses.
+  - type: "scope"
+    body: >
+      Which files, modules, or concerns are in scope.
+  - type: "outOfScope"
+    body: >
+      What is explicitly excluded.
+
+# ── Waves (groups of workspaces) ─────────────────────────────────────
+waves:
+  - id: "wave-1"
+    title: "Implementation"
+    description: "Code changes and test updates"
+    workspaceIds:
+      - "ws-implementation"
+    dependencies: []
+    batchSize: 1
+    gate: "standard"                         # standard | parallel | serial
+
+# ── Workspaces (individual units of work) ─────────────────────────────
+workspaces:
+  - id: "ws-implementation"
+    title: "Implementation Workspace"
+    waveId: "wave-1"
+    dependencies: []
+    role: "developer"
+    allowedFiles:
+      - "path/to/file1.py"
+      - "path/to/file2.py"
+      - "tests/test_file1.py"
+    forbiddenFiles:
+      - ".env"
+      - "package-lock.json"
+    instructions:
+      - "Implement the changes described in the acceptance criteria."
+      - "Run tests after changes."
+      - "Do not modify forbidden files."
+    acceptanceCriteria:
+      - id: "AC-1"
+        description: "Clearly stated, testable condition."
+        level: "required"                    # required | optional | nice_to_have
+        humanApproved: true
+        canSatisfyFinalGate: true
+        criteriaSource: "human"
+        verification:
+          type: "command_output"
+          commandRef: "CMD-TEST"
+          patterns:
+            - "passed"
+          deterministic: true
+          advisoryOnly: false
+          evidenceRefs:
+            - "command"
+            - "test_output"
+        requiredEvidence:
+          - "command"
+          - "test_output"
+
+      - id: "AC-2"
+        description: "Import smoke tests pass."
+        level: "required"
+        humanApproved: true
+        canSatisfyFinalGate: true
+        criteriaSource: "human"
+        verification:
+          type: "command_output"
+          commandRef: "CMD-IMPORT-SMOKE"
+          patterns:
+            - "passed"
+          deterministic: true
+          advisoryOnly: false
+          evidenceRefs:
+            - "command"
+            - "test_output"
+        requiredEvidence:
+          - "command"
+          - "test_output"
+
+      - id: "AC-3"
+        description: "Linter passes with no new errors."
+        level: "required"
+        humanApproved: true
+        canSatisfyFinalGate: true
+        criteriaSource: "human"
+        verification:
+          type: "command_output"
+          commandRef: "CMD-LINT"
+          patterns:
+            - "error"
+          deterministic: true
+          advisoryOnly: false
+          evidenceRefs:
+            - "command"
+            - "test_output"
+        requiredEvidence:
+          - "command"
+          - "test_output"
+
+    validation:
+      finalRequired: true
+      watchModeForbidden: true
+      noTestsFoundIsFailure: true
+      commandEvidenceRequired: true
+      forbiddenPatterns:
+        - "FIXME"
+        - "TODO"
+        - "print("
+      finalValidationCommandRefs:
+        - "CMD-TEST"
+        - "CMD-LINT"
+        - "CMD-IMPORT-SMOKE"
+      discoveryCommandsMayNotSatisfyFinalValidation: true
+
+    reports:
+      protocol: "ACCP"
+      artifactDirectory: "reports/"
+      reportsAreEvidenceOnly: true
+      commandEvidenceRequired: true
+
+    rollback:
+      strategy: "git_revert"
+      allowed: true
+      requiresHumanApproval: true
+
+# ── Validation (global) ───────────────────────────────────────────────
+validation:
+  finalRequired: true
+  watchModeForbidden: true
+  noTestsFoundIsFailure: true
+  commandEvidenceRequired: true
+  forbiddenPatterns:
+    - "FIXME"
+    - "TODO"
+  finalValidationCommandRefs:
+    - "CMD-TEST"
+    - "CMD-LINT"
+  discoveryCommandsMayNotSatisfyFinalValidation: true
+
+# ── Evidence ──────────────────────────────────────────────────────────
+evidence:
+  ledgerRequired: false                      # Enable when Merkle ledger is wired
+  confidenceEnum:
+    - "DIRECT"
+    - "INFERRED"
+    - "MANUAL"
+  requiredEvidenceTypes:
+    - "diff"
+    - "source"
+    - "command"
+    - "test_output"
+  evidenceItemRequiredFields:
+    - "type"
+    - "value"
+    - "timestamp"
+  hashWhenAvailable: true
+
+# ── Reports ───────────────────────────────────────────────────────────
+reports:
+  protocol: "ACCP"
+  artifactDirectory: "reports/"
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
