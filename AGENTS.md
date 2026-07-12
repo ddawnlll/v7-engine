@@ -135,6 +135,7 @@ interface/        → operator UI; observes runtime API only
 - AlphaForge does NOT own final trade decisions. V7 owns policy acceptance.
 - Simulation owns economic truth. No component bypasses simulation costs.
 - Runtime does NOT override policy with model confidence.
+- **Centralized training entrypoint (LOCKED #319):** All production training MUST route through ``alphaforge.train.main()``. The single config loader is ``lib.config_training.load_training_config(mode)`` which merges ``simulation.profile_registry.registry.get_profile(mode)`` + ``configs/training.yaml``. Any module importing ``xgboost`` / calling ``.fit()`` / writing to ``data/models/`` outside ``alphaforge/src/alphaforge/`` violates this rule. Legacy ``cli/real_training.py`` is deprecated but still alive for migration. `make research`/`make full` now call ``alphaforge.train`` directly.
 
 ---
 
@@ -178,7 +179,9 @@ SWING is implemented first as a control baseline to validate the architecture �
 | `v7/docs/policy_critic/ai_summary.md` | Policy Critic RL architecture, design, codebase maps, research |
 | `simulation/docs/cost_model.md` | Fee, slippage, funding cost model |
 | `simulation/docs/profiles.md` | Mode-specific simulation profiles |
-| `.github/workflows/ci.yml` | CI: contract+boundary+tests |
+|| `lib/config_training.py` | **Centralized training config loader** — merges simulation registry + `configs/training.yaml` (issue #319) |
+|| `alphaforge/tests/test_training_entrypoint.py` | **Import-boundary check** — fails if xgboost imported outside blessed entrypoints |
+|| `.github/workflows/ci.yml` | CI: contract+boundary+tests |
 | `Makefile` | `make check-contracts`, `make check-boundaries`, `make test-all` |
 
 ---
