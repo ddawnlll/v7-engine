@@ -651,9 +651,9 @@ class XGBoostTrainer:
         # Per-class precision/recall
         per_class: Dict[str, Dict[str, float]] = {}
         for cls_idx in range(NUM_CLASSES):
-            tp = int(np.sum((y_pred == cls_idx) & (y_true == cls_idx)))
-            fp = int(np.sum((y_pred == cls_idx) & (y_true != cls_idx)))
-            fn = int(np.sum((y_pred != cls_idx) & (y_true == cls_idx)))
+            tp = int(np.sum((y_pred_class == cls_idx) & (y_true == cls_idx)))
+            fp = int(np.sum((y_pred_class == cls_idx) & (y_true != cls_idx)))
+            fn = int(np.sum((y_pred_class != cls_idx) & (y_true == cls_idx)))
 
             precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
             recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
