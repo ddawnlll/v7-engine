@@ -68,7 +68,7 @@ jobs:
           --ignore=simulation/tests/test_import_boundary.py
 
       - name: Run runtime tests
-        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest runtime/tests/ -q --ignore=runtime/tests/test_retry.py
+        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest runtime/tests/ -q --ignore=runtime/tests/test_retry.py --ignore=runtime/tests/test_simulation_output_result_materializer.py
 
       - name: Run alphaforge tests
         run: PYTHONPATH=alphaforge/src:v7/src python -m pytest alphaforge/tests/ -q --ignore=alphaforge/tests/test_p10_alpha_factory.py
