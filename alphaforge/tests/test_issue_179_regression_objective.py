@@ -37,7 +37,7 @@ class TestRegressionObjectiveWire:
         y = np.random.randn(100).astype(np.float64)  # continuous values like net R
         result = trainer.train(X, y)
         assert result.model is not None
-        assert "val_metrics" in result._asdict() or hasattr(result, "val_metrics")
+        assert "rmse" in result.val_metrics, f"Expected rmse in regression metrics, got {result.val_metrics.keys()}"
 
     def test_train_with_default_objective_still_classifies(self):
         """Default multi:softprob still works with integer labels."""
