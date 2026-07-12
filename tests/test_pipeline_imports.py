@@ -7,6 +7,26 @@ regardless of data or configuration.
 See: https://github.com/ddawnlll/v7-engine/issues/317
 """
 
+import pytest
+
+
+def _has_module(name: str) -> bool:
+    try:
+        __import__(name)
+        return True
+    except ImportError:
+        return False
+
+
+_need_pyarrow = pytest.mark.skipif(
+    not _has_module("pyarrow"),
+    reason="pyarrow not installed — optional dep for parquet I/O",
+)
+_need_xgboost = pytest.mark.skipif(
+    not _has_module("xgboost"),
+    reason="xgboost not installed — optional dep for training env",
+)
+
 
 def test_import_simulation_engine() -> None:
     """Simulation engine + contracts must import cleanly."""
@@ -35,12 +55,14 @@ def test_import_mode_profiles() -> None:
     assert len(CANONICAL_PROFILES) >= 3
 
 
+@_need_pyarrow
 def test_import_feature_pipeline() -> None:
     """Core feature computation entrypoint (the import that #317 reported broken)."""
     from alphaforge.features.pipeline import compute_features
     assert callable(compute_features)
 
 
+@_need_xgboost
 def test_import_training_modules() -> None:
     """XGBoost trainer + validation modules."""
     from alphaforge.training.xgb_trainer import XGBoostTrainer
@@ -52,6 +74,7 @@ def test_import_training_modules() -> None:
     assert callable(run_walk_forward)
 
 
+@_need_pyarrow
 def test_import_lib_market_data() -> None:
     """Market data services for backfill."""
     from lib.market_data.binance.klines_service import KlinesService
