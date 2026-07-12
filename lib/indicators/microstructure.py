@@ -7,6 +7,8 @@ Pure math -- no state, no adapters.
 from typing import Sequence
 import math
 
+import numpy as np
+
 
 def dollar_volume(prices: Sequence[float], volumes: Sequence[float]) -> list[float]:
     """Dollar volume per bar: close_price * volume.
@@ -19,11 +21,14 @@ def dollar_volume(prices: Sequence[float], volumes: Sequence[float]) -> list[flo
         List of dollar-volume values, same length as inputs.
     """
     n = min(len(prices), len(volumes))
-    result: list[float] = [float("nan")] * max(len(prices), len(volumes))
-    for i in range(n):
-        if not (math.isnan(prices[i]) or math.isnan(volumes[i])):
-            result[i] = prices[i] * volumes[i]
-    return result
+    out_len = max(len(prices), len(volumes))
+    result = np.full(out_len, np.nan, dtype=np.float64)
+    if n > 0:
+        p = np.asarray(prices[:n], dtype=np.float64)
+        v = np.asarray(volumes[:n], dtype=np.float64)
+        valid = ~(np.isnan(p) | np.isnan(v))
+        result[:n] = np.where(valid, p * v, np.nan)
+    return result.tolist()
 
 
 def amihud_illiquidity(
@@ -50,20 +55,26 @@ def amihud_illiquidity(
         Entries with zero total-volume over the window are NaN.
     """
     n = len(returns)
-    result: list[float] = [float("nan")] * n
-    for i in range(period - 1, n):
-        total = 0.0
-        count = 0
-        for j in range(i - period + 1, i + 1):
-            r = returns[j]
-            v = volumes[j]
-            if v > 0 and not math.isnan(r):
-                total += abs(r) / v
-                count += 1
-        if count > 0:
-            result[i] = total / count
-        # else remains NaN
-    return result
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < period or period < 1:
+        return result.tolist()
+
+    r = np.asarray(returns, dtype=np.float64)
+    v = np.asarray(volumes, dtype=np.float64)
+    valid = (v > 0) & ~np.isnan(r)
+    safe_v = np.where(valid, v, 1.0)
+    contrib = np.where(valid, np.abs(r) / safe_v, 0.0)
+
+    csum = np.cumsum(np.insert(contrib, 0, 0.0))
+    ccount = np.cumsum(np.insert(valid.astype(np.float64), 0, 0.0))
+
+    idx = np.arange(period - 1, n)
+    start = idx - period + 1
+    total = csum[idx + 1] - csum[start]
+    count = ccount[idx + 1] - ccount[start]
+    ok = count > 0
+    result[idx[ok]] = total[ok] / count[ok]
+    return result.tolist()
 
 
 def roll_spread_estimator(

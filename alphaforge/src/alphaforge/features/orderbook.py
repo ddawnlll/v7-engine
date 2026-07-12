@@ -458,15 +458,12 @@ def compute_volume_imbalance(
     up_csum = np.cumsum(np.insert(up_vol, 0, 0))
     down_csum = np.cumsum(np.insert(down_vol, 0, 0))
     result = np.full(n, np.nan, dtype=np.float64)
-    for i in range(window - 1, n):
-        up_sum = up_csum[i + 1] - up_csum[i - window + 1]
-        down_sum = down_csum[i + 1] - down_csum[i - window + 1]
-        total = up_sum + down_sum
-        if total > 0:
-            result[i] = (up_sum - down_sum) / total
-        else:
-            result[i] = 0.0
-
+    if n <= window:
+        return result
+    up_roll = up_csum[window:] - up_csum[:-window]
+    down_roll = down_csum[window:] - down_csum[:-window]
+    total = up_roll + down_roll
+    result[window - 1:] = np.where(total > 0, (up_roll - down_roll) / total, 0.0)
     return result
 
 
@@ -625,19 +622,21 @@ def compute_roll_spread(
 
     result = np.full(n, np.nan, dtype=np.float64)
     w = window
-    for i in range(w, n):
-        start = i - w + 1
-        nv = cs_valid[i + 1] - cs_valid[start]
-        if nv < 3:
-            continue
+    if n <= w:
+        return result
 
-        sum_d = cs_d[i + 1] - cs_d[start]
-        sum_dl = cs_dl[i + 1] - cs_dl[start]
-        sum_ddl = cs_ddl[i + 1] - cs_ddl[start]
+    i = np.arange(w, n)
+    start = i - w + 1
+    nv = cs_valid[i + 1] - cs_valid[start]
+    sum_d = cs_d[i + 1] - cs_d[start]
+    sum_dl = cs_dl[i + 1] - cs_dl[start]
+    sum_ddl = cs_ddl[i + 1] - cs_ddl[start]
 
-        # cov(delta, delta_lag) = (n*sum(d*dl) - sum(d)*sum(dl)) / (n*(n-1))
-        cov = (nv * sum_ddl - sum_d * sum_dl) / (nv * (nv - 1))
-        result[i] = 2.0 * math.sqrt(max(0.0, -cov))
+    mask = nv >= 3
+    safe_denom = np.where(mask, nv * (nv - 1), 1.0)
+    # cov(delta, delta_lag) = (n*sum(d*dl) - sum(d)*sum(dl)) / (n*(n-1))
+    cov = (nv * sum_ddl - sum_d * sum_dl) / safe_denom
+    result[i] = np.where(mask, 2.0 * np.sqrt(np.maximum(0.0, -cov)), np.nan)
 
     return result
 
@@ -777,49 +776,39 @@ def compute_serial_correlation(
 
     result = np.full(n, np.nan, dtype=np.float64)
     w = window
-    for i in range(w + 1, n):
-        # x indices: [i-w .. i-1]
-        x_start = i - w
-        x_end = i  # exclusive
+    if n <= w + 1:
+        return result
 
-        # NaN count in x segment
-        nan_x = csum[x_end] - csum[x_start]
-        n_valid = w - nan_x
-        if n_valid < 4:
-            continue
+    # Vectorized across all valid i in [w+1, n) — same cumsum-slice math as
+    # the original per-bar loop, just evaluated for every i at once.
+    i = np.arange(w + 1, n)
+    x_start = i - w
+    x_end = i
 
-        # x stats
-        sum_x = cs_data[x_end] - cs_data[x_start]
-        sum_x2 = cs_data2[x_end] - cs_data2[x_start]
+    nan_x = csum[x_end] - csum[x_start]
+    n_valid = w - nan_x
 
-        # y indices: [i-w+1 .. i]
-        # y uses the same cumsum arrays but shifted by 1
-        y_start = i - w + 1
-        y_end = i + 1
+    sum_x = cs_data[x_end] - cs_data[x_start]
+    sum_x2 = cs_data2[x_end] - cs_data2[x_start]
 
-        # y stats (using cumsum at y_start and y_end)
-        sum_y = cs_data[y_end] - cs_data[y_start]
-        sum_y2 = cs_data2[y_end] - cs_data2[y_start]
+    y_start = i - w + 1
+    y_end = i + 1
+    sum_y = cs_data[y_end] - cs_data[y_start]
+    sum_y2 = cs_data2[y_end] - cs_data2[y_start]
 
-        # xy pairs: sum(x[j] * y[j]) for j in [i-w .. i-1]
-        # = sum(log_ret[j] * log_ret[j+1]) for j in [i-w .. i-1]
-        # cs_xy at idx k = sum_{j<k} log_ret[j] * log_ret[j+1]
-        sum_xy = cs_xy[x_end] - cs_xy[x_start]
+    sum_xy = cs_xy[x_end] - cs_xy[x_start]
 
-        # Pearson correlation (computational formula)
-        cov = n_valid * sum_xy - sum_x * sum_y
-        var_x = n_valid * sum_x2 - sum_x * sum_x
-        var_y = n_valid * sum_y2 - sum_y * sum_y
+    cov = n_valid * sum_xy - sum_x * sum_y
+    var_x = n_valid * sum_x2 - sum_x * sum_x
+    var_y = n_valid * sum_y2 - sum_y * sum_y
 
-        if var_x < 1e-14 or var_y < 1e-14:
-            continue
+    valid_mask = (n_valid >= 4) & (var_x >= 1e-14) & (var_y >= 1e-14)
+    denom = np.sqrt(np.where(valid_mask, var_x * var_y, 1.0))
+    valid_mask &= denom >= 1e-14
 
-        denom = np.sqrt(var_x * var_y)
-        if denom < 1e-14:
-            continue
-
-        corr = cov / denom
-        result[i] = float(np.clip(corr, -1.0, 1.0))
+    safe_denom = np.where(denom > 0, denom, 1.0)
+    corr = np.where(valid_mask, cov / safe_denom, np.nan)
+    result[i] = np.clip(corr, -1.0, 1.0)
 
     return result
 
@@ -881,13 +870,11 @@ def compute_vpin(
     vol_csum = np.cumsum(np.insert(up_vol + down_vol, 0, 0))
     abs_diff_csum = np.cumsum(np.insert(np.abs(up_vol - down_vol), 0, 0))
     result = np.full(n, np.nan, dtype=np.float64)
-    for i in range(window - 1, n):
-        total_vol = vol_csum[i + 1] - vol_csum[i - window + 1]
-        if total_vol > 0:
-            result[i] = (abs_diff_csum[i + 1] - abs_diff_csum[i - window + 1]) / total_vol
-        else:
-            result[i] = 0.0
-
+    if n <= window:
+        return result
+    total_vol = vol_csum[window:] - vol_csum[:-window]
+    abs_diff = abs_diff_csum[window:] - abs_diff_csum[:-window]
+    result[window - 1:] = np.where(total_vol > 0, abs_diff / total_vol, 0.0)
     return result
 
 
@@ -972,24 +959,23 @@ def _price_impact_slope_vectorized(
     cs_f2 = np.cumsum(np.insert(clean_f * clean_f, 0, 0))
     cs_valid = np.cumsum(np.insert(valid.astype(np.float64), 0, 0))
 
-    for i in range(window, n):
-        start = i - window + 1
-        n_valid = cs_valid[i + 1] - cs_valid[start]
-        if n_valid < 3:
-            continue
+    if n <= window:
+        return result
 
-        sum_r = cs_r[i + 1] - cs_r[start]
-        sum_f = cs_f[i + 1] - cs_f[start]
-        sum_rf = cs_rf[i + 1] - cs_rf[start]
-        sum_f2 = cs_f2[i + 1] - cs_f2[start]
+    i = np.arange(window, n)
+    start = i - window + 1
+    n_valid = cs_valid[i + 1] - cs_valid[start]
+    sum_r = cs_r[i + 1] - cs_r[start]
+    sum_f = cs_f[i + 1] - cs_f[start]
+    sum_rf = cs_rf[i + 1] - cs_rf[start]
+    sum_f2 = cs_f2[i + 1] - cs_f2[start]
 
-        # slope = (n*sum(rf) - sum(r)*sum(f)) / (n*sum(f^2) - sum(f)^2)
-        numer = n_valid * sum_rf - sum_r * sum_f
-        denom = n_valid * sum_f2 - sum_f * sum_f
-        if abs(denom) < 1e-14:
-            continue
-
-        result[i] = numer / denom
+    # slope = (n*sum(rf) - sum(r)*sum(f)) / (n*sum(f^2) - sum(f)^2)
+    numer = n_valid * sum_rf - sum_r * sum_f
+    denom = n_valid * sum_f2 - sum_f * sum_f
+    mask = (n_valid >= 3) & (np.abs(denom) >= 1e-14)
+    safe_denom = np.where(denom != 0, denom, 1.0)
+    result[i] = np.where(mask, numer / safe_denom, np.nan)
 
     return result
 
@@ -1135,15 +1121,12 @@ def compute_liquidity_vacuum(
     spread_ratio[valid_spread] = raw_spread[valid_spread] / spread_mean[valid_spread]
 
     # 3. Combine: low volume penalty * wide spread penalty
-    # Only activates when both conditions are adverse
-    for i in range(window - 1, n):
-        vr = vol_ratio[i]
-        sr = spread_ratio[i]
-        if np.isnan(vr) or np.isnan(sr):
-            continue
-        vol_penalty = max(0.0, 1.0 - vr)      # 0 when volume >= normal
-        spread_penalty = max(1.0, sr) - 1.0   # 0 when spread <= normal
-        result[i] = vol_penalty * spread_penalty
+    # Only activates when both conditions are adverse. np.maximum propagates
+    # NaN, so bars with vr/sr undefined stay NaN without explicit masking —
+    # matching the original per-bar "skip on NaN" behaviour.
+    vol_penalty = np.maximum(0.0, 1.0 - vol_ratio)     # 0 when volume >= normal
+    spread_penalty = np.maximum(1.0, spread_ratio) - 1.0  # 0 when spread <= normal
+    result = vol_penalty * spread_penalty
 
     return result
 
@@ -1350,16 +1333,17 @@ def compute_multi_level_obi(
 
     # For each level, compute rolling mean via vectorized cumsum slice:
     # mean_k[i] = (csum[i+1] - csum[i-w+1]) / w   for i >= w-1
-    # Store partial sum per level, combine in second pass
+    # Levels (n_levels, typically small) are looped; each iteration is a
+    # fully vectorized O(n) numpy op instead of a per-bar scalar step.
     result = np.full(n, np.nan, dtype=np.float64)
-    for i in range(max_window - 1, n):
-        val_sum = 0.0
-        for k in range(n_levels):
-            w = (k + 1) * step
-            start = i - w + 1
-            mean = (csum[i + 1] - csum[start]) / w
-            val_sum += mean * weights[k]
-        result[i] = val_sum / total_weight
+    i = np.arange(max_window - 1, n)
+    val_sum = np.zeros(len(i), dtype=np.float64)
+    for k in range(n_levels):
+        w = (k + 1) * step
+        start = i - w + 1
+        mean = (csum[i + 1] - csum[start]) / w
+        val_sum += mean * weights[k]
+    result[i] = val_sum / total_weight
 
     return result
 
@@ -1594,19 +1578,17 @@ def compute_vamp(
     csum_vol = np.cumsum(np.insert(clean_vol, 0, 0))
     csum_invalid = np.cumsum(np.insert(invalid_mask.astype(np.float64), 0, 0))
     csum_mid = np.cumsum(np.insert(np.where(invalid_mask, 0.0, mid_v), 0, 0))
-    for i in range(window - 1, n):
-        count = window - (csum_invalid[i + 1] - csum_invalid[i - window + 1])
-        if count < 2:
-            continue
-        vol_sum = csum_vol[i + 1] - csum_vol[i - window + 1]
-        if vol_sum > 1e-12:
-            pv_sum = csum_midvol[i + 1] - csum_midvol[i - window + 1]
-            result[i] = pv_sum / vol_sum
-        else:
-            # Fall back to simple mean when all volume is zero
-            mid_total = csum_mid[i + 1] - csum_mid[i - window + 1]
-            result[i] = mid_total / count
-
+    if n <= window:
+        return result
+    count = window - (csum_invalid[window:] - csum_invalid[:-window])
+    vol_sum = csum_vol[window:] - csum_vol[:-window]
+    pv_sum = csum_midvol[window:] - csum_midvol[:-window]
+    mid_total = csum_mid[window:] - csum_mid[:-window]
+    # Primary: VWAP mid. Fallback: simple mean when total_vol <= 0
+    vwap = np.where(vol_sum > 1e-12, pv_sum / vol_sum, mid_total / np.maximum(count, 1))
+    # NaN for insufficient valid samples
+    vwap = np.where(count >= 2, vwap, np.nan)
+    result[window - 1:] = vwap
     return result
 
 
@@ -1736,17 +1718,21 @@ def compute_vwap_to_mid_deviation(
     csum_vol = np.cumsum(np.insert(clean_vol, 0, 0))
     csum_invalid = np.cumsum(np.insert(invalid.astype(np.float64), 0, 0))
 
-    for i in range(window - 1, n):
-        count = window - (csum_invalid[i + 1] - csum_invalid[i - window + 1])
-        if count < 2:
-            continue
-        total_vol = csum_vol[i + 1] - csum_vol[i - window + 1]
-        if total_vol > 0:
-            total_pv = csum_pv[i + 1] - csum_pv[i - window + 1]
-            if not np.isnan(total_pv):
-                vwap = total_pv / total_vol
-                if vwap > 0:
-                    result[i] = (mid[i] - vwap) / vwap
+    if n < window:
+        return result
+
+    i = np.arange(window - 1, n)
+    start = i - window + 1
+    count = window - (csum_invalid[i + 1] - csum_invalid[start])
+    total_vol = csum_vol[i + 1] - csum_vol[start]
+    total_pv = csum_pv[i + 1] - csum_pv[start]
+
+    safe_vol = np.where(total_vol > 0, total_vol, 1.0)
+    vwap = total_pv / safe_vol
+    safe_vwap = np.where(vwap > 0, vwap, 1.0)
+
+    mask = (count >= 2) & (total_vol > 0) & ~np.isnan(total_pv) & (vwap > 0)
+    result[i] = np.where(mask, (mid[i] - vwap) / safe_vwap, np.nan)
 
     return result
 
@@ -1865,18 +1851,15 @@ def compute_volume_concentration_hhi(
     csum2 = np.cumsum(np.insert(clean * clean, 0, 0))
     csum_nan = np.cumsum(np.insert(vol_nan.astype(np.float64), 0, 0))
 
-    for i in range(window - 1, n):
-        count = window - (csum_nan[i + 1] - csum_nan[i - window + 1])
-        if count < 2:
-            continue
-        total = csum[i + 1] - csum[i - window + 1]
-        if total > 0:
-            # HHI = sum((v_i / total)^2) = sum(v_i^2) / total^2
-            sum_sq = csum2[i + 1] - csum2[i - window + 1]
-            result[i] = sum_sq / (total * total)
-        else:
-            result[i] = 0.0
-
+    if n <= window:
+        return result
+    count = window - (csum_nan[window:] - csum_nan[:-window])
+    total = csum[window:] - csum[:-window]
+    sum_sq = csum2[window:] - csum2[:-window]
+    # HHI = sum(v_i^2) / total^2, zero when total <= 0 or count < 2
+    hhi = np.where((total > 0) & (count >= 2), sum_sq / (total * total), 0.0)
+    hhi = np.where(count >= 2, hhi, np.nan)
+    result[window - 1:] = hhi
     return result
 
 
