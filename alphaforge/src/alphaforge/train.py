@@ -58,6 +58,25 @@ def _get_training_config(mode: str) -> TrainingConfig:
     return _training_config_cache[mode_upper]
 
 
+# ── Backward-compatible MODE_CONFIG dict ────────────────────────────
+# Old code (scripts/v7_lite/*.py, tests) imports MODE_CONFIG from
+# alphaforge.train.  Build it from the canonical registry so existing
+# imports keep working with correct values (Issue #319).
+MODE_CONFIG: dict[str, dict] = {}
+for _m in ["SWING", "SCALP", "AGGRESSIVE_SCALP"]:
+    _c = _get_training_config(_m)
+    MODE_CONFIG[_m] = {
+        "primary": _c.primary_interval,
+        "max_hold": _c.max_holding_bars,
+        "stop_mult": _c.stop_multiplier,
+        "target_mult": _c.target_multiplier,
+        "ambiguity_margin_r": _c.ambiguity_margin_r,
+        "min_edge_r": _c.min_action_edge_r,
+        "label_horizon": _c.label_horizon,
+        "label_threshold": _c.label_threshold,
+    }
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s %(message)s",
