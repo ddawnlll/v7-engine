@@ -1832,8 +1832,9 @@ def main():
     from alphaforge.training.xgb_trainer import XGBoostTrainer
 
     _obj = "reg:squarederror" if args.regression_objective else "multi:softprob"
+    _y_final = label_net_clean if args.regression_objective else y_clean
     final_trainer = XGBoostTrainer(mode=mode, objective=_obj)
-    final_result = final_trainer.train(X_clean, y_clean)
+    final_result = final_trainer.train(X_clean, _y_final)
     final_acc = float(final_result.val_metrics.get("accuracy", 0))
     print(f"  Final model accuracy: {final_acc:.4f}")
     
@@ -1871,8 +1872,9 @@ def main():
                   f"dropped {_drop}/{len(imp)}, kept {len(_keep)}")
             # Retrain with pruned features
             _obj = "reg:squarederror" if args.regression_objective else "multi:softprob"
+            _y_final = label_net_clean if args.regression_objective else y_clean
             final_trainer = XGBoostTrainer(mode=mode, objective=_obj)
-            final_result = final_trainer.train(X_clean, y_clean)
+            final_result = final_trainer.train(X_clean, _y_final)
             final_acc = float(final_result.val_metrics.get("accuracy", 0))
             print(f"  Retrained (pruned) model accuracy: {final_acc:.4f}")
             _pruned = True

@@ -354,6 +354,7 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     long_exit = simulate_path_from_arrays(
         "LONG", input.entry_price, long_stop, long_target,
         highs, lows, max_bars, available_bars, entry_risk, close_price,
+        liquidation_price=None,
     )
     long_outcome = _build_action_outcome(
         "LONG_NOW", long_exit, notional, input.entry_price, input.atr, profile,
@@ -365,6 +366,7 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     short_exit = simulate_path_from_arrays(
         "SHORT", input.entry_price, short_stop, short_target,
         highs, lows, max_bars, available_bars, entry_risk, close_price,
+        liquidation_price=None,
     )
     short_outcome = _build_action_outcome(
         "SHORT_NOW", short_exit, notional, input.entry_price, input.atr, profile,
