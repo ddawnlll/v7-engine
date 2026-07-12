@@ -670,6 +670,7 @@ class PipelineRunner:
             # v0.2 direct CLI usage and call the proven lib-level pipeline.
             try:
                 from lib.market_data.binance.klines_service import KlinesService
+                from lib.market_data.binance.funding_service import FundingService
                 from lib.market_data.binance.market_data_service import (
                     BinanceMarketDataService,
                 )
@@ -708,7 +709,7 @@ class PipelineRunner:
 
                 orchestrator = BackfillOrchestrator(
                     klines_service=klines,
-                    funding_service=None,
+                    funding_service=FundingService(client=bmd._client),
                     storage_writer=storage,
                     catalog=catalog,
                     rate_limiter=rate_limiter,
