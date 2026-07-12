@@ -629,11 +629,24 @@ class XGBoostTrainer:
         dmatrix: xgb.DMatrix,
         y_true: np.ndarray,
     ) -> Dict[str, Any]:
-        """Compute classification metrics."""
-        y_pred_prob = booster.predict(dmatrix)
-        y_pred = np.argmax(y_pred_prob, axis=1)
+        """Compute metrics — classification (multi:softprob) or regression (reg:squarederror)."""
+        y_pred = booster.predict(dmatrix)
 
-        accuracy = float(np.mean(y_pred == y_true))
+        # Regression path
+        if self._objective == "reg:squarederror":
+            y_pred_1d = y_pred.ravel()
+            mse = float(np.mean((y_pred_1d - y_true) ** 2))
+            rmse = float(np.sqrt(mse))
+            return {
+                "objective": "reg:squarederror",
+                "mse": mse,
+                "rmse": rmse,
+                "predictions": y_pred_1d.tolist()[:10],
+            }
+
+        # Classification path (multi:softprob)
+        y_pred_class = np.argmax(y_pred, axis=1)
+        accuracy = float(np.mean(y_pred_class == y_true))
 
         # Per-class precision/recall
         per_class: Dict[str, Dict[str, float]] = {}
