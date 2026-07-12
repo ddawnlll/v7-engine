@@ -186,9 +186,6 @@ for n in BATCH_SIZES:
         run_batch_cpu(arr)
         run_batch_gpu(arr)
 
-    cpu_t = float(np.median([time.perf_counter() - t0 for _ in range(5)
-                             for t0 in [time.perf_counter()] + [run_batch_cpu(arr)] and []]))
-    # Fix measurement
     cpu_ts = []
     for _ in range(5):
         t0 = time.perf_counter()

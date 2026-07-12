@@ -1,0 +1,79 @@
+sync:
+  defaults:
+    mode: "one-way-safe"
+    ignore:
+      # Respect .gitignore / .git/info/exclude automatically as a safety net
+      # (catches unknown/future junk folders that are already gitignored).
+      vcs: true
+      paths:
+        # --- Python environments (local/remote CUDA builds differ, never sync) ---
+        - ".venv/"
+        - "venv/"
+        - "env/"
+        - ".conda/"
+        - "__pycache__/"
+        - "*.py[cod]"
+        - ".mypy_cache/"
+        - ".ruff_cache/"
+        - ".pytest_cache/"
+
+        # --- JS/Node ---
+        - "node_modules/"
+        - "dist/"
+        - "dist-ssr/"
+
+        # --- Git internals (each side manages its own git state) ---
+        - ".git/"
+
+        # --- Claude Code / agent worktrees & local tool state (not source) ---
+        - ".worktrees/"
+        - ".claude/worktrees/"
+        - ".mimocode/"
+        - ".serena/"
+        - ".brv/"
+        - ".agent/"
+        - ".VSCodeCounter/"
+
+        # --- Generated data / dataset caches (large, regenerable) ---
+        - "/cache/"
+        - "/data/raw/"
+        - "/data/normalized/"
+        - "/data/processed/"
+        - "/data/cache/"
+        - "/data/results/"
+        - "/data/models/"
+        - "/data_lake/"
+        - "/reports/v7_lite/"
+        - "/models/"
+        - "/artifacts/"
+        - "/results/"
+        - "/logs/"
+        - "*.log"
+        - ".ipynb_checkpoints/"
+        - ".grafana/"
+
+        # --- Build/egg artifacts ---
+        - "*.egg-info/"
+        - "build/"
+
+        # --- Shell scripts (Windows checkout has CRLF; a synced .sh would break
+        # its shebang on Linux with "bad interpreter" errors). These are remote-
+        # native automation scripts anyway; edit them directly on the remote. ---
+        - "*.sh"
+
+        # --- OS junk ---
+        - ".DS_Store"
+        - "Thumbs.db"
+        - "ehthumbs.db"
+
+        # --- Mutagen's own runtime lock (per-machine, always differs) ---
+        - "mutagen.yml.lock"
+    symlink:
+      mode: "portable"
+    permissions:
+      defaultFileMode: 644
+      defaultDirectoryMode: 755
+
+  v7-engine:
+    alpha: "."
+    beta: "v7-remote:/root/v7-engine"

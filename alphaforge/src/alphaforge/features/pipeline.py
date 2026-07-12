@@ -491,9 +491,9 @@ class FeatureCache:
             arrays: List[pa.Array] = []
             for name in sorted(matrix.features.keys()):
                 arr = matrix.features[name]
-                # Ensure float64 for consistent storage
-                if arr.dtype != np.float64:
-                    arr = arr.astype(np.float64)
+                # Ensure float32 for consistent storage
+                if arr.dtype != np.float32:
+                    arr = arr.astype(np.float32)
                 arrays.append(pa.array(arr))
                 field_names.append(name)
 
@@ -668,6 +668,58 @@ def compute_perpetual_funding_group(
 # ---------------------------------------------------------------------------
 
 
+def _trend_sma(close: np.ndarray, period: int) -> np.ndarray:
+    """Trailing SMA with strict-NaN semantics (NaN if any NaN in window).
+
+    Matches np.mean-over-slice behaviour: result[t] = mean(close[t-period+1:t+1]),
+    NaN for t < period-1 or when the window contains a NaN.
+    """
+    n = len(close)
+    out = np.full(n, np.nan, dtype=np.float32)
+    if n < period:
+        return out
+    nan_mask = np.isnan(close)
+    clean = np.where(nan_mask, 0.0, close).astype(np.float64)
+    kernel = np.ones(period, dtype=np.float64)
+    ma = np.convolve(clean, kernel, mode="full")[:n] / period
+    if nan_mask.any():
+        nan_cnt = np.convolve(nan_mask.astype(np.float64), kernel, mode="full")[:n]
+        ma[nan_cnt > 0.5] = np.nan
+    out[period - 1:] = ma[period - 1:].astype(np.float32)
+    return out
+
+
+def _rolling_lr_slope(y: np.ndarray, window: int) -> np.ndarray:
+    """Rolling linear-regression slope of y against x = [0..window-1], closed form.
+
+    slope[t] = sum(x_c * y[t-window+1:t+1]) / sum(x_c**2) with x_c = x - mean(x);
+    the y-mean term vanishes because sum(x_c) == 0. y is globally demeaned first
+    for float conditioning (adds a constant, which sum(x_c) == 0 cancels).
+    NaN for t < window-1 or when the window contains a non-finite value.
+    """
+    n = len(y)
+    out = np.full(n, np.nan, dtype=np.float32)
+    if n < window:
+        return out
+    x_c = np.arange(window, dtype=np.float64)
+    x_c -= x_c.mean()
+    denom = max(float(np.sum(x_c * x_c)), 1e-12)
+    finite = np.isfinite(y)
+    if not finite.any():
+        return out
+    y64 = np.where(finite, y, 0.0).astype(np.float64)
+    y64 -= y64[finite].mean()
+    y64[~finite] = 0.0
+    num = np.convolve(y64, x_c[::-1], mode="full")[:n]
+    finite_cnt = np.convolve(
+        finite.astype(np.float64), np.ones(window, dtype=np.float64), mode="full"
+    )[:n]
+    ok = finite_cnt > window - 0.5
+    ok[:window - 1] = False
+    out[ok] = (num[ok] / denom).astype(np.float32)
+    return out
+
+
 def _compute_trend_group(
     close: np.ndarray,
     ma_short: int = 50,
@@ -686,27 +738,22 @@ def _compute_trend_group(
     """
     n = len(close)
     result = {}
+    ma_by_period: Dict[int, np.ndarray] = {}
     for name, period in [("trend_ma_short_slope", ma_short), ("trend_ma_long_slope", ma_long)]:
-        ma = np.full(n, np.nan, dtype=np.float64)
-        slope = np.full(n, np.nan, dtype=np.float64)
-        for i in range(period - 1, n):
-            ma[i] = np.mean(close[i - period + 1 : i + 1])
+        ma = ma_by_period.setdefault(period, _trend_sma(close, period))
         # Slope: linear regression over half-period window
         window = max(period // 2, 5)
-        for i in range(window + period - 1, n):
-            y = ma[i - window + 1 : i + 1]
-            x = np.arange(window, dtype=np.float64)
-            if np.all(np.isfinite(y)):
-                slope[i] = (np.sum((x - x.mean()) * (y - y.mean())) /
-                           max(np.sum((x - x.mean()) ** 2), 1e-12))
+        slope = _rolling_lr_slope(ma, window)
+        slope[:min(window + period - 1, n)] = np.nan
         result[name] = slope
 
     # MA cross and position
-    ma_s = np.full(n, np.nan, dtype=np.float64)
-    ma_l = np.full(n, np.nan, dtype=np.float64)
-    for i in range(ma_long - 1, n):
-        ma_s[i] = np.mean(close[i - ma_short + 1 : i + 1])
-        ma_l[i] = np.mean(close[i - ma_long + 1 : i + 1])
+    ma_s = ma_by_period.get(ma_short)
+    if ma_s is None:
+        ma_s = _trend_sma(close, ma_short)
+    ma_l = ma_by_period.get(ma_long)
+    if ma_l is None:
+        ma_l = _trend_sma(close, ma_long)
     result["trend_ma_cross"] = (ma_s / ma_l - 1.0) * 100
     result["trend_position"] = (close / ma_l - 1.0) * 100
 
@@ -791,7 +838,7 @@ def _p_njit_rolling_mean(
 ) -> np.ndarray:
     """Numba-accelerated rolling mean from precomputed cumsum arrays."""
     n = len(csum) - 1
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     for i in range(window - 1, n):
         count = window - (nan_csum[i + 1] - nan_csum[i - window + 1])
         if count >= 2:
@@ -803,7 +850,7 @@ def _p_njit_rolling_mean(
 def _p_njit_rolling_sum(csum: np.ndarray, window: int) -> np.ndarray:
     """Numba-accelerated rolling sum."""
     n = len(csum) - 1
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     for i in range(window - 1, n):
         result[i] = csum[i + 1] - csum[i - window + 1]
     return result
@@ -816,7 +863,7 @@ def _p_njit_rolling_std(
 ) -> np.ndarray:
     """Numba-accelerated rolling std."""
     n = len(csum) - 1
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     for i in range(window - 1, n):
         count = window - (nan_csum[i + 1] - nan_csum[i - window + 1])
         if count >= 2:
@@ -839,7 +886,7 @@ def _p_njit_rolling_var(
 ) -> np.ndarray:
     """Numba-accelerated rolling variance."""
     n = len(csum) - 1
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     for i in range(window - 1, n):
         count = window - (nan_csum[i + 1] - nan_csum[i - window + 1])
         if count >= 2:
@@ -855,28 +902,19 @@ def _p_njit_rolling_var(
 
 
 def _rolling_mean(arr: np.ndarray, window: int) -> np.ndarray:
-    """Compute rolling mean over `window` bars (O(n) via np.convolve or cumsum).
-
-    Result at index t uses arr[t-window+1 .. t] (causal).
-    Returns NaN for t < window-1 or when the window contains insufficient
-    non-NaN values (fewer than 2 valid samples).
-
-    NaN values in the input are excluded from the mean computation
-    (partial window mean). If all values in the window are NaN, the
-    result is NaN.
-    """
+    """Compute rolling mean over `window` bars (O(n) via np.convolve or cumsum)..."""
     n = len(arr)
     if n < window:
-        return np.full(n, np.nan, dtype=np.float64)
+        return np.full(n, np.nan, dtype=np.float32)
     if np.isnan(arr).any():
         # NaN path: cumsum + numba
         nan_mask = np.isnan(arr)
         clean = np.where(nan_mask, 0.0, arr)
         csum = np.cumsum(np.insert(clean, 0, 0))
-        nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+        nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float32), 0, 0))
         return _p_njit_rolling_mean(csum, nan_csum, window)
     # Fast path: no NaN, use np.convolve with trailing window
-    kernel = np.ones(window, dtype=np.float64) / window
+    kernel = np.ones(window, dtype=np.float32) / window
     result = np.convolve(arr, kernel, mode='full')[:n]
     result[:window - 1] = np.nan
     return result
@@ -886,11 +924,11 @@ def _rolling_sum(arr: np.ndarray, window: int) -> np.ndarray:
     """Compute rolling sum over `window` bars (O(n) via np.convolve or cumsum)."""
     n = len(arr)
     if n < window:
-        return np.full(n, np.nan, dtype=np.float64)
+        return np.full(n, np.nan, dtype=np.float32)
     if np.isnan(arr).any():
         csum = np.cumsum(np.insert(np.where(np.isnan(arr), 0.0, arr), 0, 0))
         return _p_njit_rolling_sum(csum, window)
-    kernel = np.ones(window, dtype=np.float64)
+    kernel = np.ones(window, dtype=np.float32)
     result = np.convolve(arr, kernel, mode='full')[:n]
     result[:window - 1] = np.nan
     return result
@@ -907,12 +945,12 @@ def _rolling_std(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
     """
     n = len(arr)
     if n < window:
-        return np.full(n, np.nan, dtype=np.float64)
+        return np.full(n, np.nan, dtype=np.float32)
     nan_mask = np.isnan(arr)
     clean = np.where(nan_mask, 0.0, arr)
     csum = np.cumsum(np.insert(clean, 0, 0))
     csum2 = np.cumsum(np.insert(clean * clean, 0, 0))
-    nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float32), 0, 0))
     return _p_njit_rolling_std(csum, csum2, nan_csum, window, ddof)
 
 
@@ -924,12 +962,12 @@ def _rolling_var(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
     """
     n = len(arr)
     if n < window:
-        return np.full(n, np.nan, dtype=np.float64)
+        return np.full(n, np.nan, dtype=np.float32)
     nan_mask = np.isnan(arr)
     clean = np.where(nan_mask, 0.0, arr)
     csum = np.cumsum(np.insert(clean, 0, 0))
     csum2 = np.cumsum(np.insert(clean * clean, 0, 0))
-    nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
+    nan_csum = np.cumsum(np.insert(nan_mask.astype(np.float32), 0, 0))
     return _p_njit_rolling_var(csum, csum2, nan_csum, window, ddof)
 
 
@@ -937,10 +975,10 @@ def _rolling_max(arr: np.ndarray, window: int) -> np.ndarray:
     """Compute rolling maximum over `window` bars (O(n) via monotonic deque)."""
     n = len(arr)
     if n < window:
-        return np.full(n, np.nan, dtype=np.float64)
+        return np.full(n, np.nan, dtype=np.float32)
     from collections import deque
     dq: deque = deque()
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     for i in range(n):
         # Remove elements outside window
         while dq and dq[0] <= i - window:
@@ -958,10 +996,10 @@ def _rolling_min(arr: np.ndarray, window: int) -> np.ndarray:
     """Compute rolling minimum over `window` bars (O(n) via monotonic deque)."""
     n = len(arr)
     if n < window:
-        return np.full(n, np.nan, dtype=np.float64)
+        return np.full(n, np.nan, dtype=np.float32)
     from collections import deque
     dq: deque = deque()
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     for i in range(n):
         # Remove elements outside window
         while dq and dq[0] <= i - window:
@@ -984,12 +1022,12 @@ def _ema(arr: np.ndarray, period: int) -> np.ndarray:
     Returns NaN for t < period-1 to match convention.
     """
     n = len(arr)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n < period:
         return result
     k = 2.0 / (period + 1.0)
     # Seed with SMA of first `period` values
-    seed = np.mean(arr[:period].astype(np.float64))
+    seed = np.mean(arr[:period].astype(np.float32))
     result[period - 1] = seed
     for i in range(period, n):
         if np.isnan(arr[i]):
@@ -1008,10 +1046,10 @@ def _linear_regression_slope(y: np.ndarray) -> float:
     n = len(y)
     if n < 2:
         return 0.0
-    x = np.arange(n, dtype=np.float64)
+    x = np.arange(n, dtype=np.float32)
     x_mean = np.mean(x)
-    y_mean = np.mean(y.astype(np.float64))
-    numerator = np.sum((x - x_mean) * (y.astype(np.float64) - y_mean))
+    y_mean = np.mean(y.astype(np.float32))
+    numerator = np.sum((x - x_mean) * (y.astype(np.float32) - y_mean))
     denominator = np.sum((x - x_mean) ** 2)
     if denominator == 0:
         return 0.0
@@ -1031,7 +1069,7 @@ def compute_log_return_1(close: np.ndarray) -> np.ndarray:
     Causality: uses close[t] and close[t-1] only. No future access.
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n < 2:
         return result
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -1048,7 +1086,7 @@ def compute_log_return_N(close: np.ndarray, n: int) -> np.ndarray:
     Causality: uses close[t] and close[t-n] only.
     """
     length = len(close)
-    result = np.full(length, np.nan, dtype=np.float64)
+    result = np.full(length, np.nan, dtype=np.float32)
     if length <= n:
         return result
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -1077,12 +1115,12 @@ def compute_return_zscore(returns: np.ndarray, window: int) -> np.ndarray:
     """
     n = len(returns)
     if n < window:
-        return np.full(n, np.nan, dtype=np.float64)
+        return np.full(n, np.nan, dtype=np.float32)
     # O(n) rolling z-score via cumsum
     ret_mean = _rolling_mean(returns, window)
     ret_var = _rolling_var(returns, window, ddof=1)
     ret_std = np.sqrt(np.maximum(ret_var, 0.0))
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     # Use adaptive threshold for near-zero std to handle cumsum floating-point error
     # cumsum variance can produce 1e-20 for constant data; sqrt gives 1e-10
     abs_mean = np.abs(ret_mean)
@@ -1137,7 +1175,7 @@ def compute_realized_volatility(
     Causality: uses log_returns up to index t.
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n < window + 1:
         return result
     log_ret = compute_log_return_1(close)
@@ -1166,7 +1204,7 @@ def compute_high_low_range(
     """
     n = len(high)
     if n < window:
-        return np.full(n, np.nan, dtype=np.float64)
+        return np.full(n, np.nan, dtype=np.float32)
     with np.errstate(divide="ignore", invalid="ignore"):
         hl_ratio = (high - low) / np.where(close == 0, np.nan, close)
     return _rolling_mean(hl_ratio, window)
@@ -1187,7 +1225,7 @@ def compute_garman_klass_vol(
     Causality: at t uses bars [t-window+1 .. t].
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n < window:
         return result
 
@@ -1202,8 +1240,8 @@ def compute_garman_klass_vol(
     gk_sum = _rolling_sum(gk, window)
     # Count valid bars per window
     nan_mask = np.isnan(gk)
-    csum_nan = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
-    result = np.full(n, np.nan, dtype=np.float64)
+    csum_nan = np.cumsum(np.insert(nan_mask.astype(np.float32), 0, 0))
+    result = np.full(n, np.nan, dtype=np.float32)
     for i in range(window - 1, n):
         count = window - (csum_nan[i + 1] - csum_nan[i - window + 1])
         if count < 2:
@@ -1230,7 +1268,7 @@ def compute_parkinson_vol(
     Causality: at t uses bars [t-window+1 .. t].
     """
     n = len(high)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n < window:
         return result
 
@@ -1241,8 +1279,8 @@ def compute_parkinson_vol(
     # O(n): sum of ln(H/L)^2 via rolling sum, divide by count, sqrt
     roll_sum = _rolling_sum(hl_sq, window)
     nan_mask = np.isnan(hl_sq)
-    csum_nan = np.cumsum(np.insert(nan_mask.astype(np.float64), 0, 0))
-    result = np.full(n, np.nan, dtype=np.float64)
+    csum_nan = np.cumsum(np.insert(nan_mask.astype(np.float32), 0, 0))
+    result = np.full(n, np.nan, dtype=np.float32)
     for i in range(window - 1, n):
         count = window - (csum_nan[i + 1] - csum_nan[i - window + 1])
         if count < 2:
@@ -1291,7 +1329,7 @@ def compute_true_range(
     Causality: at t uses high[t], low[t], close[t], close[t-1].
     """
     n = len(high)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n == 0:
         return result
 
@@ -1331,7 +1369,7 @@ def compute_atr_pct(atr: np.ndarray, close: np.ndarray) -> np.ndarray:
     NaN where ATR is NaN.
     """
     n = len(atr)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     valid = ~np.isnan(atr) & (close != 0)
     with np.errstate(divide="ignore", invalid="ignore"):
         result[valid] = atr[valid] / close[valid] * 100.0
@@ -1350,7 +1388,7 @@ def compute_atr_expansion(atr: np.ndarray, window: int = SWING_ATR_WINDOW) -> np
     """
     atr_sma = _rolling_mean(atr, window)
     n = len(atr)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     valid = ~np.isnan(atr) & ~np.isnan(atr_sma) & (atr_sma != 0)
     with np.errstate(divide="ignore", invalid="ignore"):
         result[valid] = atr[valid] / atr_sma[valid]
@@ -1389,7 +1427,7 @@ def compute_momentum_N(close: np.ndarray, n: int = SWING_MOMENTUM_N) -> np.ndarr
     Causality: uses close[t] and close[t-n].
     """
     length = len(close)
-    result = np.full(length, np.nan, dtype=np.float64)
+    result = np.full(length, np.nan, dtype=np.float32)
     if length <= n:
         return result
     for i in range(n, length):
@@ -1406,7 +1444,7 @@ def compute_roc_N(close: np.ndarray, n: int = SWING_MOMENTUM_N) -> np.ndarray:
     Causality: uses close[t] and close[t-n].
     """
     length = len(close)
-    result = np.full(length, np.nan, dtype=np.float64)
+    result = np.full(length, np.nan, dtype=np.float32)
     if length <= n:
         return result
     for i in range(n, length):
@@ -1433,12 +1471,12 @@ def compute_rsi(close: np.ndarray, window: int = SWING_RSI_WINDOW) -> np.ndarray
     Causality: RSI at t uses gain[t] and loss[t] from close[t]-close[t-1].
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n < window + 1:
         return result
 
     # Compute per-bar changes
-    delta = np.zeros(n, dtype=np.float64)
+    delta = np.zeros(n, dtype=np.float32)
     delta[1:] = close[1:] - close[:-1]
 
     gain = np.where(delta > 0, delta, 0.0)
@@ -1486,7 +1524,7 @@ def compute_macd(
     Causality: EMA at t uses close up to t. Recursive and causal by construction.
     """
     n = len(close)
-    nan_arr = np.full(n, np.nan, dtype=np.float64)
+    nan_arr = np.full(n, np.nan, dtype=np.float32)
 
     ema_fast = _ema(close, fast)
     ema_slow = _ema(close, slow)
@@ -1561,7 +1599,7 @@ def compute_volume_ratio(
     Causality: at t uses volume bars up to t.
     """
     n = len(volume)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n < window:
         return result
     vol_mean = _rolling_mean(volume, window)
@@ -1585,7 +1623,7 @@ def compute_volume_trend(
     """
     n = len(volume)
     if n < window:
-        return np.full(n, np.nan, dtype=np.float64)
+        return np.full(n, np.nan, dtype=np.float32)
 
     # O(n) rolling linear regression slope via cumsum of volume and idx*volume
     # β = Σ(i - mean_i)(y_i - mean_y) / Σ(i - mean_i)²
@@ -1604,10 +1642,10 @@ def compute_volume_trend(
     clean = np.where(np.isnan(volume), 0.0, volume)
     csum_y = np.cumsum(np.insert(clean, 0, 0))
     # j * y_j where j is global index (0, 1, ..., n-1)
-    jy = np.arange(n, dtype=np.float64) * clean
+    jy = np.arange(n, dtype=np.float32) * clean
     csum_jy = np.cumsum(np.insert(jy, 0, 0))
 
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if denom == 0:
         return result
     for i in range(window - 1, n):
@@ -1638,11 +1676,11 @@ def compute_vwap_deviation(
     Causality: VWAP at t uses all bars from 0 to t (cumulative).
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n == 0:
         return result
 
-    tp = (high.astype(np.float64) + low.astype(np.float64) + close.astype(np.float64)) / 3.0
+    tp = (high.astype(np.float32) + low.astype(np.float32) + close.astype(np.float32)) / 3.0
     cum_pv = 0.0
     cum_v = 0.0
 
@@ -1674,7 +1712,7 @@ def compute_obv(
     Causality: at t uses close[t], close[t-1], volume[t] only.
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n == 0:
         return result
     result[0] = 0.0
@@ -1751,7 +1789,7 @@ def compute_bb_position(
     Causality: at t uses band values computed from bars up to t.
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     valid = ~np.isnan(upper) & ~np.isnan(lower) & (upper != lower)
     with np.errstate(divide="ignore", invalid="ignore"):
         result[valid] = (close[valid] - lower[valid]) / (upper[valid] - lower[valid])
@@ -1771,7 +1809,7 @@ def compute_bb_width(
     Causality: uses band values computed from bars up to t.
     """
     n = len(upper)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     valid = ~np.isnan(middle) & (middle != 0)
     with np.errstate(divide="ignore", invalid="ignore"):
         result[valid] = (upper[valid] - lower[valid]) / middle[valid]
@@ -1804,7 +1842,7 @@ def compute_range_breakout(
     Causality: highest_N and lowest_N at t use bars up to t.
     """
     n = len(close)
-    result = np.full(n, np.nan, dtype=np.float64)
+    result = np.full(n, np.nan, dtype=np.float32)
     if n < window:
         return result
 
@@ -1867,11 +1905,11 @@ def compute_time_features_group(
     n = len(timestamps)
     if n == 0:
         return {
-            "hour_of_day_sin": np.array([], dtype=np.float64),
-            "hour_of_day_cos": np.array([], dtype=np.float64),
-            "day_of_week_sin": np.array([], dtype=np.float64),
-            "day_of_week_cos": np.array([], dtype=np.float64),
-            "is_us_hours": np.array([], dtype=np.float64),
+            "hour_of_day_sin": np.array([], dtype=np.float32),
+            "hour_of_day_cos": np.array([], dtype=np.float32),
+            "day_of_week_sin": np.array([], dtype=np.float32),
+            "day_of_week_cos": np.array([], dtype=np.float32),
+            "is_us_hours": np.array([], dtype=np.float32),
         }
 
     # Detect scale: Unix-ns (~1.7e18) vs Unix-ms (~1.7e12) vs Unix-s (~1.7e9)
@@ -1889,8 +1927,8 @@ def compute_time_features_group(
     # Python's datetime fromtimestamp for vectorized hour/day-of-week extraction
     import datetime
 
-    hours = np.zeros(n, dtype=np.float64)
-    day_of_week = np.zeros(n, dtype=np.float64)
+    hours = np.zeros(n, dtype=np.float32)
+    day_of_week = np.zeros(n, dtype=np.float32)
 
     for i in range(n):
         try:
@@ -1923,7 +1961,7 @@ def compute_time_features_group(
         "hour_of_day_cos": hour_cos,
         "day_of_week_sin": dow_sin,
         "day_of_week_cos": dow_cos,
-        "is_us_hours": us_hours.astype(np.float64),
+        "is_us_hours": us_hours.astype(np.float32),
     }
 
 
