@@ -92,12 +92,12 @@
     },
     "resolution_status": {
       "type": "string",
-      "enum": ["COMPLETE", "UNRESOLVED", "INVALIDATED", "TARGET_HIT", "STOP_HIT", "TIME_EXIT"],
+      "enum": ["COMPLETE", "UNRESOLVED", "INVALIDATED", "TARGET_HIT", "STOP_HIT", "TIME_EXIT", "LIQUIDATED"],
       "description": "How simulation resolved, propagated from SimulationOutput for audit trail."
     },
     "exit_reason": {
       "type": "string",
-      "enum": ["STOP_HIT", "TARGET_HIT", "TIME_EXIT", "HORIZON_END", "UNRESOLVED", "INVALIDATED"],
+      "enum": ["STOP_HIT", "TARGET_HIT", "TIME_EXIT", "HORIZON_END", "UNRESOLVED", "INVALIDATED", "LIQUIDATED"],
       "description": "Reason for long action exit from simulation engine."
     },
     "fee_cost_r_long": {

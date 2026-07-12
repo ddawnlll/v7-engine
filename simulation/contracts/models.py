@@ -95,6 +95,7 @@ class ExitReason(str, Enum):
     HORIZON_END = "HORIZON_END"
     UNRESOLVED = "UNRESOLVED"
     INVALIDATED = "INVALIDATED"
+    LIQUIDATED = "LIQUIDATED"
 
 
 class NoTradeQuality(str, Enum):

@@ -133,7 +133,7 @@
         },
         "exit_reason": {
           "type": "string",
-          "enum": ["STOP_HIT", "TARGET_HIT", "TIME_EXIT", "HORIZON_END", "UNRESOLVED", "INVALIDATED"],
+          "enum": ["STOP_HIT", "TARGET_HIT", "TIME_EXIT", "HORIZON_END", "UNRESOLVED", "INVALIDATED", "LIQUIDATED"],
           "description": "How this action's path exited."
         },
         "exit_price": {
