@@ -263,6 +263,7 @@ class XGBoostTrainer:
         mode: str = "SWING",
         random_seed: int = RANDOM_SEED,
         hyperparameters: Optional[Dict[str, Any]] = None,
+        objective: str = "multi:softprob",
     ):
         """Initialize trainer.
 
@@ -283,6 +284,7 @@ class XGBoostTrainer:
         else:
             self._hyperparameters = _MODE_DEFAULT_HP.get(mode, SWING_DEFAULT_HYPERPARAMS).copy()
         self._rng = np.random.RandomState(random_seed)
+        self._objective = objective
 
     @property
     def mode(self) -> str:
@@ -593,6 +595,10 @@ class XGBoostTrainer:
                 result[i] = LABEL_TO_INT[label]
             return result
 
+        # Regression objective: pass float labels through as-is
+        if self._objective == "reg:squarederror" and y.dtype.kind == "f":
+            return y.astype(np.float64)
+
         raise ValueError(
             f"Unsupported label dtype: {y.dtype}. Use string or integer labels."
         )
@@ -609,6 +615,12 @@ class XGBoostTrainer:
         for k in xgb_param_keys:
             if k in self._hyperparameters:
                 params[k] = self._hyperparameters[k]
+        # Override objective from constructor (enables regression mode)
+        params["objective"] = self._objective
+        # Regression: single output, no num_class, regression-friendly eval_metric
+        if self._objective == "reg:squarederror":
+            params.pop("num_class", None)
+            params["eval_metric"] = "rmse"
         return params
 
     def _compute_metrics(
@@ -617,18 +629,31 @@ class XGBoostTrainer:
         dmatrix: xgb.DMatrix,
         y_true: np.ndarray,
     ) -> Dict[str, Any]:
-        """Compute classification metrics."""
-        y_pred_prob = booster.predict(dmatrix)
-        y_pred = np.argmax(y_pred_prob, axis=1)
+        """Compute metrics — classification (multi:softprob) or regression (reg:squarederror)."""
+        y_pred = booster.predict(dmatrix)
 
-        accuracy = float(np.mean(y_pred == y_true))
+        # Regression path
+        if self._objective == "reg:squarederror":
+            y_pred_1d = y_pred.ravel()
+            mse = float(np.mean((y_pred_1d - y_true) ** 2))
+            rmse = float(np.sqrt(mse))
+            return {
+                "objective": "reg:squarederror",
+                "mse": mse,
+                "rmse": rmse,
+                "predictions": y_pred_1d.tolist()[:10],
+            }
+
+        # Classification path (multi:softprob)
+        y_pred_class = np.argmax(y_pred, axis=1)
+        accuracy = float(np.mean(y_pred_class == y_true))
 
         # Per-class precision/recall
         per_class: Dict[str, Dict[str, float]] = {}
         for cls_idx in range(NUM_CLASSES):
-            tp = int(np.sum((y_pred == cls_idx) & (y_true == cls_idx)))
-            fp = int(np.sum((y_pred == cls_idx) & (y_true != cls_idx)))
-            fn = int(np.sum((y_pred != cls_idx) & (y_true == cls_idx)))
+            tp = int(np.sum((y_pred_class == cls_idx) & (y_true == cls_idx)))
+            fp = int(np.sum((y_pred_class == cls_idx) & (y_true != cls_idx)))
+            fn = int(np.sum((y_pred_class != cls_idx) & (y_true == cls_idx)))
 
             precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
             recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0

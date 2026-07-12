@@ -1645,6 +1645,9 @@ def main():
     parser.add_argument("--discovery", action="store_true",
                         help="Run full discovery pipeline after training (signal generation, "
                              "simulation backtest, profitability analysis, rejection evaluation)")
+    parser.add_argument("--regression-objective", action="store_true",
+                        help="Use reg:squarederror objective instead of multi:softprob. "
+                             "Trains a regression model on net R instead of classification.")
     parser.add_argument("--discovery-confidence-threshold", type=float, default=0.55,
                         help="Confidence threshold for discovery signal generation (default: 0.55)")
     parser.add_argument("--discovery-output", default=None,
@@ -1828,8 +1831,10 @@ def main():
     print("\n[5/6] Training final model on all data...")
     from alphaforge.training.xgb_trainer import XGBoostTrainer
 
-    final_trainer = XGBoostTrainer(mode=mode)
-    final_result = final_trainer.train(X_clean, y_clean)
+    _obj = "reg:squarederror" if args.regression_objective else "multi:softprob"
+    _y_final = label_net_clean if args.regression_objective else y_clean
+    final_trainer = XGBoostTrainer(mode=mode, objective=_obj)
+    final_result = final_trainer.train(X_clean, _y_final)
     final_acc = float(final_result.val_metrics.get("accuracy", 0))
     print(f"  Final model accuracy: {final_acc:.4f}")
     
@@ -1866,8 +1871,10 @@ def main():
             print(f"  Feature pruning (threshold={args.prune_features}): "
                   f"dropped {_drop}/{len(imp)}, kept {len(_keep)}")
             # Retrain with pruned features
-            final_trainer = XGBoostTrainer(mode=mode)
-            final_result = final_trainer.train(X_clean, y_clean)
+            _obj = "reg:squarederror" if args.regression_objective else "multi:softprob"
+            _y_final = label_net_clean if args.regression_objective else y_clean
+            final_trainer = XGBoostTrainer(mode=mode, objective=_obj)
+            final_result = final_trainer.train(X_clean, _y_final)
             final_acc = float(final_result.val_metrics.get("accuracy", 0))
             print(f"  Retrained (pruned) model accuracy: {final_acc:.4f}")
             _pruned = True
@@ -1927,7 +1934,7 @@ def main():
             with open(pp_path, "w") as f:
                 json.dump(asdict(passport), f, indent=2, default=str)
             print(f"  EvidencePassport saved: {pp_path.resolve()}")
-        except Exception as e:
+        except (ImportError, AttributeError, TypeError, OSError, json.JSONDecodeError) as e:
             logger.warning("Could not build EvidencePassport: %s", e)
 
     # Save report if requested
