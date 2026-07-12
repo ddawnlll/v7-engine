@@ -10,7 +10,8 @@ walk_forward_validate which trains XGBoost per fold).
 
 import math
 
-from alphaforge.train import MODE_CONFIG, walk_forward_validate
+from lib.config_training import load_training_config
+from alphaforge.train import walk_forward_validate
 
 
 def _expected_purge_embargo(
@@ -18,7 +19,7 @@ def _expected_purge_embargo(
 ) -> tuple[int, int]:
     """Compute what purge/embargo *should* be given the MODE_CONFIG contract."""
     fold_size = n // (min_folds + 1)
-    max_hold = MODE_CONFIG[mode]["max_hold"]
+    max_hold = load_training_config(mode).max_holding_bars
     purge = max(fold_size // 4, k * max_hold)
     embargo = max(fold_size // 8, k * max_hold)
     return purge, embargo
@@ -35,7 +36,7 @@ def test_purge_embargo_all_modes_meet_max_hold_floor() -> None:
     for n in [500, 1000, 2000, 5000]:
         for mode in ["SCALP", "SWING", "AGGRESSIVE_SCALP"]:
             p, e = _expected_purge_embargo(n, 6, mode)
-            max_h = MODE_CONFIG[mode]["max_hold"]
+            max_h = load_training_config(mode).max_holding_bars
             assert p >= max_h, (
                 f"{mode} n={n}: purge={p} < max_hold={max_h}"
             )
@@ -54,7 +55,7 @@ def test_purge_embargo_respects_fold_size_floor() -> None:
     for mode in ["SCALP", "SWING", "AGGRESSIVE_SCALP"]:
         p, _ = _expected_purge_embargo(n, 6, mode)
         fold_size = n // 7  # min_folds + 1 = 7
-        max_h = MODE_CONFIG[mode]["max_hold"]
+        max_h = load_training_config(mode).max_holding_bars
         assert p >= fold_size // 4, (
             f"{mode}: purge={p} < fold_size//4={fold_size // 4}"
         )
@@ -81,11 +82,11 @@ def test_k_value_is_exported_as_hold() -> None:
     n, mode, min_folds = 5000, "SCALP", 6
     p, _ = _expected_purge_embargo(n, min_folds, mode)
     fold_size = n // (min_folds + 1)
-    k_implied = math.ceil((p - fold_size // 4) / MODE_CONFIG[mode]["max_hold"])
+    k_implied = math.ceil((p - fold_size // 4) / load_training_config(mode).max_holding_bars)
     # purge is max(fold_size//4, k*max_hold), so if fold_size//4 dominates,
     # the implied k from the floor may be 0 or negative — only check
     # when the k*max_hold term actually dominates.
-    if p == 2 * MODE_CONFIG[mode]["max_hold"]:
+    if p == 2 * load_training_config(mode).max_holding_bars:
         assert k_implied <= 2, (
             f"k appears to have changed: computed k_implied={k_implied} for {mode}"
         )

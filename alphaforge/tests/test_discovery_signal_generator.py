@@ -14,16 +14,14 @@ from alphaforge.discovery.signal_generator import (
     filter_overlapping_signals,
     generate_trade_signals,
 )
+from lib.config_training import load_training_config
 
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
-_MODE_CFG = {
-    "primary": "4h", "max_hold": 30, "stop_mult": 2.0, "target_mult": 3.0,
-    "ambiguity_margin_r": 0.15, "min_edge_r": 0.25,
-}
+_MODE_CFG = load_training_config("SWING")
 
 
 def _make_ohlcv(n: int = 200) -> dict:

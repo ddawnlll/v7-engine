@@ -8,6 +8,12 @@ Feature families:
 - Primary interval: returns, volatility, technicals, volume, candle geometry
 - Context interval: trend, regime, compression, breakout state
 - Refinement interval: micro momentum, entry pressure, taker flow
+
+⚠️ DEPRECATED: This module is superseded by ``alphaforge.features.pipeline``
+(which is the LIVE implementation used by ``alphaforge.train``).  This file
+survives only as a reference for ``train_pipeline.py`` (its sole consumer)
+and its own test suite.  Do NOT add new consumers.  Will be removed after
+v0.4 consolidation (tracked in #319).
 """
 
 from __future__ import annotations

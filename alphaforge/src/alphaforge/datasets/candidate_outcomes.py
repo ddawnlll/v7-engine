@@ -4,6 +4,11 @@ Each row represents a single SimulationOutput for one side (LONG/SHORT).
 No best-of-side selection. No local simulation. Simulation is the only
 outcome truth authority.
 
+⚠️ DEPRECATED (v0.4): This module is superseded by``alphaforge.features.pipeline``
++ ``alphaforge.labels.adapter``. Its sole consumer is
+``alphaforge.tests.test_p10_alpha_factory``.  Do NOT add new consumers.
+Will be removed after v0.4 consolidation (tracked in #319).
+
 Research labels are derived from SimulationOutput fields only.
 All pre-entry features must be observable at or before the timestamp.
 

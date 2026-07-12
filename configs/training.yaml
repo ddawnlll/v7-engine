@@ -63,7 +63,7 @@ training:
   features: "all"
 
   # Confidence threshold
-  confidence_threshold: 0.55
+  confidence_threshold: 0.50
 
   # Model hyperparameters
   xgboost:

@@ -26,20 +26,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "alphaforge", "
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("real_training")
 
-MODE_CONFIG = {
-    "SWING": {
-        "primary": "4h", "max_hold": 30, "stop_mult": 2.0, "target_mult": 3.0,
-        "ambiguity_margin_r": 0.15, "min_edge_r": 0.25,
-    },
-    "SCALP": {
-        "primary": "1h", "max_hold": 12, "stop_mult": 1.5, "target_mult": 2.0,
-        "ambiguity_margin_r": 0.10, "min_edge_r": 0.15,
-    },
-    "AGGRESSIVE_SCALP": {
-        "primary": "15m", "max_hold": 5, "stop_mult": 1.5, "target_mult": 2.0,
-        "ambiguity_margin_r": 0.05, "min_edge_r": 0.10,
-    },
-}
+# Centralized config — replaces old hardcoded MODE_CONFIG
+from lib.config_training import load_training_config
 
 
 def load_cached_data(symbols: list[str], interval: str, data_dir: str = "data"):
@@ -88,11 +76,11 @@ def generate_labels(ohlcv, mode: str):
         - r_values: np.ndarray of best-action gross R values
         - metrics_dict: dict with n_labels and label_distribution
     """
-    cfg = MODE_CONFIG[mode]
+    _rt_cfg = load_training_config(mode)
     n = len(ohlcv["close"])
-    max_hold = cfg["max_hold"]
-    stop_mult = cfg["stop_mult"]
-    target_mult = cfg["target_mult"]
+    max_hold = _rt_cfg.max_holding_bars
+    stop_mult = _rt_cfg.stop_multiplier
+    target_mult = _rt_cfg.target_multiplier
     label_map = {"LONG_NOW": 0, "SHORT_NOW": 1, "NO_TRADE": 2}
     fee_pct = 0.04
     labels_list, ints_list, r_vals = [], [], []
@@ -225,6 +213,7 @@ def walk_forward_validate(
     from collections import Counter
     import xgboost as xgb
 
+    _rt_wfv_cfg = load_training_config(mode)
     n = len(X)
     fold_size = n // (min_folds + 1)
     results: list[dict] = []
@@ -347,8 +336,9 @@ def main():
     args = parser.parse_args()
 
     symbols = [s.strip() for s in args.symbols.split(",")]
-    mode = args.mode.upper(); cfg = MODE_CONFIG[mode]
-    interval = cfg["primary"]
+    mode = args.mode.upper()
+    _rt_main_cfg = load_training_config(mode)
+    interval = _rt_main_cfg.primary_interval
 
     print(f"\nREAL TRAINING: {mode} | {len(symbols)} symbols | {interval} primary\n")
 
@@ -446,7 +436,7 @@ def main():
             "avg_net_R_per_active_trade": 0.0,
             "avg_net_R_per_decision": 0.0,
             "turnover": round(total_active / max(1, total_decisions * total_n_val), 6),
-            "avg_hold_bars": cfg["max_hold"] / 2.0,
+            "avg_hold_bars": _rt_wfv_cfg.max_holding_bars / 2.0,
         },
         "oos_summary": {
             "oos_accuracy": avg_val_accuracy,

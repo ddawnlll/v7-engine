@@ -266,26 +266,27 @@ pipeline-v0.2:
 .PHONY: research full
 
 research:
-	@echo "=== Research build (config-driven) ==="; \
+	@echo "=== Research build (config-driven, centralized entrypoint) ==="; \
 	if [ "$(DRY_RUN)" = "1" ]; then \
-		echo "[DRY RUN] Would run: download + simulate + build-dataset + train with research scope"; \
+		echo "[DRY RUN] PYTHONPATH=$(TRAIN_PYTHONPATH) $(PYTHON) -m alphaforge.train --mode $(MODE) --symbols $(SYMBOLS) --folds 6 --output data/reports/train-results-$(MODE).json"; \
 	else \
-		$(MAKE) download && \
-		$(MAKE) simulate && \
-		$(MAKE) build-dataset && \
-		$(MAKE) train; \
+		PYTHONPATH=$(TRAIN_PYTHONPATH) $(PYTHON) -m alphaforge.train \
+			--mode $(MODE) \
+			--symbols $(SYMBOLS) \
+			--folds 6 \
+			--output data/reports/train-results-$(MODE).json; \
 	fi
 
 full:
-	@echo "=== Full build (config-driven) ==="; \
+	@echo "=== Full build (config-driven, centralized entrypoint) ==="; \
 	if [ "$(DRY_RUN)" = "1" ]; then \
-		echo "[DRY RUN] Would run: download + simulate + build-dataset + train + wfv with full scope"; \
+		echo "[DRY RUN] PYTHONPATH=$(TRAIN_PYTHONPATH) $(PYTHON) -m alphaforge.train --mode $(MODE) --symbols $(SYMBOLS) --folds 6 --output data/reports/train-results-full-$(MODE).json"; \
 	else \
-		$(MAKE) download && \
-		$(MAKE) simulate && \
-		$(MAKE) build-dataset && \
-		$(MAKE) train && \
-		$(MAKE) wfv; \
+		PYTHONPATH=$(TRAIN_PYTHONPATH) $(PYTHON) -m alphaforge.train \
+			--mode $(MODE) \
+			--symbols $(SYMBOLS) \
+			--folds 6 \
+			--output data/reports/train-results-full-$(MODE).json; \
 	fi
 
 # ====================================================================

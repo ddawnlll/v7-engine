@@ -3,12 +3,14 @@ CandidateOutcomeBuilder — transforms SimulationOutput into mining-ready pyarro
 
 Produces a flattened dataset with one row per SimulationOutput, containing:
   - Identity columns (symbol, timestamp, side, mode, timeframe)
-  - Pre-entry features (computed from lookback market data available at decision time)
-  - Outcome fields (realized R, costs, path metrics, exit reason)
-  - Lineage fields (simulation_run_id, candidate_id)
+  - Simulation truth fields (net_R, gross_R, MFE, MAE, exit_reason, bars_held)
 
 Authority boundary: alphaforge/ consumes simulation output-shaped objects
 through this adapter without importing simulation/, v7/, runtime/, or interface/.
+
+⚠️ DEPRECATED (v0.4): This module is superseded by ``alphaforge.datasets.candidate_outcomes``
+(maintained) and ``alphaforge.features.pipeline`` (for feature computation).
+Will be removed after v0.4 consolidation (tracked in #319).
 """
 
 from __future__ import annotations

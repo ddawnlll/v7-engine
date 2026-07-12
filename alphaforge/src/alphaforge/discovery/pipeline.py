@@ -29,8 +29,8 @@ from alphaforge.discovery.signal_generator import (
 from alphaforge.discovery.backtest import backtest_signals
 from alphaforge.discovery.profitability import analyze_profitability
 from alphaforge.discovery.rejection import evaluate_alpha, rejection_to_verdict
+from lib.config_training import load_training_config
 from alphaforge.train import (
-    MODE_CONFIG,
     build_aligned_training_frame,
     generate_synthetic_ohlcv,
     load_cached_data,
@@ -78,8 +78,8 @@ def run_discovery(
     result = DiscoveryResult(config=config)
     mode = config.mode.upper()
     symbols = list(config.symbols)
-    cfg = MODE_CONFIG[mode]
-    interval = cfg["primary"]
+    _dp_cfg = load_training_config(mode)
+    interval = _dp_cfg.primary_interval
 
     logger.info("=" * 60)
     logger.info("  AlphaForge Discovery Pipeline")
@@ -289,7 +289,7 @@ def run_discovery(
             fold_preds=fold_preds,
             fold_y_class=fold_y_class,
             ohlcv=ohlcv,
-            mode_cfg=cfg,
+            mode_cfg=_dp_cfg,
             timestamps=ts_clean,
             symbols=sym_clean,
             close_arr=close_arr_aligned,
@@ -407,7 +407,7 @@ def run_discovery(
                     fold_preds=[hold_pred],
                     fold_y_class=[hold_class],
                     ohlcv=ohlcv,
-                    mode_cfg=cfg,
+                    mode_cfg=_dp_cfg,
                     timestamps=holdout_ts,
                     symbols=holdout_sym,
                     confidence_threshold=config.confidence_threshold,
