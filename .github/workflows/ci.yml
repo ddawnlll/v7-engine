@@ -40,23 +40,25 @@ jobs:
         run: make check-real-data
 
       - name: Run lib + integration + simulation tests
-        run: PYTHONPATH=alphaforge/src:v7/src python -m pytest lib/tests/ integration/tests/ simulation/tests/ -q \
-          --ignore=lib/tests/test_data_lake_downloader.py \
-          --ignore=lib/tests/test_market_data_backfill.py \
-          --ignore=lib/tests/test_market_data_storage.py \
-          --ignore=lib/tests/test_data_lake_catalog.py \
-          --ignore=lib/tests/test_data_lake_gateway.py \
-          --ignore=lib/tests/test_data_lake_backfill_planner.py \
-          --ignore=lib/tests/test_data_lake_checksum.py \
-          --ignore=lib/tests/test_data_lake_coverage.py \
-          --ignore=lib/tests/test_data_lake_health.py \
-          --ignore=lib/tests/test_data_lake_passport.py \
-          --ignore=lib/tests/test_data_lake_spec.py \
-          --ignore=lib/tests/test_data_lake_storage.py \
-          --ignore=integration/tests/test_alphaforge_report_builders.py \
-          --ignore=integration/tests/test_alphaforge_scaffold_imports.py \
-          --ignore=integration/tests/test_alphaforge_research_report.py \
-          --ignore=integration/tests/test_mock_backfill_writes_outputs.py \
+        run: >
+          PYTHONPATH=alphaforge/src:v7/src python -m pytest
+          lib/tests/ integration/tests/ simulation/tests/ -q
+          --ignore=lib/tests/test_data_lake_downloader.py
+          --ignore=lib/tests/test_market_data_backfill.py
+          --ignore=lib/tests/test_market_data_storage.py
+          --ignore=lib/tests/test_data_lake_catalog.py
+          --ignore=lib/tests/test_data_lake_gateway.py
+          --ignore=lib/tests/test_data_lake_backfill_planner.py
+          --ignore=lib/tests/test_data_lake_checksum.py
+          --ignore=lib/tests/test_data_lake_coverage.py
+          --ignore=lib/tests/test_data_lake_health.py
+          --ignore=lib/tests/test_data_lake_passport.py
+          --ignore=lib/tests/test_data_lake_spec.py
+          --ignore=lib/tests/test_data_lake_storage.py
+          --ignore=integration/tests/test_alphaforge_report_builders.py
+          --ignore=integration/tests/test_alphaforge_scaffold_imports.py
+          --ignore=integration/tests/test_alphaforge_research_report.py
+          --ignore=integration/tests/test_mock_backfill_writes_outputs.py
           --ignore=simulation/tests/test_simulation_writer.py
 
       - name: Run runtime tests

@@ -13,7 +13,7 @@ def _get_parser() -> argparse.ArgumentParser:
     """Extract the parser from train.py main() without running it."""
     # We import and check the source rather than call main()
     import alphaforge.train as train_mod
-    src = Path(train_mod.__file__).read_text()
+    src = Path(train_mod.__file__).read_text(encoding="utf-8")
     return src
 
 

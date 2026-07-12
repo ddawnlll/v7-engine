@@ -65,6 +65,10 @@ def simulate_path_from_arrays(
     entry_risk: float,
     close_price: float,
     liquidation_price: Optional[float] = None,
+    # NOTE(#313): liquidation_price is wired as optional API surface for #302.
+    # Currently always None — LIQUIDATED cannot fire in production until
+    # Futures Position & Margin Model delivers a liquidation price.
+    # When #302 lands, pass the computed liquidation_price here.
 ) -> ExitResult:
     """Vectorized path simulation from pre-extracted numpy arrays.
 
