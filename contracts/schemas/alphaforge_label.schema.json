@@ -202,6 +202,20 @@
     "cost_edge_warning": {
       "type": "boolean",
       "description": "True when gross edge exists (R_gross > 0) but net edge is consumed by costs (R_net <= 0). Must be flagged in label dataset."
+    },
+    "leverage": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Leverage multiplier used for this label (1x = no leverage). Default 1. From SimulationProfile.leverage."
+    },
+    "liquidation_distance_r": {
+      "type": "number",
+      "description": "Distance from entry price to liquidation price in R units. 0 when no leverage (1x). Computed as (entry - liquidation) / (ATR * stop_multiplier)."
+    },
+    "margin_ratio_at_entry": {
+      "type": "number",
+      "description": "Initial margin ratio at entry (IMR = 1/leverage). 0 for 1x (spot-equivalent)."
     }
   }
 }
