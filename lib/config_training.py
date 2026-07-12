@@ -116,12 +116,17 @@ class TrainingConfig:
 
 
 def _compute_label_horizon_from_profile(profile: Any) -> int:
-    """Derive a sensible label horizon from the simulation profile.
+    """Derive label horizon from MODE_LABEL_DEFAULTS (per-mode research choices).
 
     For triple-barrier (stop/target) labels, label_horizon = max_holding_bars
-    is correct.  For forward-return labels, a horizon equal to max_holding_bars
-    is a conservative choice (covers the full holding period).
+    is correct in principle, but AGGRESSIVE_SCALP research chose 8 bars
+    (vs max_holding_bars=5) to ensure enough forward price context.
+    MODE_LABEL_DEFAULTS preserves these per-mode research choices.
     """
+    mode_key = profile.mode.value if hasattr(profile.mode, "value") else str(profile.mode)
+    defaults = MODE_LABEL_DEFAULTS.get(mode_key)
+    if defaults is not None:
+        return int(defaults["label_horizon"])
     return profile.max_holding_bars
 
 
