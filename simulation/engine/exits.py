@@ -64,6 +64,7 @@ def simulate_path_from_arrays(
     available_bars: int,
     entry_risk: float,
     close_price: float,
+    liquidation_price: Optional[float] = None,
 ) -> ExitResult:
     """Vectorized path simulation from pre-extracted numpy arrays.
 
@@ -100,12 +101,33 @@ def simulate_path_from_arrays(
     if is_long:
         stop_bars = np.where(lows <= stop_price)[0]
         target_bars = np.where(highs >= target_price)[0]
+        liq_bars = np.where(lows <= liquidation_price)[0] if liquidation_price is not None else np.array([], dtype=int)
     else:
         stop_bars = np.where(highs >= stop_price)[0]
         target_bars = np.where(lows <= target_price)[0]
+        liq_bars = np.where(highs >= liquidation_price)[0] if liquidation_price is not None else np.array([], dtype=int)
 
     first_stop = int(stop_bars[0]) if len(stop_bars) > 0 else available_bars
     first_target = int(target_bars[0]) if len(target_bars) > 0 else available_bars
+    first_liq = int(liq_bars[0]) if len(liq_bars) > 0 else available_bars
+
+    # Liquidation takes priority over stop/target on same bar (Issue #313)
+    if first_liq < available_bars and first_liq <= first_stop:
+        exit_idx = first_liq
+        if is_long:
+            realized_gross = (liquidation_price - entry_price) / entry_risk if entry_risk > 0 else 0.0
+        else:
+            realized_gross = (entry_price - liquidation_price) / entry_risk if entry_risk > 0 else 0.0
+        mfe, mae, mfe_r, mae_r, t_mfe, t_mae = _compute_path_metrics(
+            highs[:exit_idx], lows[:exit_idx], entry_price, entry_risk, is_long,
+        )
+        return ExitResult(
+            exit_reason="LIQUIDATED", exit_price=liquidation_price,
+            exit_bar_index=exit_idx, hold_duration_bars=exit_idx + 1,
+            realized_r_gross=realized_gross,
+            mfe=mfe, mae=mae, mfe_r=mfe_r, mae_r=mae_r,
+            time_to_mfe=t_mfe, time_to_mae=t_mae,
+        )
 
     # Conservative: stop checked first → wins on same bar
     if first_stop <= first_target and first_stop < available_bars:
