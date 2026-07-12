@@ -1,0 +1,167 @@
+# PRAXIS PlanSpec v0.1 — CI pytest continuation fix
+
+planSpecVersion: "0.1.0"
+kind: "ImplementationPlan"
+profile: "praxis-v0.1"
+
+metadata:
+  planId: "HERMES-326"
+  title: "CI: fix broken pytest --ignore continuation in ci.yml"
+  description: "Replace backslash continuations with YAML folded block scalar in ci.yml so downstream jobs actually run."
+  createdAt: "2026-07-12T18:00:00Z"
+  humanId: "ddawnlll"
+  status: "draft"
+
+authority:
+  executor: "OtherAgent"
+  completionAuthority: "PraxisTruthKernel"
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: "human"
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+
+workspace:
+  root: "."
+  allowedFiles:
+    - ".github/workflows/ci.yml"
+    - ".praxis/issue-326.plan.yaml"
+  forbiddenFiles: []
+
+execution:
+  mode: "single_session"
+  agent: "claude-code"
+  autonomy: "implementation_allowed"
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 2
+
+tasks:
+  - id: "task-ci-fix"
+    title: "CI pytest continuation fix"
+    objective: "Replace | literal block with backslash continuations by > folded block scalar in ci.yml so downstream test jobs actually run."
+    artifactPolicy:
+      class: "config"
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+      advisoryReviewAllowed: true
+    acceptanceCriteria:
+      - id: "AC-YAML-SYNTAX"
+        description: "ci.yml is valid YAML."
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "command_output"
+          commandRef: "CMD-YAML-VALIDATE"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["command"]
+        requiredEvidence: ["command"]
+      - id: "AC-CI-GREEN"
+        description: "CI run on fix/ci-yaml-breakage returns success."
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "command_output"
+          commandRef: "CMD-CI-CHECK"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["command"]
+        requiredEvidence: ["command"]
+    implementation:
+      instructions:
+        - "In ci.yml, change 'Run lib + integration + simulation tests' step from `run: |` to `run: >`."
+        - "Each --ignore flag on its own line; YAML folded scalar joins them with spaces."
+        - "Validate YAML syntax."
+        - "Push to fix/ci-yaml-breakage."
+        - "Do NOT merge to main."
+      expectedOutputs:
+        - "ci.yml valid YAML."
+        - "CI run green on fix/ci-yaml-breakage."
+
+commands:
+  exactAllowedCommands:
+    - id: "CMD-YAML-VALIDATE"
+      kind: "lint"
+      command: "python -c \"import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))\""
+      evidenceRequired: true
+      timeoutSeconds: 30
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+    - id: "CMD-CI-CHECK"
+      kind: "discovery"
+      command: "gh run list --branch fix/ci-yaml-breakage --limit 3 --json headBranch,conclusion --jq '.[] | select(.headBranch==\"fix/ci-yaml-breakage\") | .conclusion' | head -1"
+      evidenceRequired: true
+      timeoutSeconds: 600
+      noTestsFoundIsFailure: false
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: true
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: "git push --force"
+      reason: "Force push prohibited"
+    - command: "rm -rf /"
+      reason: "Destructive"
+
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: ["diff", "source", "command"]
+  hashWhenAvailable: true
+
+gates:
+  sequence: ["SchemaGate", "LockGate", "EvidenceGate", "WiringGate", "ExecGate", "FinalGate"]
+  verdicts: ["PASS", "HOLD", "FAIL"]
+  reasonCodes:
+    SchemaGate: ["SCHEMA_INVALID", "SCHEMA_MISSING_REQUIRED"]
+    LockGate: ["LOCK_MISSING", "LOCK_HASH_MISMATCH"]
+    EvidenceGate: ["EVIDENCE_EMPTY", "DIFF_EMPTY"]
+    WiringGate: ["WIRING_DECLARED_UNIT_MISSING"]
+    ExecGate: ["EXIT_CODE_NONZERO", "FORBIDDEN_COMMAND"]
+    FinalGate: ["ALL_CRITERIA_MET", "CRITERIA_PARTIAL"]
+
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 2
+  reverifyCommand: "python -c \"import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))\""
+  repairPacketFormat:
+    json: true
+    markdown: true
+
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: ".praxis/issue-326.lock"
+  hashes:
+    - "planHash"
+    - "acceptanceCriteriaHash"
+    - "artifactPolicyHash"
+    - "integrationContractHash"
+    - "commandPolicyHash"
+    - "allowedFilesHash"
+    - "forbiddenFilesHash"
+
+reports:
+  protocol: "ACCP"
+  artifactDirectory: "reports/"
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true
