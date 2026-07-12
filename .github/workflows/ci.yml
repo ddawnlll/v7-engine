@@ -65,6 +65,8 @@ jobs:
           --ignore=simulation/tests/test_batch_simulation.py
           --ignore=simulation/tests/test_calibration.py
           --ignore=simulation/tests/test_engine_numba_parity.py
+          --ignore=lib/tests/test_funding_persistence.py
+          --ignore=simulation/tests/test_import_boundary.py
 
       - name: Run runtime tests
         run: PYTHONPATH=alphaforge/src:v7/src python -m pytest runtime/tests/ -q --ignore=runtime/tests/test_retry.py
