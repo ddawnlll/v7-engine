@@ -595,6 +595,10 @@ class XGBoostTrainer:
                 result[i] = LABEL_TO_INT[label]
             return result
 
+        # Regression objective: pass float labels through as-is
+        if self._objective == "reg:squarederror" and y.dtype.kind == "f":
+            return y.astype(np.float64)
+
         raise ValueError(
             f"Unsupported label dtype: {y.dtype}. Use string or integer labels."
         )
