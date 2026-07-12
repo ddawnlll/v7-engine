@@ -13,8 +13,11 @@ import numpy as np
 import pandas as pd
 
 warnings.filterwarnings("ignore")
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "simulation"))
+ROOT = str(Path(__file__).resolve().parent.parent)
+sys.path.insert(0, ROOT)
+sys.path.insert(0, ROOT + "/simulation")
+sys.path.insert(0, ROOT + "/alphaforge/src")
+sys.path.insert(0, ROOT + "/lib")
 
 # ── Config ──────────────────────────────────────────────────────────────
 N_SYMBOLS = 10
