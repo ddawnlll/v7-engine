@@ -1,0 +1,160 @@
+planSpecVersion: "0.1.0"
+kind: "ImplementationPlan"
+profile: "praxis-v0.1"
+
+metadata:
+  planId: "HERMES-179"
+  title: "Wire economic regression objective (Part B)"
+  description: "Add reg:squarederror objective to XGBoostTrainer + --regression-objective CLI flag in train.py"
+  createdAt: "2026-07-12T19:00:00Z"
+  humanId: "ddawnlll"
+  status: "draft"
+
+authority:
+  executor: "OtherAgent"
+  completionAuthority: "PraxisTruthKernel"
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: "human"
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+
+workspace:
+  root: "."
+  allowedFiles:
+    - "alphaforge/src/alphaforge/training/xgb_trainer.py"
+    - "alphaforge/src/alphaforge/train.py"
+    - "alphaforge/tests/test_issue_179_regression_objective.py"
+  forbiddenFiles: []
+
+execution:
+  mode: "single_session"
+  agent: "claude-code"
+  autonomy: "implementation_allowed"
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 2
+
+tasks:
+  - id: "task-regression"
+    title: "Wire regression objective"
+    objective: "Enable reg:squarederror training via XGBoostTrainer + CLI"
+    artifactPolicy:
+      class: "config"
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+      advisoryReviewAllowed: true
+    acceptanceCriteria:
+      - id: "AC-179-PARAM"
+        description: "XGBoostTrainer accepts objective='reg:squarederror' param"
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "test_output"
+          commandRef: "CMD-TEST-179"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["test_output", "command"]
+        requiredEvidence: ["test_output", "command"]
+      - id: "AC-179-CLI"
+        description: "--regression-objective CLI flag wired in train.py"
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "test_output"
+          commandRef: "CMD-TEST-179"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["test_output", "command"]
+        requiredEvidence: ["test_output", "command"]
+      - id: "AC-179-TRAIN"
+        description: "Regression training with continuous y values succeeds"
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "test_output"
+          commandRef: "CMD-TEST-179"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["test_output", "command"]
+        requiredEvidence: ["test_output", "command"]
+    implementation:
+      instructions:
+        - "Add objective param to XGBoostTrainer.__init__"
+        - "Override objective in _extract_xgb_params"
+        - "Remove num_class for regression, use rmse eval_metric"
+        - "Add regression branch in _compute_metrics"
+        - "Add --regression-objective CLI flag in train.py"
+        - "Wire objective to XGBoostTrainer in both final_train + prune retrain"
+      expectedOutputs:
+        - "5 tests in test_issue_179_regression_objective.py PASS"
+
+commands:
+  exactAllowedCommands:
+    - id: "CMD-TEST-179"
+      kind: "final_validation"
+      command: "PYTHONPATH=alphaforge/src:. python -m pytest alphaforge/tests/test_issue_179_regression_objective.py -v -q"
+      evidenceRequired: true
+      timeoutSeconds: 60
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: "git push --force"
+      reason: "Force push prohibited"
+
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: ["diff", "source", "command", "test_output"]
+  hashWhenAvailable: true
+
+gates:
+  sequence: ["SchemaGate", "LockGate", "EvidenceGate", "WiringGate", "ExecGate", "FinalGate"]
+  verdicts: ["PASS", "HOLD", "FAIL"]
+  reasonCodes:
+    SchemaGate: ["SCHEMA_INVALID", "SCHEMA_MISSING_REQUIRED"]
+    LockGate: ["LOCK_MISSING", "LOCK_HASH_MISMATCH"]
+    EvidenceGate: ["EVIDENCE_EMPTY", "DIFF_EMPTY"]
+    WiringGate: ["WIRING_DECLARED_UNIT_MISSING"]
+    ExecGate: ["TESTS_FAILURES", "EXIT_CODE_NONZERO"]
+    FinalGate: ["ALL_CRITERIA_MET", "CRITERIA_PARTIAL"]
+
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 2
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python -m pytest alphaforge/tests/test_issue_179_regression_objective.py -v -q"
+  repairPacketFormat:
+    json: true
+    markdown: true
+
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: ".praxis/issue-179.lock"
+  hashes: ["planHash", "acceptanceCriteriaHash", "artifactPolicyHash", "commandPolicyHash", "allowedFilesHash", "forbiddenFilesHash"]
+
+reports:
+  protocol: "ACCP"
+  artifactDirectory: "reports/"
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

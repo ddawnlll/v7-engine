@@ -1,0 +1,155 @@
+planSpecVersion: "0.1.0"
+kind: "ImplementationPlan"
+profile: "praxis-v0.1"
+
+metadata:
+  planId: "HERMES-268"
+  title: "Training CLI flags: feature pruning, evidence passport, holdout cutoff"
+  description: "Tests for --prune-features (#268), --passport (#183), --holdout-cutoff (#306)"
+  createdAt: "2026-07-12T19:00:00Z"
+  humanId: "ddawnlll"
+  status: "draft"
+
+authority:
+  executor: "OtherAgent"
+  completionAuthority: "PraxisTruthKernel"
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: "human"
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+
+workspace:
+  root: "."
+  allowedFiles:
+    - "alphaforge/src/alphaforge/train.py"
+    - "alphaforge/tests/test_issue_268_183_306_cli_flags.py"
+  forbiddenFiles: []
+
+execution:
+  mode: "single_session"
+  agent: "claude-code"
+  autonomy: "implementation_allowed"
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 2
+
+tasks:
+  - id: "task-cli-flags"
+    title: "CLI flag tests + try/except fix"
+    objective: "Verify --prune-features, --passport, --holdout-cutoff wired + tighten try/except"
+    artifactPolicy:
+      class: "test_only"
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+      advisoryReviewAllowed: true
+    acceptanceCriteria:
+      - id: "AC-268-TEST"
+        description: "--prune-features flag detected in train.py source"
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "test_output"
+          commandRef: "CMD-TEST-CLI"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["test_output"]
+        requiredEvidence: ["test_output"]
+      - id: "AC-183-TEST"
+        description: "--passport flag detected + try/except narrowed"
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "test_output"
+          commandRef: "CMD-TEST-CLI"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["test_output"]
+        requiredEvidence: ["test_output"]
+      - id: "AC-306-TEST"
+        description: "--holdout-cutoff flag detected in train.py source"
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "test_output"
+          commandRef: "CMD-TEST-CLI"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["test_output"]
+        requiredEvidence: ["test_output"]
+    implementation:
+      instructions:
+        - "Add import-based tests for all 3 CLI flags"
+        - "Narrow bare except Exception to specific exception types"
+      expectedOutputs:
+        - "4 tests PASS"
+
+commands:
+  exactAllowedCommands:
+    - id: "CMD-TEST-CLI"
+      kind: "final_validation"
+      command: "PYTHONPATH=alphaforge/src:. python -m pytest alphaforge/tests/test_issue_268_183_306_cli_flags.py -v -q"
+      evidenceRequired: true
+      timeoutSeconds: 30
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: "git push --force"
+      reason: "Force push prohibited"
+
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: ["diff", "source", "command", "test_output"]
+  hashWhenAvailable: true
+
+gates:
+  sequence: ["SchemaGate", "LockGate", "EvidenceGate", "WiringGate", "ExecGate", "FinalGate"]
+  verdicts: ["PASS", "HOLD", "FAIL"]
+  reasonCodes:
+    SchemaGate: ["SCHEMA_INVALID", "SCHEMA_MISSING_REQUIRED"]
+    LockGate: ["LOCK_MISSING", "LOCK_HASH_MISMATCH"]
+    EvidenceGate: ["EVIDENCE_EMPTY", "DIFF_EMPTY"]
+    WiringGate: ["WIRING_DECLARED_UNIT_MISSING"]
+    ExecGate: ["TESTS_FAILURES", "EXIT_CODE_NONZERO"]
+    FinalGate: ["ALL_CRITERIA_MET", "CRITERIA_PARTIAL"]
+
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 2
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python -m pytest alphaforge/tests/test_issue_268_183_306_cli_flags.py -v -q"
+  repairPacketFormat:
+    json: true
+    markdown: true
+
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: ".praxis/issue-268.lock"
+  hashes: ["planHash", "acceptanceCriteriaHash", "artifactPolicyHash", "commandPolicyHash", "allowedFilesHash", "forbiddenFilesHash"]
+
+reports:
+  protocol: "ACCP"
+  artifactDirectory: "reports/"
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

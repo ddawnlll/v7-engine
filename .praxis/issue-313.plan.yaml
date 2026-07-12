@@ -1,0 +1,142 @@
+planSpecVersion: "0.1.0"
+kind: "ImplementationPlan"
+profile: "praxis-v0.1"
+
+metadata:
+  planId: "HERMES-313"
+  title: "AF-SIM-005 — Intrabar Exit Precedence: LIQUIDATED"
+  description: "Add LIQUIDATED to ExitReason enum, EXIT_LIQUIDATED constant, liquidation_price param in exits.py"
+  createdAt: "2026-07-12T19:00:00Z"
+  humanId: "ddawnlll"
+  status: "draft"
+
+authority:
+  executor: "OtherAgent"
+  completionAuthority: "PraxisTruthKernel"
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: "human"
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+
+workspace:
+  root: "."
+  allowedFiles:
+    - "simulation/contracts/models.py"
+    - "simulation/engine/cuda_kernels.py"
+    - "simulation/engine/exits.py"
+    - "contracts/schemas/simulation_output.schema.json"
+    - "contracts/schemas/alphaforge_label.schema.json"
+  forbiddenFiles: []
+
+execution:
+  mode: "single_session"
+  agent: "claude-code"
+  autonomy: "implementation_allowed"
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 2
+
+tasks:
+  - id: "task-liquidated"
+    title: "LIQUIDATED exit reason + precedence"
+    objective: "Add LIQUIDATED to ExitReason enum, schema files, cuda constant, exits.py precedence"
+    artifactPolicy:
+      class: "config"
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+      advisoryReviewAllowed: true
+    acceptanceCriteria:
+      - id: "AC-313-ENUM"
+        description: "ExitReason.LIQUIDATED exists"
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "test_output"
+          commandRef: "CMD-TEST-313"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["test_output"]
+        requiredEvidence: ["test_output"]
+      - id: "AC-313-PRECEDENCE"
+        description: "Liquidation wins over stop on same bar"
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "test_output"
+          commandRef: "CMD-TEST-313"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["test_output"]
+        requiredEvidence: ["test_output"]
+    implementation:
+      instructions:
+        - "Add LIQUIDATED to ExitReason enum in models.py"
+        - "Update both JSON schema files with LIQUIDATED enum value"
+        - "Add EXIT_LIQUIDATED = 3 to cuda_kernels.py"
+        - "Add liquidation_price param to exits.py simulate_path_from_arrays"
+        - "Add liquidation check before stop in exits.py"
+      expectedOutputs:
+        - "LIQUIDATED usable in both directions via test"
+
+commands:
+  exactAllowedCommands:
+    - id: "CMD-TEST-313"
+      kind: "final_validation"
+      command: "PYTHONPATH=alphaforge/src:. python -m pytest alphaforge/tests/test_issue_299_action_schema.py::TestCostSymmetry -v -q"
+      evidenceRequired: true
+      timeoutSeconds: 30
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: "git push --force"
+      reason: "Force push prohibited"
+
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: ["diff", "source", "command", "test_output"]
+  hashWhenAvailable: true
+
+gates:
+  sequence: ["SchemaGate", "LockGate", "EvidenceGate", "WiringGate", "ExecGate", "FinalGate"]
+  verdicts: ["PASS", "HOLD", "FAIL"]
+  reasonCodes: {}
+
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 2
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python -m pytest alphaforge/tests/test_issue_299_action_schema.py::TestCostSymmetry -v -q"
+  repairPacketFormat:
+    json: true
+    markdown: true
+
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: ".praxis/issue-313.lock"
+  hashes: ["planHash", "acceptanceCriteriaHash", "artifactPolicyHash", "commandPolicyHash", "allowedFilesHash", "forbiddenFilesHash"]
+
+reports:
+  protocol: "ACCP"
+  artifactDirectory: "reports/"
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true

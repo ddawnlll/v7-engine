@@ -1,0 +1,144 @@
+planSpecVersion: "0.1.0"
+kind: "ImplementationPlan"
+profile: "praxis-v0.1"
+
+metadata:
+  planId: "HERMES-299"
+  title: "Action Space Machine-Readable Schema"
+  description: "JSON Schema for 9-action encoding + validator tests + LONG/SHORT symmetry tests"
+  createdAt: "2026-07-12T19:00:00Z"
+  humanId: "ddawnlll"
+  status: "draft"
+
+authority:
+  executor: "OtherAgent"
+  completionAuthority: "PraxisTruthKernel"
+  agentSelfReportIsClaimOnly: true
+  criteriaSourceRequired: "human"
+  reportsAreEvidenceOnly: true
+  pluginOwnsTruth: false
+
+workspace:
+  root: "."
+  allowedFiles:
+    - "contracts/schemas/action_space.schema.json"
+    - "alphaforge/tests/test_issue_299_action_schema.py"
+  forbiddenFiles: []
+
+execution:
+  mode: "single_session"
+  agent: "claude-code"
+  autonomy: "implementation_allowed"
+  canModifyCode: true
+  canModifyPlan: false
+  canModifyAcceptanceCriteria: false
+  maxRepairLoops: 2
+
+tasks:
+  - id: "task-action-schema"
+    title: "Action space schema + tests"
+    objective: "JSON Schema + validator + symmetry tests"
+    artifactPolicy:
+      class: "schema"
+      wiringRequired: false
+      reachabilityRequired: false
+      executionRequired: false
+      deterministicEvidenceRequired: true
+      advisoryReviewAllowed: true
+    acceptanceCriteria:
+      - id: "AC-299-SCHEMA"
+        description: "Schema defines all 9 actions with correct const values"
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "test_output"
+          commandRef: "CMD-TEST-299"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["test_output"]
+        requiredEvidence: ["test_output"]
+      - id: "AC-299-SYMMETRY"
+        description: "LONG/SHORT fee/funding/liquidation symmetry verified"
+        level: "required"
+        humanApproved: true
+        criteriaSource: "human"
+        verification:
+          type: "test_output"
+          commandRef: "CMD-TEST-299"
+          deterministic: true
+          canSatisfyFinalGate: true
+          advisoryOnly: false
+          evidenceRefs: ["test_output"]
+        requiredEvidence: ["test_output"]
+    implementation:
+      instructions:
+        - "Create contracts/schemas/action_space.schema.json"
+        - "Add 9 actions with const values 0-8"
+        - "Add validator tests for all actions"
+        - "Add LONG/SHORT symmetry tests"
+      expectedOutputs:
+        - "13 tests PASS"
+
+commands:
+  exactAllowedCommands:
+    - id: "CMD-TEST-299"
+      kind: "final_validation"
+      command: "PYTHONPATH=alphaforge/src:. python -m pytest alphaforge/tests/test_issue_299_action_schema.py -v -q"
+      evidenceRequired: true
+      timeoutSeconds: 30
+      noTestsFoundIsFailure: true
+      watchModeForbidden: true
+      expectedExitCode: 0
+      networkAllowed: false
+      shellAllowed: true
+  validationEvidenceRules:
+    finalPromotionRequiresExactAllowedCommand: true
+    discoveryCommandsMayNotSatisfyFinalValidation: true
+    runtimeGrantCommandsCanSatisfyValidationOnlyIfGrantStatesValidationPurpose: true
+  hardDeniedCommands:
+    - command: "git push --force"
+      reason: "Force push prohibited"
+
+evidence:
+  ledgerRequired: true
+  requiredEvidenceTypes: ["diff", "source", "command", "test_output"]
+  hashWhenAvailable: true
+
+gates:
+  sequence: ["SchemaGate", "LockGate", "EvidenceGate", "WiringGate", "ExecGate", "FinalGate"]
+  verdicts: ["PASS", "HOLD", "FAIL"]
+  reasonCodes:
+    SchemaGate: ["SCHEMA_INVALID", "SCHEMA_MISSING_REQUIRED"]
+    LockGate: ["LOCK_MISSING", "LOCK_HASH_MISMATCH"]
+    EvidenceGate: ["EVIDENCE_EMPTY", "DIFF_EMPTY"]
+    WiringGate: ["WIRING_DECLARED_UNIT_MISSING"]
+    ExecGate: ["TESTS_FAILURES", "EXIT_CODE_NONZERO"]
+    FinalGate: ["ALL_CRITERIA_MET", "CRITERIA_PARTIAL"]
+
+repair:
+  enabled: true
+  failedCriteriaOnly: true
+  mayModifyAcceptanceCriteria: false
+  mayModifyPlan: false
+  allowedFilesFromFailedTasksOnly: true
+  maxRepairLoops: 2
+  reverifyCommand: "PYTHONPATH=alphaforge/src:. python -m pytest alphaforge/tests/test_issue_299_action_schema.py -v -q"
+  repairPacketFormat:
+    json: true
+    markdown: true
+
+locking:
+  lockRequired: true
+  canonicalHashRequired: true
+  planLockFile: ".praxis/issue-299.lock"
+  hashes: ["planHash", "acceptanceCriteriaHash", "artifactPolicyHash", "commandPolicyHash", "allowedFilesHash", "forbiddenFilesHash"]
+
+reports:
+  protocol: "ACCP"
+  artifactDirectory: "reports/"
+  reportsAreEvidenceOnly: true
+  reportsDoNotAuthorizeExecution: true
+  commandEvidenceRequired: true
+  repairPacketRequiredOnHoldOrFail: true
