@@ -263,6 +263,7 @@ class XGBoostTrainer:
         mode: str = "SWING",
         random_seed: int = RANDOM_SEED,
         hyperparameters: Optional[Dict[str, Any]] = None,
+        objective: str = "multi:softprob",
     ):
         """Initialize trainer.
 
@@ -283,6 +284,7 @@ class XGBoostTrainer:
         else:
             self._hyperparameters = _MODE_DEFAULT_HP.get(mode, SWING_DEFAULT_HYPERPARAMS).copy()
         self._rng = np.random.RandomState(random_seed)
+        self._objective = objective
 
     @property
     def mode(self) -> str:
@@ -609,6 +611,8 @@ class XGBoostTrainer:
         for k in xgb_param_keys:
             if k in self._hyperparameters:
                 params[k] = self._hyperparameters[k]
+        # Override objective from constructor (enables regression mode)
+        params["objective"] = self._objective
         return params
 
     def _compute_metrics(

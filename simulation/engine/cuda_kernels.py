@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 EXIT_STOP_HIT = 0
 EXIT_TARGET_HIT = 1
 EXIT_TIME_EXIT = 2
+EXIT_LIQUIDATED = 3
 
 
 # ═══════════════════════════════════════════════════════════════════════
