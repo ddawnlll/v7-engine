@@ -59,6 +59,11 @@ class EvidencePassport:
     data_summary: dict = field(default_factory=dict)
     limitations: list[str] = field(default_factory=list)
 
+    # -- Signal quality (IC / Rank IC — NOT trade profitability)
+    # AlphaForge measures signal quality, not trade outcomes.  These fields
+    # carry the IC / Rank IC / calibration evidence that V7 gates consume.
+    signal_quality: dict = field(default_factory=dict)
+
 
 # ---------------------------------------------------------------------------
 # Builder

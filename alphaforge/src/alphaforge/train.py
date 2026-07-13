@@ -2025,8 +2025,13 @@ def main():
             with open(pp_path, "w") as f:
                 json.dump(asdict(passport), f, indent=2, default=str)
             print(f"  EvidencePassport saved: {pp_path.resolve()}")
-        except (ImportError, AttributeError, TypeError, OSError, json.JSONDecodeError) as e:
-            logger.warning("Could not build EvidencePassport: %s", e)
+        except Exception as e:
+            logger.error(
+                "CRITICAL: EvidencePassport build FAILED — requested via --passport %s "
+                "but builder raised: %s: %s",
+                args.passport, type(e).__name__, e,
+            )
+            sys.exit(1)
 
     # Save report if requested
     if args.output:

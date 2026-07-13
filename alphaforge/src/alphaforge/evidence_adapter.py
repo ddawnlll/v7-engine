@@ -48,6 +48,7 @@ def build_alphaforge_passport(
         - ``labels`` (list[str], optional): ground-truth label sequence.
         - ``gross_r`` (list[float], optional): per-bar gross returns in R.
         - ``fee_pct`` (float, optional): round-trip fee fraction.
+        - ``feature_names`` (list[str], optional): feature column names.
     mode:
         Trading mode (e.g. ``"SWING"``, ``"SCALP"``).
     hypothesis_refs:
@@ -65,7 +66,26 @@ def build_alphaforge_passport(
 
     passport = EvidencePassportBuilder.from_wfv_results(wfv_results, mode)
 
-    # 2. Compute baselines if label data is available
+    # 2. Populate signal quality section from WFV metrics
+    #    IC/Rank IC are already computed by walk_forward_runner.py
+    #    and present in the metrics dict.  Lift them into a dedicated
+    #    signal_quality field so V7 gates can consume them independently
+    #    of trade-level metrics.
+    metrics: dict = wfv_results.get("metrics", {}) or {}
+    per_fold: list[dict] = wfv_results.get("per_fold_results", []) or []
+    signal_quality = _build_signal_quality(metrics, per_fold)
+    passport.signal_quality = signal_quality
+
+    # 3. Add the Layer Metric Ownership disclaimer
+    passport.limitations.insert(
+        0,
+        "This passport reports SIGNAL QUALITY (IC, Rank IC, calibration error), "
+        "not trade profitability (Sharpe, win rate, profit factor). "
+        "Trade-level metrics belong to V7 evaluation, not AlphaForge. "
+        "See v7/docs/pipeline/evaluation.md § Layer Metric Ownership.",
+    )
+
+    # 4. Compute baselines if label data is available
     labels: list[str] | None = wfv_results.get("labels")
     gross_r: list[float] | None = wfv_results.get("gross_r")
     fee_pct: float = wfv_results.get("fee_pct", 0.0008)  # 8 bps default
@@ -89,7 +109,7 @@ def build_alphaforge_passport(
     else:
         passport.claim_statuses["MODEL_BEATS_BASELINES"] = "BLOCKED"
 
-    # 3. Evaluate hard caps
+    # 5. Evaluate hard caps
     current_evidence: dict[str, Any] = _build_evidence_flags(passport, mode)
     hard_cap_result: HardCapResult = apply_hard_caps(
         passport.metrics,
@@ -97,8 +117,8 @@ def build_alphaforge_passport(
     )
     passport.hard_caps = hard_cap_result
 
-    # 4. Set claim statuses
-    _set_claim_statuses(passport, hard_cap_result)
+    # 6. Set claim statuses
+    _set_claim_statuses(passport, hard_cap_result, signal_quality)
 
     return passport
 
@@ -143,20 +163,77 @@ def _build_evidence_flags(passport: EvidencePassport, mode: str) -> dict[str, An
         ),
         # Feature ablation
         "feature_ablation_done": False,
+        # Signal quality (IC-based)
+        "ic_present": bool(metrics.get("oos_ic") is not None),
+        "rank_ic_present": bool(metrics.get("oos_rank_ic") is not None),
     }
     return evidence
+
+
+def _build_signal_quality(
+    metrics: dict,
+    per_fold: list[dict],
+) -> dict:
+    """Extract IC / Rank IC evidence from WFV metrics into a dedicated dict.
+
+    The values are ALREADY computed by ``walk_forward_runner.py`` and
+    present in *metrics* and *per_fold*.  This function lifts them into
+    a structured field so V7 gates can consume signal quality independently
+    of trade-level metrics.
+    """
+    sq: dict = {}
+
+    # Aggregate IC
+    sq["oos_ic"] = metrics.get("oos_ic", 0.0)
+    sq["oos_rank_ic"] = metrics.get("oos_rank_ic", 0.0)
+    sq["oos_ic_ir"] = metrics.get("oos_ic_ir", 0.0)
+
+    # Per-fold IC / Rank IC
+    sq["per_fold_ic"] = [
+        float(f.get("oos_ic", 0.0)) for f in per_fold
+    ]
+    sq["per_fold_rank_ic"] = [
+        float(f.get("oos_rank_ic", 0.0)) for f in per_fold
+    ]
+
+    # IC stability (variance across folds)
+    ic_values = [v for v in sq["per_fold_ic"] if v != 0.0]
+    if len(ic_values) > 1:
+        import numpy as np
+        sq["ic_stability"] = float(np.std(ic_values, ddof=1))
+    else:
+        sq["ic_stability"] = 0.0
+
+    # Disclaimer — signal quality NOT trade profitability
+    # (added as a limitation in build_alphaforge_passport, but also
+    #  documented here for direct access)
+    sq["metric_philosophy"] = (
+        "SIGNAL_QUALITY_ONLY — AlphaForge measures IC, Rank IC, and "
+        "calibration error. Trade-level metrics (Sharpe, win rate, "
+        "profit factor) belong to V7 evaluation."
+    )
+
+    return sq
 
 
 def _set_claim_statuses(
     passport: EvidencePassport,
     hard_cap_result: HardCapResult,
+    signal_quality: dict | None = None,
 ) -> None:
     """Populate passport.claim_statuses based on metrics and hard caps."""
     metrics = passport.metrics
 
-    # ALPHA_HAS_EDGE
-    if metrics.get("net_expectancy_r", 0) > 0 and metrics.get("net_sharpe_ratio", 0) > 0:
+    # ALPHA_HAS_EDGE — primary signal quality gate
+    # References IC/Rank IC evidence, not just trade-level metrics
+    # (per Layer Metric Ownership, AlphaForge measures signal quality).
+    sq = signal_quality or {}
+    oos_ic = sq.get("oos_ic", metrics.get("oos_ic", 0.0))
+    oos_rank_ic = sq.get("oos_rank_ic", metrics.get("oos_rank_ic", 0.0))
+    if oos_ic > 0 and oos_rank_ic > 0:
         passport.claim_statuses["ALPHA_HAS_EDGE"] = "PASSED"
+    elif oos_ic > 0 or oos_rank_ic > 0:
+        passport.claim_statuses["ALPHA_HAS_EDGE"] = "PARTIAL"
     else:
         passport.claim_statuses["ALPHA_HAS_EDGE"] = "FAILED"
 
