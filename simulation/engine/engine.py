@@ -25,6 +25,7 @@ from simulation.contracts.models import (
     SimulationOutput,
     SimulationProfile,
 )
+from simulation.engine.margin import compute_isolated_margin, resolve_bracket_snapshot
 from simulation.engine.costs import total_cost_r
 from simulation.engine.exits import (
     ExitResult,
@@ -46,6 +47,7 @@ def _build_action_outcome(
     decision_timestamp: int = 0,
     side: str = "LONG",
     future_candles: Sequence[Candle] | None = None,
+    cost_scenario=None,
 ) -> ActionOutcome:
     """Build an ActionOutcome from an ExitResult + cost model.
 
@@ -141,6 +143,12 @@ def _build_action_outcome(
         execution_mode=execution_mode,
         maker_fill_probability=maker_fill,
     )
+    # Stress belongs to simulation evaluation, never to a post-hoc fixture.
+    # CostScenario is immutable and explicitly attached to SimulationInput.
+    if cost_scenario is not None:
+        fcr *= cost_scenario.fee_multiplier
+        scr *= cost_scenario.slippage_multiplier
+        fund_r *= cost_scenario.funding_multiplier
     tcr = fcr + scr + fund_r
 
     realized_r_net = exit_result.realized_r_gross - tcr
@@ -320,26 +328,32 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     """Run comparative simulation for LONG_NOW, SHORT_NOW, and NO_TRADE."""
     profile = input.profile
     entry_risk = input.atr * profile.stop_multiplier
-    notional = input.entry_price  # 1 unit of base currency
+    notional = input.notional_quote if input.notional_quote is not None else input.entry_price
 
     # Stop/target levels
     stop_distance = input.atr * profile.stop_multiplier
     target_distance = input.atr * profile.target_multiplier
 
-    # Liquidation price (#302) — 0 for 1x (spot-equivalent)
-    # Isolated margin: liq when margin_balance <= MMR × notional
-    # LONG: liq_price = entry × (1 - (1/lev - MMR))
-    # SHORT: liq_price = entry × (1 + (1/lev - MMR))
+    # Isolated margin: bracket evidence is mandatory for leverage >1.
     _leverage = getattr(profile, "leverage", 1)
-    _mmr = getattr(profile, "maintenance_margin_ratio", 0.004)
     if _leverage > 1:
-        _margin_used = 1.0 / _leverage
-        liq_distance_pct = _margin_used - _mmr
-        long_liquidation_price = input.entry_price * (1.0 - liq_distance_pct)
-        short_liquidation_price = input.entry_price * (1.0 + liq_distance_pct)
+        bracket = resolve_bracket_snapshot(
+            symbol=input.symbol, notional=notional, leverage=_leverage,
+            snapshots=input.bracket_snapshots,
+        )
+        long_margin = compute_isolated_margin(
+            leverage=_leverage, entry_price=input.entry_price, notional=notional,
+            direction="LONG", bracket=bracket,
+        )
+        short_margin = compute_isolated_margin(
+            leverage=_leverage, entry_price=input.entry_price, notional=notional,
+            direction="SHORT", bracket=bracket,
+        )
+        long_liquidation_price = long_margin.liquidation_price
+        short_liquidation_price = short_margin.liquidation_price
     else:
-        long_liquidation_price = None
-        short_liquidation_price = None
+        long_margin = short_margin = None
+        long_liquidation_price = short_liquidation_price = None
 
     long_stop = input.entry_price - stop_distance
     long_target = input.entry_price + target_distance
@@ -375,6 +389,7 @@ def simulate(input: SimulationInput) -> SimulationOutput:
         "LONG_NOW", long_exit, notional, input.entry_price, input.atr, profile,
         decision_timestamp=decision_ms, side="LONG",
         future_candles=candles,
+        cost_scenario=input.cost_scenario,
     )
 
     # Simulate SHORT_NOW
@@ -387,6 +402,7 @@ def simulate(input: SimulationInput) -> SimulationOutput:
         "SHORT_NOW", short_exit, notional, input.entry_price, input.atr, profile,
         decision_timestamp=decision_ms, side="SHORT",
         future_candles=candles,
+        cost_scenario=input.cost_scenario,
     )
 
     # NO_TRADE quality
