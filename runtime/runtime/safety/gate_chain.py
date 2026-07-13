@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from runtime.runtime.safety.drawdown_gate import DrawdownGate
-from runtime.runtime.safety.kill_switch import KillSwitch
+from runtime.runtime.safety.kill_switch import KillSwitch, KillSwitchConfig
 from runtime.runtime.safety.position_limiter import PositionLimiter
 from runtime.runtime.safety.symbol_cap import SymbolCap
 
@@ -45,7 +45,9 @@ class SafetyGateChain:
         position_limiter: PositionLimiter | None = None,
         symbol_cap: SymbolCap | None = None,
     ) -> None:
-        self.kill_switch = kill_switch or KillSwitch()
+        self.kill_switch = kill_switch or KillSwitch(
+            KillSwitchConfig(auto_trigger_on_drawdown_pct=30.0)
+        )
         self.drawdown_gate = drawdown_gate or DrawdownGate()
         self.position_limiter = position_limiter or PositionLimiter()
         self.symbol_cap = symbol_cap or SymbolCap()
@@ -86,8 +88,14 @@ class SafetyGateChain:
             )
 
         # 2. DrawdownGate — check equity threshold
+        #    Also feed equity drawdown into KillSwitch auto-trigger so the
+        #    kill-switch's own drawdown logic fires from live data, not just
+        #    from manual trigger() calls (Issue #333).
+        dd_pct: float = 0.0
         if equity is not None:
-            self.drawdown_gate.update_equity(equity)
+            dd_state = self.drawdown_gate.update_equity(equity)
+            dd_pct = dd_state.drawdown_pct
+            self.kill_switch.check_auto_conditions(current_drawdown_pct=dd_pct)
         if self.drawdown_gate.block_new_trades():
             dd_state = self.drawdown_gate.get_state()
             return SafetyCheckResult(

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 class KillSwitchReason(str, Enum):
@@ -41,7 +45,7 @@ class KillSwitch:
         self._state = KillSwitchState()
 
     def trigger(self, reason: str = "manual") -> KillSwitchState:
-        """Activate the kill switch."""
+        """Activate the kill switch and log a CRITICAL alert."""
         now = datetime.now(timezone.utc).isoformat()
         self._state = KillSwitchState(
             active=True,
@@ -53,6 +57,12 @@ class KillSwitch:
 
             resume_dt = datetime.now(timezone.utc) + timedelta(minutes=self.config.auto_resume_after_minutes)
             self._state.auto_resume_at = resume_dt.isoformat()
+        logger.critical(
+            "KILL SWITCH TRIGGERED — reason=%s triggered_at=%s auto_resume_at=%s",
+            reason,
+            now,
+            self._state.auto_resume_at or "manual_resume",
+        )
         return self._state
 
     def release(self) -> KillSwitchState:

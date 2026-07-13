@@ -1,0 +1,47 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation:
+  issue: "333"
+  title: "Wire production kill-switch: default 30% trailing drawdown threshold, enable in live runtime loop"
+  domain: runtime
+  subsystem: "runtime/runtime/safety/"
+  verified_current_state: true
+  acceptance_criteria:
+    - criterion: "Default threshold locked and documented"
+      status: "PASS"
+      detail: "SafetyGateChain.__init__ default KillSwitch uses KillSwitchConfig(auto_trigger_on_drawdown_pct=30.0). Standalone KillSwitch() stays at 0.0/disabled to preserve existing pattern elsewhere."
+    - criterion: "Equity curve trailing-max tracking confirmed feeding current_drawdown_pct"
+      status: "PASS"
+      detail: "DrawdownGate already implements trailing-max equity tracking with update_equity(). check_all() now feeds drawdown_pct into kill_switch.check_auto_conditions()."
+    - criterion: "Kill-switch check wired into the live runtime trading loop"
+      status: "PASS"
+      detail: "ExecutionOrchestrator._check_safety_gates() calls SafetyGateChain.check_all() which now wires kill_switch.check_auto_conditions(). Confirmed: open_order() line 394-401 in execution_orchestrator.py."
+    - criterion: "Test: simulated drawdown breach triggers halt"
+      status: "PASS"
+      detail: "TestKillSwitchWiring.test_check_all_feeds_drawdown_to_kill_switch confirms both drawdown_gate.block_new_trades()==True and kill_switch.is_active()==True after 35% drawdown."
+files_changed:
+  - path: "runtime/runtime/safety/kill_switch.py"
+    summary: "Added CRITICAL-level logging to KillSwitch.trigger() — logs reason, timestamp, and auto_resume_at on every trigger event."
+  - path: "runtime/runtime/safety/gate_chain.py"
+    summary: "Two changes: (1) SafetyGateChain.__init__ creates default KillSwitch with auto_trigger_on_drawdown_pct=30.0; (2) check_all() feeds equity drawdown_pct into kill_switch.check_auto_conditions() after updating the drawdown gate."
+  - path: "runtime/tests/test_safety_rails.py"
+    summary: "Added TestKillSwitchWiring class with 4 tests covering 30%+ drawdown trigger, below-30% inactive, default threshold check, and no-equity-no-trigger edge case."
+decisions_locked:
+  - "KillSwitch default 30% trailing drawdown trigger (via SafetyGateChain, not bare KillSwitch)"
+  - "Equity drawdown feeds KillSwitch auto-trigger via check_all() — check_auto_conditions() no longer dead code"
+remaining_holds:
+  - "Flat position (close all open orders) on kill-switch trigger: PaperExecutionAdapter.close_all_open_orders() exists and works for paper mode, but live mode (BinanceUsdmLiveExecutionAdapter) raises UnsupportedExecutionProfileError for close_all_open_orders. Wiring flattening into KillSwitch.trigger() would create a circular dependency (KillSwitch would need access to ExecutionOrchestrator). Documented as known gap — a follow-up should wire close_all_open_orders into the ExecutionOrchestrator's response to kill-switch activation, not into KillSwitch itself."
+  - "AlertService integration: KillSwitch.trigger() now logs at CRITICAL level, which is the minimum viable operator alert. Full integration with runtime/services/alert_service.py's AlertService (which already persists alerts to PostgreSQL via AlertRepository) would provide persistent operator notification. Left as future work — the existing AlertService can be extended to watch kill_switch state independently."
+  - "Auto-resume timer: KillSwitchConfig.auto_resume_after_minutes defaults to 0 (manual resume only). Auto-resume could be set via runtime settings in the future."
+safe_next_step: "Proceed to Issue #268 (feature importance pruning). The #333 PR is ready for owner review."
+commands_run:
+  - "PYTHONPATH=runtime/src python -m pytest runtime/tests/test_safety_rails.py -v --tb=short -x -k TestKillSwitchWiring → 4/4 PASS"
+  - "PYTHONPATH=runtime/src python -m pytest runtime/tests/test_safety_rails.py -v --tb=short → 53/53 PASS"
+  - "gh run view 29240010214 --json conclusion,status → conclusion=success"
+evidence:
+  - "All 53 safety tests pass (4 new, 49 existing) — no regressions"
+  - "CI green (run 29240010214)"
+  - "Git commit: 2117820"
+  - "Remote test output: 53 passed in 1.01s"
+  - "Assertion verified locally: KILL SWITCH TRIGGERED — reason=drawdown (CRITICAL log confirmed)"
