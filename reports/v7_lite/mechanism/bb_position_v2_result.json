@@ -1,0 +1,178 @@
+{
+  "protocol": {
+    "mechanism": "Price mean-reverts near Bollinger Band extremes in ranging/low-volatility regimes",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT"
+    ],
+    "feature_groups": [
+      "breakout"
+    ],
+    "pipeline_version": "0.3.1",
+    "validation_method": "6-fold anchored expanding walk-forward",
+    "cost_model": "fee-only (8bps round trip) \u2014 funding_cost_r=0.0 per audit"
+  },
+  "data": {
+    "source": "Cached factor_sprint panel (20 sym, 1h, 2023-01-01 to 2026-05-31)",
+    "symbols_loaded": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "BNBUSDT"
+    ],
+    "total_bars": 97076
+  },
+  "results": {
+    "verdict": "REJECT",
+    "verdict_label": "KIRMIZI",
+    "rationale": "Edge destroyed by cost stress",
+    "per_fold": [
+      {
+        "fold": 1,
+        "n_train": 10401,
+        "n_val": 5201,
+        "train_accuracy": 0.4874,
+        "val_accuracy": 0.2442,
+        "active_trade_count": 153,
+        "long_count": 100,
+        "short_count": 53,
+        "no_trade_count": 5048,
+        "net_r_expectancy": 0.017607,
+        "low_conf_pct": 97.0
+      },
+      {
+        "fold": 2,
+        "n_train": 24269,
+        "n_val": 5201,
+        "train_accuracy": 0.501,
+        "val_accuracy": 0.1509,
+        "active_trade_count": 247,
+        "long_count": 111,
+        "short_count": 136,
+        "no_trade_count": 4954,
+        "net_r_expectancy": 0.0109,
+        "low_conf_pct": 94.02
+      },
+      {
+        "fold": 3,
+        "n_train": 38137,
+        "n_val": 5201,
+        "train_accuracy": 0.4661,
+        "val_accuracy": 0.1388,
+        "active_trade_count": 71,
+        "long_count": 43,
+        "short_count": 28,
+        "no_trade_count": 5130,
+        "net_r_expectancy": 0.007874,
+        "low_conf_pct": 96.92
+      },
+      {
+        "fold": 4,
+        "n_train": 52005,
+        "n_val": 5201,
+        "train_accuracy": 0.4486,
+        "val_accuracy": 0.1769,
+        "active_trade_count": 39,
+        "long_count": 34,
+        "short_count": 5,
+        "no_trade_count": 5162,
+        "net_r_expectancy": 0.003687,
+        "low_conf_pct": 98.48
+      },
+      {
+        "fold": 5,
+        "n_train": 65873,
+        "n_val": 5201,
+        "train_accuracy": 0.4379,
+        "val_accuracy": 0.1769,
+        "active_trade_count": 3,
+        "long_count": 3,
+        "short_count": 0,
+        "no_trade_count": 5198,
+        "net_r_expectancy": 0.020224,
+        "low_conf_pct": 98.52
+      },
+      {
+        "fold": 6,
+        "n_train": 79741,
+        "n_val": 5201,
+        "train_accuracy": 0.4239,
+        "val_accuracy": 0.1156,
+        "active_trade_count": 8,
+        "long_count": 3,
+        "short_count": 5,
+        "no_trade_count": 5193,
+        "net_r_expectancy": 0.02213,
+        "low_conf_pct": 99.13
+      }
+    ],
+    "aggregate": {
+      "accuracy": 0.1672,
+      "train_accuracy": 0.4608,
+      "accuracy_stability": 0.7345,
+      "inter_fold_consistency": 4.5712,
+      "net_expectancy_r": 0.012144,
+      "gross_expectancy_r": 0.012144,
+      "total_gross_R": 6.326782,
+      "total_net_R": 6.326782,
+      "overfit_gap": 0.2936,
+      "train_oos_correlation": 0.4276,
+      "pbo_risk": "HIGH",
+      "total_active_trades": 521,
+      "total_long": 294,
+      "total_short": 227,
+      "total_no_trade": 30685,
+      "exposure_pct": 1.67,
+      "feature_count": 9,
+      "n_samples": 97076,
+      "n_folds": 6,
+      "confidence_threshold": 0.5,
+      "low_conf_rate_pct": 97.35
+    },
+    "cost_stress": {
+      "fee_stress_levels": [
+        {
+          "multiplier": 1.0,
+          "oos_expectancy_r": 0.012143999999999995,
+          "edge_survives": false
+        },
+        {
+          "multiplier": 1.5,
+          "oos_expectancy_r": -0.01452266666666667,
+          "edge_survives": false
+        },
+        {
+          "multiplier": 2.0,
+          "oos_expectancy_r": -0.04118933333333334,
+          "edge_survives": false
+        },
+        {
+          "multiplier": 3.0,
+          "oos_expectancy_r": -0.09452266666666667,
+          "edge_survives": false
+        }
+      ],
+      "combined_stress_edge_survives": false,
+      "break_even_cost_total_pct": 1.2277,
+      "cost_stress_verdict": "FAIL_EDGE_DESTROYED_BY_COSTS",
+      "baseline_cost_r": 0.05333333333333334
+    },
+    "null_test_comparison": {
+      "null_test_baseline_cost_adj_r": -0.1675,
+      "our_net_expectancy_r": 0.012144,
+      "z_score_vs_null": 10.57,
+      "exceeds_null_3sigma": true,
+      "exceeds_null_2sigma": true
+    },
+    "wfv_duration_seconds": 3.209641218185425
+  },
+  "audit_notes": {
+    "funding_cost_active": false,
+    "funding_note": "Funding cost is NOT active in WFV label path. Issue #304/#315 marked CLOSED but _map_config_to_profile at line 99 simulation_adapter.py confirms funding_rate defaults to 0.0 with no override visible in the WFV codepath.",
+    "data_lake_note": "No 56-symbol data lake on remote. Using cached 20-symbol factor_sprint panel. Only 4 pre-registered symbols selected.",
+    "pipeline_version_confirmed": "0.3.1"
+  },
+  "generated_at": "2026-07-13T09:47:02.945320+00:00"
+}

@@ -14,14 +14,17 @@ After #286 (TEMIZ) and #287 (KIRMIZI), the mining-based symbol-specialist approa
 - **Mechanism hypothesis:** NOT APPLICABLE — edge confirmed as noise
 - **Action:** Closed. No further testing.
 
-### 2. BB Position Mean-Reversion v1
-- **Raw R:** +0.0043 (4552 trades)
-- **Status:** CONTAMINATED (leakage in _rolling_mean feature)
-- **Mechanism hypothesis:** "Price mean-reverts near Bollinger Band extremes in ranging/low-volatility regimes. The `bb_position` feature captures normalized distance from SMA within bands, and extreme values signal overbought/oversold conditions."
-- **Why it might work:** Mean-reversion is a well-documented market microstructure phenomenon, especially in crypto where retail-driven overreactions create short-lived reversals.
-- **Why it might NOT work:** 97.3% single-feature dominance suggests the model is not learning diverse signals. Contamination means the edge may be entirely artifactual.
-- **Pre-registered test symbols:** Same 4 (BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT) — must test on corrected features first.
-- **Test plan:** Revalidate BB Position v2 (corrected pipeline) before any OOS testing.
+### 2. BB Position Mean-Reversion v1 → v2
+- **v1 Raw R:** +0.0043 (4552 trades)
+- **v1 Status:** CONTAMINATED (leakage in _rolling_mean feature)
+- **v2 Verdict (2026-07-13):** KIRMIZI (REJECT) — see BB_POSITION_V2_REVALIDATION.md
+- **v2 Net R:** +0.012144 (521 active trades, 6-fold WFV, corrected PIPELINE_VERSION 0.3.1)
+- **v2 Cost stress:** FAIL_EDGE_DESTROYED_BY_COSTS (break-even: 1.23x baseline)
+- **Mechanism hypothesis:** NOT SUPPORTED. The edge exists as a statistical trace (+0.012R/trade, z=10.57 vs null) but is too weak to survive normal operating costs. The model's 97% low-confidence rate and 1.7% exposure make it practically unusable.
+- **Why it might work:** N/A — hypotez reddedildi.
+- **Why it might NOT work:** The bb_position feature, even corrected, does not produce a reliable economic signal. Mean-reversion signal is too rare (1.7% exposure) and too weak to cover costs. The mechanism is not actionable.
+- **Pre-registered test symbols:** BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT — tested as specified.
+- **Test plan:** ✅ Complete. Result: KIRMIZI. See BB_POSITION_V2_REVALIDATION.md for full protocol execution.
 
 ### 3. SCALP 1h Direction v01
 - **Raw R:** +0.0076 (31752 trades)

@@ -1,0 +1,98 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS"
+scope_confirmation: |
+  Issue #312: BB Position v2 Revalidation.
+  Executed the pre-registered mechanism test protocol from
+  MECHANISM_HYPOTHESES.md section 2.3 on the corrected bb_position features
+  (PIPELINE_VERSION 0.3.1, trailing-window fix). 6-fold walk-forward validation
+  + cost stress sweep (1.0x-3.0x) + null-test comparison on 4 pre-registered
+  symbols (BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT) with breakout-group features.
+
+  Verdict: KIRMIZI (REJECT) — mechanism hypothesis NOT supported.
+  Edge of +0.0121R/trade destroyed at 1.5x baseline costs. Model shows
+  97% low-confidence rate, 1.7% exposure, folds 5-6 degenerate (<10 trades).
+  Per MECHANISM_HYPOTHESES.md: "entire alpha pipeline needs fundamental redesign."
+
+files_changed:
+  - "scripts/revalidate_bb_position_v2.py"            # NEW — glue script
+  - "reports/v7_lite/mechanism/bb_position_v2_result.json"  # NEW — raw results
+  - "reports/v7_lite/mechanism/BB_POSITION_V2_REVALIDATION.md"  # NEW — detailed report
+  - "reports/accp/issue-312.yaml"                     # NEW — this report
+  - "v7/docs/roadmap.md"                               # PATCHED — BB v2 KIRMIZI update
+  - "reports/v7_lite/mechanism/MECHANISM_HYPOTHESES.md" # PATCHED — BB v2 status update
+
+decisions_locked:
+  - decision: "BB Position v2 mechanism hypothesis is NOT supported"
+    status: "LOCKED"
+    rationale: |
+      6-fold WFV on corrected features (PIPELINE_VERSION 0.3.1) confirms
+      +0.0121R/trade edge is too weak to survive cost stress. Model accuracy
+      (16.7%) near random (33.3% baseline). 97% confidence-threshold rejection
+      rate. Folds 5-6 degenerate. EDGE_DESTROYED_BY_COSTS verdict from cost
+      stress (break-even multiplier 1.23x).
+    evidence:
+      - "6-fold WFV on 4 pre-registered symbols, 97076 samples, 521 active trades"
+      - "Net expectancy R: +0.012144 per active trade"
+      - "Cost stress: FAIL at all multipliers > 1.0x"
+      - "PBO risk: HIGH (overfit gap 0.2936)"
+
+  - decision: "No surviving alpha candidates — alpha pipeline needs fundamental redesign"
+    status: "LOCKED"
+    rationale: |
+      Per MECHANISM_HYPOTHESES.md: after BB Position v2 rejection, there are
+      zero mechanism-validated alpha signals. The mining-vs-mechanism purge
+      eliminated Truth V6 (noise), SCALP 1h Direction (too weak), and now
+      BB Position v2 (cost-destroyed). Only possible next step is a fundamental
+      pipeline redesign.
+    evidence:
+      - "MECHANISM_HYPOTHESES.md section 'If BB v2 fails: entire alpha pipeline needs fundamental redesign'"
+
+remaining_holds:
+  - hold: "Funding cost inactive in WFV label path"
+    status: "UNCHANGED"
+    details: |
+      Issues #304/#315 CLOSED but funding_rate=0.0 in actual WFV code path.
+      All results are fee-only. A real-cost result would be even weaker.
+    release_condition: "Tangible implementation of funding cost in WFV label generation (train.py _generate_simple_labels_numba)"
+
+  - hold: "56-symbol data lake not available"
+    status: "UNCHANGED"
+    details: |
+      Remote host lacks 56-symbol data lake. Used cached 20-symbol panel.
+      Results may differ on expanded symbol universe.
+    release_condition: "Access to full 56-symbol data lake or real-time market data feed"
+
+  - hold: "BB Position v2 verdict closes the mining chapter"
+    status: "LOCKED"
+    details: |
+      Per MECHANISM_HYPOTHESES.md, a KIRMIZI verdict on BB Position v2 means
+      no further mining of feature-specific mechanism hypotheses. The owner
+      must decide on next steps (pipeline redesign, regime-aware approaches,
+      multi-feature combined signals, or new data sources).
+    release_condition: "Owner decision on alpha pipeline redesign direction"
+
+safe_next_step: |
+  Per MECHANISM_HYPOTHESES.md, no new mining is allowed. The repo owner
+  (ddawnlll) should review this report and decide the next chapter for V7
+  alpha research. Possible directions: (a) regime-aware combined-signal
+  approach instead of single-feature testing,
+  (b) adopt fundamentally different research methodology,
+  (c) focus on infrastructure (V7-Lite rails, runtime) before alpha research,
+  (d) acquire new data sources (orderbook, alternative data) that may contain
+  unexplored signal.
+
+commands_run:
+  - "ssh remote: PYTHONPATH=alphaforge/src:simulation/src:. python3 scripts/revalidate_bb_position_v2.py"
+  - "git add scripts/revalidate_bb_position_v2.py"
+  - "git add reports/v7_lite/mechanism/BB_POSITION_V2_REVALIDATION.md"
+  - "git add reports/v7_lite/mechanism/bb_position_v2_result.json"
+  - "git add reports/accp/issue-312.yaml"
+  - "git commit -m 'feat: #312 BB Position v2 revalidation — KIRMIZI verdict'"
+
+evidence:
+  - "WFV output: 6 folds, net_expectancy_r=+0.012144, 521 trades, 16.7% accuracy"
+  - "Cost stress: combined_stress_edge_survives=False, break_even=1.23x"
+  - "Null test comparison: z-score=10.57 vs baseline of -0.1675"
+  - "Full result JSON: reports/v7_lite/mechanism/bb_position_v2_result.json"
+  - "Detailed report: reports/v7_lite/mechanism/BB_POSITION_V2_REVALIDATION.md"
