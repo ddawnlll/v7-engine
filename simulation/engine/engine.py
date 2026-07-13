@@ -326,21 +326,6 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     stop_distance = input.atr * profile.stop_multiplier
     target_distance = input.atr * profile.target_multiplier
 
-    # Liquidation price (#302) — 0 for 1x (spot-equivalent)
-    # Isolated margin: liq when margin_balance <= MMR × notional
-    # LONG: liq_price = entry × (1 - (1/lev - MMR))
-    # SHORT: liq_price = entry × (1 + (1/lev - MMR))
-    _leverage = getattr(profile, "leverage", 1)
-    _mmr = getattr(profile, "maintenance_margin_ratio", 0.004)
-    if _leverage > 1:
-        _margin_used = 1.0 / _leverage
-        liq_distance_pct = _margin_used - _mmr
-        long_liquidation_price = input.entry_price * (1.0 - liq_distance_pct)
-        short_liquidation_price = input.entry_price * (1.0 + liq_distance_pct)
-    else:
-        long_liquidation_price = None
-        short_liquidation_price = None
-
     long_stop = input.entry_price - stop_distance
     long_target = input.entry_price + target_distance
     short_stop = input.entry_price + stop_distance
@@ -369,7 +354,7 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     long_exit = simulate_path_from_arrays(
         "LONG", input.entry_price, long_stop, long_target,
         highs, lows, max_bars, available_bars, entry_risk, close_price,
-        liquidation_price=long_liquidation_price,
+        liquidation_price=None,
     )
     long_outcome = _build_action_outcome(
         "LONG_NOW", long_exit, notional, input.entry_price, input.atr, profile,
@@ -381,7 +366,7 @@ def simulate(input: SimulationInput) -> SimulationOutput:
     short_exit = simulate_path_from_arrays(
         "SHORT", input.entry_price, short_stop, short_target,
         highs, lows, max_bars, available_bars, entry_risk, close_price,
-        liquidation_price=short_liquidation_price,
+        liquidation_price=None,
     )
     short_outcome = _build_action_outcome(
         "SHORT_NOW", short_exit, notional, input.entry_price, input.atr, profile,

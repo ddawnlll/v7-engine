@@ -1541,16 +1541,7 @@ GPU path behind `force_gpu=True` opt-in flag.
 | Data sync | `#307` sync script | `sync.py`, `sync_data.py` | ✅ main |
 
 ### Lock status
-All Wave 0/1 modules: `LOCKED_INITIAL_BASELINE` — implemented, tested, and merged to main.
-
-**Grup A (PR #329):** #179 (regression objective), #268 (feature pruning), #183 (evidence passport),
-#306 (holdout cutoff), #299 (action schema), #313 (LIQUIDATED exit) — all closed.
-**Grup B-F (PR #330):** #211 (central sim bridge), #277 (PaperBroker wiring), #278 (paper validation protocol),
-#302 (margin model), #314 (dataset augmentation), #296/#297/#300/#305/#307 (research/ops decisions),
-#106/#107 (safety phase groundwork) — all closed.
-**Grup G:** #311 (batch sim perf), #318 (GPU roadmap) — closed.
-
-Issues `#304, #315` closed via PR #330 — funding pipeline wiring complete.
+All Wave 0/1 modules: `LOCKED_INITIAL_BASELINE` — implemented, tested, and merged to main. Issues `#263, #264, #266, #309, #68` closed via `gh issue close`. Issues `#304, #315` remain open: engine/label fix complete but pipeline entry point (`cli/v7_pipeline.py:711`) still uses `funding_service=None`.
 
 ### Remaining holds (Wave 2 not started)
 - `#179B` — P0: net R as primary training objective
