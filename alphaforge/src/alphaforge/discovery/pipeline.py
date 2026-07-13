@@ -43,6 +43,68 @@ from alphaforge.train import (
 logger = logging.getLogger("alphaforge.discovery.pipeline")
 
 
+# ---------------------------------------------------------------------------
+# Holdout split helper (Issue #306)
+# ---------------------------------------------------------------------------
+
+
+def compute_holdout_split(
+    timestamps: np.ndarray,
+    cutoff_date_str: str,
+    min_holdout_rows: int = 100,
+) -> np.ndarray | None:
+    """Compute a boolean mask for holdout rows based on a cutoff date.
+
+    Rows with timestamps >= the cutoff are marked ``True`` (holdout).
+
+    Parameters
+    ----------
+    timestamps : np.ndarray
+        1-D array of Unix timestamps (seconds, milliseconds, or nanoseconds).
+    cutoff_date_str : str
+        ISO-format date string (e.g. ``"2026-04-01"``).  Rows at or after
+        this date are held out.
+    min_holdout_rows : int
+        Minimum number of holdout rows required.  If fewer rows fall on or
+        after the cutoff, ``None`` is returned (insufficient holdout data).
+
+    Returns
+    -------
+    np.ndarray | None
+        Boolean mask of shape ``(len(timestamps),)`` where ``True`` means
+        holdout, or ``None`` if the holdout set is too small.
+    """
+    from datetime import datetime, timezone
+
+    try:
+        cutoff_dt = datetime.fromisoformat(cutoff_date_str).replace(
+            tzinfo=timezone.utc,
+        )
+    except (ValueError, TypeError):
+        logger.warning("Invalid holdout cutoff '%s' — ignoring", cutoff_date_str)
+        return None
+
+    if len(timestamps) == 0:
+        return None
+
+    ts_sample = timestamps[0]
+    # Detect units: if ts_sample < 1e15, treat as seconds or milliseconds
+    if abs(ts_sample) < 1e15:
+        cutoff_ts = int(cutoff_dt.timestamp() * 1000)  # ms
+    else:
+        cutoff_ts = int(cutoff_dt.timestamp() * 1_000_000_000)  # ns
+
+    mask = timestamps >= cutoff_ts
+    if int(mask.sum()) < min_holdout_rows:
+        logger.warning(
+            "Holdout too small (%d rows, need %d) — skipping",
+            int(mask.sum()), min_holdout_rows,
+        )
+        return None
+
+    return mask
+
+
 def run_discovery(
     config: DiscoveryConfig,
     precomputed_frame: Optional[dict] = None,
