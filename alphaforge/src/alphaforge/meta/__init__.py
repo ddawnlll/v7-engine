@@ -8,6 +8,12 @@ Only primary predictions with sufficient meta-confidence are passed through.
 """
 
 from alphaforge.meta.config import (
+    DEFAULT_EMBARGO_BARS,
+    DEFAULT_PURGE_BARS,
+    DEFAULT_THRESHOLD_GRID,
+    DEFAULT_TRUST_MIN_THRESHOLD,
+    TARGET_DAILY_TRADES,
+
     DEFAULT_META_DEPTH,
     DEFAULT_META_REG_LAMBDA,
     DEFAULT_TRAIN_RATIO,
@@ -15,7 +21,7 @@ from alphaforge.meta.config import (
     META_N_ESTIMATORS,
     META_LEARNING_RATE,
 )
-from alphaforge.meta.meta_labeler import MetaLabeler
+from alphaforge.meta.meta_labeler import MetaLabeler, compute_trust_scores
 from alphaforge.meta.meta_filter import MetaFilter, meta_filter_predictions
 
 __all__ = [
@@ -28,4 +34,10 @@ __all__ = [
     "MetaLabeler",
     "MetaFilter",
     "meta_filter_predictions",
+    "compute_trust_scores",
+    "DEFAULT_PURGE_BARS",
+    "DEFAULT_EMBARGO_BARS",
+    "DEFAULT_THRESHOLD_GRID",
+    "DEFAULT_TRUST_MIN_THRESHOLD",
+    "TARGET_DAILY_TRADES",
 ]
