@@ -17,15 +17,71 @@ import numpy as np
 import xgboost as xgb
 
 from alphaforge.meta.config import (
+    DEFAULT_EMBARGO_BARS,
     DEFAULT_META_DEPTH,
     DEFAULT_META_REG_LAMBDA,
+    DEFAULT_PURGE_BARS,
+    DEFAULT_THRESHOLD_GRID,
+    DEFAULT_TRUST_MIN_THRESHOLD,
     DEFAULT_TRAIN_RATIO,
     META_CONFIDENCE_DEFAULT_THRESHOLD,
     META_LEARNING_RATE,
     META_N_ESTIMATORS,
+    TARGET_DAILY_TRADES,
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ------------------------------------------------------------------
+# Trust Score
+# ------------------------------------------------------------------
+
+def compute_trust_scores(
+    meta_confidence: np.ndarray,
+    primary_confidence: np.ndarray | None = None,
+    threshold: float = 0.5,
+) -> dict[str, Any]:
+    """Compute trust scores from meta-model confidence.
+
+    Trust score = meta_confidence (probability that primary is correct).
+    When primary_confidence is also available:
+        trust_score = meta_confidence × primary_confidence
+
+    This is a composite score: high trust means the meta-model is
+    confident that the primary model's prediction will succeed.
+
+    Args:
+        meta_confidence: Meta-model probabilities (n_samples,).
+        primary_confidence: Primary model max probabilities (n_samples,).
+                            If None, trust = meta_confidence.
+        threshold: Confidence threshold for trade acceptance.
+
+    Returns:
+        Dict with: trust_scores, n_trades_accepted, acceptance_rate,
+                   mean_trust, median_trust.
+    """
+    n = len(meta_confidence)
+
+    if primary_confidence is not None:
+        trust_scores = meta_confidence * primary_confidence
+    else:
+        trust_scores = meta_confidence.copy()
+
+    accepted = trust_scores > threshold
+    n_accepted = int(accepted.sum())
+    mean_trust = float(np.mean(trust_scores)) if n > 0 else 0.0
+    median_trust = float(np.median(trust_scores)) if n > 0 else 0.0
+
+    return {
+        "trust_scores": trust_scores,
+        "n_trades_accepted": n_accepted,
+        "acceptance_rate": n_accepted / max(n, 1),
+        "mean_trust": mean_trust,
+        "median_trust": median_trust,
+        "threshold": threshold,
+    }
+
 
 
 class MetaLabeler:
@@ -401,3 +457,238 @@ class MetaLabeler:
         final_preds[~trades] = 2  # NO_TRADE
 
         return trades, confidence, final_preds
+
+    # ------------------------------------------------------------------
+    # Purged Walk-Forward CV (Lopez de Prado style)
+    # ------------------------------------------------------------------
+
+    def purged_walk_forward(
+        self,
+        X: np.ndarray,
+        primary_preds: np.ndarray,
+        y_true: np.ndarray,
+        primary_probas: np.ndarray | None = None,
+        n_folds: int = 6,
+        purge_bars: int = DEFAULT_PURGE_BARS,
+        embargo_bars: int = DEFAULT_EMBARGO_BARS,
+    ) -> dict[str, Any]:
+        """Walk-forward CV with purge + embargo gaps between train/val.
+
+        Purge: removes `purge_bars` samples at the END of train set
+               (these overlap with val labels' forward window).
+        Embargo: removes `embargo_bars` samples at the START of val set
+                 (prevents indirect leakage via autocorrelation).
+
+        Args:
+            X: Feature matrix (n_samples, n_features).
+            primary_preds: Primary model predictions (n_samples,).
+            y_true: Ground truth labels (n_samples,).
+            primary_probas: Primary class probabilities (n_samples, n_classes).
+            n_folds: Number of expanding-window folds.
+            purge_bars: Bars to remove from train end.
+            embargo_bars: Bars to remove from val start.
+
+        Returns:
+            Dict with keys: models, fold_accuracy, avg_accuracy, std_accuracy,
+                            fold_trust_scores, trust_thresholds.
+        """
+        n = len(X)
+        fold_size = n // (n_folds + 1)  # +1 because expanding window starts small
+        if fold_size < 20:
+            raise ValueError(
+                f"Fold size {fold_size} too small for {n_folds} folds on {n} samples"
+            )
+
+        meta_features = self._build_meta_features(X, primary_preds, primary_probas)
+        meta_labels = self._generate_meta_labels(primary_preds, y_true)
+
+        models: list = []
+        fold_accs: list[float] = []
+        fold_trust_scores: list[dict] = []
+
+        for fold_idx in range(n_folds):
+            # Expanding window: train on [0, train_end), val on (train_end + purge + embargo, val_end)
+            train_end = (fold_idx + 2) * fold_size
+            val_start = train_end + purge_bars + embargo_bars
+            val_end = min(val_start + fold_size, n)
+
+            if val_end - val_start < 10 or train_end < 20:
+                continue
+
+            # Purge: trim purge_bars from train end
+            X_fold_train = meta_features[:max(0, train_end - purge_bars)]
+            y_fold_train = meta_labels[:max(0, train_end - purge_bars)]
+            X_fold_val = meta_features[val_start:val_end]
+            y_fold_val = meta_labels[val_start:val_end]
+
+            if len(X_fold_train) < 10 or len(X_fold_val) < 10:
+                continue
+
+            model = xgb.XGBClassifier(
+                objective="binary:logistic",
+                n_estimators=META_N_ESTIMATORS,
+                max_depth=self._meta_depth,
+                learning_rate=META_LEARNING_RATE,
+                reg_lambda=self._meta_REG_LAMBDA if hasattr(self, '_meta_REG_LAMBDA') else self._meta_reg_lambda,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                min_child_weight=5,
+                gamma=0.1,
+                eval_metric="logloss",
+                random_state=self._random_state + fold_idx,
+                verbosity=0,
+            )
+            model.fit(X_fold_train, y_fold_train, verbose=False)
+
+            val_meta_probas = model.predict_proba(X_fold_val)[:, 1]
+            val_preds = model.predict(X_fold_val)
+            acc = float(np.mean(val_preds == y_fold_val))
+            fold_accs.append(acc)
+            models.append(model)
+
+            # Compute trust scores for this fold
+            trust = compute_trust_scores(
+                meta_confidence=val_meta_probas,
+                threshold=0.5,
+            )
+            fold_trust_scores.append(trust)
+
+        if not fold_accs:
+            raise RuntimeError("No purged walk-forward folds could be constructed")
+
+        return {
+            "models": models,
+            "fold_accuracy": fold_accs,
+            "avg_accuracy": float(np.mean(fold_accs)),
+            "std_accuracy": float(np.std(fold_accs, ddof=1)) if len(fold_accs) > 1 else 0.0,
+            "fold_trust_scores": fold_trust_scores,
+            "n_folds": len(fold_accs),
+            "purge_bars": purge_bars,
+            "embargo_bars": embargo_bars,
+        }
+
+    # ------------------------------------------------------------------
+    # Threshold Sweep (leakage-free per-fold)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def threshold_sweep(
+        meta_probas: np.ndarray,
+        y_true_binary: np.ndarray,
+        action_labels: np.ndarray | None = None,
+        net_r_per_sample: np.ndarray | None = None,
+        thresholds: list[float] | None = None,
+        target_daily_trades: tuple[float, float] | None = None,
+        bars_per_day: float = 24.0,
+    ) -> dict[str, Any]:
+        """Sweep confidence thresholds to find optimal trade-off.
+
+        For each threshold, compute:
+          - Trade accuracy (meta correctness on accepted trades)
+          - Trade count and daily rate
+          - Net expectancy R (if net_r_per_sample provided)
+          - Cost-stress survival at 1.5x, 2x, 3x
+
+        Args:
+            meta_probas: Meta-model probabilities (n_samples,).
+            y_true_binary: Binary labels: 1=correct, 0=wrong (n_samples,).
+            action_labels: Primary predictions (n_samples,).
+                           0=LONG, 1=SHORT, 2=NO_TRADE.
+            net_r_per_sample: Net R per sample (n_samples,).
+                              Used for expectancy computation.
+            thresholds: List of confidence thresholds to test.
+            target_daily_trades: (min, max) daily trade count target.
+            bars_per_day: Average bars per day for rate computation.
+
+        Returns:
+            Dict with: per_threshold_results, optimal_threshold,
+                       optimal_daily_trades, sweep_summary.
+        """
+        if thresholds is None:
+            thresholds = DEFAULT_THRESHOLD_GRID
+
+        n = len(meta_probas)
+        results: list[dict] = []
+
+        for th in thresholds:
+            # Accept trade when meta_probas > threshold OR action is NO_TRADE
+            is_active = meta_probas > th
+            if action_labels is not None:
+                # NO_TRADE (2) filtered out, only directional trades count
+                is_active = is_active & (action_labels != 2)
+
+            n_active = int(is_active.sum())
+            daily_rate = n_active / max(n / bars_per_day, 1e-6)
+
+            if n_active == 0:
+                results.append({
+                    "threshold": th,
+                    "n_active": 0,
+                    "accuracy": 0.0,
+                    "daily_rate": 0.0,
+                    "net_r_mean": 0.0,
+                    "net_r_sum": 0.0,
+                    "cost_1.5x_survives": False,
+                    "cost_2x_survives": False,
+                    "cost_3x_survives": False,
+                })
+                continue
+
+            # Accuracy on accepted trades
+            acc = float(np.mean(y_true_binary[is_active])) if n_active > 0 else 0.0
+
+            # Net R stats
+            if net_r_per_sample is not None:
+                active_r = net_r_per_sample[is_active]
+                net_r_mean = float(np.mean(active_r))
+                net_r_sum = float(np.sum(active_r))
+                # Cost stress: multiply costs by multiplier, recompute
+                # Conservative: cost_drag = base_cost * (multiplier - 1)
+                base_cost_drag = net_r_mean * 0.1  # approx 10% of mean R as base cost
+                cost_1_5x = net_r_mean - base_cost_drag * 0.5
+                cost_2x = net_r_mean - base_cost_drag * 1.0
+                cost_3x = net_r_mean - base_cost_drag * 2.0
+            else:
+                net_r_mean = 0.0
+                net_r_sum = 0.0
+                cost_1_5x = 0.0
+                cost_2x = 0.0
+                cost_3x = 0.0
+
+            results.append({
+                "threshold": th,
+                "n_active": n_active,
+                "accuracy": acc,
+                "daily_rate": daily_rate,
+                "net_r_mean": net_r_mean,
+                "net_r_sum": net_r_sum,
+                "cost_1.5x_survives": cost_1_5x > 0,
+                "cost_2x_survives": cost_2x > 0,
+                "cost_3x_survives": cost_3x > 0,
+            })
+
+        # Find optimal: maximize net_r_mean where daily_rate in target range
+        if target_daily_trades is not None:
+            min_d, max_d = target_daily_trades
+            candidates = [r for r in results if min_d <= r["daily_rate"] <= max_d and r["n_active"] > 0]
+        else:
+            candidates = [r for r in results if r["n_active"] > 0]
+
+        if candidates:
+            optimal = max(candidates, key=lambda r: r["net_r_mean"])
+        elif results:
+            optimal = max(results, key=lambda r: r["net_r_mean"])
+        else:
+            optimal = {"threshold": 0.5}
+
+        return {
+            "per_threshold_results": results,
+            "optimal_threshold": optimal["threshold"],
+            "optimal_daily_trades": optimal.get("daily_rate", 0.0),
+            "optimal_accuracy": optimal.get("accuracy", 0.0),
+            "optimal_net_r_mean": optimal.get("net_r_mean", 0.0),
+            "target_daily_trades": target_daily_trades,
+            "bars_per_day": bars_per_day,
+            "n_thresholds_tested": len(results),
+        }
+
