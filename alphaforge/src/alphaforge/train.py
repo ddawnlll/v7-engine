@@ -1904,13 +1904,14 @@ def main():
         training_run_id=run_id,
     )
 
-    # Convert numpy keys to native Python types so json.dump works
-    # (JSON requires string keys; default=str only covers values).
-    if "metrics" in metadata and isinstance(metadata["metrics"], dict):
-        _safe = {}
-        for _mk, _mv in metadata["metrics"].items():
-            _safe[str(_mk)] = _mv
-        metadata["metrics"] = _safe
+    # Convert numpy keys to native Python types so json.dump works.
+    # JSON requires string keys; default=str only covers values.
+    # build_model_artifact_metadata() can embed numpy int64 keys at
+    # any nesting level.
+    def _str_keys(d: dict) -> dict:
+        return {str(k): _str_keys(v) if isinstance(v, dict) else v for k, v in d.items()}
+
+    metadata = _str_keys(metadata)
 
     metadata_path = Path(artifact_dir) / f"metadata_{mode.lower()}_{_ts}.json"
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
