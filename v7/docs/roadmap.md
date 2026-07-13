@@ -37,6 +37,37 @@ That means the next work should be implementation-led, not more concept inventio
 
 ---
 
+## Strategic Program — Alpha Harvest -> V7-Lite -> Tensor AlphaForge (2026-07-13)
+
+**Owner-directed sequence:**
+
+1. push AlphaForge XGBoost to its practical frontier, including leverage-aware but cost-honest training/evaluation;
+2. consolidate V7-Lite into a deterministic path for validated AlphaPackages through replay, paper, shadow and explicitly authorized tiny-live operation;
+3. build Tensor AlphaForge, beginning with a shared causal encoder whose embeddings challenge the frozen XGBoost champion before direct neural heads are considered.
+
+The detailed cross-domain research and execution plan is [Alpha Harvest -> V7-Lite -> Tensor AlphaForge Roadmap](../../docs/research/alpha_harvest_v7_lite_tensor_roadmap.md).
+
+**Lock status:** strategic sequence `LOCKED`; economic thresholds and promotion evidence `HOLD`.
+
+**Locked principles:**
+
+- maximum return means survivable post-cost geometric growth, not maximum backtest return;
+- base-risk/unlevered alpha truth is stored separately from leverage-scenario utility;
+- leverage cannot promote a negative base-risk edge;
+- V7-Lite remains deterministic and cannot bypass Simulation or V7 risk gates;
+- Tensor AlphaForge is promoted only by paired OOS economic uplift over a frozen XGBoost champion.
+
+**Immediate holds:**
+
+- full-run cost stress is invalid while exported rules contain `fee_r = 0.0`;
+- current full runs are not independent replications without distinct manifests, seeds, windows and holdouts;
+- V7-Lite is an accelerator candidate but is not revenue-ready;
+- numeric leverage, drawdown, PBO/DSR, correlation and scaling thresholds remain `LOCK_CANDIDATE` until real replay/shadow evidence calibrates them.
+
+**Design lock score:** N/A — this locks sequence and authority, not empirical profitability or numeric thresholds.
+
+---
+
 ## Make/Menu Test Harness Repair (2026-07-03)
 
 **What changed:**
@@ -1562,3 +1593,30 @@ Issues `#304, #315` closed via PR #330 — funding pipeline wiring complete.
 - OOS IC=0.117, RankIC=0.110, directional accuracy=0.55
 - All features causal (trailing window only, `mode="valid"` + NaN padding)
 - Results: `reports/research_run_real_10sym_causal.json`
+
+---
+
+## #333 — Kill-Switch Wiring (2026-07-13)
+
+**Issue:** #333 — Wire production kill-switch with 30% trailing drawdown default, enable in live runtime loop.
+
+**What changed:**
+- `KillSwitch.trigger()` now logs at CRITICAL level — minimum viable operator alert path.
+- `SafetyGateChain.__init__` creates the default `KillSwitch` with `KillSwitchConfig(auto_trigger_on_drawdown_pct=30.0)` instead of the bare `KillSwitch()` which had 0.0 (disabled). Standalone `KillSwitch()` construction preserves the original 0.0 default for backward compatibility.
+- `SafetyGateChain.check_all()` now calls `kill_switch.check_auto_conditions(current_drawdown_pct=dd_pct)` after updating the drawdown gate with equity data. This connects the equity-curve trailing-max tracking (already in `DrawdownGate`) to the KillSwitch's auto-trigger logic, which was previously dead code — `check_auto_conditions()` had zero production callers.
+- `ExecutionOrchestrator._check_safety_gates()` calls `SafetyGateChain.check_all()` inside `open_order()` — confirmed live in the trade-decision path.
+- 4 new tests in `test_safety_rails.py` covering: 30%+ drawdown triggers both gates, below-30% stays inactive, default threshold verification, and no-equity-no-trigger edge case.
+
+**Lock status:** LOCKED for kill-switch wiring. DrawdownGate's equity tracking and KillSwitch's auto-trigger are now connected and exercised. No trading-mode threshold changes.
+
+**Remaining holds:**
+- "Flat position" (close all open orders) on kill-switch trigger: `PaperExecutionAdapter.close_all_open_orders()` exists but live adapter raises `UnsupportedExecutionProfileError`. Wiring flattening into KillSwitch would create circular dependency — needs ExecutionOrchestrator-level orchestration, not KillSwitch-internal.
+- AlertService integration: CRITICAL logging is minimum viable; full persistence via `runtime/services/alert_service.py` is future work.
+- Auto-resume timer: `KillSwitchConfig.auto_resume_after_minutes` defaults to 0 (manual resume only); could be configured via runtime settings.
+
+**Evidence:**
+- 53/53 safety tests pass (4 new, 49 existing), 0 regressions
+- CI green (run 29240010214)
+- Remote test output: 53 passed in 1.01s on Python 3.12.3
+- Commit: `2117820`
+- ACCP report: `reports/accp/issue-333.yaml`
