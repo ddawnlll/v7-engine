@@ -72,7 +72,7 @@ jobs:
         run: PYTHONPATH=alphaforge/src:v7/src python -m pytest runtime/tests/ -q --ignore=runtime/tests/test_retry.py --ignore=runtime/tests/test_simulation_output_result_materializer.py --ignore=runtime/tests/test_safety_rails.py
 
       - name: Run alphaforge tests
-        run: >-
+        run: >
           PYTHONPATH=alphaforge/src:v7/src python -m pytest
           alphaforge/tests/ -q
           --ignore=alphaforge/tests/test_p10_alpha_factory.py

@@ -165,6 +165,10 @@ class SimulationProfile:
     execution_mode: str = "TAKER"  # TAKER / MAKER / HYBRID
     maker_fill_probability: float = 0.7  # Fill probability for MAKER mode
     maker_fill_assumption: str = "base"  # pessimistic / base / optimistic
+    # Leverage / margin (#302) — default 1x (isolated margin)
+    leverage: int = 1
+    initial_margin_ratio: float = 0.0  # IMR = 1/leverage, computed
+    maintenance_margin_ratio: float = 0.004  # 0.4% tier 1 Binance
 
 
 @dataclass
