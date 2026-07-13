@@ -76,6 +76,31 @@ First-phase defaults (per mode):
 - validation window: 2 months
 - optional holdout tail: 1 month
 
+### Holdout Protocol
+
+When a holdout tail is reserved (via ``--holdout-cutoff`` in the CLI),
+the following rules apply:
+
+1. **Cutoff semantics:** Data at or after the cutoff date is held out.
+   The model never sees holdout rows during walk-forward validation or
+   final training.
+2. **Off-by-one bar:** The cutoff is treated as **inclusive** — bars
+   whose open time is >= the cutoff timestamp are held out.  This
+   ensures forward-looking leakage is impossible at the boundary bar.
+3. **One-shot evaluation:** The holdout set is evaluated once after
+   training completes.  No re-tuning, no threshold adjustment, no
+   iteration against holdout outcomes.  If a holdout evaluation suggests
+   candidate improvement, a new candidate with a fresh holdout reservation
+   (new timestamp cutoff) must be created — the original holdout may not
+   be re-consumed.
+4. **Minimum size:** If fewer than 100 rows fall after the cutoff, the
+   holdout reservation is skipped (insufficient statistical power).
+   This threshold is configurable in ``compute_holdout_split()``.
+5. **Single-use enforcement (future):** A ledger entry in
+   ``ResearchRunIndex`` recording which holdout reservation was consumed
+   by which candidate is planned but not yet implemented.  See issue #306
+   for the follow-up scope.
+
 Dataset owns fold construction. Evaluation owns fold consumption and interpretation.
 
 ---
