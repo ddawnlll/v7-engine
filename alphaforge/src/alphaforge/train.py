@@ -1983,6 +1983,25 @@ def main():
     print(f"  Authority round-trip cost: {cd['authority_round_trip_cost_bps']:.0f} bps (already in decision_gross_r)")
     print(f"{'='*60}\n")
 
+    # ── MLflow: log metrics + artifact, end run (#228) ────────────
+    if _mlflow_run_active and _mlflow is not None:
+        try:
+            # Log metrics (only numeric values)
+            _mlflow_metrics = {
+                k: v for k, v in metrics.items()
+                if isinstance(v, (int, float)) and not isinstance(v, bool)
+            }
+            _mlflow.log_metrics(_mlflow_metrics)
+            # Log model artifact
+            if artifact_path and artifact_path.is_file():
+                _mlflow.log_artifact(str(artifact_path))
+            if metadata_path and metadata_path.is_file():
+                _mlflow.log_artifact(str(metadata_path))
+            _mlflow.end_run()
+            logger.info("MLflow run ended — logged %d metrics + artifact", len(_mlflow_metrics))
+        except Exception as _mlf_exc:
+            logger.warning("MLflow logging failed: %s", _mlf_exc)
+
     # Build EvidencePassport if requested (Issue #183)
     if args.passport:
         try:
