@@ -27,7 +27,7 @@ class TestComputeHoldoutSplit:
         """Rows on/after cutoff are holdout; rows before are train."""
         ts = _ms_timestamps("2026-01-01", 100)  # hour 0..99 from Jan 1
         cutoff = "2026-01-03"  # 48 hours in
-        mask = compute_holdout_split(ts, cutoff)
+        mask = compute_holdout_split(ts, cutoff, min_holdout_rows=1)
         assert mask is not None
         assert mask.dtype == bool
         assert mask.shape == (100,)
@@ -40,7 +40,7 @@ class TestComputeHoldoutSplit:
         """No holdout row has timestamp < cutoff."""
         ts = _ms_timestamps("2026-04-01", 200, interval_hours=1)
         cutoff = "2026-04-07"
-        mask = compute_holdout_split(ts, cutoff)
+        mask = compute_holdout_split(ts, cutoff, min_holdout_rows=1)
         assert mask is not None
         holdout_ts = ts[mask]
         cutoff_ts = int(
@@ -54,7 +54,7 @@ class TestComputeHoldoutSplit:
         """No train row has timestamp >= cutoff."""
         ts = _ms_timestamps("2026-02-01", 100, interval_hours=1)
         cutoff = "2026-02-04"
-        mask = compute_holdout_split(ts, cutoff)
+        mask = compute_holdout_split(ts, cutoff, min_holdout_rows=1)
         assert mask is not None
         train_ts = ts[~mask]
         cutoff_ts = int(
@@ -93,7 +93,7 @@ class TestComputeHoldoutSplit:
         ts = np.array([ns_base + i * step_ns for i in range(100)], dtype=np.int64)
         assert abs(ts[0]) > 1e15, "Must be nanosecond range"
         cutoff = "2026-01-03"
-        mask = compute_holdout_split(ts, cutoff)
+        mask = compute_holdout_split(ts, cutoff, min_holdout_rows=1)
         assert mask is not None
         # First 48 rows are before cutoff (Jan 1 00:00 + 47h)
         assert mask[:48].sum() == 0
