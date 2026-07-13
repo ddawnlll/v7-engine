@@ -704,6 +704,53 @@ class TestOrchestratorSafetyWiring:
         orch.paper_adapter.open_order = MagicMock()
         orch.paper_adapter.open_order.assert_not_called()
 
+
+class TestKillSwitchWiring:
+    """Tests for #333: drawdown data feeds into kill-switch auto-trigger."""
+
+    def test_check_all_feeds_drawdown_to_kill_switch(self):
+        """check_all() with 30%+ drawdown activates kill-switch auto-trigger."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.check_all({"symbol": "BTCUSDT"}, equity=100_000.0)
+        chain.check_all({"symbol": "BTCUSDT"}, equity=65_000.0)  # 35% DD
+        assert chain.drawdown_gate.block_new_trades() is True, \
+            "DrawdownGate should block at 35% drawdown"
+        assert chain.kill_switch.is_active() is True, \
+            "KillSwitch should have auto-triggered from drawdown data"
+        ks_state = chain.kill_switch.get_state()
+        assert ks_state["reason"] == "drawdown", \
+            f"KillSwitch reason should be 'drawdown', got {ks_state['reason']}"
+
+    def test_below_30pct_drawdown_leaves_kill_switch_inactive(self):
+        """Below 30% drawdown, kill switch stays inactive."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.check_all({"symbol": "BTCUSDT"}, equity=100_000.0)
+        chain.check_all({"symbol": "BTCUSDT"}, equity=85_000.0)  # 15% DD
+        assert chain.drawdown_gate.block_new_trades() is False
+        assert chain.kill_switch.is_active() is False
+
+    def test_default_kill_switch_has_30pct_drawdown_threshold(self):
+        """SafetyGateChain's default KillSwitch has 30% drawdown auto-trigger."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        assert chain.kill_switch.config.auto_trigger_on_drawdown_pct == 30.0, (
+            "Default kill switch must have 30% drawdown threshold"
+        )
+
+    def test_no_equity_no_auto_trigger(self):
+        """Without equity data, kill switch never auto-triggers."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.check_all({"symbol": "BTCUSDT"})  # no equity
+        assert chain.kill_switch.is_active() is False
+        assert chain.drawdown_gate.block_new_trades() is False
+
     def test_drawdown_gate_over_threshold_blocks_trade(self):
         """DrawdownGate blocking prevents trade execution (fail-closed)."""
         from unittest.mock import MagicMock
@@ -732,6 +779,53 @@ class TestOrchestratorSafetyWiring:
         # Verify the adapter was NEVER called (fail-closed)
         orch.paper_adapter.open_order = MagicMock()
         orch.paper_adapter.open_order.assert_not_called()
+
+
+class TestKillSwitchWiring:
+    """Tests for #333: drawdown data feeds into kill-switch auto-trigger."""
+
+    def test_check_all_feeds_drawdown_to_kill_switch(self):
+        """check_all() with 30%+ drawdown activates kill-switch auto-trigger."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.check_all({"symbol": "BTCUSDT"}, equity=100_000.0)
+        chain.check_all({"symbol": "BTCUSDT"}, equity=65_000.0)  # 35% DD
+        assert chain.drawdown_gate.block_new_trades() is True, \
+            "DrawdownGate should block at 35% drawdown"
+        assert chain.kill_switch.is_active() is True, \
+            "KillSwitch should have auto-triggered from drawdown data"
+        ks_state = chain.kill_switch.get_state()
+        assert ks_state["reason"] == "drawdown", \
+            f"KillSwitch reason should be 'drawdown', got {ks_state['reason']}"
+
+    def test_below_30pct_drawdown_leaves_kill_switch_inactive(self):
+        """Below 30% drawdown, kill switch stays inactive."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.check_all({"symbol": "BTCUSDT"}, equity=100_000.0)
+        chain.check_all({"symbol": "BTCUSDT"}, equity=85_000.0)  # 15% DD
+        assert chain.drawdown_gate.block_new_trades() is False
+        assert chain.kill_switch.is_active() is False
+
+    def test_default_kill_switch_has_30pct_drawdown_threshold(self):
+        """SafetyGateChain's default KillSwitch has 30% drawdown auto-trigger."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        assert chain.kill_switch.config.auto_trigger_on_drawdown_pct == 30.0, (
+            "Default kill switch must have 30% drawdown threshold"
+        )
+
+    def test_no_equity_no_auto_trigger(self):
+        """Without equity data, kill switch never auto-triggers."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.check_all({"symbol": "BTCUSDT"})  # no equity
+        assert chain.kill_switch.is_active() is False
+        assert chain.drawdown_gate.block_new_trades() is False
 
     def test_safety_check_not_bypassable(self):
         """There is no flag or parameter to skip the safety gate check."""
@@ -773,3 +867,50 @@ class TestOrchestratorSafetyWiring:
 
         orch.paper_adapter.open_order = MagicMock()
         orch.paper_adapter.open_order.assert_not_called()
+
+
+class TestKillSwitchWiring:
+    """Tests for #333: drawdown data feeds into kill-switch auto-trigger."""
+
+    def test_check_all_feeds_drawdown_to_kill_switch(self):
+        """check_all() with 30%+ drawdown activates kill-switch auto-trigger."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.check_all({"symbol": "BTCUSDT"}, equity=100_000.0)
+        chain.check_all({"symbol": "BTCUSDT"}, equity=65_000.0)  # 35% DD
+        assert chain.drawdown_gate.block_new_trades() is True, \
+            "DrawdownGate should block at 35% drawdown"
+        assert chain.kill_switch.is_active() is True, \
+            "KillSwitch should have auto-triggered from drawdown data"
+        ks_state = chain.kill_switch.get_state()
+        assert ks_state["reason"] == "drawdown", \
+            f"KillSwitch reason should be 'drawdown', got {ks_state['reason']}"
+
+    def test_below_30pct_drawdown_leaves_kill_switch_inactive(self):
+        """Below 30% drawdown, kill switch stays inactive."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.check_all({"symbol": "BTCUSDT"}, equity=100_000.0)
+        chain.check_all({"symbol": "BTCUSDT"}, equity=85_000.0)  # 15% DD
+        assert chain.drawdown_gate.block_new_trades() is False
+        assert chain.kill_switch.is_active() is False
+
+    def test_default_kill_switch_has_30pct_drawdown_threshold(self):
+        """SafetyGateChain's default KillSwitch has 30% drawdown auto-trigger."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        assert chain.kill_switch.config.auto_trigger_on_drawdown_pct == 30.0, (
+            "Default kill switch must have 30% drawdown threshold"
+        )
+
+    def test_no_equity_no_auto_trigger(self):
+        """Without equity data, kill switch never auto-triggers."""
+        from runtime.runtime.safety.gate_chain import SafetyGateChain
+
+        chain = SafetyGateChain()
+        chain.check_all({"symbol": "BTCUSDT"})  # no equity
+        assert chain.kill_switch.is_active() is False
+        assert chain.drawdown_gate.block_new_trades() is False
