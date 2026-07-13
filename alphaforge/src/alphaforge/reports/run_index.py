@@ -297,6 +297,85 @@ class ResearchRunIndex:
         _, entry = self._find_by_run_id(run_id)
         return entry
 
+    def register_artifact(
+        self,
+        run_id: str,
+        artifact_path: str,
+        mode: str = "",
+        checksum: str = "",
+        metadata: dict | None = None,
+    ) -> dict:
+        """Register a model artifact path against an existing or new run.
+
+        If the run already exists in the index, the artifact path is
+        appended to its ``artifact_paths`` list (if not already present).
+        If no run with that ``run_id`` exists, a new minimal entry is
+        created automatically.
+
+        Args:
+            run_id: Unique run identifier (created if not found).
+            artifact_path: Path to the model artifact (binary or metadata).
+            mode: Trading mode (required when creating a new entry).
+            checksum: Optional SHA-256 checksum stored in the entry.
+            metadata: Optional metadata dict (stored as ``artifact_metadata``
+                      on the entry).
+
+        Returns:
+            The updated (or newly created) entry dict.
+        """
+        runs = self._data.setdefault("runs", [])
+        canonical_map = self._data.setdefault("canonical", {})
+        _, entry = self._find_by_run_id(run_id)
+
+        if entry is not None:
+            # Append artifact path if not already present
+            paths: list = entry.setdefault("artifact_paths", [])
+            if artifact_path not in paths:
+                paths.append(artifact_path)
+            if checksum:
+                entry["checksum"] = checksum
+            if metadata:
+                entry["artifact_metadata"] = metadata
+            logger.info(
+                "Registered artifact '%s' for existing run '%s'",
+                artifact_path, run_id,
+            )
+        else:
+            # Create a new minimal run entry
+            if not mode:
+                logger.warning(
+                    "register_artifact: no mode provided for new run '%s' — using 'UNKNOWN'",
+                    run_id,
+                )
+                mode = "UNKNOWN"
+            entry = _make_entry(
+                run_id=run_id,
+                mode=mode,
+                canonical_report_path=artifact_path,
+                candidate_count=0,
+                trial_count=0,
+                verdict="REGISTERED",
+                artifact_paths=[artifact_path],
+                superseded_reports=[],
+                duplicate_reports=[],
+                status=STATUS_CANONICAL,
+            )
+            if checksum:
+                entry["checksum"] = checksum
+            if metadata:
+                entry["artifact_metadata"] = metadata
+            runs.append(entry)
+            # Only update canonical map if this mode has no canonical yet
+            if mode not in canonical_map:
+                canonical_map[mode] = run_id
+            logger.info(
+                "Created new run entry '%s' (%s) with artifact '%s'",
+                run_id, mode, artifact_path,
+            )
+
+        self._data["updated_at"] = _now_iso()
+        return entry
+
     def write(self, index_path: str | Path | None = None) -> Path:
         """Persist the index to disk as JSON.
 
