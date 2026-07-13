@@ -1,0 +1,24 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: PARTIAL_RESEARCH_COMPLETE
+scope_confirmation: "Canonical AlphaForge family isolation, timestamp-aware WFV, and real 10-symbol specialist comparison; no execution promotion."
+files_changed:
+  - alphaforge/src/alphaforge/train.py
+  - alphaforge/src/alphaforge/training/xgb_trainer.py
+  - alphaforge/tests/test_train_feature_isolation.py
+  - alphaforge/tests/test_wfv_timestamp_boundaries.py
+decisions_locked: []
+remaining_holds:
+  - "Volume/no-rank: PBO HIGH and 0.2498 train/OOS gap."
+  - "Untouched holdout plus 1.0x/1.5x/2.0x simulation cost stress required."
+safe_next_step: "Freeze and evaluate the volume/no-rank candidate once on an untouched chronological holdout."
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. .venv/bin/python -m pytest alphaforge/tests/test_wfv_timestamp_boundaries.py alphaforge/tests/test_train_feature_isolation.py alphaforge/tests/test_xgb_trainer.py -q"
+evidence:
+  baseline_returns_timestamp_wfv_net_r: 0.006477
+  volume_no_rank_net_r: 0.012715
+  volume_no_rank_active_trades: 14308
+  volume_no_rank_exposure_pct: 12.22
+  volume_no_rank_overfit_gap: 0.2498
+  volume_no_rank_pbo_risk: HIGH
+  volume_no_rank_fold_net_r: [0.007711, 0.014512, 0.010832, 0.017033, 0.009801, 0.011771]

@@ -340,10 +340,10 @@
     {
       "object_name": "ActionSpace",
       "owner_domain": "alphaforge",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "schema_file": "contracts/schemas/action_space.schema.json",
       "fixture_file": null,
-      "description": "Machine-readable action space encoding direction + leverage as discrete integer labels (9 actions)",
+      "description": "Machine-readable action space encoding direction + leverage as discrete integer labels (13 actions: NO_TRADE + LONG/SHORT at 1x/2x/3x/5x/7x/10x)",
       "source_authority": [
         "contracts/schemas/action_space.schema.json"
       ],

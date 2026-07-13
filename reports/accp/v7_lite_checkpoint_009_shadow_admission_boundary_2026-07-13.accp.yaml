@@ -1,0 +1,26 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-009
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 85
+scope_confirmation: "V7-Lite now has a deterministic admission boundary immediately before the existing V7 shadow observer. A candidate with incomplete pre-shadow evidence cannot create a shadow record."
+files_changed:
+  - v7/lite/candidate_gate.py
+  - v7/tests/test_lite_candidate_gate.py
+decisions_locked:
+  - "The candidate manifest is an immutable, shadow-only V7 admission contract."
+  - "Admission occurs before shadow observation and does not bypass policy, portfolio, runtime eligibility, or risk controls."
+evidence:
+  command: "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_candidate_gate.py v7/tests/test_shadow_mode.py v7/tests/test_portfolio.py -q"
+  result: "54 passed"
+  negative_control: "A manifest with G4=HOLD returns a denied admission, returns no shadow record, and leaves ShadowModeManager records empty."
+  positive_control: "A fully PASS fixture produces exactly one shadow record after the admission boundary."
+remaining_holds:
+  - "The frozen volume/no-rank research manifest has G0-G6 HOLD and is not admitted to shadow."
+  - "The baseline ShadowModeManager mirrors a proposed decision unless supplied an independent market observer; it is not proof of live economic performance."
+  - "A horizon-aware multi-position portfolio simulation and an approved paper/shadow lifecycle remain required before promotion."
+safe_next_step: "Build the horizon-aware portfolio replay from decision traces, then rerun G0-G6 on preregistered fresh windows before activating any shadow campaign."
+commands_run:
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_candidate_gate.py v7/tests/test_shadow_mode.py v7/tests/test_portfolio.py -q"
+evidence_notes:
+  - "No orders, paper trades, or live execution were created by this checkpoint."

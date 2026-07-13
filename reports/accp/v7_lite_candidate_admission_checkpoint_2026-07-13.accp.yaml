@@ -1,0 +1,37 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS_WITH_HOLDS"
+scope_confirmation:
+  task: "Minimal V7-owned frozen AlphaForge candidate manifest admission gate"
+  completed:
+    - "V7 can load a JSON-only immutable candidate manifest without importing AlphaForge."
+    - "Admission verifies model scope, symbol scope, validity interval, artifact checksum, feature schema, and G0-G6 evidence."
+    - "Admission permits SHADOW evaluation only and is explicitly pre-policy; it cannot place orders or override V7 gates."
+  excluded:
+    - "Model inference and action selection"
+    - "Portfolio, risk, runtime execution, paper, or live routing"
+    - "Promotion of current research candidates"
+files_changed:
+  - "v7/lite/__init__.py"
+  - "v7/lite/candidate_gate.py"
+  - "v7/tests/test_lite_candidate_gate.py"
+  - "reports/accp/v7_lite_candidate_admission_checkpoint_2026-07-13.accp.yaml"
+decisions_locked:
+  - "V7 remains final acceptance authority; AlphaForge is represented only by opaque manifest lineage and evidence fields."
+  - "A frozen candidate admission is SHADOW-only and precedes, rather than replaces, V7 policy/portfolio/risk/runtime gates."
+remaining_holds:
+  - "No actual frozen candidate manifest has been produced from the current volume research candidates."
+  - "Current volume candidates lack promotion-grade, pre-registered fresh OOS evidence and must remain blocked from V7-Lite."
+  - "Runtime wiring must invoke evaluate_frozen_candidate before policy only after a candidate is legitimately SHADOW_READY."
+safe_next_step: "Have AlphaForge emit one immutable manifest only after fresh OOS evidence is frozen; then wire this gate into the runtime shadow router, retaining policy/portfolio/risk controls."
+commands_run:
+  - "PYTHONPATH=. python3 -m pytest v7/tests/test_lite_candidate_gate.py v7/tests/test_policy.py v7/tests/test_handoff.py v7/tests/test_promotion.py integration/tests/test_cross_domain_boundaries.py -q"
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests -q"
+  - ".venv/bin/python -m py_compile v7/lite/__init__.py v7/lite/candidate_gate.py"
+evidence:
+  targeted_tests: "70 passed, 2 xfailed"
+  full_v7_tests: "887 passed, 5 pre-existing failures; new v7/tests/test_lite_candidate_gate.py: 11 passed"
+  full_v7_preexisting_failures:
+    - "test_deployment_gates.py::TestShadowEvaluationManager::test_evaluate_partial (rounded 0.6667 vs exact 2/3)"
+    - "Four test_e2e_swing failures due to existing ENTER_LONG/ENTER_SHORT versus LONG_NOW/SHORT_NOW action vocabulary and legacy event shape expectations"
+  boundary: "integration/tests/test_cross_domain_boundaries.py: 4 passed, 2 xfailed"

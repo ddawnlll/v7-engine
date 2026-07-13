@@ -222,28 +222,30 @@ Each mode must pass these gates sequentially. No gate may be skipped. Promotion 
 
 ### Mode-Specific Promotion Thresholds
 
-**Owner Review Status (P0.7C):** SWING thresholds are **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines for the secondary baseline/control mode. They are *not* permanent empirical truth and must be recalibrated after the first SWING walk-forward/backtest evidence. SCALP and AGGRESSIVE_SCALP thresholds remain **HOLD** — they require empirical evidence and owner review before any promotion threshold logic can be implemented for those modes.
+**Owner Review Status (P0.7C, updated 2026-07-13):** SWING, SCALP, and AGGRESSIVE_SCALP thresholds are all **LOCKED_INITIAL_BASELINE** — owner-reviewed conservative baselines. They are *not* permanent empirical truth and must be recalibrated after each mode's first full walk-forward/backtest evidence on the canonical 5-symbol (v0.30B LOCKED baseline) / full-feature (--features all) dataset. Locking is what makes the deterministic V7-Lite readiness gate (`v7/lite/readiness_gate.py`) able to evaluate G0-G6 as real PASS/FAIL for these modes instead of leaving them permanently un-scoreable.
 
-**Mode Priority Note (P0.7E):** SCALP and AGGRESSIVE_SCALP are **PRIMARY** business/research modes. Their HOLD status means "empirical research required" — not "low priority." SWING is **SECONDARY_BASELINE** / control mode. Its LOCKED_INITIAL_BASELINE status means "safer initial baseline anchor" — not "highest product priority." AlphaForge must produce primary research reports for SCALP and AGGRESSIVE_SCALP, and a secondary baseline report for SWING. All three modes require AlphaForge research before promotion eligibility can be determined.
+**SCALP/AGGRESSIVE_SCALP lock note (2026-07-13):** These two modes' thresholds were promoted HOLD → LOCKED_INITIAL_BASELINE by owner decision so the deterministic readiness gate has real numbers to check SCALP/AGGRESSIVE_SCALP against — the numeric values below were already documented as placeholders and are unchanged by this lock; only their status changed. They remain baseline-conservative and pending recalibration after the first full 5-symbol / full-feature walk-forward run for each mode. This does not constitute empirical validation and does not authorize paper/live promotion — G1-G10 evidence is still required per mode.
+
+**Mode Priority Note (P0.7E):** SCALP and AGGRESSIVE_SCALP are **PRIMARY** business/research modes. Their LOCKED_INITIAL_BASELINE status (as of 2026-07-13) means "conservative baseline is now checkable, empirical evidence is still required to keep it locked" — not "already validated." SWING is **SECONDARY_BASELINE** / control mode. Its LOCKED_INITIAL_BASELINE status means "safer initial baseline anchor" — not "highest product priority." AlphaForge must produce primary research reports for SCALP and AGGRESSIVE_SCALP, and a secondary baseline report for SWING. All three modes require AlphaForge research before promotion eligibility can be determined.
 
 **Lock Semantics:**
-- **LOCKED_INITIAL_BASELINE:** Owner-reviewed conservative baseline for the secondary baseline/control mode (SWING). Implementation can proceed. Values subject to recalibration after first walk-forward evidence. Does NOT imply highest business priority — see Mode Priority Note above.
-- **HOLD:** Do not implement live/promotion threshold logic for this mode beyond research. HOLD means "empirical evidence required" — this reflects research difficulty (fee, slippage, latency, overfit risks), not low business priority. SCALP and AGGRESSIVE_SCALP are PRIMARY business/research modes on HOLD.
+- **LOCKED_INITIAL_BASELINE:** Owner-reviewed conservative baseline. Implementation can proceed, including deterministic gate evaluation (`v7/lite/readiness_gate.py`). Values subject to recalibration after each mode's first full walk-forward evidence on the canonical 5-symbol (v0.30B LOCKED baseline) / full-feature (--features all) dataset. Does NOT imply the mode has passed any gate yet, and does NOT imply highest business priority — see Mode Priority Note above.
+- **HOLD:** Do not implement live/promotion threshold logic for this mode beyond research. HOLD means "empirical evidence required" — this reflects research difficulty (fee, slippage, latency, overfit risks), not low business priority. As of 2026-07-13 no mode's thresholds are HOLD; all three carry LOCKED_INITIAL_BASELINE pending recalibration.
 - **RESEARCH_ONLY:** Mode may be researched, but not promoted to paper/tiny-live/live until empirical evidence and owner review exist.
 
 | Threshold | SWING | SCALP | AGGRESSIVE_SCALP |
 |-----------|-------|-------|------------------|
-| Minimum OOS window | 12 months (6 folds × 2mo) **[LOCKED_INITIAL_BASELINE]** | 12 months (6 folds × 2mo) **[HOLD]** | 6 months (6 folds × 1mo) **[HOLD]** |
-| Minimum trades/events | ≥ 200 **[LOCKED_INITIAL_BASELINE]** | ≥ 500 **[HOLD]** | ≥ 300 **[HOLD]** |
-| Minimum expectancy R | ≥ 0.15R **[LOCKED_INITIAL_BASELINE]** | ≥ 0.05R **[HOLD]** | ≥ 0.03R **[HOLD]** |
-| Max drawdown limit | ≤ 25% **[LOCKED_INITIAL_BASELINE]** | ≤ 15% **[HOLD]** | ≤ 10% **[HOLD]** |
-| Min no-trade quality | CORRECT_NO_TRADE ≥ 60%; SAVED_LOSS ≥ 0.20R per event **[LOCKED_INITIAL_BASELINE]** | CORRECT_NO_TRADE ≥ 55%; SAVED_LOSS ≥ 0.10R per event **[HOLD]** | CORRECT_NO_TRADE ≥ 50%; SAVED_LOSS ≥ 0.05R per event **[HOLD]** |
-| Calibration requirement | Reliability error within ±10% per bucket **[LOCKED_INITIAL_BASELINE]** | Reliability error within ±10% per bucket **[HOLD]** | Reliability error within ±15% per bucket **[HOLD]** |
-| Cost stress requirement | Edge survives taker × 1.5 multiplier stress **[LOCKED_INITIAL_BASELINE]** | Edge survives taker × 2.0 multiplier stress; cost-adjusted expectancy ≥ 0.10R **[HOLD]** | Edge survives taker × 2.5 multiplier stress **[HOLD]** |
-| Shadow duration | ≥ 4 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 3 weeks **[HOLD]** | ≥ 2 weeks **[HOLD]** |
-| Paper duration | ≥ 4 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 4 weeks **[HOLD]** | ≥ 3 weeks **[HOLD]** |
-| Tiny live limit | Max 0.5% account risk per trade; max 5% daily loss; max 10% cumulative **[LOCKED_INITIAL_BASELINE]** | Max 0.25% account risk per trade; max 3% daily loss; max 7% cumulative **[HOLD]** | Max 0.1% account risk per trade; max 2% daily loss; max 5% cumulative **[HOLD]** |
-| Owner review status | **LOCKED_INITIAL_BASELINE** — implementation-ready for SWING | **HOLD** — empirical evidence required | **HOLD** — empirical evidence required |
+| Minimum OOS window | 12 months (6 folds × 2mo) **[LOCKED_INITIAL_BASELINE]** | 12 months (6 folds × 2mo) **[LOCKED_INITIAL_BASELINE]** | 6 months (6 folds × 1mo) **[LOCKED_INITIAL_BASELINE]** |
+| Minimum trades/events | ≥ 200 **[LOCKED_INITIAL_BASELINE]** | ≥ 500 **[LOCKED_INITIAL_BASELINE]** | ≥ 300 **[LOCKED_INITIAL_BASELINE]** |
+| Minimum expectancy R | ≥ 0.15R **[LOCKED_INITIAL_BASELINE]** | ≥ 0.05R **[LOCKED_INITIAL_BASELINE]** | ≥ 0.03R **[LOCKED_INITIAL_BASELINE]** |
+| Max drawdown limit | ≤ 25% **[LOCKED_INITIAL_BASELINE]** | ≤ 15% **[LOCKED_INITIAL_BASELINE]** | ≤ 10% **[LOCKED_INITIAL_BASELINE]** |
+| Min no-trade quality | CORRECT_NO_TRADE ≥ 60%; SAVED_LOSS ≥ 0.20R per event **[LOCKED_INITIAL_BASELINE]** | CORRECT_NO_TRADE ≥ 55%; SAVED_LOSS ≥ 0.10R per event **[LOCKED_INITIAL_BASELINE]** | CORRECT_NO_TRADE ≥ 50%; SAVED_LOSS ≥ 0.05R per event **[LOCKED_INITIAL_BASELINE]** |
+| Calibration requirement | Reliability error within ±10% per bucket **[LOCKED_INITIAL_BASELINE]** | Reliability error within ±10% per bucket **[LOCKED_INITIAL_BASELINE]** | Reliability error within ±15% per bucket **[LOCKED_INITIAL_BASELINE]** |
+| Cost stress requirement | Edge survives taker × 1.5 multiplier stress **[LOCKED_INITIAL_BASELINE]** | Edge survives taker × 2.0 multiplier stress; cost-adjusted expectancy ≥ 0.10R **[LOCKED_INITIAL_BASELINE]** | Edge survives taker × 2.5 multiplier stress **[LOCKED_INITIAL_BASELINE]** |
+| Shadow duration | ≥ 4 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 3 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 2 weeks **[LOCKED_INITIAL_BASELINE]** |
+| Paper duration | ≥ 4 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 4 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 3 weeks **[LOCKED_INITIAL_BASELINE]** |
+| Tiny live limit | Max 0.5% account risk per trade; max 5% daily loss; max 10% cumulative **[LOCKED_INITIAL_BASELINE]** | Max 0.25% account risk per trade; max 3% daily loss; max 7% cumulative **[LOCKED_INITIAL_BASELINE]** | Max 0.1% account risk per trade; max 2% daily loss; max 5% cumulative **[LOCKED_INITIAL_BASELINE]** |
+| Owner review status | **LOCKED_INITIAL_BASELINE** — implementation-ready | **LOCKED_INITIAL_BASELINE** (2026-07-13) — implementation-ready, pending first full-dataset recalibration | **LOCKED_INITIAL_BASELINE** (2026-07-13) — implementation-ready, pending first full-dataset recalibration |
 
 ### SWING Baseline Rationale (Per Threshold)
 
@@ -262,7 +264,22 @@ Each mode must pass these gates sequentially. No gate may be skipped. Promotion 
 
 **SWING Recalibration Policy:** All SWING LOCKED_INITIAL_BASELINE thresholds must be recalibrated after the first SWING walk-forward/backtest evidence is available. Recalibration is an owner-reviewed decision, not an automated process. Thresholds do not automatically promote to LOCKED without owner review of the first empirical evidence.
 
-**SCALP and AGGRESSIVE_SCALP Status:** All numeric promotion thresholds for SCALP and AGGRESSIVE_SCALP are **HOLD**. These modes may be researched (feature engineering, label design, model experimentation) but no promotion threshold logic may be implemented until empirical evidence and owner review establish conservative baselines. The values shown in the table are placeholder defaults — they are not live, not locked, and not implementation-ready.
+### SCALP / AGGRESSIVE_SCALP Baseline Rationale (Per Threshold)
+
+| Threshold | SCALP Value | AGGRESSIVE_SCALP Value | Rationale | Recalibration Trigger |
+|-----------|-------------|-------------------------|-----------|----------------------|
+| Minimum OOS window | 12 months (6 folds × 2mo) | 6 months (6 folds × 1mo) | SCALP (1h) needs the same regime-cycle coverage as SWING; AGGRESSIVE_SCALP (15m/5m) generates enough events in half the calendar time to reach its trade-count floor | After first full-dataset walk-forward for each mode completes |
+| Minimum trades/events | ≥ 500 | ≥ 300 | Higher-frequency modes require more events for the same expectancy confidence-interval width, offset by shorter OOS windows generating more events/month | After first walk-forward: if variance higher than expected, increase threshold |
+| Minimum expectancy R | ≥ 0.05R | ≥ 0.03R | Lower per-trade R floor than SWING is intentional — SCALP/AGGRESSIVE_SCALP compensate with trade frequency; too high a floor here would reject viable high-frequency edges | After first walk-forward: recalibrate based on realized cost-adjusted distribution |
+| Max drawdown limit | ≤ 15% | ≤ 10% | Tighter than SWING because higher trade frequency compounds drawdown faster; AGGRESSIVE_SCALP tightest given shortest holding periods | After first multi-regime walk-forward: tighten if recovery periods exceed 3 months |
+| Min no-trade quality | CORRECT_NO_TRADE ≥ 55%; SAVED_LOSS ≥ 0.10R | CORRECT_NO_TRADE ≥ 50%; SAVED_LOSS ≥ 0.05R | Higher-frequency modes naturally produce more NO_TRADE noise; thresholds are relaxed vs SWING but still reject a lazy/collapsed classifier | After first evaluation: adjust if MISSED_OPPORTUNITY rate exceeds 25% |
+| Calibration requirement | ±10% per bucket | ±15% per bucket | AGGRESSIVE_SCALP's noisier microstructure features justify a looser reliability bound than SCALP/SWING | After first calibration run: tighten if model shows stable calibration |
+| Cost stress requirement | taker × 2.0; cost-adjusted expectancy ≥ 0.10R | taker × 2.5 | Higher trade frequency means cost sensitivity compounds faster — SCALP/AGGRESSIVE_SCALP require a harsher stress multiplier than SWING's 1.5× | After first cost stress run: if edge survives further stress, raise multiplier |
+| Shadow duration | ≥ 3 weeks | ≥ 2 weeks | Higher event frequency reaches statistically comparable trade counts faster than SWING's 4 weeks | Always minimum; extend if first shadow period shows high variance |
+| Paper duration | ≥ 4 weeks | ≥ 3 weeks | Matches shadow duration reasoning; ensures paper outcomes are statistically comparable to shadow/backtest | Always minimum; extend if paper-shadow divergence detected |
+| Tiny live limit | 0.25% risk/trade; 3% daily; 7% cumulative | 0.1% risk/trade; 2% daily; 5% cumulative | Progressively tighter than SWING given higher trade frequency and shorter holding periods compound risk faster | After first tiny-live period: adjust based on realized vs expected loss distribution |
+
+**SCALP/AGGRESSIVE_SCALP Recalibration Policy:** These LOCKED_INITIAL_BASELINE thresholds were promoted from HOLD placeholders by owner decision (2026-07-13) specifically so the deterministic V7-Lite readiness gate (`v7/lite/readiness_gate.py`) can evaluate G0-G6 as real PASS/FAIL. They must be recalibrated after each mode's first full 5-symbol / full-feature walk-forward/backtest evidence — same policy as SWING. Locking the threshold values does **not** mean either mode has passed any gate; as of 2026-07-13 no full-dataset SCALP/AGGRESSIVE_SCALP run has been scored against them (see `v7/docs/roadmap.md`).
 
 ### Rejection Rules
 

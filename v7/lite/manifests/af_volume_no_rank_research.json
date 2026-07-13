@@ -1,0 +1,22 @@
+{
+  "manifest_version": "v7-lite-candidate-1.0",
+  "candidate_id": "af-volume-no-rank-research-001",
+  "mode": "SCALP",
+  "model_scope": "scalp_volume_v1",
+  "deployment_stage": "SHADOW",
+  "artifact": {
+    "artifact_id": "training_scalp_20260713T111331",
+    "sha256": "811c5aab7b518a2c9cafe1989452a2372afc3f1894bdc20d8a2175ef967f24b3",
+    "feature_schema_id": "scalp-volume-no-rank-v1"
+  },
+  "scope": {
+    "supported_symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "ADAUSDT", "AVAXUSDT", "DOGEUSDT", "DOTUSDT", "LINKUSDT", "XRPUSDT"],
+    "valid_from": "2026-07-13T00:00:00Z",
+    "valid_until": null
+  },
+  "evidence": {
+    "gate_statuses": {"G0": "HOLD", "G1": "HOLD", "G2": "HOLD", "G3": "HOLD", "G4": "HOLD", "G5": "HOLD", "G6": "HOLD"},
+    "research_status": "HOLD_SELECTION_BIAS",
+    "fresh_oos_checkpoint": "V7LITE-004"
+  }
+}

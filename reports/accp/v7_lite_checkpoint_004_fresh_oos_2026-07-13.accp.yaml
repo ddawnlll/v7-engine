@@ -1,0 +1,30 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-004
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 67
+scope_confirmation: "Frozen volume/no-rank AlphaForge candidate evaluated on checksum-verified fresh Binance 1h data after canonical ms-to-ns ingestion."
+candidate:
+  feature_groups: [volume]
+  normalization: none
+  mode: SCALP
+  confidence_threshold: 0.50
+  model_parameters: XGBoostTrainer_mode_defaults
+fresh_oos:
+  source: /tmp/v7_fresh_data
+  symbols: [BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, ADAUSDT, AVAXUSDT, DOGEUSDT, DOTUSDT, LINKUSDT, XRPUSDT]
+  fit_samples: 14400
+  oos_samples: 10070
+  oos_start: "2026-06-01T00:00:00Z"
+  oos_end: "2026-07-12T22:00:00Z"
+  pre_cutoff_label_purge_hours: 24
+  net_r_per_active_trade: 0.006856
+  total_net_r: 9.735822
+  active_trades: 1420
+  exposure_pct: 14.10
+  accuracy: 0.18093
+remaining_holds:
+  - "Feature-family selection occurred before this OOS test; not promotion evidence."
+  - "No frozen artifact/manifest or portfolio-overlap simulation yet."
+  - "V7 SHADOW admission G0-G6 remain unpassed."
+safe_next_step: "Create research-only frozen candidate manifest with all pre-shadow gates HOLD, then calculate candidate overlap before any stage change."

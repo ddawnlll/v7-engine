@@ -1,0 +1,25 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-001
+result: IN_PROGRESS
+v7_lite_readiness_percent: 45
+scope_confirmation: "Baseline checkpoint before fresh-data validation, frozen manifest/portfolio work, deterministic gate wiring, and paper/shadow verification."
+completed:
+  - "Timestamp-aware canonical WFV for multi-symbol panels"
+  - "Family-isolated XGBoost experiments and normalization A/B"
+  - "Volume and volume+regime research candidates discovered"
+  - "Futures API host routing corrected and smoke-tested"
+remaining:
+  - "Fresh, untouched data evaluation"
+  - "Frozen candidate manifest and portfolio overlap simulation"
+  - "Deterministic V7-lite candidate acceptance gate"
+  - "Paper/shadow readiness verification"
+evidence:
+  volume_wfv_net_r: 0.012715
+  volume_regime_wfv_net_r: 0.011582
+  fresh_sync_records: 24840
+  fresh_sync_checksum_failures: 0
+commands_run:
+  - "PYTHONPATH=. .venv/bin/python -m pytest lib/tests/test_market_data_binance.py -q"
+  - "remote scripts/sync_data.py 10 symbols 1h checksum enabled"
+safe_next_step: "Evaluate frozen candidate on fresh post-panel data without changing candidate parameters."

@@ -148,14 +148,14 @@ class PortfolioManager:
 
         # Step 3: Suppress correlated bets via cluster limits
         decisions, corr_suppressed = self._suppress_correlated(
-            decisions, self.config.get("correlation_groups", {})
+            decisions, self.config.get("correlation_groups", {}), positions
         )
 
         # Step 4: Apply position limits
         max_positions = self.config.get("max_simultaneous_positions", 10)
         max_exposure_pct = self.config.get("max_total_exposure_pct", 50.0)
         decisions, limit_suppressed = self._apply_position_limits(
-            decisions, max_positions, max_exposure_pct
+            decisions, max_positions, max_exposure_pct, positions
         )
 
         # Rank remaining decisions
@@ -340,6 +340,7 @@ class PortfolioManager:
         self,
         decisions: list[dict],
         correlation_groups: dict[str, set[str]],
+        positions: dict[str, Any] | None = None,
     ) -> tuple[list[dict], list[str]]:
         """Internal: suppress excess cluster exposure, return (filtered, suppressed_symbols)."""
         max_cluster_pct = self.config.get("max_cluster_exposure_pct", 15.0)
@@ -352,11 +353,24 @@ class PortfolioManager:
             for m in members:
                 symbol_to_group[m] = gname
 
+        # Seed cluster exposure with already-open positions.  Without this,
+        # a newly admitted decision could exceed a cluster cap merely because
+        # its correlated sibling was opened on a previous timestamp.
+        cluster_exposure: dict[str, float] = {}
+        if positions:
+            for symbol, position in positions.items():
+                if not isinstance(position, dict):
+                    continue
+                group = symbol_to_group.get(symbol)
+                if group is not None:
+                    cluster_exposure[group] = cluster_exposure.get(group, 0.0) + float(
+                        position.get("size_pct", position.get("exposure_pct", 0.0))
+                    )
+
         # Rank decisions (best first)
         ranked = sorted(decisions, key=_rank_key)
 
         # Track cluster exposure and suppress excess
-        cluster_exposure: dict[str, float] = {}
         filtered: list[dict] = []
         suppressed: list[str] = []
 
@@ -382,6 +396,7 @@ class PortfolioManager:
         decisions: list[dict],
         max_positions: int,
         max_exposure_pct: float,
+        positions: dict[str, Any] | None = None,
     ) -> tuple[list[dict], list[str]]:
         """Internal: apply count + exposure caps, return (filtered, suppressed_symbols)."""
         if max_positions <= 0:
@@ -391,10 +406,20 @@ class PortfolioManager:
         ranked = sorted(decisions, key=_rank_key)
         filtered: list[dict] = []
         suppressed: list[str] = []
-        total_exposure: float = 0.0
+        active_positions = {
+            symbol for symbol, position in (positions or {}).items()
+            if isinstance(position, dict) and float(
+                position.get("size_pct", position.get("exposure_pct", 0.0))
+            ) > 0.0
+        }
+        total_exposure = sum(
+            float(position.get("size_pct", position.get("exposure_pct", 0.0)))
+            for position in (positions or {}).values()
+            if isinstance(position, dict)
+        )
 
         for d in ranked:
-            if len(filtered) >= max_positions:
+            if len(active_positions) + len(filtered) >= max_positions:
                 suppressed.append(d.get("symbol", "?"))
                 continue
 

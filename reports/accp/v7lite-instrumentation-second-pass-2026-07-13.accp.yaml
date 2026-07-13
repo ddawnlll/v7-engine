@@ -1,0 +1,65 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS_WITH_HOLDS"
+scope_confirmation:
+  task: "Fix blockers preventing gate progress, increase gate_completion_pct with real evidence, fix the audited leverage/regression walk-forward gap, and re-present real data."
+  completed:
+    - "Wired regression_objective through walk_forward_validate: each fold now trains reg:squarederror with the SAME purge/embargo boundaries as the classifier path, reporting MAE/RMSE/sign_correct_pct instead of accuracy. New collect_regression_metrics(). Previously the regression path was trained exactly once on the full fit-set with a single non-purged chronological split — never walk-forward validated at all."
+    - "Instrumented no-trade quality (G1/G6): train.py-local counterfactual best-of-{LONG,SHORT} classification of NO_TRADE decisions into correct/missed/saved-loss, explicitly documented as not the full Simulation-authority NoTradeOutcome pipeline."
+    - "Instrumented cost-stress sweep (G3): reuses compute_oos_metrics(fee_pct=...), applies an additional (multiplier-1)*base_cost sweep 1.0x-3.0x on top of the already-deducted base cost."
+    - "Instrumented symbol/cluster contribution (G5): reused existing alphaforge.reports.stability.compute_symbol_metrics/compute_symbol_concentration (Issue #116) — wired the already-threaded `symbols` parameter into aggregation, no new logic invented."
+    - "Instrumented calibration (G6): reused existing alphaforge.reports.ic_metrics.compute_calibration_error."
+    - "Fixed a crash I introduced: __main__'s STRUCTURED_RESULTS block unconditionally read metrics['accuracy'], which does not exist for the regression metrics dict — now branches on metrics.get('objective')."
+    - "Re-ran real SCALP and AGGRESSIVE_SCALP training on the remote GPU box (5-symbol real Binance data, --features all = 91 cols, 6-fold WFV) with the instrumented pipeline, and separately ran both modes with --regression-objective to exercise the fixed leverage WFV path."
+    - "Recomputed gate_completion_pct with the new real evidence: SCALP unchanged at 28.57% (quality subscore improved 22.26% -> 32.06%); AGGRESSIVE_SCALP increased 28.57% -> 42.86% (G3 now genuinely passes) with quality subscore improving 26.07% -> 40.53%."
+  excluded:
+    - "G4 regime breakdown and a real G6 drawdown series were NOT implemented — both need raw OHLCV (close/high/low) threaded through walk_forward_validate, which currently only receives the pre-built feature matrix. This is a larger plumbing change than the other four metrics and was deliberately deferred rather than rushed."
+    - "Did not resolve the pre-existing --output JSON report-file write mystery (file reported as 'saved' by the CLI but absent from disk) — worked around it by adding stdout print statements for the new metrics instead, which is a fully real and equivalent evidence source."
+    - "Did not investigate why 109 alphaforge/tests failures are pre-existing beyond confirming none of the failing files reference the functions this change touches, and that one relevant failure (test_wfv_purge_embargo.py) traces to an unrelated, already-uncommitted purge/embargo formula change from before this session (issue #306 branch)."
+decisions_locked:
+  - "sign_correct_pct as currently defined includes near-zero/low-materiality rows and is NOT trustworthy evidence of directional skill — both real runs report a suspicious 100.0% across every fold, which is flagged as a red flag in the metric's own design, not celebrated as a result. MAE/RMSE are the trustworthy numbers from this run."
+  - "AGGRESSIVE_SCALP's gate_completion_pct increase to 42.86% is real, evidence-backed, and does NOT constitute promotion readiness — still 4/7 gates away from the 100% SHADOW-eligibility bar."
+remaining_holds:
+  - "G1 fails both modes: no-trade quality (10.8%/12.6%) far below the 50-55% floor; PBO HIGH; deflated Sharpe and real MHT computation not present in this pipeline."
+  - "G4 fails both modes by default: no regime breakdown evidence exists yet (raw OHLCV plumbing not built)."
+  - "G5 fails both modes: real top-symbol share (43.2% SCALP / 53.4% AGGRESSIVE_SCALP, both ETHUSDT) exceeds the 40% concentration limit."
+  - "G6 fails both modes: no drawdown series yet (defaults to worst-case); real saved_loss_r (~0.0004R) is far below the 0.05-0.10R floor. Calibration ECE itself (9.65%/13.98%) would pass its own sub-threshold."
+  - "sign_correct_pct metric needs to be restricted to |net_r| > label_threshold (material rows only) before it means anything — currently likely inflated by trivial agreement on near-zero rows."
+  - "109 pre-existing alphaforge/tests failures remain unfixed and unrelated to this change (confirmed via file-reference check and one traced root cause)."
+safe_next_step: "Restrict sign_correct_pct to material rows and re-check whether it still reads ~100%; thread raw OHLCV through walk_forward_validate to unlock G4 regime breakdown and a real G6 drawdown series; investigate reducing ETHUSDT's symbol concentration for G5."
+commands_run:
+  - "ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT --features all --folds 6 --data-dir data_lake'"
+  - "ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train --mode AGGRESSIVE_SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT --features all --folds 6 --data-dir data_lake'"
+  - "ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT --features all --folds 6 --data-dir data_lake --regression-objective'"
+  - "ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train --mode AGGRESSIVE_SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT --features all --folds 6 --data-dir data_lake --regression-objective'"
+  - "PYTHONPATH=. .venv/bin/python -m pytest alphaforge/tests/ -q"
+evidence:
+  scalp_v2:
+    gate_completion_pct: 28.57
+    quality_subscore_pct: 32.06
+    correct_no_trade_pct: 10.8
+    saved_loss_r: 0.000403
+    top_symbol_share_pct: 43.2
+    calibration_ece_pct: 9.65
+    calibration_mce_pct: 90.11
+    cost_stress_max_multiplier_survived: 3.0
+  aggressive_scalp_v2:
+    gate_completion_pct: 42.86
+    quality_subscore_pct: 40.53
+    correct_no_trade_pct: 12.6
+    saved_loss_r: 0.000399
+    top_symbol_share_pct: 53.4
+    calibration_ece_pct: 13.98
+    calibration_mce_pct: 90.09
+    cost_stress_max_multiplier_survived: 3.0
+  scalp_regression_wfv:
+    val_mae: 0.006105
+    val_rmse: 0.008704
+    sign_correct_pct: 100.0
+    caveat: "sign_correct_pct likely inflated by near-zero rows; not validated evidence of skill"
+  aggressive_scalp_regression_wfv:
+    val_mae: 0.004726
+    val_rmse: 0.006985
+    sign_correct_pct: 100.0
+    caveat: "sign_correct_pct likely inflated by near-zero rows; not validated evidence of skill"
+  local_tests: "2220 passed, 109 pre-existing failures (unchanged count), 2 skipped"

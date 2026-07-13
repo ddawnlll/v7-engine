@@ -1,0 +1,58 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-017
+result: HOLD
+mode: AGGRESSIVE_SCALP
+v7_lite_readiness_percent: 28.5714
+quality_subscore_percent: 26.0747
+formula_version: "readiness-gate-1.0"
+scope_confirmation: "Real remote GPU training run, AGGRESSIVE_SCALP, 5-symbol real Binance data, --features all (91 cols), 6-fold WFV."
+data_scope:
+  symbol_count: 5
+  feature_count: 91
+  uses_all_feature_groups: true
+  start_ts: 1683000000000
+  end_ts: 1783846800000
+  canonical: true
+gate_results:
+  G0:
+    passed: true
+    reasons: []
+  G1:
+    passed: false
+    reasons:
+      - "no_trade_quality_below_threshold"
+      - "pbo_risk_not_low_or_medium"
+      - "deflated_sharpe_not_positive"
+      - "mht_fallback_identity_not_real_computation"
+  G2:
+    passed: true
+    reasons: []
+  G3:
+    passed: false
+    reasons:
+      - "edge_does_not_survive_cost_stress"
+  G4:
+    passed: false
+    reasons:
+      - "catastrophic_loss_in_a_regime"
+  G5:
+    passed: false
+    reasons:
+      - "single_symbol_dominates_edge"
+      - "single_cluster_dominates_edge"
+  G6:
+    passed: false
+    reasons:
+      - "calibration_reliability_error_too_high"
+      - "max_drawdown_exceeds_limit"
+      - "saved_loss_below_threshold"
+commands_run:
+  - "ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train --mode AGGRESSIVE_SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT --features all --folds 6 --data-dir data_lake'"
+remaining_holds:
+  - "gate:G1:no_trade_quality_below_threshold,pbo_risk_not_low_or_medium,deflated_sharpe_not_positive,mht_fallback_identity_not_real_computation"
+  - "gate:G3:edge_does_not_survive_cost_stress"
+  - "gate:G4:catastrophic_loss_in_a_regime"
+  - "gate:G5:single_symbol_dominates_edge,single_cluster_dominates_edge"
+  - "gate:G6:calibration_reliability_error_too_high,max_drawdown_exceeds_limit,saved_loss_below_threshold"
+safe_next_step: "Instrument train.py to emit no-trade-quality, cost-stress-sweep, regime-breakdown, symbol-contribution, and calibration metrics so G1/G3/G4/G5/G6 can be scored from real evidence instead of defaulting to FAIL for missing instrumentation."

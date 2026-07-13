@@ -1,0 +1,21 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-007
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 80
+scope_confirmation: "Two candidate decision traces were exported from the same fresh 10-symbol interval and compared by timestamp plus symbol."
+evidence:
+  volume_net_r_per_active_trade: 0.006139
+  volume_active_trades: 2575
+  volume_regime_net_r_per_active_trade: 0.004915
+  volume_regime_active_trades: 3155
+  same_timestamp_symbol_overlap: 1673
+  same_direction_overlap: 1439
+  opposite_direction_overlap: 234
+  union_overlap_pct: 41.24
+conclusion: "Candidate R values are non-additive; portfolio selection is mandatory."
+remaining_holds:
+  - "Trace schema needs expected_r_net / candidate policy score for deterministic V7 ranking."
+  - "Instantaneous overlap selection is not a position-horizon simulation."
+  - "Candidate evidence gates remain HOLD."
+safe_next_step: "Extend trace export with a policy ranking score, then run V7 PortfolioManager timestamp batches and report selected versus suppressed realized R."

@@ -124,6 +124,7 @@ class TestBinanceClient:
         result = client.get_funding_rate("BTCUSDT")
         assert len(result) == 1
         assert result[0][1] == "0.0001"
+        assert client._session.get.call_args.args[0].startswith("https://fapi.binance.com/")
 
 
 # =====================================================================

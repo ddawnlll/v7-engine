@@ -1,49 +1,46 @@
 # Current Task
 
-> **Purpose:** This file contains the SINGLE task the next worker agent must execute.
-> Only one task at a time. Update this when scoping new work.
+## Task ID: V7LITE-LEVERAGE-NATIVE-P1-BINANCE-EXECUTION-PARITY
 
----
+**Status:** PENDING — P0 economic parity foundation is complete.
+P1 (version the leverage and margin contract, extend action space v2, isolated-margin
+simulator) can begin after coordinator review.
 
-## Task ID: SETUP-AUDIT-MEMORY-LAYER
+## P0 Completed (2026-07-13)
 
-**Status:** ✅ COMPLETED
+P0 economic-R parity is verified:
+- True R semantics: `base_net_R` vs forward return distinguished
+- V2 action space (13 actions): backward-compatible with v1
+- Isolated-margin position model in Simulation
+- Deterministic parity fixture with 8 cost scenarios
+- 58 tests passing locally and remotely
+- `base_net_R` invariant confirmed: does not inflate with leverage
 
-### Objective
+See `reports/accp/v7_lite_leverage_native_p0_economic_parity_2026-07-13.accp.yaml`
+for full evidence.
 
-Set up the Audit Memory / Handoff Layer infrastructure — a set of machine-readable context files that serve as the shared memory layer between different AI agents working on this repository.
+## P1 Scope
 
-### Scope
+From `docs/research/v7_lite_leverage_native_master_todo.md`:
 
-- Create `.agent/` directory with protocol, handoff, task, and evidence files
-- Create `docs/decisions/`, `docs/audits/` directories with locked decisions and findings
-- Populate all files with real v7-engine data from existing docs, audits, and reports
-- Build `scripts/build_agent_context.py` context compiler
+- Version the leverage and margin contract fully
+- Extend action space through P2 isolated-margin simulator
+- Update contract registry/schema compatibility tests
+- Build Binance-native simulation economics (bracket snapshots, mark-price)
+- Model initial margin, maintenance margin, unrealized PnL, fees, funding, liquidation
+- Add quantity/tick/min-notional rounding
+- Preserve conservative intrabar ordering
 
-### Deliverables
+## Non-negotiable constraints
 
-- [x] `.agent/CONTEXT_INDEX.md` — Reading order + worker protocol
-- [x] `.agent/CURRENT_TASK.md` — This file
-- [x] `.agent/HANDOFF.md` — Session handoff
-- [x] `.agent/EVIDENCE_REQUIREMENTS.md` — Evidence standard
-- [x] `docs/project_context.md` — Project overview
-- [x] `docs/decisions/DECISIONS.md` — Locked decisions
-- [x] `docs/audits/FINDINGS_LEDGER.md` — Verified findings
-- [x] `docs/audits/OPEN_QUESTIONS.md` — Open investigations
-- [x] `docs/audits/ASSUMPTIONS.md` — Assumptions register
-- [x] `docs/audits/audit_runs/` — Directory for per-session reports
-- [x] `scripts/build_agent_context.py` — Context compiler
+- No live, paper, or shadow orders
+- No automatic runtime execution implementation
+- No cross margin / portfolio margin (P1 remains ISOLATED only)
+- No numerical promotion/drawdown/liquidation threshold locked
+- Simulation remains economic truth authority
 
-### Evidence
+## Evidence
 
-All files created and populated with repo-specific data drawn from:
-- AGENTS.md (design lock semantics, domain boundaries, protocols)
-- governance.md (domain ownership, truth hierarchy)
-- verify_summary.md (test results, performance metrics)
-- alphaforge-audit-2026-07-06.yaml (BTC duplicates, NaN, gaps)
-- research_run_real_10sym.json (training performance)
-- ai_summary.md (subsystem authority map)
-
-### Handoff
-
-See `.agent/HANDOFF.md` for full working summary and recommended next task.
+- `reports/accp/v7_lite_leverage_native_p0_economic_parity_2026-07-13.accp.yaml`
+- F-020 in `docs/audits/FINDINGS_LEDGER.md`
+- `simulation/tests/test_leverage_parity.py` (58 tests)

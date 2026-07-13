@@ -707,3 +707,4 @@ def test_class_weights_in_artifact_metadata():
     cc = result.model_artifact["class_counts"]
     total = sum(int(v) for v in cc.values())
     assert 120 <= total <= 200
+    json.dumps(result.model_artifact)

@@ -1,0 +1,48 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-012
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 92
+scope_confirmation: "The frozen SCALP volume/no-rank settings were regenerated as a canonical fresh-data trace with exit timestamps and replayed through interval-aware V7 portfolio controls."
+candidate:
+  mode: SCALP
+  feature_groups: [volume]
+  normalization: none
+  symbols: [BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, ADAUSDT, AVAXUSDT, DOGEUSDT, DOTUSDT, LINKUSDT, XRPUSDT]
+  confidence_threshold: 0.50
+  portfolio_position_size_pct: 5.0
+fresh_trace:
+  source: /tmp/v7_fresh_data
+  bars: 24840
+  aligned_samples: 24710
+  trace_rows: 9150
+  active_trace_signals: 2575
+  oos_net_expectancy_r_per_active_trade: 0.006139
+replay_evidence:
+  selection_ranking: "expected_r_net=0 for all trace signals; confidence-only deterministic tiebreak; realized_r_net excluded from selection"
+  selected_and_closed_positions: 339
+  suppressed_signals: 2236
+  max_active_positions: 9
+  observational_realized_r_sum: 1.7999692658
+  observational_realized_r_per_selected_trade: 0.0053096439
+  positive_selected_trades: 163
+  positive_rate: 0.480826
+  accounting_invariant: "selected_candidate_count == realized_candidate_count == 339 after same-symbol overlap protection"
+files_changed:
+  - v7/lite/replay_trace.py
+  - v7/lite/portfolio_replay.py
+  - v7/tests/test_lite_portfolio_replay.py
+decisions_locked:
+  - "Trace-to-replay adapter passes realized R only as an exit-time outcome and never as an admission/ranking field."
+  - "One candidate stream cannot open a second same-symbol replay position until the prior position exits."
+remaining_holds:
+  - "The source fresh window was previously inspected during candidate research; this replay validates portfolio accounting, not independent alpha discovery or promotion."
+  - "Frozen manifest G0-G6 remain HOLD; no shadow/paper/live activation is authorized."
+  - "Observational R sum is not leverage-adjusted portfolio equity, a paper-broker result, or a promotion metric."
+safe_next_step: "Sync a newly collected, preregistered post-cutoff data window; run the unchanged trace and replay once; then evaluate the G0-G6 evidence packet without tuning."
+commands_run:
+  - "remote PYTHONPATH=alphaforge/src:. python -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,ADAUSDT,AVAXUSDT,DOGEUSDT,DOTUSDT,LINKUSDT,XRPUSDT --features volume --normalization none --folds 6 --data-dir /tmp/v7_fresh_data --dump-decision-traces /tmp/v7_lite_011_fresh_volume_trace.jsonl --output /tmp/v7_lite_011_fresh_volume_report.json"
+  - "remote PYTHONPATH=. python -m v7.lite.replay_trace /tmp/v7_lite_011_fresh_volume_trace.jsonl --position-size-pct 5.0 --output /tmp/v7_lite_011_fresh_volume_replay.json"
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_portfolio_replay.py v7/tests/test_portfolio.py v7/tests/test_lite_candidate_gate.py v7/tests/test_shadow_mode.py -q"
+evidence_notes:
+  - "The initial replay implementation reported 1774 selected versus 161 realized positions, exposing same-symbol overwrite. That result was discarded. The corrected replay reports 339 selected and 339 realized positions."

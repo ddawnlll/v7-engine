@@ -1,0 +1,14 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-005
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 72
+scope_confirmation: "V7-Lite immutable SHADOW admission now forwards admitted candidate signals through existing V7 portfolio correlation and exposure caps."
+evidence:
+  targeted_tests_passed: 37
+  candidate_manifest_status: HOLD_SELECTION_BIAS
+  portfolio_overlap_status: HOLD_TRACE_EXPORT_REQUIRED
+remaining_holds:
+  - "Canonical AlphaForge WFV must export timestamp+symbol prediction traces for combined portfolio R."
+  - "Research candidate G0-G6 are HOLD; no shadow run admitted."
+safe_next_step: "Add an explicit decision-trace export and calculate overlap from opaque traces through V7 portfolio adapter."
