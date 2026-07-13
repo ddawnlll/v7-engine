@@ -20,9 +20,9 @@ class TestCentralSimBridge:
         assert results[0]["one_r"] > 0
 
     def test_cli_help(self):
-        import subprocess
+        import subprocess, sys
         r = subprocess.run(
-            ["python", "scripts/factor_central_sim.py", "--help"],
+            [sys.executable, "scripts/factor_central_sim.py", "--help"],
             capture_output=True, text=True
         )
         assert r.returncode == 0
