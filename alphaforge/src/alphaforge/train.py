@@ -1902,12 +1902,17 @@ def main():
         artifact_uri=f"file://{artifact_path.resolve()}",
         model_artifact_id=run_id,
         training_run_id=run_id,
-        feature_set_id=f"{mode.lower()}_v1_features",
-        label_dataset_id=f"{mode.lower()}_v1_labels",
-        validation_report_id=f"WFV-{mode}-{_ts}",
     )
 
-    metadata_path = Path(artifact_dir) / f"model_artifact_{mode.lower()}_{_ts}.json"
+    # Convert numpy keys to native Python types so json.dump works
+    # (JSON requires string keys; default=str only covers values).
+    if "metrics" in metadata and isinstance(metadata["metrics"], dict):
+        _safe = {}
+        for _mk, _mv in metadata["metrics"].items():
+            _safe[str(_mk)] = _mv
+        metadata["metrics"] = _safe
+
+    metadata_path = artifact_dir / f"metadata_{mode.lower()}_{_ts}.json"
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     with open(metadata_path, "w") as f:
         json.dump(metadata, f, indent=2, default=str)
