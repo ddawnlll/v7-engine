@@ -1901,10 +1901,20 @@ def main():
     # Feature importance
     try:
         bst = final_result.model
+        imp: dict[str, float] = {}
         if hasattr(bst, 'get_score'):
-            imp = bst.get_score(importance_type='gain')
+            raw_imp = bst.get_score(importance_type='gain')
+            for k, v in raw_imp.items():
+                try:
+                    idx = int(k[1:])
+                    if 0 <= idx < len(feat_names):
+                        imp[feat_names[idx]] = float(v)
+                    else:
+                        imp[k] = float(v)
+                except (ValueError, IndexError):
+                    imp[k] = float(v)
         elif hasattr(bst, 'feature_importances_'):
-            imp = dict(zip(feat_names, bst.feature_importances_))
+            imp = dict(zip(feat_names, map(float, bst.feature_importances_)))
         else:
             imp = {}
         if imp:
@@ -1924,7 +1934,7 @@ def main():
         X_clean, feat_names, _dropped = prune_features_by_importance(
             X_clean, feat_names, imp, args.prune_features,
         )
-        if _dropped:
+        if _dropped and len(feat_names) > 0:
             print(f"  Feature pruning (threshold={args.prune_features}): "
                   f"dropped {len(_dropped)}/{len(imp)+len(_dropped)}, "
                   f"kept {len(feat_names)}")
@@ -1936,6 +1946,9 @@ def main():
             final_acc = float(final_result.val_metrics.get("accuracy", 0))
             print(f"  Retrained (pruned) model accuracy: {final_acc:.4f}")
             _pruned = True
+        elif _dropped and len(feat_names) == 0:
+            print(f"  Feature pruning (threshold={args.prune_features}): "
+                  f"ALL features below threshold — keeping original feature set")
         else:
             print(f"  Feature pruning: all {len(feat_names)} features above threshold "
                   f"{args.prune_features} — no pruning needed")
