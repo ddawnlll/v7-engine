@@ -1912,7 +1912,7 @@ def main():
             _safe[str(_mk)] = _mv
         metadata["metrics"] = _safe
 
-    metadata_path = artifact_dir / f"metadata_{mode.lower()}_{_ts}.json"
+    metadata_path = Path(artifact_dir) / f"metadata_{mode.lower()}_{_ts}.json"
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     with open(metadata_path, "w") as f:
         json.dump(metadata, f, indent=2, default=str)
