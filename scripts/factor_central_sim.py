@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""#211: Central simulation bridge — batch simulation CLI.
+"""#211: Central simulation bridge — batch simulation CLI (v0, prepared API).
+
+Loads real SimulationProfile from registry and computes economic metrics
+using closed-form approximation (target_r - fee_cost_r, 50% win-rate assumption).
+Does NOT call simulation/engine/engine.py simulate() yet.
+
+Future (#???): wire through to engine.simulate() for full path simulation.
 
 Usage:
     python scripts/factor_central_sim.py --mode SCALP --symbols BTCUSDT,ETHUSDT
     python scripts/factor_central_sim.py --input signals.json --output results.json
-
-Loads real SimulationProfile from registry, feeds through the engine path.
 """
 
 import argparse

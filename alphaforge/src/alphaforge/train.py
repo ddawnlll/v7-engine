@@ -1884,6 +1884,78 @@ def main():
     elif args.prune_features > 0 and not imp:
         print(f"  Feature pruning requested but no importance values available — skipping")
 
+    # Step 5b: Save model artifact (#237)
+    from alphaforge.paths import repo_root as _repo_root
+    artifact_dir = str(_repo_root() / "artifacts" / "models")
+    _ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    run_id = f"training_{mode.lower()}_{_ts}"
+
+    artifact_path = final_trainer.save_artifact(
+        final_result,
+        artifact_dir=artifact_dir,
+        model_artifact_id=run_id,
+        artifact_filename=f"xgb_{mode.lower()}_{_ts}.json",
+    )
+
+    metadata = final_trainer.build_model_artifact_metadata(
+        final_result,
+        artifact_uri=f"file://{artifact_path.resolve()}",
+        model_artifact_id=run_id,
+        training_run_id=run_id,
+        feature_set_id=f"{mode.lower()}_v1_features",
+        label_dataset_id=f"{mode.lower()}_v1_labels",
+        validation_report_id=f"WFV-{mode}-{_ts}",
+    )
+
+    metadata_path = Path(artifact_dir) / f"model_artifact_{mode.lower()}_{_ts}.json"
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(metadata_path, "w") as f:
+        json.dump(metadata, f, indent=2, default=str)
+    print(f"  Model binary: {artifact_path}")
+    print(f"  Model metadata: {metadata_path}")
+    print(f"  Checksum (SHA-256): {metadata.get('checksum', 'N/A')[:16]}...")
+
+    # ── MLflow: start tracking run (#228) ────────────────────────
+    _mlflow = None
+    _mlflow_run_active = False
+    try:
+        import mlflow
+        _mlflow = mlflow
+        mlflow.set_experiment(f"alphaforge_{mode.lower()}")
+        mlflow.start_run(run_name=run_id)
+        # Log hyperparameters from the trainer
+        mlflow.log_params(final_trainer.hyperparameters)
+        mlflow.log_params({
+            "mode": mode,
+            "folds": args.folds,
+            "features": args.features,
+            "symbols": args.symbols,
+            "regression_objective": args.regression_objective,
+            "prune_features": args.prune_features,
+        })
+        _mlflow_run_active = True
+    except ImportError:
+        logger.info("mlflow not installed — skipping experiment tracking")
+    except Exception as _mlf_exc:
+        logger.warning("MLflow start_run failed: %s", _mlf_exc)
+
+    # Register in artifact registry (#237)
+    try:
+        from alphaforge.reports.run_index import ResearchRunIndex
+        _index = ResearchRunIndex()
+        _index.register_artifact(
+            run_id=run_id,
+            artifact_path=str(artifact_path),
+            mode=mode,
+            checksum=metadata.get("checksum", ""),
+            metadata={"model_metadata_path": str(metadata_path),
+                       "feature_count": len(feat_names)},
+        )
+        _index.write()
+        print(f"  Registered in artifact registry: {_index.index_path}")
+    except Exception as _exc:
+        logger.warning("Could not register artifact in run index: %s", _exc)
+
     # Step 6: Collect metrics
     print("\n[6/6] Collecting metrics...")
     metrics = collect_metrics(wfv_results, X_clean, feat_names)
