@@ -17,3 +17,7 @@ __all__ = [
     "adapt_simulation_output",
     "classify_no_trade_quality",
 ]
+
+from .simulation_labels import generate_leverage_labels, LeverageLabel, _simulate_bar, _select_best_action
+
+__all__.extend(["generate_leverage_labels", "LeverageLabel", "_simulate_bar", "_select_best_action"])
