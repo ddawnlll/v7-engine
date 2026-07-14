@@ -1175,6 +1175,126 @@ def _compute_stability(values: list[float]) -> float:
     return max(0.0, min(1.0, 1.0 - cv))
 
 
+def _run_fold_ab_comparison(
+    X_train: np.ndarray,
+    X_val: np.ndarray,
+    y_train_class: np.ndarray,
+    y_train_r: np.ndarray,
+    val_action_net: np.ndarray,
+    feature_names: list[str],
+    config,  # FactorSelectionConfig
+    mode: str,
+    threshold: float | None,
+) -> dict:
+    """Run A/B factor selection comparison for one WFV fold.
+
+    Config A: full features, static (baseline — already computed by caller).
+    Config B: greedy IC-selected features + dynamic weighting.
+
+    Both configs use the same XGBoost trainer with identical hyperparameters.
+    Results are folded into the fold_payload dict.
+
+    Returns dict with keys: config_a, config_b, selected_features, ic_table.
+    """
+    from alphaforge.training.xgb_trainer import XGBoostTrainer
+    from alphaforge.reports.metrics import compute_oos_metrics
+    from alphaforge.reports.ic_metrics import compute_dynamic_weights
+    import xgboost as xgb
+
+    result = {}
+
+    # ── Config A: full features, static (baseline) ──────────────────
+    # This is the same model already trained by the caller, so we
+    # retrain on the same fold for apples-to-apples comparison.
+    trainer_a = XGBoostTrainer(mode=mode)
+    fold_a = trainer_a.train(X_train, y_train_class)
+    y_prob_a = fold_a.model.inplace_predict(X_val)
+    y_pred_a = np.argmax(y_prob_a, axis=1)
+    y_prob_max_a = np.max(y_prob_a, axis=1)
+
+    _default_threshold = 0.65  # conservative default
+    _threshold = threshold if threshold is not None else _default_threshold
+    y_pred_a[y_prob_max_a < _threshold] = 2  # NO_TRADE
+
+    pred_labels_a = np.array(
+        ["LONG_NOW" if p == 0 else "SHORT_NOW" if p == 1 else "NO_TRADE" for p in y_pred_a],
+        dtype=object,
+    )
+    pred_r_a = val_action_net[np.arange(len(y_pred_a)), y_pred_a]
+    metrics_a = compute_oos_metrics(pred_labels_a.tolist(), pred_r_a.tolist(), fee_pct=0.0)
+
+    result["config_a"] = {
+        "feature_count": X_train.shape[1],
+        "n_active_trades": int(np.sum(y_pred_a != 2)),
+        "val_accuracy": float(np.mean(y_pred_a == y_train_class[:len(y_pred_a)])) if len(y_train_class) >= len(y_pred_a) else 0.0,
+        "net_r_expectancy": float(metrics_a.get("avg_net_R_per_active_trade", 0.0)),
+        "label": "full_features_static",
+    }
+
+    # ── Factor selection on training data (leakage-free) ─────────────
+    fs_result = run_factor_selection(X_train, y_train_r, feature_names, config)
+    selected = fs_result.selected_features
+
+    result["selected_features"] = selected
+    result["ic_table_top10"] = fs_result.ic_table[:10]
+    result["n_selected"] = len(selected)
+    result["n_total"] = fs_result.n_total_features
+
+    if not selected:
+        result["config_b"] = {
+            "feature_count": 0,
+            "n_active_trades": 0,
+            "val_accuracy": 0.0,
+            "net_r_expectancy": 0.0,
+            "label": "selected_features_dynamic_WEIGHTLESS",
+            "note": "No features passed IC threshold — skipped",
+        }
+        return result
+
+    # ── Config B: selected features + dynamic weighting ─────────────
+    X_train_sel, sel_names = apply_feature_mask(X_train, feature_names, selected)
+    X_val_sel, _ = apply_feature_mask(X_val, feature_names, selected)
+
+    if config.enable_dynamic_weighting:
+        X_train_w, X_val_w = apply_dynamic_weighting_to_fold(
+            X_train_sel, X_val_sel, y_train_r, sel_names, sel_names,
+        )
+    else:
+        X_train_w, X_val_w = X_train_sel, X_val_sel
+
+    trainer_b = XGBoostTrainer(mode=mode)
+    fold_b = trainer_b.train(X_train_w, y_train_class)
+    y_prob_b = fold_b.model.inplace_predict(X_val_w)
+    y_pred_b = np.argmax(y_prob_b, axis=1)
+    y_prob_max_b = np.max(y_prob_b, axis=1)
+    y_pred_b[y_prob_max_b < _threshold] = 2
+
+    pred_labels_b = np.array(
+        ["LONG_NOW" if p == 0 else "SHORT_NOW" if p == 1 else "NO_TRADE" for p in y_pred_b],
+        dtype=object,
+    )
+    pred_r_b = val_action_net[np.arange(len(y_pred_b)), y_pred_b]
+    metrics_b = compute_oos_metrics(pred_labels_b.tolist(), pred_r_b.tolist(), fee_pct=0.0)
+
+    result["config_b"] = {
+        "feature_count": X_train_w.shape[1],
+        "n_active_trades": int(np.sum(y_pred_b != 2)),
+        "val_accuracy": float(np.mean(y_pred_b == y_train_class[:len(y_pred_b)])) if len(y_train_class) >= len(y_pred_b) else 0.0,
+        "net_r_expectancy": float(metrics_b.get("avg_net_R_per_active_trade", 0.0)),
+        "label": "selected_features_dynamic_weighted" if config.enable_dynamic_weighting else "selected_features_static",
+    }
+
+    # ── Delta summary ───────────────────────────────────────────────
+    result["delta"] = {
+        "net_r_b_minus_a": result["config_b"]["net_r_expectancy"] - result["config_a"]["net_r_expectancy"],
+        "accuracy_b_minus_a": result["config_b"]["val_accuracy"] - result["config_a"]["val_accuracy"],
+        "trades_a": result["config_a"]["n_active_trades"],
+        "trades_b": result["config_b"]["n_active_trades"],
+    }
+
+    return result
+
+
 def walk_forward_validate(
     X: np.ndarray,
     y_int: np.ndarray,
@@ -1191,6 +1311,8 @@ def walk_forward_validate(
     exit_timestamps: np.ndarray | None = None,
     capture_decision_trace: bool = False,
     regression_objective: bool = False,
+    feature_selection_config: "FactorSelectionConfig | None" = None,
+    feature_names: list[str] | None = None,
 ) -> List[dict] | tuple[list[dict], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
     """6-fold anchored expanding walk-forward validation.
 
@@ -1223,11 +1345,25 @@ def walk_forward_validate(
             Without this, the regression path was never walk-forward
             validated at all — only trained once on the full fit-set inside
             main()'s "Train final model" step, with no purge/embargo.
+        feature_selection_config: When provided, run A/B comparison each fold.
+            Config A = full features (static, baseline).  Config B = greedy
+            IC-selected features with fold-wise dynamic weighting.
+            Requires ``feature_names`` to be supplied.  Results appear in
+            ``fold_payload["ab_comparison"]`` with keys ``config_a`` and
+            ``config_b``.
+        feature_names: List of feature names (length = X.shape[1]).
+            Required when ``feature_selection_config`` is provided.
 
     Returns per-fold result dicts.
     """
     from alphaforge.training.xgb_trainer import XGBoostTrainer
     from alphaforge.reports.metrics import compute_oos_metrics
+    from alphaforge.factor_selection import (
+        FactorSelectionConfig,
+        apply_dynamic_weighting_to_fold,
+        apply_feature_mask,
+        run_factor_selection,
+    )
     from collections import Counter
     import xgboost as xgb
 
@@ -1245,6 +1381,16 @@ def walk_forward_validate(
         raise ValueError("symbols must have one entry per sample")
     if exit_timestamps is not None and len(exit_timestamps) != n:
         raise ValueError("exit_timestamps must have one entry per sample")
+    if feature_selection_config is not None:
+        if feature_names is None:
+            raise ValueError(
+                "feature_names must be provided when feature_selection_config is set"
+            )
+        if len(feature_names) != X.shape[1]:
+            raise ValueError(
+                f"feature_names length ({len(feature_names)}) != X.shape[1] ({X.shape[1]})"
+            )
+
     if action_net_r is None:
         action_net_r = np.column_stack([
             net_r_values,
@@ -1367,6 +1513,21 @@ def walk_forward_validate(
         y_pred_prob = fold_result.model.inplace_predict(X_val)
         y_pred_prob_max = np.max(y_pred_prob, axis=1)
         y_pred = np.argmax(y_pred_prob, axis=1)
+
+        # ── A/B factor selection comparison (Config A vs Config B) ──────
+        ab_comparison = None
+        if feature_selection_config is not None and feature_names is not None:
+            ab_comparison = _run_fold_ab_comparison(
+                X_train=X_train,
+                X_val=X_val,
+                y_train_class=y_train,
+                y_train_r=net_r_values[:effective_train_end],
+                val_action_net=val_action_net,
+                feature_names=feature_names,
+                config=feature_selection_config,
+                mode=mode,
+                threshold=threshold,
+            )
 
         # Direction debias: if model heavily over-predicts one direction,
         # apply a gentle correction. This fixes systematic bias from
@@ -1509,6 +1670,9 @@ def walk_forward_validate(
         )
         fold_payload["val_confidence"] = y_pred_prob_max.tolist()
         fold_payload["val_correct"] = (y_pred == y_val).astype(np.float64).tolist()
+        if ab_comparison is not None:
+            fold_payload["ab_comparison"] = ab_comparison
+
         results.append(fold_payload)
 
         logger.info(
@@ -1646,6 +1810,86 @@ def collect_regression_metrics(
         "feature_count": len(feature_names),
         "n_samples": n_samples,
         "n_folds": len(wfv_results),
+    }
+
+
+# ---------------------------------------------------------------------------
+# A/B factor selection summary
+# ---------------------------------------------------------------------------
+
+def collect_ab_comparison_metrics(
+    wfv_results: List[dict],
+) -> dict:
+    """Aggregate A/B factor selection results across all folds.
+
+    When walk_forward_validate is called with feature_selection_config,
+    each fold_payload contains an "ab_comparison" dict.  This function
+    aggregates those into a single summary suitable for reporting.
+
+    Returns dict with:
+      - config_a_summary: aggregated Config A (full features) metrics
+      - config_b_summary: aggregated Config B (selected features) metrics
+      - delta_summary: B minus A comparison
+      - selected_features_unions: features selected across all folds
+      - winner: "A" or "B" based on mean net_r_expectancy
+    """
+    ab_folds = [r["ab_comparison"] for r in wfv_results if "ab_comparison" in r]
+
+    if not ab_folds:
+        return {"status": "no_ab_comparison_data", "winner": None}
+
+    # Config A aggregation
+    a_accs = [f["config_a"]["val_accuracy"] for f in ab_folds]
+    a_nrs = [f["config_a"]["net_r_expectancy"] for f in ab_folds]
+    a_trades = [f["config_a"]["n_active_trades"] for f in ab_folds]
+
+    # Config B aggregation
+    b_accs = [f["config_b"]["val_accuracy"] for f in ab_folds]
+    b_nrs = [f["config_b"]["net_r_expectancy"] for f in ab_folds]
+    b_trades = [f["config_b"]["n_active_trades"] for f in ab_folds]
+
+    # Selected features union
+    all_selected = set()
+    for f in ab_folds:
+        all_selected.update(f.get("selected_features", []))
+
+    # Winner determination by mean net R
+    mean_a_nr = float(np.mean(a_nrs))
+    mean_b_nr = float(np.mean(b_nrs))
+    winner = "B" if mean_b_nr > mean_a_nr else "A"
+
+    # Delta per fold
+    deltas_nr = [f["delta"]["net_r_b_minus_a"] for f in ab_folds]
+    deltas_acc = [f["delta"]["accuracy_b_minus_a"] for f in ab_folds]
+
+    return {
+        "n_folds": len(ab_folds),
+        "config_a_summary": {
+            "mean_val_accuracy": round(float(np.mean(a_accs)), 4),
+            "mean_net_r_expectancy": round(mean_a_nr, 6),
+            "total_active_trades": sum(a_trades),
+            "mean_active_trades_per_fold": round(float(np.mean(a_trades)), 1),
+            "fold_accuracies": [round(a, 4) for a in a_accs],
+            "fold_net_r": [round(nr, 6) for nr in a_nrs],
+        },
+        "config_b_summary": {
+            "mean_val_accuracy": round(float(np.mean(b_accs)), 4),
+            "mean_net_r_expectancy": round(mean_b_nr, 6),
+            "total_active_trades": sum(b_trades),
+            "mean_active_trades_per_fold": round(float(np.mean(b_trades)), 1),
+            "fold_accuracies": [round(a, 4) for a in b_accs],
+            "fold_net_r": [round(nr, 6) for nr in b_nrs],
+        },
+        "delta_summary": {
+            "mean_net_r_b_minus_a": round(float(np.mean(deltas_nr)), 6),
+            "mean_accuracy_b_minus_a": round(float(np.mean(deltas_acc)), 4),
+            "folds_where_b_wins": sum(1 for d in deltas_nr if d > 0),
+            "folds_where_a_wins": sum(1 for d in deltas_nr if d < 0),
+            "folds_tied": sum(1 for d in deltas_nr if abs(d) < 1e-10),
+        },
+        "selected_features_union": sorted(all_selected),
+        "winner": winner,
+        "status": "ok",
     }
 
 
