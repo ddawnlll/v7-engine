@@ -479,3 +479,50 @@ Python 3.12.3, CUDA 13.0, commit `8acd3ca`). Parity fixture produces correct
 
 **NO simulation result has been treated as real Binance parity.** The fixture
 uses deterministic synthetic candles, not exchange data.
+
+---
+
+## F-021 — RETRACTION: Oracle Ceiling R Must Not Be Reported as Model G3 Performance
+
+**Status:** CONFIRMED
+**Severity:** CRITICAL
+**Confidence:** 1.00
+**Scope:** Previous session scorecards, conversation reports
+**Discovered by:** Audit on 2026-07-14
+**Validated by:** Code inspection + F-019 cross-reference
+
+**Description:** In previous sessions, a value of +0.8439 was reported as "G3
+PASS MeanR=0.8439" in scorecard tables. This is categorically wrong: 0.8439 is
+the **oracle ceiling R** (the label's own best-case forward return when it
+selects the correct side), NOT the model's predicted-action R-multiple.
+
+The same label that produces oracle ceiling +0.8439 yields actual model
+performance of **NetR = -0.084** (from commit `2640ead`, 8,925 sample subset,
+overfit_gap=0.524, PBO=HIGH). Even this -0.084 is from a tiny subset and
+cannot be trusted as representative.
+
+**Why this happened:** The label generator computes forward returns and selects
+the "winning" direction as the training label. The mean R of these selected
+labels is the oracle ceiling — it reflects the data's theoretical best-case,
+not what the model can achieve. Reporting it as G3 conflates label quality
+with model prediction quality (F-019).
+
+**Impact:** Any scorecard showing G3 PASS with 0.8439 is invalid. The actual
+G3 state remains **UNMEASURED** on the full 56-symbol panel with proper
+purge/embargo and cost-adjusted labels.
+
+**Retraction scope:**
+- The value 0.8439 must NEVER appear in any G3 scorecard column
+- It may be documented as `oracle_ceiling_R = +0.8439` in research notes only
+- G3 can only be scored by running `walk_forward_validate` with the full panel
+  and computing the model's OWN predicted-action R-multiple
+- The previous session's "G3 PASS" claim is hereby retracted
+
+**Resolution:** Faz 3 (factor selection) and subsequent training runs will
+produce the real G3 measurement. Until then, G3 status = UNMEASURED.
+
+**Evidence:**
+- Commit `2640ead`: G3 reported as FAIL with NetR=0.0072 (honest measurement)
+- F-019: `net_r` is forward return, not R-multiple
+- Oracle ceiling derivation: label selects winning side → mean of winning-side
+  forward returns = theoretical maximum, not achievable by any model
