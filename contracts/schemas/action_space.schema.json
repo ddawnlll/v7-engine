@@ -2,34 +2,35 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/ddawnlll/v7-engine/contracts/schemas/action_space.schema.json",
   "title": "AlphaForge Action Space",
-  "description": "Machine-readable encoding of the action space for leverage-aware training (AF-DATA-002, #299). Encodes direction + leverage as discrete integer labels. V0 covers 1x only (legacy); V1 adds 2x/3x/5x for leverage-aware strategies.",
+  "description": "Machine-readable encoding of the action space for leverage-aware training (AF-DATA-002, #299). Encodes direction + leverage as discrete integer labels. V0 covers 1x only (legacy); V1 adds 2x/3x/5x; V2 adds 7x/10x (13 total actions). V2 preserves V1 IDs (0-8) and appends new actions 9-12.",
   "type": "object",
   "properties": {
     "version": {
       "type": "string",
-      "enum": ["v0", "v1"],
-      "description": "Action space version. v0 = legacy 1x flat actions; v1 = leverage-aware."
+      "enum": ["v0", "v1", "v2"],
+      "description": "Action space version. v0 = legacy 1x flat actions; v1 = leverage-aware 1x-5x (IDs 0-8); v2 = 1x-10x (IDs 0-12, backward compatible with v1)."
     },
     "actions": {
       "type": "object",
       "description": "Mapping from human-readable action name to integer label.",
       "properties": {
-        "NO_TRADE": {
-          "type": "integer",
-          "const": 0,
-          "description": "No position — default for SCALP/AGGRESSIVE_SCALP."
-        },
-        "LONG_1X":     { "type": "integer", "const": 1, "description": "Long, 1x leverage (no leverage)." },
-        "LONG_2X":     { "type": "integer", "const": 2, "description": "Long, 2x leverage." },
-        "LONG_3X":     { "type": "integer", "const": 3, "description": "Long, 3x leverage." },
-        "LONG_5X":     { "type": "integer", "const": 4, "description": "Long, 5x leverage." },
-        "SHORT_1X":    { "type": "integer", "const": 5, "description": "Short, 1x leverage." },
-        "SHORT_2X":    { "type": "integer", "const": 6, "description": "Short, 2x leverage." },
-        "SHORT_3X":    { "type": "integer", "const": 7, "description": "Short, 3x leverage." },
-        "SHORT_5X":    { "type": "integer", "const": 8, "description": "Short, 5x leverage." }
+        "NO_TRADE":  { "type": "integer", "const": 0,  "description": "No position — 0x leverage." },
+        "LONG_1X":   { "type": "integer", "const": 1,  "description": "Long, 1x leverage (base risk)." },
+        "LONG_2X":   { "type": "integer", "const": 2,  "description": "Long, 2x leverage." },
+        "LONG_3X":   { "type": "integer", "const": 3,  "description": "Long, 3x leverage." },
+        "LONG_5X":   { "type": "integer", "const": 4,  "description": "Long, 5x leverage." },
+        "SHORT_1X":  { "type": "integer", "const": 5,  "description": "Short, 1x leverage (base risk)." },
+        "SHORT_2X":  { "type": "integer", "const": 6,  "description": "Short, 2x leverage." },
+        "SHORT_3X":  { "type": "integer", "const": 7,  "description": "Short, 3x leverage." },
+        "SHORT_5X":  { "type": "integer", "const": 8,  "description": "Short, 5x leverage." },
+        "LONG_7X":   { "type": "integer", "const": 9,  "description": "Long, 7x leverage." },
+        "LONG_10X":  { "type": "integer", "const": 10, "description": "Long, 10x leverage." },
+        "SHORT_7X":  { "type": "integer", "const": 11, "description": "Short, 7x leverage." },
+        "SHORT_10X": { "type": "integer", "const": 12, "description": "Short, 10x leverage." }
       },
       "required": ["NO_TRADE", "LONG_1X", "LONG_2X", "LONG_3X", "LONG_5X",
-                   "SHORT_1X", "SHORT_2X", "SHORT_3X", "SHORT_5X"],
+                   "SHORT_1X", "SHORT_2X", "SHORT_3X", "SHORT_5X",
+                   "LONG_7X", "LONG_10X", "SHORT_7X", "SHORT_10X"],
       "additionalProperties": false
     },
     "joint_encoding": {
@@ -42,8 +43,8 @@
         },
         "leverage": {
           "type": "integer",
-          "enum": [0, 1, 2, 3, 5],
-          "description": "Leverage multiplier. 0 = NO_TRADE."
+          "enum": [0, 1, 2, 3, 5, 7, 10],
+          "description": "Leverage multiplier. 0 = NO_TRADE. Sub-1x economic exposure represented by lower notional/risk budget, not an invalid Binance leverage setting."
         }
       },
       "required": ["direction", "leverage"]

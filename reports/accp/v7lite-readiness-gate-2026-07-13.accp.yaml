@@ -1,0 +1,38 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS_WITH_HOLDS"
+scope_confirmation:
+  task: "Build deterministic V7-Lite readiness gate (G0-G6) to replace hand-typed v7_lite_readiness_percent, and lock SCALP/AGGRESSIVE_SCALP promotion thresholds so the gate can score them."
+  completed:
+    - "v7/lite/readiness_gate.py: MODE_THRESHOLDS (transcribed from evaluation.md), DataScope with canonical-scope guardrail, GateEvidence, evaluate_gate per G0-G6, compute_readiness (binary gate_completion_pct + advisory quality_subscore_pct), write_readiness_checkpoint (auto-incrementing checkpoint_id, ACCP-YAML output)."
+    - "v7/docs/pipeline/evaluation.md: SCALP and AGGRESSIVE_SCALP thresholds promoted HOLD -> LOCKED_INITIAL_BASELINE (owner decision, values unchanged) with a rationale sub-table mirroring SWING's."
+    - "v7/docs/roadmap.md: recorded the lock decision and the deterministic SHADOW-eligibility target (gate_completion_pct == 100 on 10-symbol/97-feature scope), replacing the prior un-derived '~35-40% economic score' framing."
+    - "v7/tests/test_lite_readiness_gate.py: 22 tests (per-gate boundary tests, full-pass scenario, scope guardrail, checkpoint round-trip, checkpoint_id auto-increment, doc/code threshold cross-check)."
+  excluded:
+    - "Does not run the actual full 10-symbol/97-feature SCALP/AGGRESSIVE_SCALP training+WFV — that is a separate, compute-heavy task using alphaforge.train."
+    - "Does not touch the leverage/regression-objective path audited earlier in this session (separate follow-up)."
+    - "Does not change v7/lite/candidate_gate.py's admission logic — only adds the scoring layer that decides what to put in its gate_statuses input."
+    - "Does not evaluate G7-G10 (shadow/paper/tiny-live/live) — those require live observation and cannot be computed from static evidence."
+files_changed:
+  - "v7/lite/readiness_gate.py"
+  - "v7/lite/__init__.py"
+  - "v7/tests/test_lite_readiness_gate.py"
+  - "v7/docs/pipeline/evaluation.md"
+  - "v7/docs/roadmap.md"
+decisions_locked:
+  - "gate_completion_pct is the sole authoritative readiness number; quality_subscore_pct is advisory-only and cannot substitute for a gate PASS."
+  - "compute_readiness refuses non-canonical (symbol_count != 10 or feature_count != 97) scope unless the caller explicitly passes allow_partial_scope=True with a reason string."
+  - "SCALP and AGGRESSIVE_SCALP promotion thresholds are now LOCKED_INITIAL_BASELINE (owner decision 2026-07-13) — same placeholder values, status changed only. This does not constitute empirical validation."
+remaining_holds:
+  - "No full 10-symbol/97-feature SCALP or AGGRESSIVE_SCALP run has been scored against this gate yet — current gate_completion_pct for both modes is NOT YET COMPUTED."
+  - "SCALP/AGGRESSIVE_SCALP thresholds remain pending recalibration after each mode's first full-dataset walk-forward evidence, per the same policy already applied to SWING."
+  - "5 pre-existing v7/tests failures (documented in .agent/HANDOFF.md) remain unfixed and unrelated to this change: test_deployment_gates.py::TestShadowEvaluationManager::test_evaluate_partial (rounding), and 4 test_e2e_swing.py failures (ENTER_LONG/ENTER_SHORT vs LONG_NOW/SHORT_NOW action vocabulary)."
+safe_next_step: "Run alphaforge.train for SCALP and AGGRESSIVE_SCALP on the full 10-symbol/97-feature dataset, feed the resulting per-gate evidence into compute_readiness(), and write the first real (non-synthetic) checkpoint via write_readiness_checkpoint()."
+commands_run:
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_readiness_gate.py -q"
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_candidate_gate.py -q"
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests -q"
+evidence:
+  new_test_suite: "22 passed"
+  candidate_gate_regression_check: "16 passed"
+  full_v7_suite: "922 passed, 5 pre-existing failures (unchanged, unrelated)"

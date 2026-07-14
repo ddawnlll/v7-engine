@@ -1,0 +1,15 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-006
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 77
+scope_confirmation: "Canonical AlphaForge WFV can optionally emit timestamped, symbol-specific OOS decision traces for V7 portfolio overlap analysis."
+evidence:
+  local_wfv_tests_passed: 47
+  remote_trace_smoke_rows: 1709
+  remote_trace_smoke_symbols: 2
+  trace_columns: [fold, timestamp, symbol, decision, confidence, realized_r_net]
+remaining_holds:
+  - "Generate frozen traces for each candidate on the same untouched interval."
+  - "Apply V7 portfolio adapter to those opaque traces before claiming combined R."
+safe_next_step: "Run volume-only and volume+regime frozen trace exports on fresh data, then calculate overlap under V7 portfolio caps."

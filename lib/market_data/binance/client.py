@@ -16,6 +16,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://api.binance.com"
+_FUTURES_BASE_URL = "https://fapi.binance.com"
 
 
 class BinanceClientError(Exception):
@@ -106,7 +107,7 @@ class BinanceClient:
         if end_time is not None:
             params["endTime"] = end_time
 
-        return self._get("/fapi/v1/fundingRate", params)
+        return self._get_futures("/fapi/v1/fundingRate", params)
 
     def get_open_interest_hist(
         self,
@@ -132,7 +133,7 @@ class BinanceClient:
         if end_time is not None:
             params["endTime"] = end_time
 
-        return self._get("/fapi/v1/openInterestHist", params)
+        return self._get_futures("/fapi/v1/openInterestHist", params)
 
     def get_premium_index_klines(
         self,
@@ -157,7 +158,7 @@ class BinanceClient:
         if end_time is not None:
             params["endTime"] = end_time
 
-        return self._get("/fapi/v1/premiumIndexKlines", params)
+        return self._get_futures("/fapi/v1/premiumIndexKlines", params)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -165,7 +166,15 @@ class BinanceClient:
 
     def _get(self, path: str, params: dict[str, Any]) -> Any:
         """GET request with retry logic."""
-        url = urljoin(self._base_url, path)
+        return self._get_from_base(self._base_url, path, params)
+
+    def _get_futures(self, path: str, params: dict[str, Any]) -> Any:
+        """GET a USD-M futures endpoint from Binance's futures host."""
+        return self._get_from_base(_FUTURES_BASE_URL, path, params)
+
+    def _get_from_base(self, base_url: str, path: str, params: dict[str, Any]) -> Any:
+        """GET with retry logic from the supplied Binance API host."""
+        url = urljoin(base_url, path)
         last_exc: Optional[Exception] = None
 
         for attempt in range(self._max_retries):

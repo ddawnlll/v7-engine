@@ -1,0 +1,67 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: PASS_WITH_HOLDS
+scope_confirmation: >
+  Documentation-only leverage-native master planning task. No trading source,
+  model, simulation logic, external account, paper trade, shadow campaign, or
+  live order was changed or executed.
+files_changed:
+  - docs/research/v7_lite_leverage_native_master_todo.md
+  - v7/docs/roadmap.md
+  - docs/audits/FINDINGS_LEDGER.md
+  - docs/audits/OPEN_QUESTIONS.md
+  - .agent/CURRENT_TASK.md
+  - .agent/HANDOFF.md
+  - reports/accp/v7_lite_leverage_native_master_todo_2026-07-13.accp.yaml
+decisions_locked:
+  - >
+    Leverage is a Binance-native execution variable, but base-risk Simulation
+    net R remains the alpha truth metric and must be reported separately from
+    leveraged equity return.
+  - >
+    Higher leverage is forbidden from rescuing a negative base-risk or
+    cost-negative candidate.
+  - >
+    The first margin implementation is isolated-only and bracket-aware; cross
+    or portfolio margin requires separate evidence and design work.
+  - >
+    AlphaForge may recommend leverage evidence but V7 owns final leverage
+    eligibility and Runtime enforces the hard cap.
+remaining_holds:
+  - >
+    Current AlphaForge net_r values are net forward returns rather than
+    verified simulation R multiples (F-019); P0 parity is required first.
+  - >
+    Current Simulation liquidation uses a simplified maintenance-margin value;
+    Binance bracket, mark-price and liquidation parity are unverified (Q-013).
+  - >
+    Numeric leverage, drawdown, liquidation, cost-survival and promotion
+    thresholds require empirical calibration and remain HOLD.
+  - >
+    The frozen volume candidate remains G0-G6 HOLD pending sufficient
+    preregistered post-cutoff data.
+safe_next_step: >
+  Implement V7LITE-LEVERAGE-NATIVE-P0-ECONOMIC-PARITY: true-R field parity,
+  isolated-margin/bracket Simulation input contract, one-symbol 13-action
+  fixture, and explicit 1x/1.5x/2x/3x cost scenarios. Run tests before any
+  AlphaForge leverage training or automatic Binance execution.
+commands_run:
+  - "rg and code inspection of AlphaForge labels, Simulation economics, V7 and Runtime leverage surfaces"
+  - "Official Binance USD-M API documentation review on 2026-07-13"
+evidence:
+  alpha_label_semantics:
+    - "alphaforge/src/alphaforge/train.py:475-500"
+    - "alphaforge/src/alphaforge/train.py:535-546"
+    - "alphaforge/src/alphaforge/train.py:417-442"
+  existing_leverage_surfaces:
+    - "contracts/schemas/action_space.schema.json"
+    - "simulation/contracts/models.py:141-171"
+    - "simulation/engine/engine.py:319-390"
+    - "runtime/services/binance_usdm_manual_live_service.py:892-926"
+  official_exchange_surfaces:
+    - "POST /fapi/v1/leverage"
+    - "POST /fapi/v1/marginType"
+    - "GET /fapi/v1/leverageBracket"
+    - "GET /fapi/v3/positionRisk"
+    - "GET /fapi/v1/commissionRate"
+    - "GET /fapi/v1/fundingRate"

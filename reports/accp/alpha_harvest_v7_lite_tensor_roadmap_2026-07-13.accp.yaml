@@ -1,0 +1,120 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "ALPHA-HARVEST-V7-LITE-TENSOR-ROADMAP-2026-07-13"
+generated_at: "2026-07-13"
+
+result: "PASS_WITH_HOLDS"
+
+scope_confirmation:
+  requested: >-
+    Create and save a detailed, professionally researched roadmap for maximizing
+    returns through XGBoost AlphaForge exhaustion including leverage-aware
+    training, deterministic V7-Lite, and a later tensor-based AlphaForge.
+  delivered: >-
+    Added a 667-line cross-domain strategic roadmap with objective hierarchy,
+    evidence baseline, intelligent brute-force protocol, leverage-aware dual
+    surfaces, validation and promotion states, V7-Lite target shape, shared
+    tensor encoder architecture, 30-day execution campaign, agent-army operating
+    model, decision dashboard, and 23 annotated primary/professional sources.
+  exclusions:
+    - "No trading source code was changed."
+    - "No live deployment or capital authorization was performed."
+    - "No numeric profitability or risk threshold was falsely locked."
+
+files_changed:
+  - path: "docs/research/alpha_harvest_v7_lite_tensor_roadmap.md"
+    change: "created detailed authoritative strategic roadmap"
+  - path: "v7/docs/roadmap.md"
+    change: "added strategic program summary, lock status and holds"
+  - path: "docs/project_context.md"
+    change: "added P12-A/B/C strategic phases and roadmap link"
+  - path: "ai_summary.md"
+    change: "added strategic roadmap to subsystem and quick-start maps"
+  - path: "alphaforge/docs/ai_summary.md"
+    change: "added owner-directed Alpha Harvest/V7-Lite/tensor sequence"
+  - path: "docs/decisions/DECISIONS.md"
+    change: "added DEC-011 and DEC-012"
+  - path: "docs/audits/FINDINGS_LEDGER.md"
+    change: "added F-020 through F-022"
+  - path: "docs/audits/OPEN_QUESTIONS.md"
+    change: "added Q-011 through Q-014"
+  - path: ".agent/CURRENT_TASK.md"
+    change: "recorded completed current task"
+  - path: ".agent/HANDOFF.md"
+    change: "rewritten with task evidence and next action"
+  - path: "reports/accp/alpha_harvest_v7_lite_tensor_roadmap_2026-07-13.accp.yaml"
+    change: "created completion evidence"
+
+decisions_locked:
+  - id: "DEC-011"
+    decision: "Strategic sequence is Alpha Harvest -> V7-Lite -> Tensor AlphaForge."
+  - id: "DEC-012"
+    decision: >-
+      Leverage-aware research preserves base-risk alpha truth separately from
+      leverage-scenario utility; Simulation owns economics, V7 owns eligibility,
+      Runtime enforces caps.
+
+confirmed_findings:
+  - id: "F-020"
+    severity: "HIGH"
+    confidence: 1.0
+    finding: >-
+      full_001 evaluated 127690 candidates and produced positive rules, but its
+      top rule has fee_r=0.0 so fee stress is inert.
+  - id: "F-021"
+    severity: "HIGH"
+    confidence: 1.0
+    finding: >-
+      V7-Lite reports 62.5 percent accelerator readiness but revenue status
+      NOT_READY and live/revenue gate readiness of 5 percent.
+  - id: "F-022"
+    severity: "INFO"
+    confidence: 0.9
+    finding: >-
+      Public evidence supports strong trees for engineered tabular data and
+      neural encoders for temporal/order-flow/cross-asset structure, favoring a
+      problem-dependent hybrid transition.
+
+remaining_holds:
+  - "Repair fee, slippage and funding propagation in full mining cost stress."
+  - "Prove whether full_001 and full_002 use independent data, folds, seeds and holdouts."
+  - "Reconcile contradictory alpha inventory and V7-Lite reports into canonical registries."
+  - "Calibrate numeric leverage, drawdown, liquidation, DSR/PBO and scaling thresholds from real evidence."
+  - "V7-Lite remains not revenue-ready; paper, shadow, kill-switch and promoted-alpha evidence are missing."
+  - "Tensor promotion requires paired post-cost OOS uplift over a frozen XGBoost champion."
+
+safe_next_step: >-
+  Implement the Days 1-3 economic-truth slice: trace and repair fee_r/slippage/
+  funding propagation into mining rules, add a non-zero cost-stress invariant,
+  create immutable run manifests, and re-run one full campaign before evaluating
+  any candidate for V7-Lite readiness.
+
+commands_run:
+  - "git status --short"
+  - "sed/rg reads of all mandatory context files and relevant ai_summary files"
+  - "tvly research ... --model pro -o /tmp/v7_alphaforge_research.md"
+  - "web searches for academic primary papers and official professional-team sources"
+  - "jq inspection of full_001/full_002, alpha registry and discovery verdict artifacts"
+  - "rg scan for existing V7-Lite assets, reports and scripts"
+  - "curl link validation for all 23 external roadmap sources"
+  - "local path existence checks for roadmap links"
+
+evidence:
+  repository:
+    - "reports/alphaforge/mining/full_001/mining_summary.json"
+    - "reports/alphaforge/mining/full_001/top_rules.json"
+    - "reports/alpha_registry.json"
+    - "reports/alpha_discovery_final_verdict.json"
+    - "reports/v7_lite/V7_LITE_COMPLETION_GATE_v0_2.md"
+  research:
+    - "23 annotated sources in docs/research/alpha_harvest_v7_lite_tensor_roadmap.md"
+    - "17 source URLs returned HTTP 200 in direct validation"
+    - "6 DOI/SSRN/Citadel URLs returned anti-bot HTTP 403 but were verified through browser research"
+  verification:
+    - "All local roadmap links exist."
+    - "No code tests run because this is a docs/design-lock task and source behavior was not changed."
+
+design_lock:
+  status: "LOCKED"
+  score: null
+  reason: "Sequence and authority are locked; economic outcomes and numeric thresholds remain HOLD."

@@ -38,3 +38,32 @@ DEFAULT_META_REG_LAMBDA: float = 5.0
 
 META_CONFIDENCE_DEFAULT_THRESHOLD: float = 0.5
 """Default confidence threshold: meta predicts 'trade' when probability > 0.5."""
+
+# ---------------------------------------------------------------------------
+# Purged walk-forward cross-validation
+# ---------------------------------------------------------------------------
+
+DEFAULT_PURGE_BARS: int = 12
+"""Number of bars to purge between train and validation folds.
+Prevents label leakage when labels use a forward-looking window."""
+
+DEFAULT_EMBARGO_BARS: int = 12
+"""Number of embargo bars after purge.
+Adds additional buffer to prevent indirect leakage."""
+
+# ---------------------------------------------------------------------------
+# Threshold sweep
+# ---------------------------------------------------------------------------
+
+DEFAULT_THRESHOLD_GRID: list[float] = [0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+"""Default grid of confidence thresholds to sweep."""
+
+# ---------------------------------------------------------------------------
+# Trust score
+# ---------------------------------------------------------------------------
+
+DEFAULT_TRUST_MIN_THRESHOLD: float = 0.4
+"""Minimum trust score to consider a trade."""
+
+TARGET_DAILY_TRADES: tuple[float, float] = (3.0, 12.0)
+"""Target range for daily active trades. Used to optimize threshold."""

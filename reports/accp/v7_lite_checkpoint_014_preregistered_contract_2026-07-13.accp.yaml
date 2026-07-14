@@ -1,0 +1,33 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-014
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 95
+scope_confirmation: "The next independent post-cutoff evaluation has a validated immutable preregistration manifest that generates the exact central AlphaForge frozen-holdout CLI arguments."
+files_changed:
+  - v7/lite/preregistration.py
+  - v7/lite/manifests/af_volume_no_rank_postcutoff_preregistration.json
+  - v7/lite/__init__.py
+  - v7/tests/test_lite_candidate_gate.py
+  - alphaforge/src/alphaforge/train.py
+decisions_locked:
+  - "The preregistration freezes SCALP, ten symbols, volume-only features, normalization none, cutoff 2026-07-12T22:00:00Z, confidence threshold 0.50, 5% position size, and trace basename."
+  - "The generated CLI explicitly passes the frozen confidence threshold instead of relying on a mutable config default."
+  - "Feature or normalization drift causes validation failure before execution."
+evidence:
+  commands:
+    - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_candidate_gate.py v7/tests/test_lite_portfolio_replay.py v7/tests/test_portfolio.py -q"
+    - "PYTHONPATH=alphaforge/src:. .venv/bin/python -m pytest alphaforge/tests/test_wfv_timestamp_boundaries.py -q"
+  results:
+    - "49 V7-Lite/portfolio tests passed"
+    - "4 frozen-holdout boundary tests passed"
+  manifest_load: "candidate=af-volume-no-rank-research-001, cutoff=2026-07-12T22:00:00+00:00, symbols=10"
+remaining_holds:
+  - "Current fresh cache remains too short after cutoff for an independent frozen holdout evaluation."
+  - "No G0-G6 status changes; candidate admission remains blocked."
+safe_next_step: "When the preregistered window is sufficient, generate CLI args from this manifest, run the new trace once, replay it once, and produce the G0-G6 evidence packet."
+commands_run:
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_candidate_gate.py v7/tests/test_lite_portfolio_replay.py v7/tests/test_portfolio.py -q"
+  - "PYTHONPATH=alphaforge/src:. .venv/bin/python -m pytest alphaforge/tests/test_wfv_timestamp_boundaries.py -q"
+evidence_notes:
+  - "95% represents ready-to-execute implementation/evidence infrastructure. It is not a claim that independent alpha validation, shadow observation, paper execution, or promotion is complete."

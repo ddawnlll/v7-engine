@@ -115,6 +115,17 @@
 
 ---
 
+## Q-011 — Does the Volume Specialist Survive an Untouched Holdout and Cost Stress?
+
+**Confidence:** STRONG INFERENCE
+**Scope:** AlphaForge SCALP volume specialist
+**Suggested investigation:** Freeze `features=volume`, `normalization=none`,
+symbols, threshold and model parameters; evaluate once on a chronological
+untouched holdout and apply 1.0x/1.5x/2.0x simulation-authority cost stress.
+Promotion requires positive stressed performance and holdout/fold agreement.
+
+---
+
 ## Q-010 — Is There a Standard for Profiling Data Format?
 
 **Confidence:** HYPOTHESIS
@@ -124,6 +135,60 @@
 - Propose a standard schema for pipeline timing data
 - Update profiling scripts to emit standard format
 - Enable automatic comparison across runs
+
+---
+
+## Q-012 — Does the Frozen Volume Candidate Survive a Preregistered Post-Cutoff Interval Replay?
+
+**Confidence:** STRONG INFERENCE
+**Scope:** AlphaForge SCALP volume candidate / V7-Lite replay
+**Suggested investigation:**
+- Collect a timestamped 10-symbol 1h window strictly after the previously
+  inspected fresh cache ends (`2026-07-12T22:00:00Z`).
+- Freeze volume features, no rank normalization, symbols, XGBoost defaults,
+  confidence threshold 0.50, 5% replay position size, and portfolio config.
+- Produce one canonical OOS trace with exit timestamps and run the interval
+  replay exactly once, without feature/threshold/config selection on that data.
+- Evaluate G0–G6 only from the preregistered evidence packet; retain HOLD on
+  any failed or insufficiently sampled gate.
+
+**Background:** F-018 confirms replay accounting correctness on the current
+fresh cache but cannot establish independent alpha promotion because that data
+was previously inspected during research.
+
+---
+
+## Q-013 — Does the Simulator Reproduce Binance USDⓈ-M Margin and Liquidation Economics?
+
+**Confidence:** STRONG INFERENCE
+**Scope:** `simulation/`, Runtime USDⓈ-M services, AlphaForge leverage labels
+
+**Suggested investigation:**
+- Snapshot Binance symbol leverage brackets, account commission, funding,
+  position configuration and mark-price inputs.
+- Compare the current single-MMR isolated liquidation approximation with
+  Binance testnet/shadow position outcomes for all planned 1x–10x tiers.
+- Establish Simulation parity for quantity rounding, initial/maintenance
+  margin, liquidation precedence, fee/funding and realized PnL.
+- Keep cross/portfolio margin out of the first implementation unless separately
+  modeled and validated.
+
+**Blocking rule:** No AlphaForge model may select a leverage tier, and no
+candidate may claim cost survival under leverage, until a versioned
+Simulation-to-Binance parity fixture passes.
+
+**Background:** The runtime has a manual `/fapi/v1/leverage` call and the
+simulator has a simplified liquidation path, but neither alone is a validated
+exchange-economic authority. See F-019 and
+`docs/research/v7_lite_leverage_native_master_todo.md`.
+
+**P0 Update (2026-07-13):** Simulation now has an isolated-margin position
+model (`simulation/engine/margin.py`) with Binance-compatible liquidation
+formulas and a deterministic 13-action parity fixture.  The simulator produces
+correct `base_net_R`, liquidation prices, margin values, and cost scenario
+results across 1x–10x.  But the fixture uses synthetic candles — NOT real
+Binance exchange data or testnet fills.  Q-013 remains OPEN for testnet/shadow
+reconciliation with real Binance positions.  See F-020.
 
 ---
 

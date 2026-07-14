@@ -542,7 +542,6 @@ class TestPurgeEmbargo:
             f"Expected consistent embargo_period, got {embargo_values}"
         )
 
-
 # =========================================================================
 # Additional structural tests
 # =========================================================================

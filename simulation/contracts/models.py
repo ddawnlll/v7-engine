@@ -98,6 +98,23 @@ class ExitReason(str, Enum):
     LIQUIDATED = "LIQUIDATED"
 
 
+class MarginType(str, Enum):
+    """Binance USDⓈ-M margin types."""
+    ISOLATED = "ISOLATED"
+    CROSS = "CROSS"
+
+
+class LeverageTier(str, Enum):
+    """Discrete leverage tier labels used in the v2 action space."""
+    NO_TRADE = "0x"
+    LEV_1X = "1x"
+    LEV_2X = "2x"
+    LEV_3X = "3x"
+    LEV_5X = "5x"
+    LEV_7X = "7x"
+    LEV_10X = "10x"
+
+
 class NoTradeQuality(str, Enum):
     CORRECT_NO_TRADE = "CORRECT_NO_TRADE"
     SAVED_LOSS = "SAVED_LOSS"
@@ -107,7 +124,7 @@ class NoTradeQuality(str, Enum):
 
 class ExecutionMode(str, Enum):
     """Execution mode for fee computation.
-    
+
     TAKER: Use taker fees (conservative default).
     MAKER: Use maker fees with fill probability for adverse selection.
     HYBRID: Maker fee on entry, taker fee on exit.
@@ -192,6 +209,12 @@ class SimulationInput:
     profile: SimulationProfile
     simulation_family_version: str = "simfam-1.0.0"
     cost_model_version: str = "cost-1.0.0"
+    # Leverage-native simulation is opt-in and isolated-only.  A position at
+    # leverage > 1 must carry explicit exchange bracket evidence; the engine
+    # deliberately has no silent global-MMR fallback.
+    bracket_snapshots: tuple[BinanceBracketSnapshot, ...] = ()
+    notional_quote: float | None = None
+    cost_scenario: CostScenario | None = None
 
 
 # ── Output Types ──────────────────────────────────────────────────────
@@ -334,3 +357,127 @@ class MonteCarloDistribution:
     stop_before_target_probability: float
     tail_risk: float
     confidence_stability: float
+
+
+# ── Leverage / Margin Types (P0 Economic Parity) ────────────────────────
+
+
+@dataclass(frozen=True)
+class BinanceBracketSnapshot:
+    """Immutable snapshot of a Binance USDⓈ-M leverage bracket for one tier.
+
+    Captures the exchange configuration at query time so simulation
+    can reproduce bracket-dependent margin and liquidation behaviour
+    without live network calls.
+    """
+    symbol: str
+    tier: int
+    leverage: int
+    notional_cap_usd: float
+    maintenance_margin_ratio: float
+    bracket_snapshot_version: str = "bracket-1.0.0"
+    snapshot_timestamp_ms: int = 0
+
+
+@dataclass(frozen=True)
+class PositionMargin:
+    """Isolated-margin position parameters for one leverage tier.
+
+    All fields are deterministic inputs to the Simulation engine.
+    No live exchange calls are embedded here.
+    """
+    leverage: int
+    margin_type: str = "ISOLATED"  # MarginType.ISOLATED only for P0
+    initial_margin_ratio: float = 0.0      # computed: 1.0 / leverage
+    maintenance_margin_ratio: float = 0.0  # from Binance bracket
+    quantity: float = 0.0                  # base asset quantity
+    notional: float = 0.0                  # position notional in quote
+    entry_price: float = 0.0
+    liquidation_price: float | None = None  # None for 1x (no liq possible)
+    liquidation_distance_pct: float = 0.0   # distance from entry to liq as fraction
+    bracket_snapshot_version: str = "bracket-1.0.0"
+    bracket_tier: int = 0
+
+    def __post_init__(self) -> None:
+        if self.margin_type not in ("ISOLATED",):
+            raise ValueError(
+                f"PositionMargin.margin_type must be ISOLATED in P0, got {self.margin_type}"
+            )
+
+
+@dataclass(frozen=True)
+class CostScenario:
+    """Immutable cost-stress scenario input.
+
+    Replaces the mutable-default monkey-patching pattern in
+    simulation/validation/cost_stress.py for new code paths.
+
+    Each scenario independently scales fee, slippage, and funding
+    cost components so downstream consumers can test cost survival
+    without mutating global state.
+    """
+    scenario_id: str
+    fee_multiplier: float = 1.0
+    slippage_multiplier: float = 1.0
+    funding_multiplier: float = 1.0
+    description: str = ""
+
+
+# ── Leverage Outcome (P0 Economic Parity) ──────────────────────────────
+
+
+@dataclass
+class LeverageOutcome:
+    """Per-action outcome for one leverage tier under one cost scenario.
+
+    Every leverage action produces these fields. Separates base-risk
+    economic truth from leveraged equity results.
+    """
+    # Action identity
+    action_label: str = ""       # "LONG_5X", "SHORT_2X", "NO_TRADE"
+    direction: str = ""          # "LONG", "SHORT", "NO_TRADE"
+    leverage: int = 1            # 0 for NO_TRADE
+
+    # Base-risk economics (must not inflate with leverage)
+    base_net_R: float = 0.0      # net R at 1x base risk — the alpha truth
+    realized_r_gross: float = 0.0
+
+    # Leveraged equity (changes with leverage, notional)
+    # Ratio of quote PnL to the initial isolated margin.  This is not an
+    # account-equity return unless an account-equity denominator is supplied.
+    margin_return_net: float = 0.0
+    # Deprecated compatibility field; equals margin_return_net in P0.1.
+    equity_return_net: float = 0.0
+
+    # Cost decomposition
+    fee_cost_r: float = 0.0
+    slippage_cost_r: float = 0.0
+    funding_cost_r: float = 0.0
+    total_cost_r: float = 0.0
+
+    # Margin
+    initial_margin: float = 0.0
+    maintenance_margin: float = 0.0
+    margin_type: str = "ISOLATED"
+
+    # Liquidation
+    liquidation_price: float | None = None
+    liquidation_distance_pct: float = 0.0
+    liquidation_event: bool = False
+
+    # Exit
+    exit_reason: str = ""
+    exit_price: float = 0.0
+    exit_bar_index: int = 0
+    hold_duration_bars: int = 0
+
+    # Quantity / notional
+    quantity: float = 0.0
+    notional: float = 0.0
+
+    # Cost scenario
+    cost_scenario_id: str = "baseline_1.0x"
+
+    # Path metrics
+    mfe_r: float = 0.0
+    mae_r: float = 0.0

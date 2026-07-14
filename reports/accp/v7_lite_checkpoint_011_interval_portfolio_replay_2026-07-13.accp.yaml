@@ -1,0 +1,32 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-011
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 90
+scope_confirmation: "V7-Lite now replays policy-approved shadow candidates over entry/exit intervals with active positions passed into V7 PortfolioManager at every entry batch."
+files_changed:
+  - v7/lite/portfolio_replay.py
+  - v7/lite/__init__.py
+  - v7/portfolio.py
+  - v7/tests/test_lite_portfolio_replay.py
+  - v7/tests/test_portfolio.py
+decisions_locked:
+  - "Replay ranks candidates only by V7's expected_r_net/confidence ordering; realized_r_net is never used for admission or ranking."
+  - "Realized R is booked only at the selected candidate's supplied exit timestamp."
+  - "Existing holdings seed V7 cluster, total-exposure, and simultaneous-position limits."
+evidence:
+  command: "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_portfolio_replay.py v7/tests/test_portfolio.py v7/tests/test_lite_candidate_gate.py v7/tests/test_shadow_mode.py -q"
+  result: "60 passed"
+  negative_controls:
+    - "A lower-realized-R candidate wins a same-cluster batch when it has higher expected R, demonstrating no outcome leakage into selection."
+    - "A later candidate is blocked while exposure is open, then admitted at the exact prior exit timestamp."
+    - "Existing positions block correlated, total-exposure, and simultaneous-count violations."
+remaining_holds:
+  - "No fresh real-data trace containing the new exit_timestamp contract has yet been replayed."
+  - "The current volume/no-rank candidate remains G0-G6 HOLD and cannot start shadow observation."
+  - "Replay is observational and does not include a paper broker, independent shadow observer, or live execution."
+safe_next_step: "Deploy the trace-contract change to the research environment, regenerate preregistered fresh OOS traces, run this replay, then evaluate G0-G6 without re-tuning on that window."
+commands_run:
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_portfolio_replay.py v7/tests/test_portfolio.py v7/tests/test_lite_candidate_gate.py v7/tests/test_shadow_mode.py -q"
+evidence_notes:
+  - "The replay's realized_r_sum is an observational sum of selected trade R, not portfolio equity, leverage-adjusted PnL, or a promotion metric."
