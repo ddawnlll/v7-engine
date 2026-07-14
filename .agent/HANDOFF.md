@@ -1,103 +1,94 @@
-# Agent Handoff — Session 2026-07-11
+# Agent Handoff — Kelly Sizing Experiment (2026-07-14)
 
-> **Purpose:** This file is rewritten at the end of every agent task.
-> It contains the ephemeral working state that the NEXT agent needs to continue.
+## Current state
 
----
+The requested real-data Kelly sizing experiment is complete and persisted at
+`/root/v7-engine-main/data/reports/kelly_sizing_results.json`.
 
-## Work Completed
+**Research verdict: PASS_WITH_HOLDS.** The experiment itself completed and its
+artifact validated, but **no threshold reached the requested 80% economic win
+rate**. The maximum was 64.19% at threshold 0.70, so no leverage tier or
+confidence threshold is authorized or locked.
 
-### Audit Memory / Handoff Layer — Initial Setup
+## Work completed
 
-Created the full Agent Context system for this repository. This is the **foundational infrastructure** that enables model-agnostic memory across AI worker sessions.
+- Added `alphaforge/src/alphaforge/kelly_sizing_experiment.py`.
+  - Validates long-panel row identity across open/high/low/close/volume.
+  - Loads all 56 real symbols from `/root/v7-engine/cache/v7_lite_expanded_panel_v1/`.
+  - Builds 2,094,784 aligned rows with 91 `build_aligned_training_frame`
+    features.
+  - Uses six timestamp-grouped expanding folds, 1,406-group purge and
+    703-group embargo; all rows sharing a candle timestamp stay on one side of
+    a boundary.
+  - Fits fixed three-class XGBoost models on CUDA and sweeps thresholds
+    0.30–0.90 in 0.05 increments.
+  - Computes economic win rate / avg win / avg loss, raw Kelly, half-Kelly
+    (max 5x), quarter-Kelly (max 3x), and adjusted return.
+- Wrote the required JSON artifact, ACCP-YAML completion report, audit finding,
+  open question, and roadmap entry.
 
-**Deliverables created:**
+## Confirmed result
 
-| File | Purpose |
-|------|---------|
-| `.agent/CONTEXT_INDEX.md` | Reading order + worker protocol |
-| `.agent/CURRENT_TASK.md` | Current single task (this file) |
-| `.agent/HANDOFF.md` | Agent handoff (this file) |
-| `.agent/EVIDENCE_REQUIREMENTS.md` | Evidence standard for task completion |
-| `docs/project_context.md` | Project overview, boundaries, architecture |
-| `docs/decisions/DECISIONS.md` | 10 locked decisions + open questions |
-| `docs/audits/FINDINGS_LEDGER.md` | 16 verified findings with evidence |
-| `docs/audits/OPEN_QUESTIONS.md` | 10 open investigations |
-| `docs/audits/ASSUMPTIONS.md` | 9 documented assumptions |
-| `docs/audits/audit_runs/` | Directory for per-session audit reports |
-| `scripts/build_agent_context.py` | Context compiler (task-based filtering) |
+- Best win rate: **64.1856%** at threshold **0.70**, 1,142 candidate trades,
+  12.15 candidates/day.
+- Best unconstrained sizing illustration: **0.70**, half-Kelly **1.591433x**,
+  base net return **0.034301**, adjusted return **0.054587**.
+- `selection.best_80pct_winrate_by_adjusted_R` is `null` — no threshold meets
+  the 80% rule.
+- `base_net_R` is AlphaForge `action_net_r`: a fractional net forward-return
+  proxy, **not** true risk-normalized R or leverage-aware exchange P&L.
 
-### Content Seeded from Real Audit Data
+## Files inspected
 
-All files populated with actual v7-engine data:
-- Findings from `reports/alphaforge-audit-2026-07-06.yaml`
-- Metrics from `reports/verify_summary.md`
-- Performance data from `reports/research_run_real_10sym.json`
-- Decisions from `docs/architecture/governance.md` and `AGENTS.md`
-- Findings from profiling data and training runs
+- `/root/v7-engine-main/AGENTS.md`
+- `/root/v7-engine-main/.agent/{CONTEXT_INDEX.md,project_context.md,CURRENT_TASK.md,EVIDENCE_REQUIREMENTS.md,HANDOFF.md}`
+- `/root/v7-engine-main/docs/{decisions/DECISIONS.md,audits/FINDINGS_LEDGER.md,audits/OPEN_QUESTIONS.md}`
+- `/root/v7-engine-main/ai_summary.md`
+- `/root/v7-engine-main/alphaforge/docs/ai_summary.md`
+- `/root/v7-engine-main/alphaforge/src/alphaforge/{train.py,meta/meta_labeler.py,training/xgb_trainer.py}`
+- `/root/v7-engine-main/alphaforge/tests/{test_training_entrypoint.py,test_wfv_purge_embargo.py}`
+- `/root/v7-engine/cache/v7_lite_expanded_panel_v1/manifest.json`
+- `/tmp/leverage_sizing_test.py` (unverified prototype; replaced by the audited module)
 
----
+## Files modified
 
-## Files Inspected
+- `/root/v7-engine-main/alphaforge/src/alphaforge/kelly_sizing_experiment.py`
+- `/root/v7-engine-main/data/reports/kelly_sizing_results.json`
+- `/root/v7-engine-main/docs/audits/FINDINGS_LEDGER.md`
+- `/root/v7-engine-main/docs/audits/OPEN_QUESTIONS.md`
+- `/root/v7-engine-main/v7/docs/roadmap.md`
+- `/root/v7-engine-main/reports/accp/kelly_sizing_experiment_2026-07-14.accp.yaml`
+- `/root/v7-engine-main/.agent/HANDOFF.md`
 
-- `README.md` — Project overview
-- `AGENTS.md` — Working instructions, design lock semantics
-- `ai_summary.md` — Repo meta-hub
-- `docs/architecture/governance.md` — Domain ownership, conflict resolution
-- `docs/architecture/feature_workflow.md` — End-to-end feature flow
-- `reports/verify_summary.md` — Full verification results
-- `reports/alphaforge-audit-2026-07-06.yaml` — Dataset audit
-- `reports/research_run_real_10sym.json` — Research run results
-- `pyproject.toml` — Project config
-- All subsystem ai_summary files
+## Commands and verification
 
----
+- `PYTHONPATH=alphaforge/src:. python3 -m py_compile alphaforge/src/alphaforge/kelly_sizing_experiment.py` — PASS.
+- Preflight assertions for six split boundaries, Kelly formula/caps, and CUDA
+  `predict_proba` shape — PASS.
+- `PYTHONPATH=alphaforge/src:. python3 -m alphaforge.kelly_sizing_experiment` — PASS; real panel artifact written.
+- JSON assertion harness — PASS: 91 features, six folds, 13 thresholds,
+  temporal gaps, finite values, and `adjusted_R == base_net_R * leverage`.
+- `PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_training_entrypoint.py alphaforge/tests/test_wfv_purge_embargo.py -q` — 4 passed, 2 unrelated existing failures:
+  1. `simulation/tests/test_leverage_training.py` imports XGBoost outside the
+     entrypoint test's blessed paths.
+  2. A SWING WFV expectation still assumes `max_hold` instead of the current
+     `label_horizon` purge policy.
 
-## Files Modified
+## Unresolved blockers
 
-All new files (no existing files modified):
-- `.agent/CONTEXT_INDEX.md`
-- `.agent/CURRENT_TASK.md`
-- `.agent/HANDOFF.md`
-- `.agent/EVIDENCE_REQUIREMENTS.md`
-- `docs/project_context.md`
-- `docs/decisions/DECISIONS.md`
-- `docs/audits/FINDINGS_LEDGER.md`
-- `docs/audits/OPEN_QUESTIONS.md`
-- `docs/audits/ASSUMPTIONS.md`
-- `scripts/build_agent_context.py`
+- No evaluated threshold reaches the 80% win-rate target.
+- The threshold sweep is retrospective and needs a preregistered untouched
+  holdout before it can guide even research selection.
+- Leverage-dependent liquidation, rounding, and Binance-margin economic parity
+  are not modeled by the `action_net_r` proxy; no execution action is allowed.
+- An unrelated `alphaforge/src/alphaforge/features/scalp_momentum.py` edit has
+  a 2026-07-13T22:30:27Z mtime, after this artifact's 22:29:43Z write time.
+  It is not part of this task and must be preserved; it did not affect the
+  completed run.
 
----
+## Exact recommended next action
 
-## Commands Executed
-
-- `mkdir -p docs/decisions docs/audits/audit_runs .agent scripts`
-- File creation via `write_file` tool (11 files)
-
----
-
-## Tests and Benchmarks
-
-No tests run — infrastructure-only task. Context compiler script tested syntactically with `python -m py_compile`.
-
----
-
-## Unresolved Blockers
-
-- The context compiler (`scripts/build_agent_context.py`) is an initial implementation — needs real-world testing with actual task IDs to validate filtering logic.
-- AGENTS.md has not yet been updated to reflect the new handoff protocol. This is intentionally deferred to avoid a merge conflict with existing task-based changes.
-
----
-
-## Recommended Next Action
-
-**Continue populating evidence.** The ledger is seeded but can be enriched:
-
-1. **Run the context compiler** to verify it works end-to-end:
-   ```bash
-   python scripts/build_agent_context.py --task AUDIT-DATA-PIPELINE-001 --output /tmp/agent-context.md
-   ```
-2. **Add more audit findings** from the 40+ ACCP reports in `reports/` that are not yet in the ledger.
-3. **Update AGENTS.md** to reference `.agent/CONTEXT_INDEX.md` as the entry point and add the handoff protocol.
-4. **Set a real CURRENT_TASK.md** for the next worker.
-5. **Add the reading-file protocol to your SSH agent's dev prompt.**
+Do **not** select a leverage tier. Freeze a new causal feature/model hypothesis,
+then run it once on a later untouched chronological holdout with the same
+timestamp-grouped folds. Require at least 80% economic win rate and one
+candidate/day before commissioning a new margin-aware Kelly study.

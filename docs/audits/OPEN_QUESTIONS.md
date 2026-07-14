@@ -127,6 +127,27 @@
 
 ---
 
+## Q-011 — Can a Preregistered Causal Candidate Reach 80% Win Rate at 1+ Trade/Day?
+
+**Confidence:** STRONG INFERENCE
+**Scope:** SCALP 1h AlphaForge candidate selection and leverage research
+**Suggested investigation:**
+- Freeze a new causal feature/model hypothesis before evaluation; do not tune
+  from the failed 0.30–0.90 retrospective sweep.
+- Evaluate it once on an untouched chronological post-selection holdout with
+  the same timestamp-grouped purge/embargo method.
+- Require both economic win rate >=80% and candidate frequency >=1/day before
+  considering any sizing analysis.
+- Replace `action_net_r` proxy outcomes with simulation-authority, margin-aware
+  trade outcomes before studying leverage-dependent return or liquidation risk.
+
+**Background:** F-017's real 56-symbol six-fold experiment peaked at 64.19%
+economic win rate (threshold 0.70), so no tested threshold qualifies for the
+requested 80% Kelly sizing target. The threshold sweep is retrospective and
+cannot be used as an out-of-sample threshold-selection rule.
+
+---
+
 ## Recently Resolved
 
 | Q-ID | Resolution | Date | Moved To |

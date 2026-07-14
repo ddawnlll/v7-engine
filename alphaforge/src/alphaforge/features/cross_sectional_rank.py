@@ -270,12 +270,12 @@ def _rolling_correlation_vs_series(
         dx = xv - np.mean(xv)
         dy = yv - np.mean(yv)
         cov = np.sum(dx * dy) / n_valid
-        std_x = np.std(xv, ddof=0)
-        std_y = np.std(yv, ddof=0)
+        std_x = np.std(xv)
+        std_y = np.std(yv)
         if std_x < 1e-14 or std_y < 1e-14:
             continue
         r = cov / (std_x * std_y)
-        result[i] = float(np.clip(r, -1.0, 1.0))
+        result[i] = -1.0 if r < -1.0 else (1.0 if r > 1.0 else r)
 
     return result
 
@@ -293,7 +293,7 @@ def _rolling_zscore(arr: np.ndarray, window: int) -> np.ndarray:
         if len(valid) < 2:
             continue
         mu = np.mean(valid)
-        sigma = np.std(valid, ddof=1)
+        sigma = np.std(valid)
         if sigma < 1e-14:
             result[i] = 0.0
         else:
@@ -388,7 +388,7 @@ def compute_cross_sectional_rank_group(
                 seg = log_ret[max(0, t - volatility_window + 1) : t + 1]
                 seg_clean = seg[~np.isnan(seg)]
                 if len(seg_clean) >= 2:
-                    vol_matrix[s_idx, t] = np.std(seg_clean, ddof=1)
+                    vol_matrix[s_idx, t] = np.std(seg_clean)
 
         # Raw volume (value for ranking)
         vol_raw_matrix[s_idx, :] = volume

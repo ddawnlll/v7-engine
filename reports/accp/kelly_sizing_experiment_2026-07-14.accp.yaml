@@ -1,0 +1,40 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS_WITH_HOLDS"
+scope_confirmation:
+  task: "Run a real-data Kelly-inspired leverage sizing experiment on the remote 56-symbol 1h panel"
+  requirements_met:
+    - "Loaded /root/v7-engine/cache/v7_lite_expanded_panel_v1/ and validated all five field files share row identity."
+    - "Built 2,094,784 timestamp-aligned rows with 91 features via alphaforge.train.build_aligned_training_frame."
+    - "Ran exactly six timestamp-grouped expanding walk-forward folds with a 1,406-group purge and 703-group embargo."
+    - "Trained fixed multi-class XGBoost models on CUDA for every fold."
+    - "Swept confidence thresholds 0.30 through 0.90 by 0.05 and calculated win rate, avg win/loss, base net return, raw Kelly, half-Kelly, quarter-Kelly, leverage, and adjusted return."
+    - "Saved the requested JSON artifact to data/reports/kelly_sizing_results.json."
+files_changed:
+  - "alphaforge/src/alphaforge/kelly_sizing_experiment.py"
+  - "data/reports/kelly_sizing_results.json"
+  - "docs/audits/FINDINGS_LEDGER.md"
+  - "docs/audits/OPEN_QUESTIONS.md"
+  - "v7/docs/roadmap.md"
+  - ".agent/HANDOFF.md"
+  - "reports/accp/kelly_sizing_experiment_2026-07-14.accp.yaml"
+decisions_locked:
+  - "None. Existing SCALP threshold and leverage-policy holds remain unchanged."
+remaining_holds:
+  - "No threshold met the required 80% economic win rate; the maximum was 64.19% at threshold 0.70."
+  - "Threshold selection is retrospective across OOS folds and requires a preregistered untouched holdout."
+  - "base_net_R is AlphaForge action_net_r (fractional net forward return), not true risk-normalized R or leverage-aware Binance P&L."
+  - "No simulation-to-exchange isolated-margin parity fixture supports leverage deployment."
+safe_next_step:
+  - "Do not choose a leverage tier. Freeze a new causal hypothesis and test it once on an untouched holdout; require >=80% economic win rate and >=1 candidate/day before a new sizing study."
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. python3 -m py_compile alphaforge/src/alphaforge/kelly_sizing_experiment.py"
+  - "PYTHONPATH=alphaforge/src:. python3 -m alphaforge.kelly_sizing_experiment"
+  - "Python JSON assertion harness: six folds, 13 thresholds, 91 features, temporal gaps, and adjusted_R formula validation"
+  - "PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_training_entrypoint.py alphaforge/tests/test_wfv_purge_embargo.py -q"
+evidence:
+  - "Real panel: 2,095,512 raw rows, 56 symbols, 2022-01-01T00:00:00Z through 2026-06-30T23:00:00Z."
+  - "Aligned frame: 2,094,784 rows and exactly 91 features; all six XGBoost folds used CUDA."
+  - "Best 80%-constrained candidate: null (none qualified)."
+  - "Best unconstrained illustration: threshold 0.70, half-Kelly leverage 1.591433x, adjusted return 0.054587."
+  - "Focused repository-test command reported two pre-existing unrelated failures: simulation/tests/test_leverage_training.py bypasses the XGBoost import-boundary test, and a SWING test expects max_hold-based rather than current label_horizon-based purge sizing."

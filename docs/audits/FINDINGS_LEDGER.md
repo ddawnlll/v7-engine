@@ -337,3 +337,39 @@
 **Evidence:**
 - `reports/research_run_real_10sym.json`
 - `data/raw/*/*.parquet.sha256` — provenance verified
+
+---
+
+## F-017 — 56-Symbol Kelly Sizing Sweep Does Not Meet the 80% Win-Rate Target
+
+**Status:** CONFIRMED
+**Severity:** MEDIUM
+**Confidence:** 0.99
+**Scope:** `alphaforge/src/alphaforge/kelly_sizing_experiment.py`, 56-symbol 1h V7-Lite expanded panel
+**Discovered by:** Kelly sizing experiment on remote CUDA host
+**Validated by:** JSON schema/formula/fold-boundary assertions on the persisted artifact
+
+**Description:** A real-data, timestamp-grouped six-fold expanding walk-forward
+experiment trained a fixed three-class XGBoost model on the 56-symbol 1h panel.
+It used 91 AlphaForge features, a 1,406-hour purge and 703-hour embargo at every
+fold boundary, and swept confidence thresholds from 0.30 through 0.90 in 0.05
+steps. No threshold reached the requested 80% economic win rate.
+
+**Results:**
+- Highest observed win rate: **64.19%** at threshold **0.70** (1,142 candidate
+  trades; 12.15 candidates/day), so the 80% target is not met.
+- The best unconstrained sizing illustration was threshold **0.70** with
+  half-Kelly leverage **1.5914x** and adjusted return **0.054587** from base
+  net return **0.034301**.
+- There is therefore no `threshold + leverage` combination eligible under the
+  requested 80%-win-rate rule.
+- The stored `base_net_R` is AlphaForge `action_net_r`: a fractional net
+  forward-return proxy, not risk-normalized R or exchange-realized leveraged P&L.
+
+**Evidence:**
+- `data/reports/kelly_sizing_results.json` — 2,094,784 aligned rows, 91
+  features, six CUDA folds, threshold metrics and selection result.
+- `PYTHONPATH=alphaforge/src:. python3 -m alphaforge.kelly_sizing_experiment`
+  on `1.208.108.242:33346` — real 56-symbol panel run.
+- JSON validation asserted all six temporal gaps, all 13 thresholds, and
+  `adjusted_R == base_net_R * leverage` for both Kelly schemes.

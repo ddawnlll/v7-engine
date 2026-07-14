@@ -1664,6 +1664,37 @@ Issues `#304, #315` closed via PR #330 — funding pipeline wiring complete.
 
 ---
 
+## Kelly Sizing Experiment — 56-Symbol SCALP Panel (2026-07-14)
+
+**What changed:**
+- Added `alphaforge/src/alphaforge/kelly_sizing_experiment.py`, a research-only
+  timestamp-grouped 6-fold expanding walk-forward experiment using the
+  real 56-symbol 1h expanded panel and the standard 91-feature frame.
+- Produced `data/reports/kelly_sizing_results.json` with threshold-level
+  win/loss/payoff metrics plus half-Kelly (max 5x) and quarter-Kelly (max 3x)
+  sizing illustrations.
+
+**Results:**
+- No confidence threshold from 0.30 to 0.90 reached 80% economic win rate.
+- Best win rate: 64.19% at threshold 0.70 (1,142 candidates; 12.15/day).
+- Best unconstrained adjusted-return illustration: threshold 0.70,
+  half-Kelly 1.5914x, base net return 0.034301, adjusted return 0.054587.
+
+**Lock status:** HOLD — no SCALP confidence threshold or leverage tier is
+locked. This is a retrospective research result, not execution authorization.
+
+**Remaining holds:**
+- The 80% win-rate target is not met by any evaluated threshold.
+- `action_net_r` is a fractional forward-return proxy rather than true
+  risk-normalized R or Binance-margin-realized P&L.
+- A preregistered untouched holdout and simulation-to-exchange margin parity
+  remain required before any leverage policy can be considered.
+
+**Evidence:** `data/reports/kelly_sizing_results.json`,
+`reports/accp/kelly_sizing_experiment_2026-07-14.accp.yaml`, F-017.
+
+---
+
 ## Strategic Program — Alpha Harvest -> V7-Lite -> Tensor AlphaForge (continued)
 
 *See above for the full strategic roadmap document.*

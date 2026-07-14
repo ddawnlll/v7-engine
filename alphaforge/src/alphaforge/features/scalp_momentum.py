@@ -195,9 +195,9 @@ def compute_scalp_momentum_group(
         from numpy.lib.stride_tricks import sliding_window_view
         peaks = np.max(sliding_window_view(close_f, N), axis=1)
         mom_div = np.full(n, np.nan, dtype=np.float64)
-        recent_ret = log_ret[N:]
-        drawup = close_f[N:] / peaks - 1.0
-        mom_div[N:] = np.where(
+        recent_ret = log_ret[N - 1:]
+        drawup = close_f[N - 1:] / peaks - 1.0
+        mom_div[N - 1:] = np.where(
             recent_ret > 0, np.abs(drawup),
             np.where(recent_ret < 0, -np.abs(drawup), 0.0),
         )
