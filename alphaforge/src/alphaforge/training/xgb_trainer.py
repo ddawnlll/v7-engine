@@ -159,17 +159,17 @@ SWING_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
 SCALP_DEFAULT_HYPERPARAMS: Dict[str, Any] = {
     "objective": "multi:softprob",
     "num_class": NUM_CLASSES,
-    "max_depth": 4,
-    "learning_rate": 0.1,
-    "n_estimators": 120,
-    "subsample": 0.9,
-    "colsample_bytree": 0.9,
-    "min_child_weight": 3,
-    "gamma": 0.05,
-    "reg_alpha": 0.05,
-    "reg_lambda": 0.5,
+    "max_depth": 3,
+    "learning_rate": 0.03,
+    "n_estimators": 300,
+    "subsample": 0.6,
+    "colsample_bytree": 0.6,
+    "min_child_weight": 10,
+    "gamma": 1.0,
+    "reg_alpha": 1.0,
+    "reg_lambda": 10.0,
     "eval_metric": "mlogloss",
-    "early_stopping_rounds": 20,
+    "early_stopping_rounds": 30,
     "random_state": 42,
     "verbosity": 0,
     **GPU_PARAMS,
@@ -368,17 +368,8 @@ class XGBoostTrainer:
         if n_train > 0:
             sample_weight_train *= float(n_train) / sample_weight_train.sum()
 
-        # NumPy scalar keys are not legal JSON object keys.  These maps are
-        # persisted by the canonical training entrypoint, so normalize them
-        # at the source instead of relying on a permissive JSON encoder.
-        self._last_class_weights = {
-            int(label): float(weight)
-            for label, weight in class_weight_map.items()
-        }
-        self._last_class_counts = {
-            int(label): int(count)
-            for label, count in zip(classes, counts)
-        }
+        self._last_class_weights = class_weight_map
+        self._last_class_counts = dict(zip(classes, counts))
 
         # Prepare DMatrix — use QuantileDMatrix for GPU (lower memory, faster binning)
         _device = self._hyperparameters.get("device", "cpu")

@@ -2341,6 +2341,8 @@ def main():
     parser.add_argument("--regression-objective", action="store_true",
                         help="Use reg:squarederror objective instead of multi:softprob. "
                              "Trains a regression model on net R instead of classification.")
+    parser.add_argument("--feature-selection", action="store_true",
+                        help="Run IC-based factor selection A/B comparison each fold.")
     parser.add_argument("--discovery-confidence-threshold", type=float, default=0.55,
                         help="Confidence threshold for discovery signal generation (default: 0.55)")
     parser.add_argument("--discovery-output", default=None,
