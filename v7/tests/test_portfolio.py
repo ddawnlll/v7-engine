@@ -357,3 +357,49 @@ class TestRankingOrder:
         # Wait: ETHUSDT > BTCUSDT alphabetically. Actually B < E, so BTCUSDT first
         assert result.ranked[0]["symbol"] == "BTCUSDT"
         assert result.ranked[1]["symbol"] == "ETHUSDT"
+
+
+class TestExistingPositionLimits:
+    """New candidates must respect holdings opened on earlier timestamps."""
+
+    @staticmethod
+    def _request(symbol):
+        return {"symbol": symbol, "mode": "SCALP"}
+
+    @staticmethod
+    def _result(symbol, size=5.0):
+        return {
+            "symbol": symbol,
+            "passed": True,
+            "decision": "ENTER_LONG",
+            "expected_r": 0.3,
+            "confidence": 0.8,
+            "position_size_pct": size,
+        }
+
+    def test_existing_cluster_exposure_blocks_correlated_candidate(self):
+        pm = PortfolioManager({"max_cluster_exposure_pct": 10.0})
+        result = pm.evaluate_portfolio(
+            [self._request("SOLUSDT")], [self._result("SOLUSDT", 5.0)],
+            {"ADAUSDT": {"size_pct": 8.0, "side": "LONG"}},
+        )
+        assert result.ranked == []
+        assert result.suppressed == ["SOLUSDT"]
+
+    def test_existing_total_exposure_blocks_candidate(self):
+        pm = PortfolioManager({"max_total_exposure_pct": 10.0})
+        result = pm.evaluate_portfolio(
+            [self._request("BTCUSDT")], [self._result("BTCUSDT", 5.0)],
+            {"ETHUSDT": {"size_pct": 8.0, "side": "LONG"}},
+        )
+        assert result.ranked == []
+        assert result.suppressed == ["BTCUSDT"]
+
+    def test_existing_position_count_blocks_candidate(self):
+        pm = PortfolioManager({"max_simultaneous_positions": 1})
+        result = pm.evaluate_portfolio(
+            [self._request("BTCUSDT")], [self._result("BTCUSDT", 5.0)],
+            {"ETHUSDT": {"size_pct": 5.0, "side": "LONG"}},
+        )
+        assert result.ranked == []
+        assert result.suppressed == ["BTCUSDT"]

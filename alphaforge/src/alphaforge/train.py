@@ -303,13 +303,20 @@ def load_cached_data(
     if not found_any:
         return None
 
+    timestamp_array = np.array(timestamps, dtype=np.int64)
+    # The data-lake contract stores Binance open times in milliseconds while
+    # panel-cache timestamps are nanoseconds.  Canonicalize at the ingestion
+    # boundary so chronological split code never silently compares units.
+    if len(timestamp_array) and np.max(np.abs(timestamp_array)) < 10**15:
+        timestamp_array = timestamp_array * 1_000_000
+
     result = {
         "close": np.array(closes, dtype=np.float64),
         "high": np.array(highs, dtype=np.float64),
         "low": np.array(lows, dtype=np.float64),
         "open": np.array(opens, dtype=np.float64),
         "volume": np.array(volumes, dtype=np.float64),
-        "timestamp": np.array(timestamps),
+        "timestamp": timestamp_array,
         "symbol": sym_list,
     }
     for col_name, col_list in extra_cols.items():
@@ -500,6 +507,16 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
     so SWING/SCALP/AGGRESSIVE_SCALP produce DIFFERENT label distributions.
 
     Returns (int_labels, gross_r_values, net_r_values, metrics_dict).
+
+    ⚠️  F-019 / P0 Economic Parity (2026-07-13):
+    ``gross_r_values`` and ``net_r_values`` are **net forward returns**
+    (close[t+h]/close[t] - 1 - cost), NOT risk-normalized R-multiples.
+    They must not be used to select Binance leverage tiers or compare
+    to 1R targets.  True R-multiples must come from Simulation-authority
+    labels (base_net_R_long / base_net_R_short).  The variable names are
+    preserved for backward compatibility; new code should read them as
+    ``gross_forward_return`` / ``net_forward_return``.
+
     Label DECISION uses net_R (cost-aware); gross_R is exported for analysis
     and net_R is exported for downstream economic metrics.
     """
@@ -646,6 +663,11 @@ def _compute_single_symbol_frame(
             np.zeros(label_len, dtype=np.float64),
         ]),
         "ts": sym_ts[:label_len],
+        # Labels above use close[i + label_horizon] for each entry i.  Preserve
+        # that per-symbol realization time so a later portfolio replay can
+        # model concurrent holdings instead of treating every decision as an
+        # instantaneous independent trade.
+        "exit_ts": sym_ts[label_horizon:label_horizon + label_len],
         "close_prices": sym_close[:label_len],
         "feat_names": fn,
     }
@@ -777,6 +799,7 @@ def build_aligned_training_frame(
     action_gross_parts: list[np.ndarray] = []
     action_net_parts: list[np.ndarray] = []
     ts_parts: list[np.ndarray] = []
+    exit_ts_parts: list[np.ndarray] = []
     sym_rank_parts: list[np.ndarray] = []
     close_price_parts: list[np.ndarray] = []
     feat_names: list[str] | None = None
@@ -850,6 +873,7 @@ def build_aligned_training_frame(
         action_gross_parts.append(res["action_gross"])
         action_net_parts.append(res["action_net"])
         ts_parts.append(res["ts"])
+        exit_ts_parts.append(res["exit_ts"])
         sym_rank_parts.append(np.full(len(res["y"]), res["sym_order"], dtype=np.int32))
         close_price_parts.append(res["close_prices"])
     feat_names = full_feat_names  # Use fullest feature name set (from symbols with derivative data)
@@ -858,7 +882,15 @@ def build_aligned_training_frame(
     # Phase 2: Cross-sectional features (residual momentum, lead-lag)
     # Computed once over the full multi-symbol panel, then joined per-symbol.
     # ------------------------------------------------------------------
-    if len(unique_syms) >= 2:
+    # A family-only experiment must stay family-only.  Cross-sectional residual
+    # features are valuable in the full model, but silently appending them to
+    # e.g. ``--features returns`` makes specialist A/B results uninterpretable.
+    include_residual_momentum = (
+        feature_groups is None
+        or feature_groups == ["all"]
+        or "residual_momentum" in feature_groups
+    )
+    if include_residual_momentum and len(unique_syms) >= 2:
         try:
             from alphaforge.features.residual_momentum import compute_residual_momentum_group
             # Check all symbols have the same length before building multi_ohlcv
@@ -947,6 +979,7 @@ def build_aligned_training_frame(
             "action_gross_r": np.empty((0, 3), dtype=np.float64),
             "action_net_r": np.empty((0, 3), dtype=np.float64),
             "timestamps": np.empty((0,), dtype=timestamps.dtype),
+            "exit_timestamps": np.empty((0,), dtype=timestamps.dtype),
             "symbols": np.empty((0,), dtype=object),
             "close_prices": np.empty((0,), dtype=np.float64),
             "feature_names": feat_names or [],
@@ -960,6 +993,7 @@ def build_aligned_training_frame(
     action_gross_r = np.vstack(action_gross_parts)
     action_net_r = np.vstack(action_net_parts)
     ts = np.concatenate(ts_parts)
+    exit_ts = np.concatenate(exit_ts_parts)
     sym_rank = np.concatenate(sym_rank_parts)
     close_prices = np.concatenate(close_price_parts) if close_price_parts else np.array([], dtype=np.float64)
     if np.issubdtype(ts.dtype, np.datetime64):
@@ -981,6 +1015,7 @@ def build_aligned_training_frame(
         "action_gross_r": action_gross_r[sort_idx],
         "action_net_r": action_net_r[sort_idx],
         "timestamps": ts[sort_idx],
+        "exit_timestamps": exit_ts[sort_idx],
         "symbols": symbols_arr[sort_idx],
         "close_prices": close_prices[sort_idx] if len(close_prices) == len(ts) else close_prices,
         "feature_names": feat_names or [],
@@ -1151,12 +1186,19 @@ def walk_forward_validate(
     action_net_r: np.ndarray | None = None,
     return_raw_preds: bool = False,
     enable_debias: bool = False,
+    timestamps: np.ndarray | None = None,
+    symbols: np.ndarray | None = None,
+    exit_timestamps: np.ndarray | None = None,
+    capture_decision_trace: bool = False,
+    regression_objective: bool = False,
 ) -> List[dict] | tuple[list[dict], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
     """6-fold anchored expanding walk-forward validation.
 
     Args:
         X: Feature matrix.
-        y_int: Integer labels (0=LONG, 1=SHORT, 2=NO_TRADE).
+        y_int: Integer labels (0=LONG, 1=SHORT, 2=NO_TRADE). Ignored when
+            regression_objective is True (net_r_values is the training/eval
+            target in that case).
         net_r_values: Net R values per sample.
         mode: Trading mode.
         min_folds: Minimum number of folds (default 6).
@@ -1168,6 +1210,19 @@ def walk_forward_validate(
             Default False — the debias is statistically contaminated (it adapts
             to OOS data in-sample) and should only be enabled for retrospective
             analysis of its impact.
+        timestamps: Optional timestamp for each sample.  When present, purge
+            and embargo are measured in unique time bars rather than panel
+            rows, so a 10-symbol hourly panel still uses a 12-hour horizon.
+        exit_timestamps: Optional realization timestamp for each sample. Used
+            only in emitted decision traces; it does not affect fitting.
+        regression_objective: When True, each fold trains an
+            ``xgb.reg:squarederror`` model on net_r_values directly (instead
+            of the multi:softprob classifier) using the SAME purge/embargo
+            fold boundaries computed below, and reports val_mae/val_rmse/
+            sign_correct_pct per fold instead of accuracy/confusion-matrix.
+            Without this, the regression path was never walk-forward
+            validated at all — only trained once on the full fit-set inside
+            main()'s "Train final model" step, with no purge/embargo.
 
     Returns per-fold result dicts.
     """
@@ -1177,6 +1232,19 @@ def walk_forward_validate(
     import xgboost as xgb
 
     n = len(X)
+    if timestamps is not None:
+        timestamps = np.asarray(timestamps)
+        if len(timestamps) != n:
+            raise ValueError(
+                "timestamps must have one entry per sample "
+                f"(got {len(timestamps)} timestamps for {n} samples)"
+            )
+        if n > 1 and np.any(timestamps[1:] < timestamps[:-1]):
+            raise ValueError("timestamps must be sorted in non-decreasing order")
+    if symbols is not None and len(symbols) != n:
+        raise ValueError("symbols must have one entry per sample")
+    if exit_timestamps is not None and len(exit_timestamps) != n:
+        raise ValueError("exit_timestamps must have one entry per sample")
     if action_net_r is None:
         action_net_r = np.column_stack([
             net_r_values,
@@ -1185,14 +1253,15 @@ def walk_forward_validate(
         ]) if n > 0 else np.empty((0, 3), dtype=np.float64)
     fold_size = n // (min_folds + 1)
     results: list[dict] = []
-    # P0.9F: purge/embargo tied to label_horizon (the actual forward lookahead
-    # of the label function — was previously bound to max_hold, which was wrong
-    # because max_hold is the position-sizing horizon, not the label horizon).
+    # Purge/embargo must scale with the label's forward lookahead, not with the
+    # amount of history loaded.  Scaling them with ``fold_size`` discarded weeks
+    # of usable validation data in short runs and over a year in long panels,
+    # without removing any additional label overlap.
     _wfv_cfg = _get_training_config(mode)
     label_horizon = _wfv_cfg.label_horizon
     k = 2  # HOLD: multiplier requires empirical calibration
-    purge_bars = max(fold_size // 4, k * label_horizon)
-    embargo_bars = max(fold_size // 8, k * label_horizon)
+    purge_bars = k * label_horizon
+    embargo_bars = k * label_horizon
 
     logger.info(
         "WFV: folds=%d, fold_size=%d, purge=%d, embargo=%d",
@@ -1213,8 +1282,27 @@ def walk_forward_validate(
             logger.warning("Fold %d: val_end >= n â€” stopping", fold + 1)
             break
 
-        effective_train_end = train_end - purge_bars
-        effective_val_start = val_start + embargo_bars
+        if timestamps is None:
+            # Compatibility fallback for row-wise callers.  Canonical panel
+            # training always supplies timestamps below.
+            effective_train_end = train_end - purge_bars
+            effective_val_start = val_start + embargo_bars
+            purge_rows = purge_bars
+            embargo_rows = embargo_bars
+        else:
+            # The frame is timestamp-major: several symbols can share each
+            # hourly bar.  A label horizon is measured in bars, not rows.
+            # Locate boundaries in unique timestamp space, then map them back
+            # to row indices.  This prevents cross-symbol label overlap.
+            unique_ts, first_rows = np.unique(timestamps, return_index=True)
+            boundary_ts = timestamps[val_start]
+            boundary_pos = int(np.searchsorted(unique_ts, boundary_ts, side="left"))
+            train_pos = max(0, boundary_pos - purge_bars)
+            val_pos = min(len(unique_ts) - 1, boundary_pos + embargo_bars)
+            effective_train_end = int(first_rows[train_pos])
+            effective_val_start = int(first_rows[val_pos])
+            purge_rows = train_end - effective_train_end
+            embargo_rows = effective_val_start - val_start
 
         assert effective_train_end <= train_end - label_horizon, (
             f"purge_bars={purge_bars} insufficient: train_end={train_end}, "
@@ -1234,6 +1322,45 @@ def walk_forward_validate(
         if len(X_train) < 50 or len(X_val) < 10:
             logger.warning("Fold %d: insufficient samples â€” stopping", fold + 1)
             break
+
+        if regression_objective:
+            y_train_reg = net_r_values[:effective_train_end]
+            y_val_reg = net_r_values[effective_val_start:val_end]
+
+            reg_trainer = XGBoostTrainer(mode=mode, objective="reg:squarederror")
+            reg_fold_result = reg_trainer.train(X_train, y_train_reg)
+            y_pred_reg = reg_fold_result.model.inplace_predict(X_val)
+
+            mae = float(np.mean(np.abs(y_pred_reg - y_val_reg)))
+            rmse = float(np.sqrt(np.mean((y_pred_reg - y_val_reg) ** 2)))
+            sign_mask = y_val_reg != 0
+            sign_correct_pct = (
+                float(np.mean(np.sign(y_pred_reg[sign_mask]) == np.sign(y_val_reg[sign_mask])) * 100)
+                if np.any(sign_mask) else 0.0
+            )
+
+            results.append({
+                "fold": fold + 1,
+                "n_train": len(X_train),
+                "n_val": len(X_val),
+                "purge_period": int(purge_rows),
+                "embargo_period": int(embargo_rows),
+                "purge_bars": int(purge_bars),
+                "embargo_bars": int(embargo_bars),
+                "val_start": val_start,
+                "val_end": val_end,
+                "effective_val_start": effective_val_start,
+                "val_mae": mae,
+                "val_rmse": rmse,
+                "sign_correct_pct": sign_correct_pct,
+                "net_r_expectancy": float(np.mean(y_val_reg)),
+                "training_duration_seconds": reg_fold_result.training_duration_seconds,
+            })
+            logger.info(
+                "Fold %d/%d: train=%d, val=%d, val_mae=%.6f, val_rmse=%.6f, sign_correct=%.1f%%",
+                fold + 1, min_folds, len(X_train), len(X_val), mae, rmse, sign_correct_pct,
+            )
+            continue
 
         trainer = XGBoostTrainer(mode=mode)
         fold_result = trainer.train(X_train, y_train)
@@ -1289,6 +1416,28 @@ def walk_forward_validate(
         # fee_pct=0.0 avoids double-counting.
         pred_metrics = compute_oos_metrics(pred_labels.tolist(), pred_gross_r.tolist(), fee_pct=0.0)
 
+        # ── No-trade quality (train.py-local approximation) ──────────────
+        # This is NOT the Simulation-authority NoTradeOutcome classification
+        # in alphaforge.labels.adapter (that needs upstream was_correct_skip/
+        # saved_loss_score/missed_opportunity_score fields that are computed
+        # from richer Simulation outcome objects not available at this stage
+        # of the pipeline). It is a direct, honestly-documented approximation
+        # from what walk_forward_validate already has: for each NO_TRADE
+        # decision, the counterfactual best-of-{LONG,SHORT} net R at that
+        # sample (columns 0/1 of val_action_net).
+        no_trade_mask = y_pred == 2
+        no_trade_correct = 0
+        no_trade_missed = 0
+        no_trade_saved_loss_values: List[float] = []
+        _MISSED_OPPORTUNITY_R_THRESHOLD = 0.10  # matches the SCALP min-saved-loss/expectancy bar
+        if np.any(no_trade_mask):
+            best_counterfactual_r = np.maximum(
+                val_action_net[no_trade_mask, 0], val_action_net[no_trade_mask, 1]
+            )
+            no_trade_correct = int(np.sum(best_counterfactual_r <= 0))
+            no_trade_missed = int(np.sum(best_counterfactual_r >= _MISSED_OPPORTUNITY_R_THRESHOLD))
+            no_trade_saved_loss_values = (-best_counterfactual_r[best_counterfactual_r < 0]).tolist()
+
         val_accuracy = float(np.mean(y_pred == y_val))
         train_accuracy = float(fold_result.train_metrics.get("accuracy", 0.0))
         val_logloss = float(fold_result.val_metrics.get("logloss", 0.0))
@@ -1309,12 +1458,14 @@ def walk_forward_validate(
         oracle_metrics = compute_oos_metrics(true_labels.tolist(), true_gross_r.tolist(), fee_pct=0.0)
         net_r_expectancy_val = float(pred_metrics.get("avg_net_R_per_active_trade", 0.0))
 
-        results.append({
+        fold_payload = {
             "fold": fold + 1,
             "n_train": len(X_train),
             "n_val": len(X_val),
-            "purge_period": purge_bars,
-            "embargo_period": embargo_bars,
+            "purge_period": int(purge_rows),
+            "embargo_period": int(embargo_rows),
+            "purge_bars": int(purge_bars),
+            "embargo_bars": int(embargo_bars),
             "val_start": val_start,
             "val_end": val_end,
             "effective_val_start": effective_val_start,
@@ -1326,6 +1477,9 @@ def walk_forward_validate(
             "long_count": long_count,
             "short_count": short_count,
             "no_trade_count": no_trade_count,
+            "no_trade_correct_count": no_trade_correct,
+            "no_trade_missed_count": no_trade_missed,
+            "no_trade_saved_loss_values": no_trade_saved_loss_values,
             "long_actual": int(true_counts.get(0, 0)),
             "short_actual": int(true_counts.get(1, 0)),
             "no_trade_actual": int(true_counts.get(2, 0)),
@@ -1338,7 +1492,24 @@ def walk_forward_validate(
             "decision_gross_r": pred_gross_r.tolist(),
             "active_metrics": pred_metrics,
             "oracle_metrics": oracle_metrics,
-        })
+        }
+        if capture_decision_trace:
+            fold_payload["decision_timestamps"] = timestamps[effective_val_start:val_end].tolist() if timestamps is not None else []
+            fold_payload["decision_exit_timestamps"] = exit_timestamps[effective_val_start:val_end].tolist() if exit_timestamps is not None else []
+            fold_payload["decision_symbols"] = np.asarray(symbols)[effective_val_start:val_end].astype(str).tolist() if symbols is not None else []
+            fold_payload["decision_confidence"] = y_pred_prob_max.tolist()
+
+        # ── Symbol contribution (G5) + calibration (G6) evidence ──────────
+        # Kept unconditional (not gated by capture_decision_trace) so
+        # collect_metrics can always compute symbol concentration and
+        # calibration error when the caller supplies `symbols`.
+        fold_payload["val_symbols"] = (
+            np.asarray(symbols)[effective_val_start:val_end].astype(str).tolist()
+            if symbols is not None else []
+        )
+        fold_payload["val_confidence"] = y_pred_prob_max.tolist()
+        fold_payload["val_correct"] = (y_pred == y_val).astype(np.float64).tolist()
+        results.append(fold_payload)
 
         logger.info(
             "Fold %d/%d: train=%d, val=%d, val_acc=%.4f, active=%d",
@@ -1431,6 +1602,54 @@ def compute_inter_fold_consistency(wfv_results: List[dict]) -> float:
 
 
 # ---------------------------------------------------------------------------
+# Summary — regression objective
+# ---------------------------------------------------------------------------
+
+def collect_regression_metrics(
+    wfv_results: List[dict],
+    feature_names: List[str],
+) -> dict:
+    """Aggregate walk-forward metrics for the regression (reg:squarederror) path.
+
+    Mirrors collect_metrics' shape where it makes sense (n_folds, n_samples,
+    feature_count, overfit-style signal), but reports MAE/RMSE/sign-correctness
+    instead of accuracy/confusion-matrix, since there is no discrete decision
+    to score a hit-rate on.
+    """
+    maes = [r["val_mae"] for r in wfv_results]
+    rmses = [r["val_rmse"] for r in wfv_results]
+    sign_correct_pcts = [r["sign_correct_pct"] for r in wfv_results]
+    fold_expectancies = [r.get("net_r_expectancy", 0.0) for r in wfv_results]
+
+    mean_mae = float(np.mean(maes)) if maes else 0.0
+    mean_rmse = float(np.mean(rmses)) if rmses else 0.0
+    mean_sign_correct_pct = float(np.mean(sign_correct_pcts)) if sign_correct_pcts else 0.0
+
+    # Fold-stability of sign-correctness (higher = more consistent across folds),
+    # same normalization convention as _compute_stability for the classifier path.
+    sign_correct_stability = _compute_stability(sign_correct_pcts)
+
+    n_samples = sum(r.get("n_train", 0) + r.get("n_val", 0) for r in wfv_results[:1]) if wfv_results else 0
+    if wfv_results:
+        n_samples = wfv_results[-1].get("n_train", 0) + wfv_results[-1].get("n_val", 0)
+
+    return {
+        "objective": "reg:squarederror",
+        "val_mae": mean_mae,
+        "val_rmse": mean_rmse,
+        "sign_correct_pct": mean_sign_correct_pct,
+        "sign_correct_stability": sign_correct_stability,
+        "fold_maes": maes,
+        "fold_rmses": rmses,
+        "fold_sign_correct_pcts": sign_correct_pcts,
+        "fold_net_r_expectancy": fold_expectancies,
+        "feature_count": len(feature_names),
+        "n_samples": n_samples,
+        "n_folds": len(wfv_results),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
@@ -1458,9 +1677,88 @@ def collect_metrics(
 
     decision_labels: list[str] = []
     decision_gross_r: list[float] = []
+    val_symbols: list[str] = []
+    val_confidence: list[float] = []
+    val_correct: list[float] = []
     for r in wfv_results:
         decision_labels.extend(r.get("decision_labels", []))
         decision_gross_r.extend(r.get("decision_gross_r", []))
+        val_symbols.extend(r.get("val_symbols", []))
+        val_confidence.extend(r.get("val_confidence", []))
+        val_correct.extend(r.get("val_correct", []))
+
+    # ── Symbol/cluster contribution (G5) ──────────────────────────────────
+    symbol_stability: dict = {"available": False}
+    if val_symbols and len(val_symbols) == len(decision_labels) == len(decision_gross_r):
+        from alphaforge.reports.stability import compute_symbol_concentration, compute_symbol_metrics
+
+        per_symbol_active_r: dict[str, list[float]] = {}
+        for sym, label, gross_r in zip(val_symbols, decision_labels, decision_gross_r):
+            if label == "NO_TRADE":
+                continue
+            per_symbol_active_r.setdefault(sym, []).append(gross_r)
+        per_symbol_oos = {
+            sym: {
+                "oos_expectancy_r": float(np.mean(rs)),
+                "oos_win_rate": float(np.mean([1.0 if v > 0 else 0.0 for v in rs])),
+                "oos_trade_count": len(rs),
+            }
+            for sym, rs in per_symbol_active_r.items()
+        }
+        symbol_metrics = compute_symbol_metrics(per_symbol_oos)
+        concentration = compute_symbol_concentration(symbol_metrics)
+        symbol_stability = {
+            "available": True,
+            "num_symbols": concentration["num_symbols"],
+            "top_symbol": concentration["top_symbol"],
+            "top_symbol_share_pct": round(concentration["top_symbol_share"] * 100, 2),
+            "symbol_concentration_hhi": concentration["symbol_concentration_hhi"],
+            "per_symbol_shares": concentration["per_symbol_shares"],
+        }
+
+    # ── Cost-stress sweep (G3) ────────────────────────────────────────────
+    # decision_gross_r already has the base round-trip cost (8bps) deducted
+    # by the label generator. A stress multiplier of m applies an ADDITIONAL
+    # (m - 1) * base_cost per active trade on top of that base — it does not
+    # re-derive cost from scratch, so it composes correctly with the label's
+    # existing cost accounting instead of double-counting or under-counting.
+    cost_stress: dict = {"available": False}
+    if decision_labels and len(decision_labels) == len(decision_gross_r):
+        stress_multipliers = [1.0, 1.5, 2.0, 2.5, 3.0]
+        per_multiplier: dict[str, float] = {}
+        max_survived = 0.0
+        for m in stress_multipliers:
+            extra_cost = (m - 1.0) * _ROUND_TRIP_COST_FRACTIONAL
+            stressed_r = [
+                (gr - extra_cost) if lbl != "NO_TRADE" else gr
+                for lbl, gr in zip(decision_labels, decision_gross_r)
+            ]
+            stressed_metrics = compute_oos_metrics(decision_labels, stressed_r, fee_pct=0.0)
+            stressed_expectancy = float(stressed_metrics.get("avg_net_R_per_active_trade", 0.0))
+            per_multiplier[f"{m}x"] = round(stressed_expectancy, 6)
+            if stressed_expectancy > 0:
+                max_survived = m
+        cost_stress = {
+            "available": True,
+            "base_round_trip_cost_fraction": _ROUND_TRIP_COST_FRACTIONAL,
+            "expectancy_r_by_multiplier": per_multiplier,
+            "max_multiplier_survived": max_survived,
+        }
+
+    # ── Calibration (G6) — reliability error from confidence vs correctness ─
+    calibration: dict = {"available": False}
+    if val_confidence and len(val_confidence) == len(val_correct):
+        from alphaforge.reports.ic_metrics import compute_calibration_error
+
+        ece, mce = compute_calibration_error(
+            np.asarray(val_confidence, dtype=np.float64),
+            np.asarray(val_correct, dtype=np.float64),
+        )
+        calibration = {
+            "available": True,
+            "expected_calibration_error_pct": round(ece * 100, 4),
+            "max_calibration_error_pct": round(mce * 100, 4),
+        }
 
     if decision_labels and len(decision_labels) == len(decision_gross_r):
         trade_metrics = compute_oos_metrics(decision_labels, decision_gross_r, fee_pct=fee_pct)
@@ -1497,6 +1795,22 @@ def collect_metrics(
         _min_trade_count = 0
         _drawdown_guard = 0.0
 
+    # No-trade quality (train.py-local approximation; see the per-fold
+    # comment in walk_forward_validate for why this is not the full
+    # Simulation-authority NoTradeOutcome classification).
+    total_no_trade_correct = sum(r.get("no_trade_correct_count", 0) for r in wfv_results)
+    total_no_trade_missed = sum(r.get("no_trade_missed_count", 0) for r in wfv_results)
+    all_saved_loss_values: list[float] = []
+    for r in wfv_results:
+        all_saved_loss_values.extend(r.get("no_trade_saved_loss_values", []))
+    correct_no_trade_pct = (
+        float(total_no_trade_correct / total_no_trade * 100) if total_no_trade > 0 else 0.0
+    )
+    missed_opportunity_pct = (
+        float(total_no_trade_missed / total_no_trade * 100) if total_no_trade > 0 else 0.0
+    )
+    saved_loss_r = float(np.mean(all_saved_loss_values)) if all_saved_loss_values else 0.0
+
     # Confidence threshold metrics
     low_conf_counts = [r.get("low_conf_count", 0) for r in wfv_results]
     total_low_conf = sum(low_conf_counts)
@@ -1505,6 +1819,20 @@ def collect_metrics(
 
     # Cost decomposition
     round_trip_cost_bps = _AUTHORITY["round_trip_taker_fee_bps"]  # 8.0 bps
+    fold_summaries = [
+        {
+            "fold": int(result["fold"]),
+            "net_expectancy_r": round(float(result.get("net_r_expectancy", 0.0)), 6),
+            "active_trades": int(result.get("active_trade_count", 0)),
+            "exposure_pct": round(
+                float(result.get("active_trade_count", 0)) / max(int(result.get("n_val", 0)), 1) * 100,
+                2,
+            ),
+            "purge_bars": int(result.get("purge_bars", result.get("purge_period", 0))),
+            "embargo_bars": int(result.get("embargo_bars", result.get("embargo_period", 0))),
+        }
+        for result in wfv_results
+    ]
 
     return {
         "mode": mode.upper(),
@@ -1529,7 +1857,18 @@ def collect_metrics(
         "total_long": total_long,
         "total_short": total_short,
         "total_no_trade": total_no_trade,
+        "no_trade_quality": {
+            "correct_no_trade_pct": round(correct_no_trade_pct, 2),
+            "missed_opportunity_pct": round(missed_opportunity_pct, 2),
+            "saved_loss_r": round(saved_loss_r, 6),
+            "method": "train.py-local approximation from val_action_net counterfactual "
+                      "best-of-{LONG,SHORT} R at each NO_TRADE decision, not the full "
+                      "Simulation-authority NoTradeOutcome classification",
+        },
         "exposure_pct": round(exposure_pct, 2),
+        "symbol_stability": symbol_stability,
+        "calibration": calibration,
+        "cost_stress": cost_stress,
         "confidence_threshold": _get_training_config(mode).confidence_threshold,
         "low_conf_rate_pct": round(low_conf_rate, 2),
         "cost_decomposition": {
@@ -1537,6 +1876,9 @@ def collect_metrics(
             "authority_round_trip_cost_bps": _AUTHORITY["round_trip_taker_fee_bps"],
             "round_trip_cost_r (in values)": 0.0,
         },
+        # Compact, serializable evidence for specialist comparison.  Full
+        # decision traces remain in the evidence passport when requested.
+        "fold_summaries": fold_summaries,
         "features": feature_names,
     }
 
@@ -1615,6 +1957,99 @@ def _run_discovery_after_training(
         print(f"  Discovery report saved: {out_path.resolve()}")
 
 
+def evaluate_frozen_holdout(
+    X: np.ndarray,
+    y_int: np.ndarray,
+    action_net_r: np.ndarray,
+    timestamps: np.ndarray,
+    exit_timestamps: np.ndarray,
+    symbols: np.ndarray,
+    *,
+    mode: str,
+    cutoff: str,
+    trace_path: str | Path,
+    confidence_threshold: float | None = None,
+) -> dict[str, Any]:
+    """Fit only labels realized before ``cutoff`` and trace post-cutoff OOS.
+
+    This is a one-shot frozen evaluation primitive.  The training mask uses
+    ``exit_timestamps < cutoff`` rather than entry time alone, preventing a
+    label whose forward outcome crosses the cutoff from leaking into fitting.
+    It does not tune a threshold or mutate the candidate configuration.
+    """
+    import pandas as pd
+    from alphaforge.reports.metrics import compute_oos_metrics
+    from alphaforge.training.xgb_trainer import XGBoostTrainer
+
+    n = len(X)
+    arrays = (y_int, action_net_r, timestamps, exit_timestamps, symbols)
+    if any(len(array) != n for array in arrays):
+        raise ValueError("frozen holdout arrays must have identical lengths")
+    cutoff_ns = int(pd.Timestamp(cutoff, tz="UTC").value)
+    ts_ns = np.asarray(timestamps, dtype=np.int64)
+    exit_ns = np.asarray(exit_timestamps, dtype=np.int64)
+    # Cached source data may be millisecond epoch; canonicalize locally so the
+    # leakage boundary remains correct for direct programmatic callers too.
+    if len(ts_ns) and np.max(np.abs(ts_ns)) < 1_000_000_000_000_000:
+        ts_ns = ts_ns * 1_000_000
+    if len(exit_ns) and np.max(np.abs(exit_ns)) < 1_000_000_000_000_000:
+        exit_ns = exit_ns * 1_000_000
+    train_mask = exit_ns < cutoff_ns
+    holdout_mask = ts_ns >= cutoff_ns
+    crossing_label_count = int(np.sum((ts_ns < cutoff_ns) & (exit_ns >= cutoff_ns)))
+    if int(train_mask.sum()) < 100:
+        raise ValueError("frozen holdout leaves fewer than 100 leakage-safe training samples")
+    if int(holdout_mask.sum()) < 100:
+        raise ValueError("frozen holdout contains fewer than 100 post-cutoff samples")
+    output = Path(trace_path)
+    if output.exists():
+        raise FileExistsError(
+            f"frozen holdout trace already exists: {output}; use the recorded result rather than retrying"
+        )
+
+    trainer = XGBoostTrainer(mode=mode)
+    result = trainer.train(X[train_mask], y_int[train_mask])
+    probabilities = result.model.inplace_predict(X[holdout_mask])
+    confidence = np.max(probabilities, axis=1)
+    predicted = np.argmax(probabilities, axis=1)
+    threshold = (
+        float(confidence_threshold)
+        if confidence_threshold is not None
+        else float(_get_training_config(mode).confidence_threshold)
+    )
+    predicted[confidence < threshold] = 2
+    holdout_actions = action_net_r[holdout_mask]
+    realized_r = holdout_actions[np.arange(len(predicted)), predicted]
+    labels = np.array(
+        ["LONG_NOW" if value == 0 else "SHORT_NOW" if value == 1 else "NO_TRADE" for value in predicted],
+        dtype=object,
+    )
+    metrics = compute_oos_metrics(labels.tolist(), realized_r.tolist(), fee_pct=0.0)
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    holdout_ts = ts_ns[holdout_mask]
+    holdout_exit = exit_ns[holdout_mask]
+    holdout_symbols = np.asarray(symbols)[holdout_mask]
+    with output.open("w", encoding="utf-8") as trace_file:
+        for timestamp, exit_timestamp, symbol, decision, score, outcome in zip(
+            holdout_ts, holdout_exit, holdout_symbols, labels, confidence, realized_r,
+        ):
+            trace_file.write(json.dumps({
+                "timestamp": int(timestamp), "exit_timestamp": int(exit_timestamp),
+                "symbol": str(symbol), "decision": str(decision),
+                "confidence": float(score), "realized_r_net": float(outcome),
+            }) + "\n")
+
+    return {
+        "cutoff": cutoff,
+        "training_samples": int(train_mask.sum()),
+        "holdout_samples": int(holdout_mask.sum()),
+        "crossing_label_count_purged": crossing_label_count,
+        "confidence_threshold": threshold,
+        "active_trade_count": int(np.sum(predicted != 2)),
+        "metrics": metrics,
+        "trace_path": str(output),
+    }
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -1628,8 +2063,16 @@ def main():
     parser.add_argument("--folds", type=int, default=6, help="WFV folds")
     parser.add_argument("--output", default=None, help="Output report path")
     parser.add_argument("--dump-softmax", default=None, help="Dump softmax probs to .npy")
+    parser.add_argument("--dump-decision-traces", default=None, help="Write timestamped OOS decision trace as JSONL")
     parser.add_argument("--panel-cache", default=None, help="Path to factor_sprint panel cache directory")
+    parser.add_argument("--data-dir", default=None, help="Root of raw/ normalized data-lake cache (default: repo data)")
     parser.add_argument("--dump-features", default=None, help="Dump X_clean + feat_names to .npy/.txt")
+    parser.add_argument(
+        "--normalization",
+        choices=["cross_sectional_rank", "none"],
+        default="cross_sectional_rank",
+        help="Feature normalization applied after NaN handling (default: cross_sectional_rank)",
+    )
     parser.add_argument("--positive-control", action="store_true", help="Replace labels with synthetic feature-based signal for pipeline validation")
     parser.add_argument("--threshold-sweep", default=None,
                         help="Comma-separated threshold values to sweep (e.g., '0.1,0.3,0.45,0.55,0.7'). "
@@ -1637,6 +2080,11 @@ def main():
     parser.add_argument("--holdout-cutoff", default=None,
                         help="ISO date (e.g. '2026-04-07') for 3-month holdout reservation. "
                              "Data AFTER this date is held out — model evaluated once, no retuning.")
+    parser.add_argument("--frozen-holdout-trace", default=None,
+                        help="One-shot post-cutoff OOS JSONL trace. Requires --holdout-cutoff; "
+                             "trains only labels realized before the cutoff, then exits.")
+    parser.add_argument("--frozen-confidence-threshold", type=float, default=None,
+                        help="Explicit immutable confidence threshold for --frozen-holdout-trace.")
     parser.add_argument("--prune-features", type=float, default=0.0,
                         help="Feature importance pruning threshold (0=disabled). "
                              "Features with gain below threshold are dropped before final training.")
@@ -1663,7 +2111,10 @@ def main():
     print(f"\n{'='*60}")
     print(f"  AlphaForge Training Pipeline")
     print(f"  Mode: {mode} | Interval: {interval} | Symbols: {len(symbols)}")
-    print(f"  Features: {args.features} | WFV Folds: {args.folds}")
+    print(
+        f"  Features: {args.features} | Normalization: {args.normalization} "
+        f"| WFV Folds: {args.folds}"
+    )
     print(f"{'='*60}\n")
 
     # Step 1: Load data
@@ -1672,7 +2123,7 @@ def main():
     if args.panel_cache:
         ohlcv = _load_panel_data(args.panel_cache, symbols)
     elif not args.synthetic:
-        ohlcv = load_cached_data(symbols, interval)
+        ohlcv = load_cached_data(symbols, interval, args.data_dir)
     if ohlcv is None:
         logger.info("Falling back to synthetic data")
         ohlcv = generate_synthetic_ohlcv(
@@ -1705,6 +2156,7 @@ def main():
     action_gross_r = training_frame["action_gross_r"]
     action_net_r = training_frame["action_net_r"]
     sample_timestamps = training_frame["timestamps"]
+    sample_exit_timestamps = training_frame["exit_timestamps"]
     sample_symbols = training_frame["symbols"]
 
     print("\n[3/6] Aligning samples and cleaning NaNs...")
@@ -1724,14 +2176,52 @@ def main():
     action_gross_clean = action_gross_r
     action_net_clean = action_net_r
     ts_clean = sample_timestamps
+    exit_ts_clean = sample_exit_timestamps
     sym_clean = sample_symbols
 
-    # Cross-sectional rank normalization: convert each feature to percentile
-    # ranks per timestamp across all symbols. Research shows +35% IC improvement.
-    if len(sym_clean) > 0 and len(ts_clean) > 0:
+    if args.frozen_holdout_trace:
+        if not args.holdout_cutoff:
+            raise ValueError("--frozen-holdout-trace requires --holdout-cutoff")
+        if args.normalization != "none":
+            raise ValueError("--frozen-holdout-trace requires --normalization none")
+        frozen_result = evaluate_frozen_holdout(
+            X_clean, y_clean, action_net_clean, ts_clean, exit_ts_clean, sym_clean,
+            mode=mode, cutoff=args.holdout_cutoff,
+            trace_path=args.frozen_holdout_trace,
+            confidence_threshold=args.frozen_confidence_threshold,
+        )
+        print("\nFROZEN HOLDOUT RESULTS")
+        print(json.dumps(frozen_result, indent=2, default=str))
+        if args.output:
+            Path(args.output).write_text(json.dumps(frozen_result, indent=2, default=str), encoding="utf-8")
+        return frozen_result
+
+    # Cross-sectional rank normalization is useful for relative-value families,
+    # but must be A/B-tested against raw time-series features for each alpha
+    # family.  Keep it as the historical default while exposing an explicit
+    # no-normalization challenger.
+    if args.normalization == "cross_sectional_rank" and len(sym_clean) > 0 and len(ts_clean) > 0:
         _unique_ts = np.unique(ts_clean)
         if len(_unique_ts) < len(ts_clean):  # multiple symbols per timestamp
             X_clean = cross_sectional_rank_normalize(X_clean, ts_clean)
+
+    # Reserve a genuinely unseen chronological block.  `holdout-cutoff` used
+    # to be forwarded only to discovery; canonical training must exclude it.
+    X_fit, y_fit = X_clean, y_clean
+    label_net_fit, action_net_fit, ts_fit, exit_ts_fit = label_net_clean, action_net_clean, ts_clean, exit_ts_clean
+    if args.holdout_cutoff:
+        import pandas as pd
+        cutoff_ns = int(pd.Timestamp(args.holdout_cutoff, tz="UTC").value)
+        fit_mask = ts_clean < cutoff_ns
+        n_holdout = int((~fit_mask).sum())
+        if n_holdout == 0 or int(fit_mask.sum()) < 100:
+            raise ValueError("holdout-cutoff leaves insufficient fit data or no holdout samples")
+        X_fit, y_fit = X_clean[fit_mask], y_clean[fit_mask]
+        label_net_fit = label_net_clean[fit_mask]
+        action_net_fit = action_net_clean[fit_mask]
+        ts_fit = ts_clean[fit_mask]
+        exit_ts_fit = exit_ts_clean[fit_mask]
+        print(f"  Reserved holdout: {n_holdout} samples from {args.holdout_cutoff}; fit samples: {len(X_fit)}")
 
 
     # Feature dump for correlation analysis
@@ -1777,7 +2267,7 @@ def main():
         sys.exit(1)
 
     # Step 4: Walk-forward validation
-    if args.threshold_sweep:
+    if args.threshold_sweep and not args.regression_objective:
         # Nested Threshold Sweep (leakage-free per-fold)
         thresholds = [float(t.strip()) for t in args.threshold_sweep.split(",")]
         thresholds = sorted(set(thresholds))
@@ -1786,9 +2276,13 @@ def main():
         print(f"{'='*70}")
 
         wfv_results, fold_preds, fold_y_class, fold_y_val = walk_forward_validate(
-            X_clean, y_clean, label_net_clean, mode, min_folds=args.folds,
-            action_net_r=action_net_clean,
+            X_fit, y_fit, label_net_fit, mode, min_folds=args.folds,
+            action_net_r=action_net_fit,
             return_raw_preds=True,
+            timestamps=ts_fit,
+            symbols=sym_clean[:len(ts_fit)],
+            exit_timestamps=exit_ts_fit,
+            capture_decision_trace=bool(args.dump_decision_traces),
         )
 
         per_fold_choices, final_threshold, per_fold_eval = _select_nested_thresholds(
@@ -1812,29 +2306,60 @@ def main():
         print(f"\n[4/6] Walk-forward validation ({args.folds} folds, anchored expanding)...")
         t0 = time.time()
         _need_raw_preds = args.discovery
-        if _need_raw_preds:
+        if _need_raw_preds and not args.regression_objective:
             wfv_results, fold_preds, fold_y_class, fold_y_val = walk_forward_validate(
-                X_clean, y_clean, label_net_clean, mode, min_folds=args.folds,
-                action_net_r=action_net_clean,
+                X_fit, y_fit, label_net_fit, mode, min_folds=args.folds,
+                action_net_r=action_net_fit,
                 return_raw_preds=True,
+                timestamps=ts_fit,
+                symbols=sym_clean[:len(ts_fit)],
+                exit_timestamps=exit_ts_fit,
+                capture_decision_trace=bool(args.dump_decision_traces),
+                regression_objective=args.regression_objective,
             )
         else:
             wfv_results = walk_forward_validate(
-                X_clean, y_clean, label_net_clean, mode, min_folds=args.folds,
-                action_net_r=action_net_clean,
+                X_fit, y_fit, label_net_fit, mode, min_folds=args.folds,
+                action_net_r=action_net_fit,
                 dump_softmax_path=args.dump_softmax,
+                timestamps=ts_fit,
+                symbols=sym_clean[:len(ts_fit)],
+                exit_timestamps=exit_ts_fit,
+                capture_decision_trace=bool(args.dump_decision_traces),
+                regression_objective=args.regression_objective,
             )
         wfv_duration = time.time() - t0
         print(f"  {len(wfv_results)} folds completed in {wfv_duration:.1f}s")
+
+    if args.dump_decision_traces:
+        trace_path = Path(args.dump_decision_traces)
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        with trace_path.open("w", encoding="utf-8") as trace_file:
+            for fold_result in wfv_results:
+                for timestamp, exit_timestamp, symbol, decision, confidence, realized_r in zip(
+                    fold_result.get("decision_timestamps", []),
+                    fold_result.get("decision_exit_timestamps", []),
+                    fold_result.get("decision_symbols", []),
+                    fold_result.get("decision_labels", []),
+                    fold_result.get("decision_confidence", []),
+                    fold_result.get("decision_gross_r", []),
+                ):
+                    trace_file.write(json.dumps({
+                        "fold": fold_result["fold"], "timestamp": timestamp,
+                        "exit_timestamp": exit_timestamp,
+                        "symbol": symbol, "decision": decision,
+                        "confidence": confidence, "realized_r_net": realized_r,
+                    }, default=str) + "\n")
+        print(f"  Decision trace saved: {trace_path.resolve()}")
 
     # Step 5: Train final model
     print("\n[5/6] Training final model on all data...")
     from alphaforge.training.xgb_trainer import XGBoostTrainer
 
     _obj = "reg:squarederror" if args.regression_objective else "multi:softprob"
-    _y_final = label_net_clean if args.regression_objective else y_clean
+    _y_final = label_net_fit if args.regression_objective else y_fit
     final_trainer = XGBoostTrainer(mode=mode, objective=_obj)
-    final_result = final_trainer.train(X_clean, _y_final)
+    final_result = final_trainer.train(X_fit, _y_final)
     final_acc = float(final_result.val_metrics.get("accuracy", 0))
     print(f"  Final model accuracy: {final_acc:.4f}")
     
@@ -1958,29 +2483,61 @@ def main():
 
     # Step 6: Collect metrics
     print("\n[6/6] Collecting metrics...")
-    metrics = collect_metrics(wfv_results, X_clean, feat_names)
+    if args.regression_objective:
+        metrics = collect_regression_metrics(wfv_results, feat_names)
+    else:
+        metrics = collect_metrics(wfv_results, X_fit, feat_names)
+    metrics["experiment_configuration"] = {
+        "features": args.features,
+        "normalization": args.normalization,
+        "symbols": symbols,
+        "folds": args.folds,
+    }
 
     print(f"\n{'='*60}")
     print(f"  TRAINING RESULTS â€” {mode}")
     print(f"{'='*60}")
-    print(f"  Accuracy (OOS):              {metrics['accuracy']:.4f}")
-    print(f"  Train Accuracy:              {metrics['train_accuracy']:.4f}")
-    print(f"  Accuracy Stability:          {metrics['accuracy_stability']:.4f}")
-    print(f"  Inter-fold consistency:    {metrics['inter_fold_consistency']:.4f}")
-    print(f"  Overfit Gap:                 {metrics['overfit_gap']:.4f}")
-    print(f"  Train-OOS Correlation:       {metrics['train_oos_correlation']:.4f}")
-    print(f"  PBO Risk:                    {metrics['pbo_risk']}")
-    print(f"  Net Expectancy R (per active trade): {metrics['net_expectancy_r']:.6f}")
-    print(f"  Feature Count:               {metrics['feature_count']}")
-    print(f"  Total Samples:               {metrics['n_samples']}")
-    print(f"  Walk-Forward Folds:          {metrics['n_folds']}")
-    print(f"  Active Trades:               {metrics['total_active_trades']}")
-    print(f"  LONG / SHORT / NO_TRADE:     {metrics['total_long']} / {metrics['total_short']} / {metrics['total_no_trade']}")
-    print(f"  Exposure %:                  {metrics['exposure_pct']:.1f}%")
-    print(f"  Confidence Threshold:        {metrics['confidence_threshold']}")
-    print(f"  Low Confidence Rate:         {metrics['low_conf_rate_pct']:.1f}%")
-    cd = metrics['cost_decomposition']
-    print(f"  Authority round-trip cost: {cd['authority_round_trip_cost_bps']:.0f} bps (already in decision_gross_r)")
+    if args.regression_objective:
+        print(f"  Objective:                   reg:squarederror")
+        print(f"  Val MAE (avg across folds):  {metrics['val_mae']:.6f}")
+        print(f"  Val RMSE (avg across folds): {metrics['val_rmse']:.6f}")
+        print(f"  Sign Correctness %:          {metrics['sign_correct_pct']:.2f}%")
+        print(f"  Sign Correctness Stability:  {metrics['sign_correct_stability']:.4f}")
+        print(f"  Feature Count:               {metrics['feature_count']}")
+        print(f"  Total Samples:               {metrics['n_samples']}")
+        print(f"  Walk-Forward Folds:          {metrics['n_folds']}")
+        print(f"  Per-fold MAE:                {[round(v, 6) for v in metrics['fold_maes']]}")
+        print(f"  Per-fold sign-correct %:     {[round(v, 2) for v in metrics['fold_sign_correct_pcts']]}")
+    else:
+        print(f"  Accuracy (OOS):              {metrics['accuracy']:.4f}")
+        print(f"  Train Accuracy:              {metrics['train_accuracy']:.4f}")
+        print(f"  Accuracy Stability:          {metrics['accuracy_stability']:.4f}")
+        print(f"  Inter-fold consistency:    {metrics['inter_fold_consistency']:.4f}")
+        print(f"  Overfit Gap:                 {metrics['overfit_gap']:.4f}")
+        print(f"  Train-OOS Correlation:       {metrics['train_oos_correlation']:.4f}")
+        print(f"  PBO Risk:                    {metrics['pbo_risk']}")
+        print(f"  Net Expectancy R (per active trade): {metrics['net_expectancy_r']:.6f}")
+        print(f"  Feature Count:               {metrics['feature_count']}")
+        print(f"  Total Samples:               {metrics['n_samples']}")
+        print(f"  Walk-Forward Folds:          {metrics['n_folds']}")
+        print(f"  Active Trades:               {metrics['total_active_trades']}")
+        print(f"  LONG / SHORT / NO_TRADE:     {metrics['total_long']} / {metrics['total_short']} / {metrics['total_no_trade']}")
+        print(f"  Exposure %:                  {metrics['exposure_pct']:.1f}%")
+        print(f"  Confidence Threshold:        {metrics['confidence_threshold']}")
+        print(f"  Low Confidence Rate:         {metrics['low_conf_rate_pct']:.1f}%")
+        cd = metrics['cost_decomposition']
+        print(f"  Authority round-trip cost: {cd['authority_round_trip_cost_bps']:.0f} bps (already in decision_gross_r)")
+        ntq = metrics['no_trade_quality']
+        print(f"  No-Trade Quality: correct={ntq['correct_no_trade_pct']:.1f}% missed_opp={ntq['missed_opportunity_pct']:.1f}% saved_loss_r={ntq['saved_loss_r']:.6f}")
+        ss = metrics['symbol_stability']
+        if ss.get('available'):
+            print(f"  Symbol Stability: n_symbols={ss['num_symbols']} top_symbol={ss['top_symbol']} top_share={ss['top_symbol_share_pct']:.1f}% hhi={ss['symbol_concentration_hhi']:.4f}")
+        cal = metrics['calibration']
+        if cal.get('available'):
+            print(f"  Calibration: ECE={cal['expected_calibration_error_pct']:.2f}% MCE={cal['max_calibration_error_pct']:.2f}%")
+        cs = metrics['cost_stress']
+        if cs.get('available'):
+            print(f"  Cost Stress: max_multiplier_survived={cs['max_multiplier_survived']}x  by_multiplier={cs['expectancy_r_by_multiplier']}")
     print(f"{'='*60}\n")
 
     # ── MLflow: log metrics + artifact, end run (#228) ────────────
@@ -2003,7 +2560,7 @@ def main():
             logger.warning("MLflow logging failed: %s", _mlf_exc)
 
     # Build EvidencePassport if requested (Issue #183)
-    if args.passport:
+    if args.passport and not args.regression_objective:
         try:
             from dataclasses import asdict
             from alphaforge.evidence_adapter import build_alphaforge_passport
@@ -2064,11 +2621,20 @@ if __name__ == "__main__":
     metrics = main()
     # Print structured output for machine consumption
     print("\n---STRUCTURED_RESULTS---")
-    print(json.dumps({
-        "status": "PASS",
-        "accuracy": metrics["accuracy"],
-        "inter_fold_consistency": metrics["inter_fold_consistency"],
-        "overfit_gap": metrics["overfit_gap"],
-        "feature_count": metrics["feature_count"],
-    }, indent=2))
-
+    if metrics.get("objective") == "reg:squarederror":
+        print(json.dumps({
+            "status": "PASS",
+            "objective": "reg:squarederror",
+            "val_mae": metrics["val_mae"],
+            "val_rmse": metrics["val_rmse"],
+            "sign_correct_pct": metrics["sign_correct_pct"],
+            "feature_count": metrics["feature_count"],
+        }, indent=2))
+    else:
+        print(json.dumps({
+            "status": "PASS",
+            "accuracy": metrics["accuracy"],
+            "inter_fold_consistency": metrics["inter_fold_consistency"],
+            "overfit_gap": metrics["overfit_gap"],
+            "feature_count": metrics["feature_count"],
+        }, indent=2))

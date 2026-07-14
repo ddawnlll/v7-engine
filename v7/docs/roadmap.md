@@ -37,37 +37,6 @@ That means the next work should be implementation-led, not more concept inventio
 
 ---
 
-## Strategic Program — Alpha Harvest -> V7-Lite -> Tensor AlphaForge (2026-07-13)
-
-**Owner-directed sequence:**
-
-1. push AlphaForge XGBoost to its practical frontier, including leverage-aware but cost-honest training/evaluation;
-2. consolidate V7-Lite into a deterministic path for validated AlphaPackages through replay, paper, shadow and explicitly authorized tiny-live operation;
-3. build Tensor AlphaForge, beginning with a shared causal encoder whose embeddings challenge the frozen XGBoost champion before direct neural heads are considered.
-
-The detailed cross-domain research and execution plan is [Alpha Harvest -> V7-Lite -> Tensor AlphaForge Roadmap](../../docs/research/alpha_harvest_v7_lite_tensor_roadmap.md).
-
-**Lock status:** strategic sequence `LOCKED`; economic thresholds and promotion evidence `HOLD`.
-
-**Locked principles:**
-
-- maximum return means survivable post-cost geometric growth, not maximum backtest return;
-- base-risk/unlevered alpha truth is stored separately from leverage-scenario utility;
-- leverage cannot promote a negative base-risk edge;
-- V7-Lite remains deterministic and cannot bypass Simulation or V7 risk gates;
-- Tensor AlphaForge is promoted only by paired OOS economic uplift over a frozen XGBoost champion.
-
-**Immediate holds:**
-
-- full-run cost stress is invalid while exported rules contain `fee_r = 0.0`;
-- current full runs are not independent replications without distinct manifests, seeds, windows and holdouts;
-- V7-Lite is an accelerator candidate but is not revenue-ready;
-- numeric leverage, drawdown, PBO/DSR, correlation and scaling thresholds remain `LOCK_CANDIDATE` until real replay/shadow evidence calibrates them.
-
-**Design lock score:** N/A — this locks sequence and authority, not empirical profitability or numeric thresholds.
-
----
-
 ## Make/Menu Test Harness Repair (2026-07-03)
 
 **What changed:**
@@ -1596,105 +1565,437 @@ Issues `#304, #315` closed via PR #330 — funding pipeline wiring complete.
 
 ---
 
-|#333 — Kill-Switch Wiring (2026-07-13)
+## V7-Lite Shadow Admission Boundary (Checkpoint 009, 2026-07-13)
 
-**Issue:** #333 — Wire production kill-switch with 30% trailing drawdown default, enable in live runtime loop.
+**What changed:** V7-Lite now has a deterministic, immutable candidate-manifest
+boundary immediately before the existing `ShadowModeManager`. A candidate with
+any incomplete G0–G6 evidence is denied and cannot create a shadow record.
+Admitted candidates are still shadow-only and continue through the ordinary V7
+policy, portfolio, runtime-eligibility, and risk layers; the boundary never
+creates an order.
 
-**What changed:**
-- `KillSwitch.trigger()` now logs at CRITICAL level — minimum viable operator alert path.
-- `SafetyGateChain.__init__` creates the default `KillSwitch` with `KillSwitchConfig(auto_trigger_on_drawdown_pct=30.0)` instead of the bare `KillSwitch()` which had 0.0 (disabled). Standalone `KillSwitch()` construction preserves the original 0.0 default for backward compatibility.
-- `SafetyGateChain.check_all()` now calls `kill_switch.check_auto_conditions(current_drawdown_pct=dd_pct)` after updating the drawdown gate with equity data. This connects the equity-curve trailing-max tracking (already in `DrawdownGate`) to the KillSwitch's auto-trigger logic, which was previously dead code — `check_auto_conditions()` had zero production callers.
-- `ExecutionOrchestrator._check_safety_gates()` calls `SafetyGateChain.check_all()` inside `open_order()` — confirmed live in the trade-decision path.
-- 4 new tests in `test_safety_rails.py` covering: 30%+ drawdown triggers both gates, below-30% stays inactive, default threshold verification, and no-equity-no-trigger edge case.
+**Verification:** 54 tests passed across candidate admission, shadow mode, and
+portfolio caps. Negative control: G4=`HOLD` left the shadow record store empty.
+Positive control: a fully-PASS fixture created one shadow record.
 
-**Lock status:** LOCKED for kill-switch wiring. DrawdownGate's equity tracking and KillSwitch's auto-trigger are now connected and exercised. No trading-mode threshold changes.
+**Lock status:** `LOCKABLE_WITH_HOLDS` — code boundary is verified; no research
+candidate is authorized for a shadow campaign yet.
 
-**Remaining holds:**
-- "Flat position" (close all open orders) on kill-switch trigger: `PaperExecutionAdapter.close_all_open_orders()` exists but live adapter raises `UnsupportedExecutionProfileError`. Wiring flattening into KillSwitch would create circular dependency — needs ExecutionOrchestrator-level orchestration, not KillSwitch-internal.
-- AlertService integration: CRITICAL logging is minimum viable; full persistence via `runtime/services/alert_service.py` is future work.
-- Auto-resume timer: `KillSwitchConfig.auto_resume_after_minutes` defaults to 0 (manual resume only); could be configured via runtime settings.
+**Remaining holds / release conditions:**
+- Rerun G0–G6 on a preregistered fresh window and replace HOLD evidence with
+  independently reproducible PASS evidence.
+- Run holding-horizon-aware, multi-position portfolio replay before interpreting
+  combined candidate returns.
+- Supply an independent market observer to shadow mode and complete the
+  mode-specific shadow/paper lifecycle gates.
+
+**Readiness:** 85% implementation/readiness toward V7-Lite; this is not a
+profitability or live-promotion percentage.
+
+---
+
+## V7-Lite Holding-Horizon Trace Contract (Checkpoint 010, 2026-07-13)
+
+**What changed:** The canonical AlphaForge OOS trace now emits an
+`exit_timestamp` alongside each decision timestamp and `realized_r_net`. Its
+value comes from the same per-symbol `label_horizon` index used by the label
+generator, avoiding an invalid panel-row approximation when multiple symbols
+share a bar.
+
+**Verification:** 48 timestamp-aware WFV tests passed. A 12-bar SCALP fixture
+asserts every emitted realization time is exactly its matching entry time plus
+12 bars. Model targets, fitting, and costs were not changed.
+
+**Lock status:** `LOCKABLE_WITH_HOLDS` — replay input contract is ready; no
+multi-position/horizon replay result exists yet.
+
+**Remaining holds / release conditions:**
+- Implement and run interval-aware replay with V7 portfolio caps and realized
+  R recognized only at exit.
+- Preserve the G0–G6 HOLD on the frozen research candidate until a
+  preregistered fresh-window rerun independently produces PASS evidence.
+
+**Readiness:** 87% implementation/readiness toward V7-Lite. This is still not
+a profitability, paper-trading, shadow-evidence, or live-promotion score.
+
+---
+
+## V7-Lite Interval Portfolio Replay (Checkpoint 011, 2026-07-13)
+
+**What changed:** `v7.lite.portfolio_replay` now replays policy-approved
+shadow candidates over their actual entry/exit intervals. At each entry batch,
+currently open positions are passed to `PortfolioManager`; positions ending at
+that timestamp are released first. The portfolio manager was corrected so
+already-open positions seed cluster, total-exposure, and simultaneous-position
+limits, not merely its display of remaining exposure.
+
+**Verification:** 60 V7-Lite/portfolio/shadow tests passed. Negative controls
+prove realized R cannot affect selection and an open position blocks later
+exposure until its exact exit time.
+
+**Lock status:** `LOCKABLE_WITH_HOLDS` — interval-aware observational replay
+is code-complete and tested; it has not yet run against a fresh regenerated
+real-data trace.
+
+**Remaining holds / release conditions:**
+- Deploy the trace contract, regenerate a preregistered fresh OOS trace, and
+  run the replay without threshold/config selection on that window.
+- Maintain G0–G6 HOLD until independent fresh evidence proves each gate.
+- Complete paper/shadow lifecycle with an independent observer; replay is not
+  execution and its summed R is not portfolio equity.
+
+**Readiness:** 90% implementation/readiness toward V7-Lite. It remains neither
+a profitability claim nor authorization for paper/live trading.
+
+---
+
+## V7-Lite Fresh Interval Replay (Checkpoint 012, 2026-07-13)
+
+**What changed:** The frozen SCALP volume/no-rank configuration was regenerated
+on the checksum-verified 10-symbol fresh-data cache with the new exit-time trace
+contract, then replayed at 5% position size through active-holding-aware V7
+portfolio controls. The trace-to-replay adapter assigns `expected_r_net=0` to
+all trace rows because the trace does not carry a forward return forecast;
+confidence is the deterministic tie-break and realized R is booked only at exit.
+
+**Evidence:** 2,575 active trace signals became 339 selected-and-closed replay
+positions, with 2,236 suppressions and a maximum of nine simultaneous holdings.
+The observational selected-trade sum was +1.799969R (+0.005310R per selected
+trade). A same-symbol overwrite bug was detected by this replay, fixed, covered
+by a negative control, and the original invalid 1,774/161 result was discarded.
+
+**Lock status:** `LOCKABLE_WITH_HOLDS` — fresh trace/replay accounting is now
+evidence-backed, but it is not independent alpha-selection evidence or a
+promotion result.
+
+**Remaining holds / release conditions:**
+- Collect a new preregistered post-cutoff data window and execute the unchanged
+  trace/replay exactly once.
+- Keep all G0–G6 statuses HOLD until that independent evidence packet passes.
+- Complete an independent shadow observer and paper lifecycle; observational R
+  remains neither portfolio equity nor a live/paper PnL claim.
+
+**Readiness:** 92% implementation/readiness toward V7-Lite, explicitly not a
+profitability or execution-promotion percentage.
+
+---
+
+## V7-Lite Frozen Post-Cutoff Holdout Runner (Checkpoint 013, 2026-07-13)
+
+**What changed:** Central `alphaforge.train` now exposes
+`--frozen-holdout-trace`. It fits only labels whose actual `exit_timestamp` is
+before the specified cutoff, purging entries whose forward label outcome crosses
+the boundary, then writes a canonical trace only for post-cutoff entries. The
+mode requires raw/no-rank normalization and refuses to overwrite an existing
+trace file, making a silent retry less likely.
+
+**Verification:** 49 WFV/holdout tests passed. Negative controls prove a
+12-bar crossing label is excluded from training, output contains only post-cutoff
+entries, and a reused trace path fails before model training.
+
+**Lock status:** `LOCKABLE_WITH_HOLDS` — independent-holdout infrastructure is
+tested; no sufficient independent post-cutoff observation window exists yet.
+
+**Remaining holds / release conditions:**
+- Wait for enough bars strictly after `2026-07-12T22:00:00Z`, then run the
+  preregistered frozen CLI once and replay its trace.
+- Keep G0–G6 HOLD until the untouched-window evidence packet passes without
+  feature/threshold/model/portfolio changes.
+
+**Readiness:** 94% implementation/readiness toward V7-Lite. The remaining
+uncertainty is empirical, not a reason to treat the candidate as promoted.
+
+---
+
+## V7-Lite Preregistered Independent-Window Contract (Checkpoint 014, 2026-07-13)
+
+**What changed:** A strict preregistration JSON and validator now freeze the
+next untouched-window run: SCALP, ten symbols, volume-only, no rank
+normalization, the exact cutoff, 0.50 confidence threshold, 5% position size,
+and a one-shot trace basename. The generator emits those values as explicit
+central `alphaforge.train` CLI arguments; it does not rely on a mutable default.
+
+**Verification:** 49 V7-Lite/portfolio tests and four frozen-holdout boundary
+tests passed. Feature or normalization drift is rejected before execution.
+
+**Lock status:** `LOCKABLE_WITH_HOLDS` — exact independent-evaluation contract
+is machine-validated. Its empirical execution remains pending sufficient new
+post-cutoff data.
+
+**Remaining holds / release conditions:**
+- Use the manifest once the post-cutoff window is sufficient; trace and replay
+  it once without configuration selection.
+- Keep all G0–G6 statuses HOLD until the resulting independent evidence packet
+  is assessed.
+
+**Readiness:** 95% implementation/readiness toward V7-Lite. This remains a
+strictly non-promotional readiness score.
+
+---
+
+## V7-Lite Post-Cutoff Data Staging (Checkpoint 015, 2026-07-13)
+
+**What changed:** A separate checksum-verified cache was collected strictly
+after the preregistered cutoff. It contains 20 records: two 1h bars for each
+of the ten frozen symbols, with zero gaps, duplicates, checksum failures, or
+sync errors.
+
+**Lock status:** `HOLD` — the cache cannot form a 12-bar forward label and is
+below the frozen-holdout 100-row minimum. No model, trace, replay, threshold
+selection, or gate result was produced from it.
+
+**Release condition:** Accumulate enough external post-cutoff market bars, then
+run the immutable checkpoint-014 command exactly once. The readiness remains
+95%; this is an external evidence hold, not an implementation hold.
+
+---
+
+## V7-Lite Leverage-Native Economic Campaign (2026-07-13)
+
+**What changed:** The project now has a single master todo for Binance-native
+perpetual leverage from Simulation economics through AlphaForge training, V7
+eligibility, Runtime reconciliation and frozen-evidence promotion. It defines
+the discrete `0x/1x/2x/3x/5x/7x/10x` research action grid, while preserving
+unlevered/base-risk net R as the alpha truth metric.
+
+**Lock status:** `LOCKABLE_WITH_HOLDS` — architecture and sequencing are
+specified; numerical leverage, drawdown, liquidation and promotion thresholds
+remain empirical holds.
+
+**Current score semantics:** implementation/evidence plumbing remains roughly
+95%, XGBoost search exhaustion is estimated at 30–35%, and the stricter
+economic-deployment baseline is 20–25%. Code completion alone cannot raise the
+economic score.
+
+**Critical path:**
+
+1. Repair forward-return versus true simulation-R parity.
+2. Implement bracket-aware isolated-margin Simulation and explicit cost
+   scenarios.
+3. Generate leverage outcomes and train/calibrate AlphaForge sizing only after
+   base-risk cost survival.
+4. Add V7 leverage eligibility and Runtime Binance preflight/reconciliation.
+5. Run frozen OOS, then shadow/paper evidence.
+
+**Reference:** `docs/research/v7_lite_leverage_native_master_todo.md`.
+
+---
+
+## V7-Lite P0 Economic-R Parity — COMPLETE (2026-07-13)
+
+**What changed:** P0 economic-R parity foundation implemented and verified:
+
+1. **True R semantics:** ``base_net_R`` is Simulation-authority net R at 1x base risk.
+   AlphaForge ``generate_labels()`` now documents that ``gross_r_values``/``net_r_values``
+   are forward returns, NOT risk-normalized R-multiples (F-019).
+
+2. **V2 action space (13 actions):** ``contracts/schemas/action_space.schema.json`` now
+   supports ``NO_TRADE`` + LONG/SHORT at ``1x/2x/3x/5x/7x/10x``, backward-compatible
+   with v1 IDs 0-8. Registry bumped to v2.0.0.
+
+3. **Isolated-margin model:** ``simulation/engine/margin.py`` provides
+   ``compute_isolated_margin()`` with Binance USDⓈ-M liquidation formulas.
+   ``PositionMargin`` / ``CostScenario`` / ``LeverageOutcome`` types added to contracts.
+
+4. **Parity fixture:** ``simulation/engine/leverage_fixture.py`` generates 13-action
+   outcomes with 8 immutable cost scenarios. ``base_net_R`` is verified invariant:
+   it does not inflate with leverage.
+
+5. **Tests:** ``simulation/tests/test_leverage_parity.py`` — 58 tests (forward return
+   vs true R, fixture determinism, base_net_R invariance, 13-action contract,
+   isolated-only margin, liquidation behavior, cost scenarios, simulation parity,
+   backward compatibility). All pass locally (macOS, Python 3.14) and remotely
+   (vast.ai RTX 3060, Python 3.12.3, CUDA 13.0).
+
+**Lock status:** P0 foundation `LOCKED`. Leverage tiers and cost scenarios are
+immutable. Numerical liquidation/drawdown/promotion thresholds remain
+empirical `HOLD`.
+
+**Economic-deployment score:** Infrastructure (unchanged) ~95%. Economic score
+advances from 20-25% to ~35-40% (P0 15pts: parity evidence now exists).
+
+**Remaining holds:** No simulation output treated as real Binance parity —
+the fixture uses deterministic synthetic candles. Q-013 (Binance margin
+parity) remains OPEN. Frozen volume candidate still G0–G6 HOLD.
 
 **Evidence:**
-- 53/53 safety tests pass (4 new, 49 existing), 0 regressions
-- CI green (run 29240010214)
-- Remote test output: 53 passed in 1.01s on Python 3.12.3
-- Commit: `2117820`
-- ACCP report: `reports/accp/issue-333.yaml`
+- ``reports/accp/v7_lite_leverage_native_p0_economic_parity_2026-07-13.accp.yaml``
+- ``simulation/tests/test_leverage_parity.py`` — 58 passed (local + remote)
+- F-020 in ``docs/audits/FINDINGS_LEDGER.md``
 
 ---
 
-## #312 — BB Position v2 Revalidation — KIRMIZI (2026-07-13)
+## Deterministic V7-Lite Readiness Gate + SCALP/AGGRESSIVE_SCALP Threshold Lock (2026-07-13)
 
-**Issue:** #312 — Execute pre-registered BB Position v2 mechanism test protocol from MECHANISM_HYPOTHESES.md section 2.3. This is the sole surviving alpha candidate after the mining-vs-mechanism purge.
+**What changed:** The informal, hand-typed `v7_lite_readiness_percent` field
+in `reports/accp/v7_lite_checkpoint_*.yaml` (e.g. "45%", "95%" typed by
+whoever wrote the report) is replaced by a deterministic score computed by
+`v7/lite/readiness_gate.py`:
 
-**What changed:**
-- Wrote and executed `scripts/revalidate_bb_position_v2.py` — glue script that loads real 1h panel data for 4 pre-registered symbols (BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT), builds training frame with breakout-group features (bb_position, bb_width, range_breakout_N), runs 6-fold anchored expanding walk-forward validation with XGBoost, computes aggregate metrics, cost stress sweep (1.0x-3.0x), and null-test comparison.
-- Used corrected bb_position features from PIPELINE_VERSION 0.3.1 (trailing-window fix) — confirmed no silent override in the execution path.
+- `gate_completion_pct` — primary, binary: `100 * (G0-G6 gates that PASS) / 7`.
+  Evaluated per mode against the `MODE_THRESHOLDS` table (transcribed from
+  `v7/docs/pipeline/evaluation.md`'s Mode-Specific Promotion Thresholds
+  table). No partial credit — a gate either meets every exit criterion or
+  fails with explicit reason codes.
+- `quality_subscore_pct` — advisory only, distance-to-threshold for gates not
+  yet passed. Explicitly documented as non-authoritative; cannot substitute
+  for `gate_completion_pct` in a PASS/FAIL decision.
+- `DataScope` guardrail: refuses to compute a score unless the evidence comes
+  from the canonical 5-symbol (v0.30B LOCKED real-data baseline: BTCUSDT/ETHUSDT/SOLUSDT/BNBUSDT/XRPUSDT) / full-feature (--features all) / full-history dataset, unless
+  the caller explicitly opts out with `allow_partial_scope=True` and a
+  reason string. This directly closes the gap found in this session's audit
+  of the leverage/regression-objective path in `alphaforge/train.py`, where a
+  synthetic 6-feature run's metrics (MAE 0.000, unvalidated) could otherwise
+  be mistaken for a real readiness signal.
+- `write_readiness_checkpoint()` auto-increments `checkpoint_id` by scanning
+  existing `reports/accp/v7_lite_checkpoint_*.yaml` files and writes
+  `v7_lite_readiness_percent` / `result` directly from the computed score —
+  never typed by the caller again.
 
-**Results:**
-- Net expectancy R: **+0.012144** per active trade (521 trades, 97076 samples)
-- Model accuracy: **16.7%** — near chance for 3-class (33.3% baseline)
-- **97.4% low-confidence rate** — model only trades 1.7% of the time
-- Folds 5-6 degenerate: 3 and 8 trades respectively; signal collapses after fold 2
-- Overfit gap: **0.2936** (train 46.1% vs val 16.7%) — PBO risk rated HIGH
-- Cost stress: **FAIL_EDGE_DESTROYED_BY_COSTS** at all multipliers > 1.0x
-- Break-even cost multiplier: **1.23x** — any realistic cost increase kills the edge
-- Null test comparison: edge +0.012R is statistically distinct from TEMIZ baseline of -0.1675 (z=10.57) but **economically irrelevant**
+**Threshold lock (owner decision, 2026-07-13):** SCALP and AGGRESSIVE_SCALP
+promotion thresholds in `v7/docs/pipeline/evaluation.md` were promoted
+**HOLD → LOCKED_INITIAL_BASELINE** (same placeholder numeric values, status
+changed only) specifically so the deterministic gate can evaluate real
+PASS/FAIL for these two PRIMARY business-priority modes instead of leaving
+them permanently un-scoreable. This does **not** constitute empirical
+validation — thresholds remain pending recalibration after each mode's first
+full-dataset walk-forward evidence, and no paper/live promotion is
+authorized by this lock alone.
 
-**Verdict: KIRMIZI (REJECT). The BB position mean-reversion mechanism hypothesis is NOT supported.**
+**The V7-Lite SCALP/AGGRESSIVE_SCALP SHADOW-eligibility target:**
+`gate_completion_pct == 100` (all 7 of G0-G6 deterministically PASS),
+computed on the 5-symbol (v0.30B LOCKED baseline) / full-feature (--features all) / full-history scope, per mode
+independently. Hitting 100 means the resulting candidate manifest can
+honestly set `gate_statuses["G0".."G6"] = "PASS"` for
+`v7.lite.candidate_gate.evaluate_frozen_candidate()` — the score *is* the
+shadow-admission bar, not a separate number.
 
-**Implications:**
-- Per MECHANISM_HYPOTHESES.md's explicit conclusion: "If BB v2 fails: entire alpha pipeline needs fundamental redesign"
-- Zero mechanism-validated alpha candidates survive after the purge (Truth V6 = noise, SCALP 1h Direction = too weak, BB Position v2 = cost-destroyed)
-- Owner to decide next chapter: pipeline redesign, regime-aware combined-signal approach, new data sources, or infrastructure-first focus
+**Current status (updated 2026-07-13, first real scoring run):**
+`gate_completion_pct = 28.57` (2/7 gates PASS — G0, G2) for **both** SCALP
+and AGGRESSIVE_SCALP, computed from a real training run on the remote GPU
+box: `alphaforge.train --mode {SCALP,AGGRESSIVE_SCALP} --symbols
+BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT --features all --folds 6 --data-dir
+data_lake`. Real results: SCALP net expectancy +0.002976R (OOS acc 0.3667,
+overfit gap 0.293, PBO HIGH); AGGRESSIVE_SCALP net expectancy +0.002204R
+(OOS acc 0.3123, overfit gap 0.267, PBO HIGH). Both barely positive but far
+below the ≥0.05R/≥0.03R promotion floors and the G3 cost-stress requirement.
+Checkpoints: `reports/accp/v7_lite_checkpoint_016_scalp_readiness_2026-07-13.accp.yaml`,
+`reports/accp/v7_lite_checkpoint_017_aggressive_scalp_readiness_2026-07-13.accp.yaml`.
 
-**Audit findings documented in this task:**
-1. **Funding cost remains inactive in WFV label path** — Issues #304/#315 marked CLOSED but `funding_rate` wiring in `train.py`'s `_generate_simple_labels_numba` and `_map_config_to_profile` in `simulation_adapter.py` still defaults to 0.0. All results are fee-only (8bps round trip). A real-cost result would be even weaker.
-2. **No 56-symbol data lake on remote** — `data/raw/` is empty. Used cached factor_sprint panel (20 symbols, 1h, 2023-2026). Only 4 pre-registered symbols selected.
+**This run is scope-partial, not canonical**, flagged via
+`allow_partial_scope=True` in `compute_readiness()`:
+- BTC/ETH have ~13.6 months of real history; SOL/BNB/XRP only ~3.4 months
+  (zero-filled for the gap by the training pipeline) — a genuine data-lake
+  backfill gap, not a code bug. A 2022-start Binance Vision backfill attempt
+  on 2026-07-13 returned mostly HTTP 404 for the missing years; this
+  environment's real-data window appears capped at ~3.5 months regardless of
+  requested start date.
+- `alphaforge.train`'s current output does **not** emit no-trade-quality
+  (CORRECT_NO_TRADE%, saved-loss R), cost-stress-sweep, regime-breakdown, or
+  per-symbol-contribution metrics — so G1, G3, G4, G5, G6 fail by default
+  (missing instrumentation), not necessarily because the underlying edge
+  fails those specific criteria. This is the concrete next engineering task:
+  instrument these five metric families in `train.py`/`collect_metrics()`
+  before the score can be trusted as authoritative.
+- The previous informal "~35-40% economic score" framing (not derived from
+  any formula) is retired in favor of this computed, checkpointed number.
 
-**Lock status:**
-- BB Position v2 mechanism hypothesis: **LOCKED** — KIRMIZI verdict, hypothesis not supported
-- Alpha pipeline status: **LOCKED** — needs fundamental redesign per MECHANISM_HYPOTHESES.md
-- Funding cost gap: **UNCHANGED** — still HOLD (documented but not resolved here)
+**Lock status:** Gate infrastructure `LOCKED` (deterministic, tested, 22
+tests). SCALP/AGGRESSIVE_SCALP numeric thresholds `LOCKED_INITIAL_BASELINE`.
+Actual promotion PASS/FAIL for either mode remains `HOLD` — 28.57% is far
+below the 100% SHADOW-eligibility bar, and the score itself is partial-scope
+pending the data and instrumentation gaps above.
 
 **Evidence:**
-- Full WFV output archived in `reports/v7_lite/mechanism/bb_position_v2_result.json`
-- Detailed report: `reports/v7_lite/mechanism/BB_POSITION_V2_REVALIDATION.md`
-- ACCP report: `reports/accp/issue-312.yaml`
+- `v7/lite/readiness_gate.py`, `v7/tests/test_lite_readiness_gate.py` — 22 tests passed
+- `v7/tests/test_lite_candidate_gate.py` — 16 passed (no regression)
+- Full `v7/tests` suite: 922 passed, 5 pre-existing failures (unchanged from
+  HANDOFF.md's documented list: 1 rounding test in
+  `test_deployment_gates.py`, 4 `test_e2e_swing.py` action-vocabulary
+  mismatches — unrelated to this change)
+- `reports/accp/v7lite-readiness-gate-2026-07-13.accp.yaml`
+- `reports/accp/v7_lite_checkpoint_016_scalp_readiness_2026-07-13.accp.yaml` — first real SCALP score (28.57%)
+- `reports/accp/v7_lite_checkpoint_017_aggressive_scalp_readiness_2026-07-13.accp.yaml` — first real AGGRESSIVE_SCALP score (28.57%)
+- Remote training logs: `/root/train_scalp_full5.log`, `/root/train_aggr_full5.log` on the vast.ai GPU box (root@1.208.108.242:33346)
 
 ---
 
-## Kelly Sizing Experiment — 56-Symbol SCALP Panel (2026-07-14)
+## Instrumented G1/G3/G5/G6 Metrics + Real Leverage Walk-Forward Fix (2026-07-13, second pass)
 
-**What changed:**
-- Added `alphaforge/src/alphaforge/kelly_sizing_experiment.py`, a research-only
-  timestamp-grouped 6-fold expanding walk-forward experiment using the
-  real 56-symbol 1h expanded panel and the standard 91-feature frame.
-- Produced `data/reports/kelly_sizing_results.json` with threshold-level
-  win/loss/payoff metrics plus half-Kelly (max 5x) and quarter-Kelly (max 3x)
-  sizing illustrations.
+**What changed:** Closed four of the five instrumentation gaps identified above,
+plus fixed the audited bug where the leverage/regression path was never
+walk-forward validated at all:
 
-**Results:**
-- No confidence threshold from 0.30 to 0.90 reached 80% economic win rate.
-- Best win rate: 64.19% at threshold 0.70 (1,142 candidates; 12.15/day).
-- Best unconstrained adjusted-return illustration: threshold 0.70,
-  half-Kelly 1.5914x, base net return 0.034301, adjusted return 0.054587.
+1. **`walk_forward_validate(..., regression_objective=True)`** now trains
+   `reg:squarederror` per fold using the SAME purge/embargo boundaries as the
+   classifier path (previously the regression path only ever trained once on
+   the full fit-set with a single non-purged chronological split). Reports
+   per-fold MAE/RMSE/sign-correctness. New `collect_regression_metrics()`.
+2. **No-trade quality (G1/G6):** train.py-local approximation — for each
+   NO_TRADE decision, counterfactual best-of-{LONG,SHORT} net R classifies it
+   CORRECT / MISSED_OPPORTUNITY / a saved-loss magnitude. Explicitly **not**
+   the full Simulation-authority NoTradeOutcome classification (that needs
+   upstream score fields not available at this pipeline stage).
+3. **Cost-stress sweep (G3):** reuses `compute_oos_metrics(fee_pct=...)` —
+   applies an *additional* (multiplier − 1) × base-cost on top of the label's
+   already-deducted 8bps, sweeping 1.0×–3.0×, reporting the max multiplier
+   the edge survives.
+4. **Symbol/cluster contribution (G5):** reuses existing
+   `alphaforge.reports.stability.compute_symbol_metrics`/
+   `compute_symbol_concentration` (Issue #116) — no new logic, just wired
+   `symbols` (already threaded through the function) into the aggregation.
+5. **Calibration (G6):** reuses existing
+   `alphaforge.reports.ic_metrics.compute_calibration_error` — confidence vs.
+   correctness across all validation rows.
+6. **Not done — G4 regime breakdown / G6 drawdown series:** both need raw
+   OHLCV (close/high/low) threaded through `walk_forward_validate`, which
+   only receives the already-built feature matrix today. Bigger plumbing
+   change than the others; deferred rather than rushed.
 
-**Lock status:** HOLD — no SCALP confidence threshold or leverage tier is
-locked. This is a retrospective research result, not execution authorization.
+**Real re-run results (same 5-symbol scope, `--features all`, instrumented):**
 
-**Remaining holds:**
-- The 80% win-rate target is not met by any evaluated threshold.
-- `action_net_r` is a fractional forward-return proxy rather than true
-  risk-normalized R or Binance-margin-realized P&L.
-- A preregistered untouched holdout and simulation-to-exchange margin parity
-  remain required before any leverage policy can be considered.
+| Mode | gate_completion_pct | quality_subscore_pct | Change |
+|------|---------------------|-----------------------|--------|
+| SCALP | 28.57% (2/7: G0, G2) | 32.06% (was 22.26%) | Same binary gates pass; now backed by real G1/G6 numbers instead of defaults |
+| AGGRESSIVE_SCALP | **42.86%** (3/7: G0, G2, G3) | 40.53% (was 26.07%) | **Real increase** — G3 cost-stress now genuinely passes (survives 3.0×, needs 2.5×; AGGRESSIVE_SCALP has no explicit cost-adjusted-expectancy floor beyond survival) |
 
-**Evidence:** `data/reports/kelly_sizing_results.json`,
-`reports/accp/kelly_sizing_experiment_2026-07-14.accp.yaml`, F-017.
+Real per-mode evidence now available: SCALP correct_no_trade=10.8%,
+saved_loss_r=0.0004, top_symbol_share=43.2% (ETHUSDT, HHI 0.3545),
+calibration ECE=9.65%/MCE=90.11%, cost-stress survives to 3.0×.
+AGGRESSIVE_SCALP correct_no_trade=12.6%, saved_loss_r=0.0004,
+top_symbol_share=53.4% (ETHUSDT, HHI 0.4822), calibration ECE=13.98%/
+MCE=90.09%, cost-stress survives to 3.0×. G5 still fails both modes (single-
+symbol share exceeds the 40% concentration limit); G6 still fails both
+(no drawdown series yet, saved_loss_r far below the 0.05–0.10R floor); G1
+still fails both (no-trade quality far below the 50–60% floor, PBO HIGH,
+MHT/deflated-Sharpe not computed).
 
----
+**Real leverage/regression walk-forward (the audited gap, now fixed):**
+SCALP reg:squarederror WFV — MAE 0.0061R, RMSE 0.0087R, 6 real
+purge/embargo-respecting folds. AGGRESSIVE_SCALP — MAE 0.0047R, RMSE 0.0070R.
 
-## Strategic Program — Alpha Harvest -> V7-Lite -> Tensor AlphaForge (continued)
+**Known limitation — do not treat sign-correctness as validated:** both runs
+report 100.0% sign-correct_pct on **every** fold. This is flagged as
+suspicious, not celebrated: real market data essentially never produces
+perfect directional accuracy across every OOS fold, and the metric as
+currently defined includes near-zero/low-materiality rows where a trivial
+constant-sign prediction would look "correct" without reflecting real
+skill on the rows that actually matter (the ones large enough to trigger a
+LONG/SHORT decision in the classifier path). The MAE/RMSE numbers are more
+trustworthy than sign_correct_pct as currently defined. **Next step:**
+restrict sign-correctness to `|net_r| > label_threshold` (material rows
+only) before treating it as evidence of anything.
 
-*See above for the full strategic roadmap document.*
+**Lock status:** Unchanged — `HOLD` for both modes' promotion. AGGRESSIVE_SCALP's
+gate_completion_pct increase (28.57% → 42.86%) is real and evidence-backed,
+but still far below the 100% SHADOW-eligibility bar.
+
+**Evidence:**
+- `alphaforge/tests/test_wfv_regression.py` (4), `test_wfv_no_trade_quality.py` (3),
+  `test_wfv_symbol_calibration.py` (3), `test_wfv_cost_stress.py` (2) — 12 new tests, all passed
+- Full `alphaforge/tests/` suite: 2220 passed, 109 pre-existing failures (unchanged
+  count from before this change — confirmed unrelated via file-content and diff inspection)
+- `reports/accp/v7_lite_checkpoint_018_scalp_readiness_2026-07-13.accp.yaml`
+- `reports/accp/v7_lite_checkpoint_019_aggressive_scalp_readiness_2026-07-13.accp.yaml`
+- Remote logs: `/root/train_scalp_v3.log`, `/root/train_aggr_v3.log`,
+  `/root/train_scalp_regression_wfv.log`, `/root/train_aggr_regression_wfv.log`

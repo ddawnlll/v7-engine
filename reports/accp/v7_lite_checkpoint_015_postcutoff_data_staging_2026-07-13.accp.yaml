@@ -1,0 +1,30 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-015
+result: HOLD_INSUFFICIENT_INDEPENDENT_DATA
+v7_lite_readiness_percent: 95
+scope_confirmation: "A separate, checksum-verified post-cutoff staging cache was collected without changing the frozen candidate or executing a model/replay evaluation."
+post_cutoff_staging:
+  cutoff_ms: 1783940400000
+  symbols: 10
+  interval: 1h
+  records: 20
+  files: 10
+  rows_per_symbol: 2
+  last_timestamp_ms: 1783944000000
+  gaps: 0
+  duplicates: 0
+  checksum_failures: 0
+  sync_errors: 0
+  location: /tmp/v7_postcutoff_staging
+decision: HOLD
+reason: "Two post-cutoff bars per symbol cannot produce a 12-bar forward label, and 20 panel rows are below the frozen-holdout minimum of 100 post-cutoff samples."
+commands_run:
+  - "remote scripts/sync_data.py --symbols <10 frozen symbols> --intervals 1h --start-ts 1783940400000 --end-ts 1783982811000 --output-dir /tmp/v7_postcutoff_staging"
+  - "remote parquet metadata verification"
+remaining_holds:
+  - "Accumulate sufficient post-cutoff bars, then use the immutable V7LITE-014 preregistration once."
+  - "G0-G6 remain HOLD; no shadow, paper, or live activity is authorized."
+safe_next_step: "Wait for enough external market data to satisfy the frozen-holdout horizon and sample requirements, then perform exactly one preregistered evaluation."
+evidence_notes:
+  - "No training, model artifact, decision trace, replay, threshold selection, or gate status change was produced from this insufficient window."

@@ -1,0 +1,24 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-002
+result: IN_PROGRESS
+v7_lite_readiness_percent: 52
+scope_confirmation: "Fresh Binance data can now flow through the canonical AlphaForge CLI with timestamp units normalized."
+files_changed:
+  - alphaforge/src/alphaforge/train.py
+  - alphaforge/tests/test_train_timestamp_units.py
+  - lib/market_data/binance/client.py
+  - lib/tests/test_market_data_binance.py
+evidence:
+  fresh_sync_records: 24840
+  fresh_sync_checksum_failures: 0
+  fresh_loader_smoke_symbols: 2
+  fresh_loader_smoke_aligned_rows: 4942
+  fresh_loader_smoke_net_r: 0.003592
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. .venv/bin/python -m pytest alphaforge/tests/test_train_timestamp_units.py alphaforge/tests/test_train_feature_isolation.py alphaforge/tests/test_wfv_timestamp_boundaries.py -q"
+  - "remote canonical alphaforge.train --data-dir /tmp/v7_fresh_data"
+remaining_holds:
+  - "Candidate settings must be frozen before fresh-data promotion evaluation."
+  - "Portfolio overlap and deterministic V7-lite gate remain unwired."
+safe_next_step: "Receive gate/manifest design checkpoint and implement portfolio adapter without changing AlphaForge candidate ownership."

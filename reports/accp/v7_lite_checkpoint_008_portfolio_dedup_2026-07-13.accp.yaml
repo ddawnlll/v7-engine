@@ -1,0 +1,19 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-008
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 83
+scope_confirmation: "Fresh same-interval candidate traces were deduplicated at timestamp+symbol through the V7 portfolio adapter without using realized R for ranking."
+evidence:
+  input_active_candidate_decisions: 5730
+  timestamp_symbol_batches: 4057
+  selected_decisions: 4057
+  suppressed_decisions: 0
+  selected_observational_total_realized_r: 21.563304
+  selected_observational_r_per_trade: 0.005315
+  candidate_ranking_field: confidence_only
+limitations:
+  - "This is simultaneous-signal deduplication, not a position-horizon or drawdown simulation."
+  - "Realized R was not used for selection; expected_r_net was intentionally 0."
+  - "G0-G6 remain HOLD; no SHADOW admission is authorized."
+safe_next_step: "Add holding-horizon aware portfolio simulation and evaluate paper/shadow lifecycle gates."

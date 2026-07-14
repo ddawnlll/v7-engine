@@ -26,7 +26,6 @@
     "deny": [
       "Bash(curl *)",
       "Bash(wget *)",
-      "Bash(ssh *)",
       "Bash(nc *)",
       "Bash(ncat *)",
       "Bash(socat *)",

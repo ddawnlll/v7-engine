@@ -279,8 +279,7 @@ def generate_leverage_fixture(
             )
             risk_quote = FIXTURE_ATR * profile.stop_multiplier * margin.quantity
             quote_pnl = sim_outcome.realized_r_net * risk_quote
-            init_margin_val = margin.initial_margin_ratio * margin.notional
-            margin_return = quote_pnl / init_margin_val if init_margin_val > 0 else 0.0
+            margin_return = quote_pnl / margin.initial_margin if margin.initial_margin else 0.0
 
             outcomes.append(LeverageOutcome(
                 action_label=action_label,

@@ -322,6 +322,32 @@
 
 ---
 
+## F-017 — Volume Specialist Is a Research Candidate, Not a Promotion Candidate
+
+**Status:** CONFIRMED
+**Severity:** INFO
+**Confidence:** 1.00
+**Scope:** `alphaforge.train` / SCALP 1h factor-sprint panel
+**Validated by:** Canonical timestamp-aware 6-fold WFV on 10 symbols, 276,566 samples
+
+**Description:** The isolated `volume` feature family with cross-sectional rank
+normalization disabled produced `+0.012715R` per active trade, 14,308 active
+trades (12.22% exposure), and positive R in all six folds. This remains **HOLD**:
+the OOS/train gap is `0.2498` and PBO is `HIGH`; it must not be sent to V7-lite
+or execution without untouched holdout and cost-stress evidence.
+
+**Evidence:** Remote canonical run `/tmp/af_specialist_volume_no_rank_audited.json`
+on 2026-07-13; fold R `0.007711, 0.014512, 0.010832, 0.017033, 0.009801, 0.011771`.
+
+**Follow-up validation (2026-07-13):** A model fitted only before
+`2026-01-01` produced `+0.009417R` on the 36,110-sample 2026 holdout; it
+remained positive at 1.5x (`+0.009017R`) and 2.0x (`+0.008617R`) round-trip
+cost. A development-only nested threshold sweep selected 0.70, but that
+threshold yielded only 37 holdout trades (0.1% exposure). The alpha candidate
+is confirmed; its production threshold remains HOLD.
+
+---
+
 ## F-016 — Real Data Research Run Successful (10 Symbols)
 
 **Status:** CONFIRMED
@@ -340,36 +366,116 @@
 
 ---
 
-## F-017 — 56-Symbol Kelly Sizing Sweep Does Not Meet the 80% Win-Rate Target
+## F-018 — Interval-Aware Fresh Replay Requires Same-Symbol Exclusivity
 
 **Status:** CONFIRMED
-**Severity:** MEDIUM
-**Confidence:** 0.99
-**Scope:** `alphaforge/src/alphaforge/kelly_sizing_experiment.py`, 56-symbol 1h V7-Lite expanded panel
-**Discovered by:** Kelly sizing experiment on remote CUDA host
-**Validated by:** JSON schema/formula/fold-boundary assertions on the persisted artifact
+**Severity:** HIGH
+**Confidence:** 1.00
+**Scope:** `v7.lite.portfolio_replay` / V7 portfolio accounting
+**Validated by:** Fresh 10-symbol OOS trace replay and unit negative control
 
-**Description:** A real-data, timestamp-grouped six-fold expanding walk-forward
-experiment trained a fixed three-class XGBoost model on the 56-symbol 1h panel.
-It used 91 AlphaForge features, a 1,406-hour purge and 703-hour embargo at every
-fold boundary, and swept confidence thresholds from 0.30 through 0.90 in 0.05
-steps. No threshold reached the requested 80% economic win rate.
+**Description:** An initial interval replay accepted a second signal for the
+same symbol while its prior trace position was open. The V7 default per-symbol
+limit permits 5% + 5% = 10%, but this trace format represents one candidate
+stream rather than scale-in instructions. The active-position map overwrote the
+earlier record and lost its realization, so the preliminary `1774 selected /
+161 realized` output is invalid and discarded.
 
-**Results:**
-- Highest observed win rate: **64.19%** at threshold **0.70** (1,142 candidate
-  trades; 12.15 candidates/day), so the 80% target is not met.
-- The best unconstrained sizing illustration was threshold **0.70** with
-  half-Kelly leverage **1.5914x** and adjusted return **0.054587** from base
-  net return **0.034301**.
-- There is therefore no `threshold + leverage` combination eligible under the
-  requested 80%-win-rate rule.
-- The stored `base_net_R` is AlphaForge `action_net_r`: a fractional net
-  forward-return proxy, not risk-normalized R or exchange-realized leveraged P&L.
+**Resolution:** Replay now suppresses same-symbol signals until the prior trace
+position exits. The corrected fresh replay produced `339 selected / 339
+realized`, 2,236 suppressions, maximum 9 active positions, and an observational
+selected-trade sum of `+1.799969R` (`+0.005310R` per selected trade). Realized R
+was excluded from selection and recognized only at exit.
 
 **Evidence:**
-- `data/reports/kelly_sizing_results.json` — 2,094,784 aligned rows, 91
-  features, six CUDA folds, threshold metrics and selection result.
-- `PYTHONPATH=alphaforge/src:. python3 -m alphaforge.kelly_sizing_experiment`
-  on `1.208.108.242:33346` — real 56-symbol panel run.
-- JSON validation asserted all six temporal gaps, all 13 thresholds, and
-  `adjusted_R == base_net_R * leverage` for both Kelly schemes.
+- `v7/lite/portfolio_replay.py`
+- `v7/tests/test_lite_portfolio_replay.py`
+- `reports/accp/v7_lite_checkpoint_012_fresh_interval_replay_2026-07-13.accp.yaml`
+
+**Constraint:** This validates portfolio-replay accounting only. The fresh
+window had already been inspected in research, so it is not independent alpha
+promotion evidence; the volume candidate remains G0–G6 HOLD.
+
+---
+
+## F-019 — Current AlphaForge `net_r` Is Not a Guaranteed Simulation R-Multiple
+
+**Status:** CONFIRMED
+**Severity:** CRITICAL
+**Confidence:** 1.00
+**Scope:** `alphaforge/src/alphaforge/train.py` and V7-Lite trace/replay metrics
+**Validated by:** Code inspection on 2026-07-13
+
+**Description:** The canonical current label path computes forward return
+`close[t+h]/close[t] - 1`, deducts a fixed 8-bps cost, and exports that value as
+`net_r`. It does not divide the exported value by a stop/initial-risk amount.
+The alternative triple-barrier path calculates a risk-normalized value only for
+the label comparison, but also exports the unnormalized net return. Therefore
+fresh AlphaForge values such as `+0.006139R` must be treated as net forward
+returns until Simulation-parity labels replace them.
+
+**Impact:** Current AlphaForge values cannot be compared to the 1R target,
+cannot select Binance leverage tiers, and cannot satisfy an economic promotion
+gate. Portfolio replay remains valid as selection/accounting plumbing only,
+not true leveraged equity evidence.
+
+**Evidence:**
+- `alphaforge/src/alphaforge/train.py:475-500`
+- `alphaforge/src/alphaforge/train.py:535-546`
+- `alphaforge/src/alphaforge/train.py:417-442`
+- `reports/accp/v7_lite_checkpoint_012_fresh_interval_replay_2026-07-13.accp.yaml`
+
+**Resolution path:** P0 in
+`docs/research/v7_lite_leverage_native_master_todo.md` requires
+Simulation-authority true-R labels and parity tests before leverage research.
+
+**P0 Update (2026-07-13):** `_generate_simple_labels_numba()` and `generate_labels()`
+now document the semantic mismatch explicitly in docstrings (F-019 warning block).
+New Simulation-authority fields `base_net_R_long` / `base_net_R_short` are available
+via `LeverageOutcome` in the parity fixture.  See F-020.
+
+---
+
+## F-020 — P0 Economic-R Parity Foundation Implemented
+
+**Status:** CONFIRMED
+**Severity:** INFO
+**Confidence:** 1.00
+**Scope:** `simulation/`, `contracts/`, `alphaforge/src/alphaforge/train.py`
+**Validated by:** 58 new tests (local + remote), deterministic fixture, cost scenarios
+
+**Description:** P0 economic-R parity foundation for Binance USDⓈ-M leverage research
+is implemented.  The system now has:
+
+1. **True R semantics:** ``base_net_R`` is Simulation-authority net R at 1x base risk,
+   computed as ``(exit_price - entry_price) / (ATR * stop_multiplier) - costs``.
+   Forward returns and R-multiples are now distinguished in docstrings.
+
+2. **V2 action space (13 actions):** ``NO_TRADE`` + LONG/SHORT at 1x/2x/3x/5x/7x/10x,
+   backward-compatible with v1 IDs (0-8).
+
+3. **Isolated-margin model:** ``PositionMargin`` / ``compute_isolated_margin()``
+   explicit Binance liquidation formulas (ISOLATED only for P0).
+
+4. **Deterministic parity fixture:** One symbol (BTCUSDT), 13 actions, 8 immutable
+   cost scenarios, verified invariant: ``base_net_R`` does not inflate with leverage.
+
+5. **Explicit cost scenarios:** ``CostScenario`` frozen dataclass replaces monkey-patching
+   for new code paths.
+
+**Evidence:**
+- ``simulation/engine/margin.py`` — isolated margin, v2 action space mapping
+- ``simulation/engine/leverage_fixture.py`` — parity fixture + cost scenarios
+- ``simulation/tests/test_leverage_parity.py`` — 58 tests, all passing locally + remote
+- ``simulation/contracts/models.py`` — ``PositionMargin``, ``CostScenario``, ``LeverageOutcome``,
+  ``BinanceBracketSnapshot``, ``MarginType``, ``LeverageTier``
+- ``contracts/schemas/action_space.schema.json`` — v2 with 13 actions
+- ``contracts/registry.json`` — ActionSpace bumped to v2.0.0
+- ``alphaforge/src/alphaforge/train.py`` — F-019 docstring warning
+
+**Remote validation:** Same 58 tests pass on vast.ai RTX 3060 (host `367b847a92d6`,
+Python 3.12.3, CUDA 13.0, commit `8acd3ca`). Parity fixture produces correct
+`base_net_R` invariance and liquidation prices. Cost scenarios verified.
+
+**NO simulation result has been treated as real Binance parity.** The fixture
+uses deterministic synthetic candles, not exchange data.

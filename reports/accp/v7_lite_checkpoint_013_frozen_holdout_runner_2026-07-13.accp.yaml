@@ -1,0 +1,32 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-013
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 94
+scope_confirmation: "The centralized AlphaForge training CLI now has a one-shot frozen-holdout mode that can produce a post-cutoff trace for V7-Lite replay without label-outcome leakage."
+files_changed:
+  - alphaforge/src/alphaforge/train.py
+  - alphaforge/tests/test_wfv_timestamp_boundaries.py
+decisions_locked:
+  - "Frozen holdout training uses exit_timestamp < cutoff, not entry timestamp alone; labels whose outcomes cross cutoff are purged."
+  - "Frozen mode requires --normalization none and refuses to overwrite an existing trace path, reducing accidental retry/tuning."
+  - "The result trace retains the canonical entry timestamp, exit timestamp, confidence, decision, and realized_r_net fields needed by V7-Lite replay."
+evidence:
+  command: "PYTHONPATH=alphaforge/src:. .venv/bin/python -m pytest alphaforge/tests/test_wfv_timestamp_boundaries.py alphaforge/tests/test_wfv.py -q"
+  result: "49 passed"
+  negative_controls:
+    - "A 12-bar label crossing the cutoff is excluded from fit samples."
+    - "Trace contains only post-cutoff entries."
+    - "A second use of the same trace path raises FileExistsError before model training."
+  cli_surface: "python -m alphaforge.train --holdout-cutoff <ISO> --normalization none --frozen-holdout-trace <JSONL>"
+remaining_holds:
+  - "No sufficient independent post-cutoff data is available yet; the current cache ends 2026-07-12T22:00:00Z and remote time was 2026-07-13T12:01:09Z."
+  - "The frozen volume candidate remains G0-G6 HOLD."
+  - "A frozen holdout trace remains observational until it is replayed and independently assessed under the gate evidence packet."
+safe_next_step: "When enough post-cutoff bars exist, run the frozen CLI exactly once with the preregistered candidate inputs, then replay the emitted JSONL and evaluate G0-G6 without any config change."
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. .venv/bin/python -m pytest alphaforge/tests/test_wfv_timestamp_boundaries.py alphaforge/tests/test_wfv.py -q"
+  - "PYTHONPATH=alphaforge/src:. .venv/bin/python -m py_compile alphaforge/src/alphaforge/train.py"
+  - "PYTHONPATH=alphaforge/src:. .venv/bin/python -m alphaforge.train --help"
+evidence_notes:
+  - "This checkpoint prepares independent evaluation infrastructure; it is not a new alpha result."

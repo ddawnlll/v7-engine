@@ -1,94 +1,94 @@
-# Agent Handoff — Kelly Sizing Experiment (2026-07-14)
+# Agent Handoff — V7-Lite Leverage-Native P0 Economic Parity (2026-07-13)
 
 ## Current state
 
-The requested real-data Kelly sizing experiment is complete and persisted at
-`/root/v7-engine-main/data/reports/kelly_sizing_results.json`.
+P0 economic-R parity foundation is IMPLEMENTED and VERIFIED:
+- 58 new tests pass locally (macOS, Python 3.14) and remotely (vast.ai, Python 3.12.3)
+- Deterministic 13-action parity fixture produces correct invariants
+- base_net_R does not inflate with leverage
+- Cost scenarios stress correctly
 
-**Research verdict: PASS_WITH_HOLDS.** The experiment itself completed and its
-artifact validated, but **no threshold reached the requested 80% economic win
-rate**. The maximum was 64.19% at threshold 0.70, so no leverage tier or
-confidence threshold is authorized or locked.
+## Completed in P0
 
-## Work completed
+### Scope 1: AlphaForge R semantics
+- Added F-019 docstring warning in `alphaforge/src/alphaforge/train.py:generate_labels()`
+- Clarified that `gross_r_values`/`net_r_values` are **net forward returns**, not risk-normalized R
+- New simulation fields `base_net_R_long`/`base_net_R_short` available via `LeverageOutcome`
 
-- Added `alphaforge/src/alphaforge/kelly_sizing_experiment.py`.
-  - Validates long-panel row identity across open/high/low/close/volume.
-  - Loads all 56 real symbols from `/root/v7-engine/cache/v7_lite_expanded_panel_v1/`.
-  - Builds 2,094,784 aligned rows with 91 `build_aligned_training_frame`
-    features.
-  - Uses six timestamp-grouped expanding folds, 1,406-group purge and
-    703-group embargo; all rows sharing a candle timestamp stay on one side of
-    a boundary.
-  - Fits fixed three-class XGBoost models on CUDA and sweeps thresholds
-    0.30–0.90 in 0.05 increments.
-  - Computes economic win rate / avg win / avg loss, raw Kelly, half-Kelly
-    (max 5x), quarter-Kelly (max 3x), and adjusted return.
-- Wrote the required JSON artifact, ACCP-YAML completion report, audit finding,
-  open question, and roadmap entry.
+### Scope 2: Isolated-margin contract
+- `simulation/contracts/models.py`: added `PositionMargin`, `CostScenario`, `LeverageOutcome`,
+  `BinanceBracketSnapshot`, `MarginType`, `LeverageTier`
+- `simulation/engine/margin.py`: `compute_isolated_margin()` with Binance USDⓈ-M formulas
+- V2 action space mapping (13 actions, backward-compatible with v1 IDs 0-8)
 
-## Confirmed result
+### Scope 3: Extended action space
+- `contracts/schemas/action_space.schema.json`: v2 with 13 actions (NO_TRADE + LONG/SHORT at 1x/2x/3x/5x/7x/10x)
+- `contracts/registry.json`: ActionSpace bumped to v2.0.0
+- Backward compatible: v1 IDs 0-8 preserved, v2 adds IDs 9-12
 
-- Best win rate: **64.1856%** at threshold **0.70**, 1,142 candidate trades,
-  12.15 candidates/day.
-- Best unconstrained sizing illustration: **0.70**, half-Kelly **1.591433x**,
-  base net return **0.034301**, adjusted return **0.054587**.
-- `selection.best_80pct_winrate_by_adjusted_R` is `null` — no threshold meets
-  the 80% rule.
-- `base_net_R` is AlphaForge `action_net_r`: a fractional net forward-return
-  proxy, **not** true risk-normalized R or leverage-aware exchange P&L.
+### Scope 4+5: Parity fixture + cost scenarios
+- `simulation/engine/leverage_fixture.py`: `generate_leverage_fixture()` — deterministic fixture
+- 8 immutable `CostScenario` instances: baseline, fee 1.5x/2.0x/3.0x, slippage 1.5x/2.0x, combined 2.0x/3.0x
+- No monkey-patching for new code paths
 
-## Files inspected
+### Scope 6: Tests
+- `simulation/tests/test_leverage_parity.py`: 58 tests, all passing
+- Covers: forward return vs true R, fixture determinism, base_net_R invariance,
+  13-action contract, isolated-only margin, liquidation behavior, cost scenarios,
+  simulation parity, backward compatibility
 
-- `/root/v7-engine-main/AGENTS.md`
-- `/root/v7-engine-main/.agent/{CONTEXT_INDEX.md,project_context.md,CURRENT_TASK.md,EVIDENCE_REQUIREMENTS.md,HANDOFF.md}`
-- `/root/v7-engine-main/docs/{decisions/DECISIONS.md,audits/FINDINGS_LEDGER.md,audits/OPEN_QUESTIONS.md}`
-- `/root/v7-engine-main/ai_summary.md`
-- `/root/v7-engine-main/alphaforge/docs/ai_summary.md`
-- `/root/v7-engine-main/alphaforge/src/alphaforge/{train.py,meta/meta_labeler.py,training/xgb_trainer.py}`
-- `/root/v7-engine-main/alphaforge/tests/{test_training_entrypoint.py,test_wfv_purge_embargo.py}`
-- `/root/v7-engine/cache/v7_lite_expanded_panel_v1/manifest.json`
-- `/tmp/leverage_sizing_test.py` (unverified prototype; replaced by the audited module)
+## Verification
 
-## Files modified
+### Local (macOS, Python 3.14):
+```
+PYTHONPATH=. .venv/bin/python -m pytest simulation/tests/test_leverage_parity.py -v
+→ 58 passed
 
-- `/root/v7-engine-main/alphaforge/src/alphaforge/kelly_sizing_experiment.py`
-- `/root/v7-engine-main/data/reports/kelly_sizing_results.json`
-- `/root/v7-engine-main/docs/audits/FINDINGS_LEDGER.md`
-- `/root/v7-engine-main/docs/audits/OPEN_QUESTIONS.md`
-- `/root/v7-engine-main/v7/docs/roadmap.md`
-- `/root/v7-engine-main/reports/accp/kelly_sizing_experiment_2026-07-14.accp.yaml`
-- `/root/v7-engine-main/.agent/HANDOFF.md`
+PYTHONPATH=. .venv/bin/python -m pytest simulation/tests/unit/test_costs.py simulation/tests/unit/test_engine.py simulation/tests/test_engine_interface.py simulation/tests/test_exits.py simulation/tests/test_cost_stress.py -q
+→ 111 passed
 
-## Commands and verification
+PYTHONPATH=. .venv/bin/python -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q
+→ 20 passed
 
-- `PYTHONPATH=alphaforge/src:. python3 -m py_compile alphaforge/src/alphaforge/kelly_sizing_experiment.py` — PASS.
-- Preflight assertions for six split boundaries, Kelly formula/caps, and CUDA
-  `predict_proba` shape — PASS.
-- `PYTHONPATH=alphaforge/src:. python3 -m alphaforge.kelly_sizing_experiment` — PASS; real panel artifact written.
-- JSON assertion harness — PASS: 91 features, six folds, 13 thresholds,
-  temporal gaps, finite values, and `adjusted_R == base_net_R * leverage`.
-- `PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_training_entrypoint.py alphaforge/tests/test_wfv_purge_embargo.py -q` — 4 passed, 2 unrelated existing failures:
-  1. `simulation/tests/test_leverage_training.py` imports XGBoost outside the
-     entrypoint test's blessed paths.
-  2. A SWING WFV expectation still assumes `max_hold` instead of the current
-     `label_horizon` purge policy.
+PYTHONPATH=. .venv/bin/python -m pytest alphaforge/tests/test_wfv.py alphaforge/tests/test_wfv_timestamp_boundaries.py -q
+→ 49 passed
+```
 
-## Unresolved blockers
+### Remote (vast.ai, RTX 3060, Python 3.12.3, CUDA 13.0):
+```
+ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=. python3 -m pytest simulation/tests/test_leverage_parity.py -v'
+→ 58 passed
 
-- No evaluated threshold reaches the 80% win-rate target.
-- The threshold sweep is retrospective and needs a preregistered untouched
-  holdout before it can guide even research selection.
-- Leverage-dependent liquidation, rounding, and Binance-margin economic parity
-  are not modeled by the `action_net_r` proxy; no execution action is allowed.
-- An unrelated `alphaforge/src/alphaforge/features/scalp_momentum.py` edit has
-  a 2026-07-13T22:30:27Z mtime, after this artifact's 22:29:43Z write time.
-  It is not part of this task and must be preserved; it did not affect the
-  completed run.
+Parity fixture output:
+  LONG_1X  base_R=0.812400  equity_R=0.812400  liq_price=None
+  LONG_2X  base_R=0.812400  equity_R=1.624800  liq_price=25200.0
+  LONG_10X base_R=0.812400  equity_R=8.124000  liq_price=45200.0
+  SHORT_1X base_R=-0.854267  equity_R=-0.854267  liq_price=None
+  Base net R invariant: True
+  Cost scenarios: baseline→fee_2.0x fee_R doubles, equity drops correctly
+```
 
-## Exact recommended next action
+## Files changed
 
-Do **not** select a leverage tier. Freeze a new causal feature/model hypothesis,
-then run it once on a later untouched chronological holdout with the same
-timestamp-grouped folds. Require at least 80% economic win rate and one
-candidate/day before commissioning a new margin-aware Kelly study.
+### New files:
+- `simulation/engine/margin.py` — isolated margin computation, v2 action space mapping
+- `simulation/engine/leverage_fixture.py` — parity fixture generator, cost scenarios
+- `simulation/tests/test_leverage_parity.py` — 58 P0 parity tests
+
+### Modified files:
+- `simulation/contracts/models.py` — added MarginType, LeverageTier, PositionMargin,
+  CostScenario, BinanceBracketSnapshot, LeverageOutcome
+- `contracts/schemas/action_space.schema.json` — v2 with 13 actions
+- `contracts/registry.json` — ActionSpace v2.0.0
+- `alphaforge/src/alphaforge/train.py` — F-019 docstring warning
+- `docs/audits/FINDINGS_LEDGER.md` — F-020, F-019 update
+- `docs/audits/OPEN_QUESTIONS.md` — Q-013 update
+
+## Current task / next action
+
+P0 is complete. Next: P1 (contracts + P2 isolated-margin simulator from
+the master todo). See `.agent/CURRENT_TASK.md` for updated scope.
+
+The frozen post-cutoff volume candidate remains G0–G6 HOLD.
+No Binance testnet/shadow reconciliation has been attempted —
+the parity fixture uses deterministic synthetic candles only.

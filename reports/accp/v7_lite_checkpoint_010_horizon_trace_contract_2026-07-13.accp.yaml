@@ -1,0 +1,25 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+checkpoint_id: V7LITE-010
+result: PASS_WITH_HOLDS
+v7_lite_readiness_percent: 87
+scope_confirmation: "Canonical AlphaForge OOS decision traces now carry the actual per-symbol label realization timestamp needed for a holding-horizon-aware portfolio replay."
+files_changed:
+  - alphaforge/src/alphaforge/train.py
+  - alphaforge/tests/test_wfv_timestamp_boundaries.py
+decisions_locked:
+  - "Trace exit_timestamp is sourced from the same per-symbol label-horizon index that generated realized_r_net; it is not inferred from panel-row order."
+  - "The new field is observation/replay metadata and does not alter XGBoost targets, model fitting, or simulated costs."
+evidence:
+  command: "PYTHONPATH=alphaforge/src:. .venv/bin/python -m pytest alphaforge/tests/test_wfv_timestamp_boundaries.py alphaforge/tests/test_wfv.py -q"
+  result: "48 passed"
+  trace_alignment_test: "For a 12-bar SCALP fixture, every emitted exit timestamp equals the matching entry timestamp plus 12 bars."
+remaining_holds:
+  - "No horizon-aware multi-position replay has been implemented or executed yet."
+  - "The existing frozen research manifest remains G0-G6 HOLD and cannot start shadow observation."
+safe_next_step: "Implement a replay that consumes entry/exit trace intervals, applies V7 portfolio caps to simultaneous candidates, and reports realized R only after position exits."
+commands_run:
+  - "PYTHONPATH=alphaforge/src:. .venv/bin/python -m pytest alphaforge/tests/test_wfv_timestamp_boundaries.py alphaforge/tests/test_wfv.py -q"
+  - "PYTHONPATH=alphaforge/src:. .venv/bin/python -m py_compile alphaforge/src/alphaforge/train.py"
+evidence_notes:
+  - "No orders, paper trades, or live execution were created by this checkpoint."

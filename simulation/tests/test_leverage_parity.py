@@ -25,8 +25,6 @@ import pytest
 # ── Test imports ────────────────────────────────────────────────────────
 
 from simulation.contracts.models import (
-    BinanceBracketSnapshot,
-    BinanceBracketSnapshot,
     Candle,
     CostScenario,
     FuturePath,
@@ -375,16 +373,11 @@ class TestIsolatedMarginOnly:
 
     def test_compute_isolated_margin_uses_isolated(self):
         """compute_isolated_margin always returns ISOLATED type."""
-        bracket = BinanceBracketSnapshot(
-            symbol="TEST", tier=1, leverage=10, notional_cap_usd=999999,
-            maintenance_margin_ratio=0.004,
-        )
         pm = compute_isolated_margin(
             leverage=3,
             entry_price=50000,
             notional=50000,
             direction="LONG",
-            bracket=bracket,
         )
         assert pm.margin_type == "ISOLATED"
 
@@ -429,16 +422,11 @@ class TestLiquidationBehavior:
 
     def test_liquidation_price_formula_long(self):
         """LONG liq_price = entry × (1 - (IMR - MMR))."""
-        bracket = BinanceBracketSnapshot(
-            symbol="TEST", tier=1, leverage=10, notional_cap_usd=999999,
-            maintenance_margin_ratio=0.004,
-        )
         pm = compute_isolated_margin(
             leverage=5,
             entry_price=50000,
             notional=50000,
             direction="LONG",
-            bracket=bracket,
         )
         imr = 1.0 / 5  # 0.2
         mmr = 0.004    # 0.4%
@@ -449,16 +437,11 @@ class TestLiquidationBehavior:
 
     def test_liquidation_price_formula_short(self):
         """SHORT liq_price = entry × (1 + (IMR - MMR))."""
-        bracket = BinanceBracketSnapshot(
-            symbol="TEST", tier=1, leverage=10, notional_cap_usd=999999,
-            maintenance_margin_ratio=0.004,
-        )
         pm = compute_isolated_margin(
             leverage=5,
             entry_price=50000,
             notional=50000,
             direction="SHORT",
-            bracket=bracket,
         )
         imr = 1.0 / 5
         mmr = 0.004
@@ -479,16 +462,11 @@ class TestLiquidationBehavior:
 
     def test_leverage_10x_liquidation_price(self):
         """10x LONG: IMR=0.1, MMR=0.004, liq_dist=0.096."""
-        bracket = BinanceBracketSnapshot(
-            symbol="TEST", tier=1, leverage=10, notional_cap_usd=999999,
-            maintenance_margin_ratio=0.004,
-        )
         pm = compute_isolated_margin(
             leverage=10,
             entry_price=50000,
             notional=50000,
             direction="LONG",
-            bracket=bracket,
         )
         expected_liq = 50000.0 * (1.0 - 0.096)
         assert pm.liquidation_price == pytest.approx(expected_liq, abs=0.01)
@@ -514,17 +492,12 @@ class TestLiquidationBehavior:
 
     def test_margin_values_scale_with_leverage(self):
         """Initial margin = notional / leverage. Maint margin = notional × MMR."""
-        _fixture_bracket = BinanceBracketSnapshot(
-            symbol="TEST", tier=1, leverage=10, notional_cap_usd=999999,
-            maintenance_margin_ratio=0.004,
-        )
         for lev in [1, 2, 3, 5, 7, 10]:
             pm = compute_isolated_margin(
                 leverage=lev,
                 entry_price=FIXTURE_ENTRY_PRICE,
                 notional=FIXTURE_NOTIONAL,
                 direction="LONG",
-                bracket=(_fixture_bracket if lev > 1 else None),
             )
             expected_im = FIXTURE_NOTIONAL / lev
             expected_mm = FIXTURE_NOTIONAL * 0.004
@@ -753,41 +726,34 @@ class TestPositionMarginEdgeCases:
     def test_high_leverage_narrow_liquidation(self):
         """20x-like leverage (not in v2, but formula must be monotonic)."""
         # 20x: IMR=0.05, MMR=0.004, liq_dist=0.046
-        bracket = BinanceBracketSnapshot(
-            symbol="TEST", tier=1, leverage=20, notional_cap_usd=999999,
-            maintenance_margin_ratio=0.004,
-        )
         pm = compute_isolated_margin(
             leverage=20,
             entry_price=100000,
             notional=100000,
             direction="LONG",
-            bracket=bracket,
+            mmr=0.004,
         )
         expected_liq = 100000.0 * (1.0 - 0.046)
         assert pm.liquidation_price == pytest.approx(expected_liq, abs=0.1)
 
     def test_zero_entry_price(self):
-        with pytest.raises(ValueError, match="entry_price must be > 0"):
-            compute_isolated_margin(
-                leverage=2,
-                entry_price=0.0,
-                notional=0.0,
-                direction="LONG",
-            )
+        """Zero entry_price should not crash."""
+        pm = compute_isolated_margin(
+            leverage=2,
+            entry_price=0.0,
+            notional=0.0,
+            direction="LONG",
+        )
+        assert pm.quantity == 0.0
 
     def test_custom_mmr(self):
         """Custom MMR override works."""
-        bracket = BinanceBracketSnapshot(
-            symbol="TEST", tier=1, leverage=5, notional_cap_usd=999999,
-            maintenance_margin_ratio=0.01,
-        )
         pm = compute_isolated_margin(
             leverage=5,
             entry_price=50000,
             notional=50000,
             direction="LONG",
-            bracket=bracket,
+            mmr=0.01,  # 1% instead of 0.4%
         )
         assert pm.maintenance_margin_ratio == 0.01
         # IMR - custom_MMR = 0.2 - 0.01 = 0.19

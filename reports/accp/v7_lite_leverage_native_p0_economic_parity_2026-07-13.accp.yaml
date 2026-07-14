@@ -1,0 +1,96 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task_id: "V7LITE-LEVERAGE-NATIVE-P0-ECONOMIC-PARITY"
+task_date: "2026-07-13"
+agent_model: "deepseek-v4-pro"
+
+result: "PASS"
+
+scope_confirmation:
+  - "Scope 1: AlphaForge R semantics — docstring warning added (F-019 documented)"
+  - "Scope 2: Isolated-margin contract — PositionMargin, compute_isolated_margin(), MarginType, LeverageTier"
+  - "Scope 3: V2 action space — 13 actions, backward-compatible with v1 IDs 0-8"
+  - "Scope 4: Deterministic parity fixture — generate_leverage_fixture(), base_net_R invariant"
+  - "Scope 5: Cost scenarios — 8 immutable CostScenario instances, no monkey-patching"
+  - "Scope 6: Tests — 58 tests (forward return vs true R, fixture determinism, base_net_R invariance, 13-action, isolated-only, liquidation, cost scenarios, simulation parity, backward compat)"
+  - "ALL scope items verified locally (macOS, Python 3.14) and remotely (vast.ai, Python 3.12.3, RTX 3060)"
+  - "Did NOT broaden scope. Did NOT place any Binance order. Did NOT implement cross/portfolio margin."
+  - "Did NOT lock any numerical drawdown/liquidation thresholds."
+
+files_changed:
+  new:
+    - "simulation/engine/margin.py"
+    - "simulation/engine/leverage_fixture.py"
+    - "simulation/tests/test_leverage_parity.py"
+  modified:
+    - "simulation/contracts/models.py"
+    - "contracts/schemas/action_space.schema.json"
+    - "contracts/registry.json"
+    - "alphaforge/src/alphaforge/train.py"
+    - "docs/audits/FINDINGS_LEDGER.md"
+    - "docs/audits/OPEN_QUESTIONS.md"
+    - ".agent/HANDOFF.md"
+    - ".agent/CURRENT_TASK.md"
+    - "v7/docs/roadmap.md"
+
+decisions_locked:
+  - "DEC-002: Simulation > realized > contract > runtime > model — maintained"
+  - "DEC-005: Cost model includes fee + slippage + funding — maintained"
+  - "V2 action space: 13 actions (NO_TRADE + LONG/SHORT at 1x/2x/3x/5x/7x/10x)"
+  - "ISOLATED margin only for P0/P1 — no cross/portfolio fallback"
+  - "base_net_R must not inflate with leverage — verified invariant"
+
+remaining_holds:
+  - "Liquidation thresholds: not locked — empirical HOLD"
+  - "Drawdown thresholds: not locked — empirical HOLD"
+  - "Promotion thresholds: not locked — empirical HOLD"
+  - "Real Binance parity (testnet/shadow): NOT attempted — fixture uses synthetic candles"
+  - "Cross margin / portfolio margin: DEFERRED"
+  - "Leverage-model training: NOT started"
+  - "Q-013: Binance USDⓈ-M parity — remains OPEN pending real exchange reconciliation"
+  - "Volume candidate: remains G0–G6 HOLD"
+
+safe_next_step: "P1 — Version the leverage and margin contract + P2 isolated-margin simulator"
+
+commands_run:
+  - command: "PYTHONPATH=. .venv/bin/python -m pytest simulation/tests/test_leverage_parity.py -v"
+    result: "58 passed (local macOS, Python 3.14)"
+  - command: "PYTHONPATH=. .venv/bin/python -m pytest simulation/tests/unit/test_costs.py simulation/tests/unit/test_engine.py simulation/tests/test_engine_interface.py simulation/tests/test_exits.py simulation/tests/test_cost_stress.py -q"
+    result: "111 passed"
+  - command: "PYTHONPATH=. .venv/bin/python -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q"
+    result: "20 passed"
+  - command: "PYTHONPATH=. .venv/bin/python -m pytest alphaforge/tests/test_wfv.py alphaforge/tests/test_wfv_timestamp_boundaries.py -q"
+    result: "49 passed"
+  - command: "PYTHONPATH=. .venv/bin/python -m pytest simulation/tests/ --ignore=simulation/tests/test_batch_simulation.py --ignore=simulation/tests/test_calibration.py --ignore=simulation/tests/test_engine_numba_parity.py -q"
+    result: "526 passed, 5 xfailed, 1 pre-existing failure (numba import)"
+  - command: "ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=. python3 -m pytest simulation/tests/test_leverage_parity.py -v'"
+    result: "58 passed (remote vast.ai RTX 3060, Python 3.12.3)"
+  - command: "Remote parity fixture run"
+    result: "base_net_R invariant=True, 13 actions, 8 cost scenarios, liquidation prices correct"
+
+evidence:
+  - finding_id: "F-020"
+    summary: "P0 Economic-R parity foundation implemented and verified"
+    confidence: 1.00
+  - invariant: "base_net_R does not inflate with leverage"
+    verified: true
+    local: true
+    remote: true
+  - action_space_version: "v2"
+    action_count: 13
+    backward_compatible: true
+  - field_names_added:
+      - "base_net_R (LeverageOutcome)"
+      - "equity_return_net (LeverageOutcome)"
+      - "initial_margin, maintenance_margin (PositionMargin)"
+      - "liquidation_price, liquidation_distance_pct (PositionMargin)"
+      - "margin_type (ISOLATED only)"
+      - "cost_scenario_id (CostScenario)"
+  - field_names_renamed:
+      - "gross_r_values → documented as gross_forward_return (alphaforge/train.py)"
+      - "net_r_values → documented as net_forward_return (alphaforge/train.py)"
+  - old_artifacts_readable: true
+  - simulation_treated_as_binance_parity: "NO — fixture uses deterministic synthetic candles only"
+  - remote_host: "vast.ai 367b847a92d6"
+  - remote_gpu: "NVIDIA RTX 3060 12GB, CUDA 13.0"
+  - remote_commit: "8acd3ca"

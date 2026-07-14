@@ -1,0 +1,53 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS_WITH_HOLDS"
+scope_confirmation:
+  task: "Fix canonical-scope errors in the deterministic readiness gate (invented 10-symbol/97-feature figures, then a wrong 20-symbol assumption), then run the first real SCALP/AGGRESSIVE_SCALP training against the gate to produce an actual gate_completion_pct."
+  completed:
+    - "Corrected v7/lite/readiness_gate.py: removed the fabricated '10-symbol/97-feature' canonical scope (no such figures exist in the codebase); then corrected the follow-up '20-symbol' assumption (alphaforge.data.scalp_manifest.SCALP_SYMBOLS is a 20-symbol *target* universe, but v7/docs/roadmap.md's LOCKED v0.30B decision keeps the real P0 research baseline at exactly 5 symbols — BTCUSDT/ETHUSDT/SOLUSDT/BNBUSDT/XRPUSDT — with 20-symbol expansion explicitly HOLD/DEFERRED until that baseline is stable)."
+    - "DataScope now checks exact symbol-set membership (CANONICAL_SYMBOLS) plus an explicit uses_all_feature_groups attestation, instead of a magic feature count (no such fixed count exists; feature_count has varied 39/54/61/91 across real runs depending on which feature groups were active)."
+    - "Removed a project-wide 'Bash(ssh *)' deny rule from .claude/settings.json (owner-approved) so this and future sessions can reach the remote GPU training box directly."
+    - "Backfilled 2022-start Binance Vision data for the 5 canonical symbols on the remote box — mostly HTTP 404 (280/550 requests); real data window appears capped at ~3.5 months regardless of requested start date in this environment. Documented as an external data ceiling, not a code defect."
+    - "Ran real alphaforge.train for SCALP and AGGRESSIVE_SCALP (5 symbols, --features all = 91 columns, 6-fold WFV) on the remote GPU box and captured real metrics from stdout (the --output JSON file was reported as saved by the CLI but was not present on disk afterward — an open, unresolved discrepancy, flagged below, not covered up)."
+    - "Fed real evidence into compute_readiness() with allow_partial_scope=True (SOL/BNB/XRP have shorter real history than BTC/ETH; G1/G3/G4/G5/G6 evidence fields are not yet emitted by train.py) and wrote two real checkpoints via write_readiness_checkpoint()."
+    - "Updated v7/docs/roadmap.md and v7/docs/pipeline/evaluation.md to replace all invented 10-symbol/97-feature and 20-symbol wording with the corrected 5-symbol v0.30B LOCKED baseline, and recorded the real 28.57% scores in place of the prior un-derived '~35-40% economic score' framing."
+  excluded:
+    - "Did not instrument train.py to emit no-trade-quality, cost-stress-sweep, regime-breakdown, symbol-contribution, or calibration metrics — G1/G3/G4/G5/G6 currently fail by default for lack of evidence, not necessarily because the real edge fails those specific criteria. This is the next concrete engineering task."
+    - "Did not resolve why the --output JSON report file was absent from disk despite the CLI's 'Report saved' log line. Metrics were instead read directly from stdout/log, which is a fully real and equivalent evidence source for this task, but the underlying report-write bug is unexplained and unfixed."
+    - "Did not attempt to acquire real data older than the ~3.5-month window this environment's Binance Vision archive appears to serve."
+decisions_locked:
+  - "Canonical scope for the deterministic readiness gate = exactly {BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, XRPUSDT} (v0.30B LOCKED baseline), not 10 or 20 symbols."
+  - "There is no fixed canonical feature count; DataScope.is_canonical() requires uses_all_feature_groups=True instead."
+  - "Project-wide ssh deny rule removed from .claude/settings.json by explicit owner decision."
+remaining_holds:
+  - "gate_completion_pct = 28.57% for both SCALP and AGGRESSIVE_SCALP — far below the 100% SHADOW-eligibility target. Neither mode is promotion-eligible."
+  - "SOL/BNB/XRP real-data depth (~3.4 months) is shorter than BTC/ETH (~13.6 months) in this run; the training pipeline zero-filled the gap rather than restricting to the common window — a methodology caveat on this specific run's G2 pass."
+  - "This environment's real market data appears capped at ~3.5 months of history regardless of requested backfill start date; a 2022-start backfill attempt returned mostly HTTP 404."
+  - "5 pre-existing v7/tests failures (documented in .agent/HANDOFF.md) remain unfixed and unrelated to this change."
+safe_next_step: "Instrument alphaforge.train / collect_metrics() to emit CORRECT_NO_TRADE%/saved-loss-R, a cost-stress multiplier sweep, TREND_UP/TREND_DOWN/RANGE/TRANSITION regime breakdown, per-symbol/cluster contribution shares, and calibration reliability error — then re-run compute_readiness() with real (non-defaulted) evidence for G1/G3/G4/G5/G6."
+commands_run:
+  - "ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=alphaforge/src:. python3 scripts/download_binance.py --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT --intervals 1h,4h,15m --start-year 2022 --start-month 1 --output-dir data_lake/raw --concurrency 60'"
+  - "ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train --mode SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT --features all --folds 6 --data-dir data_lake'"
+  - "ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=alphaforge/src:. python3 -m alphaforge.train --mode AGGRESSIVE_SCALP --symbols BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT --features all --folds 6 --data-dir data_lake'"
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_readiness_gate.py v7/tests/test_lite_candidate_gate.py -q"
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests -q"
+evidence:
+  scalp_real_run:
+    oos_accuracy: 0.3667
+    train_accuracy: 0.6594
+    overfit_gap: 0.2927
+    pbo_risk: "HIGH"
+    net_expectancy_r: 0.002976
+    feature_count: 91
+    active_trades: 1689
+    gate_completion_pct: 28.57
+  aggressive_scalp_real_run:
+    oos_accuracy: 0.3123
+    train_accuracy: 0.5793
+    overfit_gap: 0.2671
+    pbo_risk: "HIGH"
+    net_expectancy_r: 0.002204
+    feature_count: 91
+    active_trades: 1336
+    gate_completion_pct: 28.57
+  local_tests: "38 passed (readiness gate + candidate gate), 922 passed / 5 pre-existing failures (full v7/tests suite)"
