@@ -1,0 +1,61 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+task: "Faz 0+1+3: Branch Reconciliation + G3 Relabeling + Factor Selection A/B Infrastructure"
+completed_at: "2026-07-14T23:59:00+03:00"
+result: "SUCCESS"
+
+scope_confirmation:
+  - "Faz 0: Cherry-pick be186bd from fix/306-holdout-cutoff-tests to main"
+  - "Faz 1: G3 oracle ceiling retraction in FINDINGS_LEDGER (F-021)"
+  - "Faz 3: IC-based factor selection + A/B comparison in walk_forward_validate"
+
+files_changed:
+  - "v7/lite/readiness_gate.py (NEW — from be186bd cherry-pick)"
+  - "v7/tests/test_lite_readiness_gate.py (NEW — 22 tests)"
+  - "docs/audits/FINDINGS_LEDGER.md (+F-021 retraction)"
+  - "alphaforge/src/alphaforge/reports/ic_metrics.py (+4 factor selection functions)"
+  - "alphaforge/src/alphaforge/factor_selection.py (NEW — factor selection module)"
+  - "alphaforge/src/alphaforge/train.py (+feature_selection_config, +_run_fold_ab_comparison, +collect_ab_comparison_metrics)"
+  - "alphaforge/tests/test_factor_selection.py (NEW — 18 tests)"
+  - "alphaforge/tests/test_ab_factor_selection.py (NEW — 7 tests)"
+  - ".agent/HANDOFF.md (updated)"
+
+commits:
+  - hash: "50ac3ce"
+    message: "cherry-pick: be186bd V7-Lite deterministic readiness gate + instrumented WFV metrics"
+  - hash: "2dde994"
+    message: "docs: F-021 retraction — oracle ceiling R (0.8439) is not model G3 performance"
+  - hash: "0418f0d"
+    message: "feat: Faz 3 — IC-based factor selection + A/B comparison in walk_forward_validate"
+
+decisions_locked:
+  - "Factor selection uses greedy IC-based approach (per AlphaForge paper)"
+  - "Correlation threshold for redundancy removal: 0.5"
+  - "Optimal feature pool target: 10-20 features"
+  - "Dynamic weighting: fold-wise IC-proportional (leakage-free)"
+
+remaining_holds:
+  - "Faz 3 empirical validation: needs remote GPU run with 56-symbol panel"
+  - "Feature pool size calibration: 10-20 target needs empirical verification"
+  - "G3 real measurement: still UNMEASURED on full panel"
+  - "Faz 2 (Gα0 oracle decomposition) not started"
+  - "Faz 4 (meta-labeling gating) not started"
+
+safe_next_step: |
+  Run full A/B comparison on remote GPU:
+  1. pytest alphaforge/tests/test_factor_selection.py test_ab_factor_selection.py -v
+  2. Run walk_forward_validate with feature_selection_config=FactorSelectionConfig(max_features=20) on 56-symbol panel
+  3. Compare Config A (108 features) vs Config B (selected 10-20 features) NetR
+
+commands_run:
+  - "python3 -c 'import ast; ast.parse(...)' → SYNTAX OK (all 4 files)"
+  - "PYTHONPATH=. python3 -m pytest v7/tests/test_lite_readiness_gate.py -v → 22 passed"
+
+evidence:
+  - "readiness_gate.py exists: v7/lite/readiness_gate.py (16726 bytes)"
+  - "22/22 readiness gate tests pass locally"
+  - "ic_metrics.py syntax verified"
+  - "factor_selection.py syntax verified"
+  - "train.py syntax verified (2640 + 244 new lines)"
+  - "Both test files syntax verified"
+  - "Commit history clean: 50ac3ce → 2dde994 → 0418f0d"

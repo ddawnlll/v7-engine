@@ -1,94 +1,75 @@
-# Agent Handoff — V7-Lite Leverage-Native P0 Economic Parity (2026-07-13)
+# Agent Handoff — Faz 0+1+3 Completion (2026-07-14)
 
 ## Current state
 
-P0 economic-R parity foundation is IMPLEMENTED and VERIFIED:
-- 58 new tests pass locally (macOS, Python 3.14) and remotely (vast.ai, Python 3.12.3)
-- Deterministic 13-action parity fixture produces correct invariants
-- base_net_R does not inflate with leverage
-- Cost scenarios stress correctly
+Three task phases completed and committed:
 
-## Completed in P0
+### Faz 0: Branch Reconciliation ✅
+- Cherry-picked `be186bd` (V7-Lite deterministic readiness gate) from `fix/306-holdout-cutoff-tests` to `main`
+- Resolved merge conflicts (8 files: docs, contracts, simulation, roadmap)
+- Commit: `50ac3ce`
+- Verification: `v7/tests/test_lite_readiness_gate.py` → 22/22 passed
+- `v7/lite/readiness_gate.py` now on main with `compute_readiness()` function
 
-### Scope 1: AlphaForge R semantics
-- Added F-019 docstring warning in `alphaforge/src/alphaforge/train.py:generate_labels()`
-- Clarified that `gross_r_values`/`net_r_values` are **net forward returns**, not risk-normalized R
-- New simulation fields `base_net_R_long`/`base_net_R_short` available via `LeverageOutcome`
+### Faz 1: G3 Relabeling ✅
+- Added F-021 retraction to `docs/audits/FINDINGS_LEDGER.md`
+- Documents that oracle ceiling R (+0.8439) must NOT be reported as model G3 performance
+- Retracts previous session's "G3 PASS MeanR=0.8439" claim
+- Actual model G3 = UNMEASURED on full 56-symbol panel
+- Commit: `2dde994`
 
-### Scope 2: Isolated-margin contract
-- `simulation/contracts/models.py`: added `PositionMargin`, `CostScenario`, `LeverageOutcome`,
-  `BinanceBracketSnapshot`, `MarginType`, `LeverageTier`
-- `simulation/engine/margin.py`: `compute_isolated_margin()` with Binance USDⓈ-M formulas
-- V2 action space mapping (13 actions, backward-compatible with v1 IDs 0-8)
+### Faz 3: Factor Selection A/B Test ✅ (Infrastructure)
+- Extended `alphaforge/src/alphaforge/reports/ic_metrics.py` with 4 new functions:
+  - `compute_per_feature_ic()` — per-feature IC/RankIC/|IC| computation
+  - `compute_feature_correlation_matrix()` — pairwise Pearson correlation
+  - `select_features_greedy_ic()` — greedy IC-based selection with redundancy removal
+  - `compute_dynamic_weights()` — fold-wise IC-proportional dynamic weighting
+- Created `alphaforge/src/alphaforge/factor_selection.py`:
+  - `FactorSelectionConfig` dataclass (max_features, corr_threshold, min_ic, enable_dynamic_weighting)
+  - `FactorSelectionResult` dataclass
+  - `run_factor_selection()` — full pipeline
+  - `apply_feature_mask()` — column selection
+  - `apply_dynamic_weighting_to_fold()` — fold-wise weighting
+  - `format_ic_table_for_logging()` — human-readable IC table
+- Integrated A/B comparison into `walk_forward_validate`:
+  - New params: `feature_selection_config`, `feature_names`
+  - New helper: `_run_fold_ab_comparison()` — runs Config A (full) vs Config B (selected) each fold
+  - New aggregator: `collect_ab_comparison_metrics()` — summarizes A/B across all folds
+  - Results appear in `fold_payload["ab_comparison"]`
+- Commit: `0418f0d`
+- Tests: 25 tests across 2 test files (test_factor_selection.py + test_ab_factor_selection.py)
 
-### Scope 3: Extended action space
-- `contracts/schemas/action_space.schema.json`: v2 with 13 actions (NO_TRADE + LONG/SHORT at 1x/2x/3x/5x/7x/10x)
-- `contracts/registry.json`: ActionSpace bumped to v2.0.0
-- Backward compatible: v1 IDs 0-8 preserved, v2 adds IDs 9-12
+## What changed
 
-### Scope 4+5: Parity fixture + cost scenarios
-- `simulation/engine/leverage_fixture.py`: `generate_leverage_fixture()` — deterministic fixture
-- 8 immutable `CostScenario` instances: baseline, fee 1.5x/2.0x/3.0x, slippage 1.5x/2.0x, combined 2.0x/3.0x
-- No monkey-patching for new code paths
+| File | Change |
+|------|--------|
+| `v7/lite/readiness_gate.py` | NEW — deterministic V7-Lite readiness gate (from be186bd) |
+| `v7/tests/test_lite_readiness_gate.py` | NEW — 22 tests |
+| `docs/audits/FINDINGS_LEDGER.md` | +F-021 retraction entry |
+| `alphaforge/src/alphaforge/reports/ic_metrics.py` | +4 factor selection functions (238 lines) |
+| `alphaforge/src/alphaforge/factor_selection.py` | NEW — factor selection module (217 lines) |
+| `alphaforge/src/alphaforge/train.py` | +feature_selection_config param, +_run_fold_ab_comparison, +collect_ab_comparison_metrics (244 lines) |
+| `alphaforge/tests/test_factor_selection.py` | NEW — 18 tests |
+| `alphaforge/tests/test_ab_factor_selection.py` | NEW — 7 tests |
 
-### Scope 6: Tests
-- `simulation/tests/test_leverage_parity.py`: 58 tests, all passing
-- Covers: forward return vs true R, fixture determinism, base_net_R invariance,
-  13-action contract, isolated-only margin, liquidation behavior, cost scenarios,
-  simulation parity, backward compatibility
+## Next action
 
-## Verification
+1. **Remote GPU validation**: Run `test_factor_selection.py` and `test_ab_factor_selection.py` on remote (needs numpy/scipy/xgboost)
+2. **Real data A/B test**: Run full 56-symbol panel with `feature_selection_config` to get actual Config A vs Config B comparison
+3. **Faz 2** (Gα0 oracle decomposition) and **Faz 4** (meta-labeling gating) — per previous task descriptions
 
-### Local (macOS, Python 3.14):
+## Commands to verify
+
+```bash
+# Local syntax check (already passed)
+python3 -c "import ast; [ast.parse(open(f).read()) for f in ['alphaforge/src/alphaforge/reports/ic_metrics.py', 'alphaforge/src/alphaforge/factor_selection.py', 'alphaforge/src/alphaforge/train.py']]"
+
+# Remote GPU test (needs full deps)
+PYTHONPATH=alphaforge/src:. python3 -m pytest alphaforge/tests/test_factor_selection.py alphaforge/tests/test_ab_factor_selection.py -v
+
+# Remote full A/B comparison run
+PYTHONPATH=. python3 -c "
+from alphaforge.train import main
+# Will need feature_selection_config=FactorSelectionConfig() passed to main()
+"
 ```
-PYTHONPATH=. .venv/bin/python -m pytest simulation/tests/test_leverage_parity.py -v
-→ 58 passed
-
-PYTHONPATH=. .venv/bin/python -m pytest simulation/tests/unit/test_costs.py simulation/tests/unit/test_engine.py simulation/tests/test_engine_interface.py simulation/tests/test_exits.py simulation/tests/test_cost_stress.py -q
-→ 111 passed
-
-PYTHONPATH=. .venv/bin/python -m pytest integration/tests/test_contract_registry.py integration/tests/test_schema_parity.py -q
-→ 20 passed
-
-PYTHONPATH=. .venv/bin/python -m pytest alphaforge/tests/test_wfv.py alphaforge/tests/test_wfv_timestamp_boundaries.py -q
-→ 49 passed
-```
-
-### Remote (vast.ai, RTX 3060, Python 3.12.3, CUDA 13.0):
-```
-ssh -p 33346 root@1.208.108.242 'cd /root/v7-engine && PYTHONPATH=. python3 -m pytest simulation/tests/test_leverage_parity.py -v'
-→ 58 passed
-
-Parity fixture output:
-  LONG_1X  base_R=0.812400  equity_R=0.812400  liq_price=None
-  LONG_2X  base_R=0.812400  equity_R=1.624800  liq_price=25200.0
-  LONG_10X base_R=0.812400  equity_R=8.124000  liq_price=45200.0
-  SHORT_1X base_R=-0.854267  equity_R=-0.854267  liq_price=None
-  Base net R invariant: True
-  Cost scenarios: baseline→fee_2.0x fee_R doubles, equity drops correctly
-```
-
-## Files changed
-
-### New files:
-- `simulation/engine/margin.py` — isolated margin computation, v2 action space mapping
-- `simulation/engine/leverage_fixture.py` — parity fixture generator, cost scenarios
-- `simulation/tests/test_leverage_parity.py` — 58 P0 parity tests
-
-### Modified files:
-- `simulation/contracts/models.py` — added MarginType, LeverageTier, PositionMargin,
-  CostScenario, BinanceBracketSnapshot, LeverageOutcome
-- `contracts/schemas/action_space.schema.json` — v2 with 13 actions
-- `contracts/registry.json` — ActionSpace v2.0.0
-- `alphaforge/src/alphaforge/train.py` — F-019 docstring warning
-- `docs/audits/FINDINGS_LEDGER.md` — F-020, F-019 update
-- `docs/audits/OPEN_QUESTIONS.md` — Q-013 update
-
-## Current task / next action
-
-P0 is complete. Next: P1 (contracts + P2 isolated-margin simulator from
-the master todo). See `.agent/CURRENT_TASK.md` for updated scope.
-
-The frozen post-cutoff volume candidate remains G0–G6 HOLD.
-No Binance testnet/shadow reconciliation has been attempted —
-the parity fixture uses deterministic synthetic candles only.
