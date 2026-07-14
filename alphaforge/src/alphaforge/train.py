@@ -1199,6 +1199,7 @@ def _run_fold_ab_comparison(
     from alphaforge.training.xgb_trainer import XGBoostTrainer
     from alphaforge.reports.metrics import compute_oos_metrics
     from alphaforge.reports.ic_metrics import compute_dynamic_weights
+    from alphaforge.factor_selection import run_factor_selection, apply_feature_mask, apply_dynamic_weighting_to_fold
     import xgboost as xgb
 
     result = {}
@@ -2678,8 +2679,18 @@ def main():
 
     metadata_path = Path(artifact_dir) / f"model_artifact_{mode.lower()}_{_ts}.json"
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    def _convert_keys(obj):
+        """Recursively convert dict keys to strings for JSON serialization."""
+        if isinstance(obj, dict):
+            return {str(k): _convert_keys(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_convert_keys(v) for v in obj]
+        if hasattr(obj, 'item'):
+            return obj.item()
+        return obj
+
     with open(metadata_path, "w") as f:
-        json.dump(metadata, f, indent=2, default=str)
+        json.dump(_convert_keys(metadata), f, indent=2)
     print(f"  Model binary: {artifact_path}")
     print(f"  Model metadata: {metadata_path}")
     print(f"  Checksum (SHA-256): {metadata.get('checksum', 'N/A')[:16]}...")
