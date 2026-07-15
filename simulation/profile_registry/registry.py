@@ -194,4 +194,30 @@ _AGGRESSIVE_SCALP_V1 = SimulationProfile(
 # Register and export hashes
 SWING_V1_HASH = register_profile(_SWING_V1)
 SCALP_V1_HASH = register_profile(_SCALP_V1)
+
+# Asymmetric exit profile (Phase 1 oracle feasibility check, 2026-07-15).
+# stop_multiplier=1.75 (unchanged), target_multiplier=0.60 (asymmetric).
+# 0.05R expectancy requires ~76.6% win rate at this geometry.
+# Oracle win rate on 5 canonical symbols: 76.6% (barely feasible at breakeven).
+# EXPERIMENTAL — not locked, not canonical. Owner decision to promote.
+_SCALP_ASYMMETRIC_V1 = SimulationProfile(
+    profile_version="1.1.0-exp-asym-06",
+    mode=TradingMode.SCALP,
+    primary_interval=_SCALP_V1.primary_interval,
+    max_holding_bars=_SCALP_V1.max_holding_bars,
+    stop_multiplier=_SCALP_V1.stop_multiplier,      # 1.75 (unchanged)
+    target_multiplier=0.60,                           # asymmetric: 1.75:0.60
+    ambiguity_margin_r=_SCALP_V1.ambiguity_margin_r,
+    min_action_edge_r=_SCALP_V1.min_action_edge_r,
+    no_trade_default=_SCALP_V1.no_trade_default,
+    context_intervals=_SCALP_V1.context_intervals,
+    refinement_intervals=_SCALP_V1.refinement_intervals,
+    stop_method=_SCALP_V1.stop_method,
+    target_method=_SCALP_V1.target_method,
+    mae_penalty_weight=_SCALP_V1.mae_penalty_weight,
+    cost_penalty_weight=_SCALP_V1.cost_penalty_weight,
+    time_penalty_weight=_SCALP_V1.time_penalty_weight,
+)
+SCALP_ASYMMETRIC_HASH = register_profile(_SCALP_ASYMMETRIC_V1)
+
 AGGRESSIVE_SCALP_V1_HASH = register_profile(_AGGRESSIVE_SCALP_V1)

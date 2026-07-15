@@ -263,3 +263,32 @@ These are alphaforge's label interpretation thresholds, not simulation config. I
 
 **For validation:** See [validation.md](validation.md) for required test gates.
 
+
+## SCALP Asymmetric Exit (Experimental)
+
+- **Version:** `1.1.0-exp-asym-06`
+- **Status:** EXPERIMENTAL (not canonical, not locked)
+- **Purpose:** Test asymmetric TP:SL geometry for meeting G1 win-rate gate (≥80%)
+
+### Changes from v1.0.0
+| Parameter | v1.0.0 (canonical) | v1.1.0-exp-asym-06 |
+|-----------|-------------------|-------------------|
+| `target_multiplier` | 1.75 | **0.60** |
+| `stop_multiplier` | 1.75 (unchanged) | 1.75 |
+| TP:SL ratio | 1:1 | **1:2.92** |
+
+### Rationale
+At 1:1 R:R (canonical SCALP), 80% win rate implies ~0.6R gross expectancy — the model measured
++0.041R. The asimmetric geometry reduces per-win payout but lowers the win rate required for
+positive expectancy. At SL=1.75 TP=0.60:
+- Breakeven win rate: 74.5%
+- Win rate for 0.05R expectancy: 76.6%
+- Win rate for 0.10R expectancy: 78.7%
+
+Oracle check (5 canonical symbols, simplified forward-scan):
+- Oracle win rate: 76.6% (exactly at the 0.05R threshold)
+- Oracle trade rate: 99.6% (oracle almost always has a preference)
+
+### Owner Decision Required
+This profile is EXPERIMENTAL. An owner must review the Phase 3 threshold sweep results
+before promoting to canonical or abandoning this geometry.

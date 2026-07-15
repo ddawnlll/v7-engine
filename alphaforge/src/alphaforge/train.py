@@ -46,7 +46,7 @@ from lib.config_training import load_training_config, TrainingConfig
 _training_config_cache: dict[str, TrainingConfig] = {}
 
 
-def _get_training_config(mode: str) -> TrainingConfig:
+def _get_training_config(mode: str, profile_version: str | None = None) -> TrainingConfig:
     """Get cached training config for mode.
 
     Loads from simulation profile registry + configs/training.yaml.
@@ -520,7 +520,7 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
     Label DECISION uses net_R (cost-aware); gross_R is exported for analysis
     and net_R is exported for downstream economic metrics.
     """
-    cfg = _get_training_config(mode)
+    cfg = _get_training_config(mode, profile_version)
     label_horizon = cfg.label_horizon
     label_threshold = cfg.label_threshold
     min_edge_r = cfg.min_action_edge_r
@@ -626,7 +626,7 @@ def _compute_single_symbol_frame(
             ohlcv_input["open_interest"] = open_interest
         if premium_index is not None:
             ohlcv_input["premium_index"] = premium_index
-        _cfg = _get_training_config(mode)
+        _cfg = _get_training_config(mode, profile_version)
         _interval = _cfg.primary_interval
         fm = cached_compute_features(
             ohlcv_input, mode=mode, interval=_interval,
@@ -804,7 +804,7 @@ def build_aligned_training_frame(
     close_price_parts: list[np.ndarray] = []
     feat_names: list[str] | None = None
 
-    _cfg_t = _get_training_config(mode)
+    _cfg_t = _get_training_config(mode, profile_version)
     min_edge_r = _cfg_t.min_action_edge_r
     ambiguity_margin_r = _cfg_t.ambiguity_margin_r
 
@@ -1404,7 +1404,7 @@ def walk_forward_validate(
     # amount of history loaded.  Scaling them with ``fold_size`` discarded weeks
     # of usable validation data in short runs and over a year in long panels,
     # without removing any additional label overlap.
-    _wfv_cfg = _get_training_config(mode)
+    _wfv_cfg = _get_training_config(mode, profile_version)
     label_horizon = _wfv_cfg.label_horizon
     k = 2  # HOLD: multiplier requires empirical calibration
     purge_bars = k * label_horizon
@@ -1560,7 +1560,7 @@ def walk_forward_validate(
             walk_forward_validate._fold_y_val.append(y_val.copy())
 
         # Apply confidence threshold: force NO_TRADE when model is uncertain
-        _default_threshold = _get_training_config(mode).confidence_threshold
+        _default_threshold = _get_training_config(mode, profile_version).confidence_threshold
         _threshold = threshold if threshold is not None else float(_default_threshold)
         low_conf_count = int(np.sum(y_pred_prob_max < _threshold))
         low_conf_pct = float(low_conf_count / len(y_pred_prob_max) * 100)
@@ -2114,7 +2114,7 @@ def collect_metrics(
         "symbol_stability": symbol_stability,
         "calibration": calibration,
         "cost_stress": cost_stress,
-        "confidence_threshold": _get_training_config(mode).confidence_threshold,
+        "confidence_threshold": _get_training_config(mode, profile_version).confidence_threshold,
         "low_conf_rate_pct": round(low_conf_rate, 2),
         "cost_decomposition": {
             "fee_pct (already in decision_gross_r)": 0.0,
@@ -2260,7 +2260,7 @@ def evaluate_frozen_holdout(
     threshold = (
         float(confidence_threshold)
         if confidence_threshold is not None
-        else float(_get_training_config(mode).confidence_threshold)
+        else float(_get_training_config(mode, profile_version).confidence_threshold)
     )
     predicted[confidence < threshold] = 2
     holdout_actions = action_net_r[holdout_mask]
@@ -2345,6 +2345,9 @@ def main():
                         help="Train regression model, convert predictions to trade decisions.")
     parser.add_argument("--feature-selection", action="store_true",
                         help="Run IC-based factor selection A/B comparison each fold.")
+    parser.add_argument("--profile-version", default=None,
+                        help="Simulation profile version (e.g., 1.1.0-exp-asym-06). "
+                             "Uses default profile for the mode if not specified.")
     parser.add_argument("--discovery-confidence-threshold", type=float, default=0.55,
                         help="Confidence threshold for discovery signal generation (default: 0.55)")
     parser.add_argument("--discovery-output", default=None,
@@ -2354,7 +2357,7 @@ def main():
     global mode
     mode = args.mode.upper()
     symbols = [s.strip().upper() for s in args.symbols.split(",")]
-    _main_cfg = _get_training_config(mode)
+    _main_cfg = _get_training_config(mode, _profile_version)
     interval = _main_cfg.primary_interval
 
     print(f"\n{'='*60}")
