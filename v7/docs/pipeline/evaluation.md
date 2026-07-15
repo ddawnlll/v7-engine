@@ -186,7 +186,7 @@ Each mode must pass these gates sequentially. No gate may be skipped. Promotion 
 | G0 | DOC_READY | Mode has complete docs, contracts, labels, model outputs, and risk rules | All authority docs for the mode are written and internally consistent | Design lock review passed |
 | G1 | RESEARCH_BACKTEST | Initial research backtest with cost-honest labels and no-trade quality | Walk-forward OOS backtest with unified cost model; all metric families computed; PBO/deflated-Sharpe computed from real MHT functions (not fallback identity) | Positive expectancy R; no-trade quality meets per-mode threshold; PBO risk LOW or MEDIUM; deflated Sharpe > 0; MHT computed for real (fail-closed against fallback identity) |
 | G2 | WALK_FORWARD_OOS | Walk-forward out-of-sample evidence across multiple folds | 6 folds minimum; 12-month train, 2-month validation per fold; per-fold consistency metrics | Median fold expectancy meets mode threshold; no fold catastrophically negative |
-| G3 | COST_STRESS | Fee, slippage, spread, and funding stress where applicable | Cost model applied at taker rates (conservative); slippage volatility-adjusted; funding stress if perps | Edge survives cost stress; cost-adjusted expectancy meets mode minimum (SCALP REQUIRED: ≥ 0.10R) |
+| G3 | COST_STRESS | Fee, slippage, spread, and funding stress where applicable | Cost model applied at taker rates (conservative); slippage volatility-adjusted; funding stress if perps | Edge survives cost stress; cost-adjusted expectancy meets mode minimum (SCALP REQUIRED: ≥ 0.05R, recalibrated 2026-07-15) |
 | G4 | REGIME_BREAKDOWN | Performance evaluated per TREND_UP, TREND_DOWN, RANGE, TRANSITION | Per-regime metrics: realized R, no-trade quality, action distribution, decision margin | No single regime hides catastrophic loss; TRANSITION regime does not dominate negative outcomes |
 | G5 | SYMBOL_STABILITY | No single symbol or cluster explains majority of edge | Per-symbol breakdown: contribution to total expectancy; cluster contribution analysis | No single symbol > 40% of total edge; no single cluster > 60% of total edge |
 | G6 | CALIBRATION_RELIABILITY | Probability and expected-R surfaces calibrated enough for policy gates | Reliability error per confidence bucket; predicted-vs-realized R bucket alignment | Reliability error within acceptable bounds; regression sign correctness above threshold |
@@ -216,7 +216,9 @@ Each mode must pass these gates sequentially. No gate may be skipped. Promotion 
 | Max drawdown limit | ≤ 25% **[LOCKED_INITIAL_BASELINE]** | ≤ 15% **[LOCKED_INITIAL_BASELINE]** | ≤ 10% **[LOCKED_INITIAL_BASELINE]** |
 | Min no-trade quality | CORRECT_NO_TRADE ≥ 60%; SAVED_LOSS ≥ 0.20R per event **[LOCKED_INITIAL_BASELINE]** | CORRECT_NO_TRADE ≥ 55%; SAVED_LOSS ≥ 0.10R per event **[LOCKED_INITIAL_BASELINE]** | CORRECT_NO_TRADE ≥ 50%; SAVED_LOSS ≥ 0.05R per event **[LOCKED_INITIAL_BASELINE]** |
 | Calibration requirement | Reliability error within ±10% per bucket **[LOCKED_INITIAL_BASELINE]** | Reliability error within ±10% per bucket **[LOCKED_INITIAL_BASELINE]** | Reliability error within ±15% per bucket **[LOCKED_INITIAL_BASELINE]** |
-| Cost stress requirement | Edge survives taker × 1.5 multiplier stress **[LOCKED_INITIAL_BASELINE]** | Edge survives taker × 2.0 multiplier stress; cost-adjusted expectancy ≥ 0.10R **[LOCKED_INITIAL_BASELINE]** | Edge survives taker × 2.5 multiplier stress **[LOCKED_INITIAL_BASELINE]** |
+| Cost stress requirement | Edge survives taker × 1.5 multiplier stress **[LOCKED_INITIAL_BASELINE]** | Edge survives taker × 2.0 multiplier stress; cost-adjusted expectancy ≥ 0.05R **[RECALIBRATED 2026-07-15]** | Edge survives taker × 2.5 multiplier stress **[LOCKED_INITIAL_BASELINE]** |
+| Minimum daily trade rate | — (not applicable) | ≥ 1 trade/day **[NEW 2026-07-15]** | — (not applicable) |
+| Minimum win rate | — (not applicable) | ≥ 80% **[NEW 2026-07-15]** | — (not applicable) |
 | Shadow duration | ≥ 4 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 3 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 2 weeks **[LOCKED_INITIAL_BASELINE]** |
 | Paper duration | ≥ 4 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 4 weeks **[LOCKED_INITIAL_BASELINE]** | ≥ 3 weeks **[LOCKED_INITIAL_BASELINE]** |
 | Tiny live limit | Max 0.5% account risk per trade; max 5% daily loss; max 10% cumulative **[LOCKED_INITIAL_BASELINE]** | Max 0.25% account risk per trade; max 3% daily loss; max 7% cumulative **[LOCKED_INITIAL_BASELINE]** | Max 0.1% account risk per trade; max 2% daily loss; max 5% cumulative **[LOCKED_INITIAL_BASELINE]** |
@@ -249,12 +251,41 @@ Each mode must pass these gates sequentially. No gate may be skipped. Promotion 
 | Max drawdown limit | ≤ 15% | ≤ 10% | Tighter than SWING because higher trade frequency compounds drawdown faster; AGGRESSIVE_SCALP tightest given shortest holding periods | After first multi-regime walk-forward: tighten if recovery periods exceed 3 months |
 | Min no-trade quality | CORRECT_NO_TRADE ≥ 55%; SAVED_LOSS ≥ 0.10R | CORRECT_NO_TRADE ≥ 50%; SAVED_LOSS ≥ 0.05R | Higher-frequency modes naturally produce more NO_TRADE noise; thresholds are relaxed vs SWING but still reject a lazy/collapsed classifier | After first evaluation: adjust if MISSED_OPPORTUNITY rate exceeds 25% |
 | Calibration requirement | ±10% per bucket | ±15% per bucket | AGGRESSIVE_SCALP's noisier microstructure features justify a looser reliability bound than SCALP/SWING | After first calibration run: tighten if model shows stable calibration |
-| Cost stress requirement | taker × 2.0; cost-adjusted expectancy ≥ 0.10R | taker × 2.5 | Higher trade frequency means cost sensitivity compounds faster — SCALP/AGGRESSIVE_SCALP require a harsher stress multiplier than SWING's 1.5× | After first cost stress run: if edge survives further stress, raise multiplier |
+| Cost stress requirement | taker × 2.0; cost-adjusted expectancy ≥ 0.05R **[RECALIBRATED 2026-07-15]** | taker × 2.5 | Higher trade frequency means cost sensitivity compounds faster — SCALP/AGGRESSIVE_SCALP require a harsher stress multiplier than SWING's 1.5×. SCALP's expectancy floor was 0.10R at initial lock; owner recalibration (2026-07-15) lowered it to 0.05R after the honest 56-symbol fc997b4/7f717fd walk-forward harness produced real cost-adjusted expectancy in the 0.021–0.039R range across th=0.60–0.70 and never approached 0.10R at any observed operating point — see Recalibration Log below | After first cost stress run: if edge survives further stress, raise multiplier |
+| Minimum daily trade rate | ≥ 1 trade/day **[NEW 2026-07-15]** | — | Owner decision to target "few but high-quality trades" over high-frequency generalist trading, given fc997b4 evidence that per-trade expectancy improves as trade frequency drops (th=0.60: 2.7/day, R=0.021 → th=0.70: 0.1/day, R=0.039) | After first walk-forward at the recalibrated bar: revisit if no threshold satisfies rate + win-rate + expectancy simultaneously |
+| Minimum win rate | ≥ 80% **[NEW 2026-07-15]** | — | Same owner decision as above; a win-rate floor makes the "high quality" half of the target explicit and checkable, not just implied by expectancy | Same as above |
 | Shadow duration | ≥ 3 weeks | ≥ 2 weeks | Higher event frequency reaches statistically comparable trade counts faster than SWING's 4 weeks | Always minimum; extend if first shadow period shows high variance |
 | Paper duration | ≥ 4 weeks | ≥ 3 weeks | Matches shadow duration reasoning; ensures paper outcomes are statistically comparable to shadow/backtest | Always minimum; extend if paper-shadow divergence detected |
 | Tiny live limit | 0.25% risk/trade; 3% daily; 7% cumulative | 0.1% risk/trade; 2% daily; 5% cumulative | Progressively tighter than SWING given higher trade frequency and shorter holding periods compound risk faster | After first tiny-live period: adjust based on realized vs expected loss distribution |
 
 **SCALP/AGGRESSIVE_SCALP Recalibration Policy:** These LOCKED_INITIAL_BASELINE thresholds were promoted from HOLD placeholders by owner decision (2026-07-13) specifically so the deterministic V7-Lite readiness gate (`v7/lite/readiness_gate.py`) can evaluate G0-G6 as real PASS/FAIL. They must be recalibrated after each mode's first full 5-symbol / full-feature walk-forward/backtest evidence — same policy as SWING. Locking the threshold values does **not** mean either mode has passed any gate; as of 2026-07-13 no full-dataset SCALP/AGGRESSIVE_SCALP run has been scored against them (see `v7/docs/roadmap.md`).
+
+#### SCALP Threshold Recalibration Log
+
+**2026-07-15 — owner decision, evidence-driven:**
+
+1. **`min_cost_adjusted_expectancy_r`: 0.10R → 0.05R.** The honest, purge/embargo'd,
+   cost-honest 56-symbol harness (`fc997b4`/`7f717fd`, 1042 days, N=723–2766 depending
+   on threshold) never produced a cost-adjusted expectancy anywhere near 0.10R at any
+   real, verified operating point — observed range was 0.021R–0.039R across
+   th=0.60–0.70. 0.10R was never empirically grounded (it was the initial conservative
+   placeholder); 0.05R matches the upper end of what has actually been measured.
+2. **New criteria added: `min_daily_trade_rate ≥ 1.0`, `min_win_rate_pct ≥ 80.0`.**
+   Owner explicitly redefined the target from "generalist, high-frequency" to "few but
+   high-quality" trading. Both are additive to (not replacing) the existing
+   `min_trades ≥ 500` and `min_expectancy_r ≥ 0.05R` criteria in G1.
+
+**Honest caveat (as of this recalibration):** no single measured threshold in the
+`fc997b4` evidence table satisfies all three of {≥1 trade/day, ≥80% win rate, ≥0.05R
+expectancy} *simultaneously* — th=0.60 clears the trade-rate floor but not win-rate or
+expectancy; th=0.65 clears win-rate but falls under the trade-rate floor (0.7/day);
+th=0.70 clears win-rate and expectancy but trade-rate falls to 0.1/day. This
+recalibration sets the *target*, not a retroactive claim that it has been hit — the
+next walk-forward run (or a meta-labeling/selection improvement) must locate an
+operating point inside this band, or the target itself must be revisited with owner
+review if no such point is found after genuine search (see Gα0 oracle-decomposition
+protocol in `v7/docs/roadmap.md` for how "is this target physically reachable" is
+tested before further threshold chasing).
 
 ### Rejection Rules
 

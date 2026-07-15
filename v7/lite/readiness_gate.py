@@ -69,6 +69,11 @@ MODE_THRESHOLDS: dict[str, dict[str, float | int]] = {
         "min_cost_adjusted_expectancy_r": 0.0,  # no explicit floor beyond survival for SWING
         "max_symbol_contribution_pct": 40.0,
         "max_cluster_contribution_pct": 60.0,
+        # No daily-trade-rate/win-rate floor for SWING — not requested, and
+        # SWING's low trade frequency (4h primary) makes a "1/day" framing
+        # inapplicable. 0.0 = no-op (never fails G1 on these two checks).
+        "min_win_rate_pct": 0.0,
+        "min_daily_trade_rate": 0.0,
     },
     "SCALP": {
         "min_oos_months": 12,
@@ -80,9 +85,18 @@ MODE_THRESHOLDS: dict[str, dict[str, float | int]] = {
         "min_saved_loss_r": 0.10,
         "max_calibration_error_pct": 10.0,
         "cost_stress_multiplier": 2.0,
-        "min_cost_adjusted_expectancy_r": 0.10,
+        # Recalibrated 2026-07-15 (owner decision, evidence: fc997b4/7f717fd
+        # honest 56-symbol harness, 1042 days). Was 0.10 — no observed
+        # threshold hit 0.10R with real evidence; 0.05R matches the "few but
+        # profitable" operating point (~th=0.60-0.65) actually measured.
+        # See v7/docs/pipeline/evaluation.md SCALP Threshold Recalibration Log.
+        "min_cost_adjusted_expectancy_r": 0.05,
         "max_symbol_contribution_pct": 40.0,
         "max_cluster_contribution_pct": 60.0,
+        # New 2026-07-15 (owner decision): "few but high-quality trades"
+        # target, added alongside (not replacing) min_trades/min_expectancy_r.
+        "min_win_rate_pct": 80.0,
+        "min_daily_trade_rate": 1.0,
     },
     "AGGRESSIVE_SCALP": {
         "min_oos_months": 6,
@@ -97,6 +111,10 @@ MODE_THRESHOLDS: dict[str, dict[str, float | int]] = {
         "min_cost_adjusted_expectancy_r": 0.0,
         "max_symbol_contribution_pct": 40.0,
         "max_cluster_contribution_pct": 60.0,
+        # No daily-trade-rate/win-rate floor for AGGRESSIVE_SCALP — not
+        # requested; 0.0 = no-op.
+        "min_win_rate_pct": 0.0,
+        "min_daily_trade_rate": 0.0,
     },
 }
 
@@ -146,6 +164,8 @@ class GateEvidence:
     pbo_risk: str = "HIGH"
     deflated_sharpe: float = -1.0
     regression_sign_correct_pct: float = 0.0
+    win_rate_pct: float = 0.0
+    daily_trade_rate: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -193,8 +213,8 @@ def evaluate_gate(gate_id: str, evidence: GateEvidence, mode: str) -> GateResult
             reasons.append("no_evidence_supplied")
 
     elif gate_id == "G1":
-        if evidence.expectancy_r <= 0:
-            reasons.append("non_positive_expectancy_r")
+        if evidence.expectancy_r < t["min_expectancy_r"]:
+            reasons.append("expectancy_r_below_threshold")
         if evidence.correct_no_trade_pct < t["min_correct_no_trade_pct"]:
             reasons.append("no_trade_quality_below_threshold")
         if evidence.pbo_risk not in ("LOW", "MEDIUM"):
@@ -203,6 +223,10 @@ def evaluate_gate(gate_id: str, evidence: GateEvidence, mode: str) -> GateResult
             reasons.append("deflated_sharpe_not_positive")
         if not evidence.mht_computed_real:
             reasons.append("mht_fallback_identity_not_real_computation")
+        if evidence.win_rate_pct < t["min_win_rate_pct"]:
+            reasons.append("win_rate_below_threshold")
+        if evidence.daily_trade_rate < t["min_daily_trade_rate"]:
+            reasons.append("daily_trade_rate_below_threshold")
 
     elif gate_id == "G2":
         if evidence.folds < t["min_folds"]:
@@ -252,7 +276,11 @@ def _gate_quality(gate_id: str, evidence: GateEvidence, mode: str) -> float:
     """Advisory-only distance-to-threshold for a single not-yet-passed gate."""
     t = MODE_THRESHOLDS[_require_mode(mode)]
     if gate_id == "G1":
-        return _quality_ratio(evidence.correct_no_trade_pct, t["min_correct_no_trade_pct"])
+        no_trade_ratio = _quality_ratio(evidence.correct_no_trade_pct, t["min_correct_no_trade_pct"])
+        expectancy_ratio = _quality_ratio(evidence.expectancy_r, t["min_expectancy_r"] or 0.01)
+        win_rate_ratio = _quality_ratio(evidence.win_rate_pct, t["min_win_rate_pct"] or 1.0)
+        daily_rate_ratio = _quality_ratio(evidence.daily_trade_rate, t["min_daily_trade_rate"] or 1.0)
+        return (no_trade_ratio + expectancy_ratio + win_rate_ratio + daily_rate_ratio) / 4.0
     if gate_id == "G2":
         return _quality_ratio(evidence.folds, t["min_folds"])
     if gate_id == "G3":

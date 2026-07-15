@@ -42,6 +42,8 @@ def _passing_evidence(mode: str) -> dict[str, GateEvidence]:
             pbo_risk="LOW",
             deflated_sharpe=0.5,
             mht_computed_real=True,
+            win_rate_pct=t["min_win_rate_pct"],
+            daily_trade_rate=t["min_daily_trade_rate"],
         ),
         "G2": GateEvidence(
             folds=t["min_folds"],
@@ -126,6 +128,78 @@ def test_g4_fails_on_catastrophic_regime_loss() -> None:
     result = evaluate_gate("G4", GateEvidence(catastrophic_regime_loss=True), "SWING")
     assert not result.passed
     assert result.reasons == ("catastrophic_loss_in_a_regime",)
+
+
+def test_scalp_g3_recalibrated_to_0_05r() -> None:
+    """2026-07-15 owner recalibration: SCALP min_cost_adjusted_expectancy_r
+    is 0.05, not the prior 0.10 — no observed threshold in the honest
+    fc997b4/7f717fd harness ever hit 0.10R."""
+    assert MODE_THRESHOLDS["SCALP"]["min_cost_adjusted_expectancy_r"] == 0.05
+
+
+def test_scalp_g1_requires_80pct_win_rate_and_1_daily_trade() -> None:
+    t = MODE_THRESHOLDS["SCALP"]
+    assert t["min_win_rate_pct"] == 80.0
+    assert t["min_daily_trade_rate"] == 1.0
+
+    base = dict(
+        expectancy_r=t["min_expectancy_r"] + 0.01,
+        correct_no_trade_pct=t["min_correct_no_trade_pct"],
+        pbo_risk="LOW",
+        deflated_sharpe=0.5,
+        mht_computed_real=True,
+    )
+    passing = GateEvidence(**base, win_rate_pct=80.0, daily_trade_rate=1.0)
+    assert evaluate_gate("G1", passing, "SCALP").passed
+
+    low_win_rate = GateEvidence(**base, win_rate_pct=79.9, daily_trade_rate=1.0)
+    result = evaluate_gate("G1", low_win_rate, "SCALP")
+    assert not result.passed
+    assert "win_rate_below_threshold" in result.reasons
+
+    low_daily_rate = GateEvidence(**base, win_rate_pct=80.0, daily_trade_rate=0.9)
+    result = evaluate_gate("G1", low_daily_rate, "SCALP")
+    assert not result.passed
+    assert "daily_trade_rate_below_threshold" in result.reasons
+
+
+def test_swing_and_aggressive_scalp_unaffected_by_new_criteria() -> None:
+    """The new win-rate/daily-trade-rate floors are SCALP-only (0.0 = no-op
+    elsewhere) — this recalibration must not silently tighten SWING or
+    AGGRESSIVE_SCALP, which nobody asked to change."""
+    for mode in ("SWING", "AGGRESSIVE_SCALP"):
+        t = MODE_THRESHOLDS[mode]
+        assert t["min_win_rate_pct"] == 0.0
+        assert t["min_daily_trade_rate"] == 0.0
+        evidence = GateEvidence(
+            expectancy_r=t["min_expectancy_r"] + 0.01,
+            correct_no_trade_pct=t["min_correct_no_trade_pct"],
+            pbo_risk="LOW",
+            deflated_sharpe=0.5,
+            mht_computed_real=True,
+            win_rate_pct=0.0,
+            daily_trade_rate=0.0,
+        )
+        assert evaluate_gate("G1", evidence, mode).passed
+
+
+def test_g1_expectancy_floor_now_enforced_not_just_positive() -> None:
+    """Previously G1 only checked expectancy_r <= 0 — the documented
+    min_expectancy_r floor (0.05R for SCALP) was declared but never wired.
+    A barely-positive expectancy below the floor must now fail G1."""
+    t = MODE_THRESHOLDS["SCALP"]
+    evidence = GateEvidence(
+        expectancy_r=0.001,  # positive, but below min_expectancy_r=0.05
+        correct_no_trade_pct=t["min_correct_no_trade_pct"],
+        pbo_risk="LOW",
+        deflated_sharpe=0.5,
+        mht_computed_real=True,
+        win_rate_pct=t["min_win_rate_pct"],
+        daily_trade_rate=t["min_daily_trade_rate"],
+    )
+    result = evaluate_gate("G1", evidence, "SCALP")
+    assert not result.passed
+    assert "expectancy_r_below_threshold" in result.reasons
 
 
 def test_partial_pass_gives_gate_completion_between_bounds() -> None:

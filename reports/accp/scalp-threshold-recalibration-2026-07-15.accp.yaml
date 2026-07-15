@@ -1,0 +1,32 @@
+accp_version: "2.0.0"
+source_format: "ACCP-YAML"
+result: "PASS_WITH_HOLDS"
+scope_confirmation:
+  task: "Recalibrate SCALP G1/G3 promotion thresholds per owner decision: min_cost_adjusted_expectancy_r 0.10R->0.05R, add min_daily_trade_rate>=1.0 and min_win_rate_pct>=80.0, both wired into G1."
+  completed:
+    - "v7/lite/readiness_gate.py: SCALP MODE_THRESHOLDS updated (min_cost_adjusted_expectancy_r=0.05, min_daily_trade_rate=1.0, min_win_rate_pct=80.0). SWING/AGGRESSIVE_SCALP given the same new keys with 0.0 (no-op) values so the recalibration does not silently tighten modes nobody asked to change."
+    - "GateEvidence: added win_rate_pct and daily_trade_rate fields."
+    - "evaluate_gate G1: now checks win_rate_pct/daily_trade_rate against the new thresholds, and enforces the previously-declared-but-unwired min_expectancy_r floor (was only checking expectancy_r <= 0)."
+    - "_gate_quality G1: advisory quality score now averages no-trade-quality, expectancy, win-rate, and daily-rate ratios (was no-trade-quality only)."
+    - "v7/docs/pipeline/evaluation.md: gate table (G3 row), SCALP threshold table, SCALP rationale table, and new 'SCALP Threshold Recalibration Log' section all updated with the new values, dates, and evidence-based rationale."
+    - "v7/docs/roadmap.md: recalibration entry with honest caveat that no single measured fc997b4 threshold yet satisfies all three new criteria simultaneously."
+    - "v7/tests/test_lite_readiness_gate.py: 4 new tests (recalibrated value pin, win-rate/daily-rate enforcement with boundary cases, SWING/AGGRESSIVE_SCALP non-regression, expectancy-floor-now-enforced regression test)."
+  excluded:
+    - "Does not run a new training pass to find an operating point that actually satisfies the new band — this task only recalibrates the target and the code/docs that measure it. Finding the operating point is separate follow-up work."
+    - "Does not touch SWING or AGGRESSIVE_SCALP thresholds beyond adding no-op placeholder keys for the new fields."
+decisions_locked:
+  - "SCALP min_cost_adjusted_expectancy_r is now 0.05R (was 0.10R, never empirically grounded)."
+  - "SCALP G1 now additionally requires min_daily_trade_rate>=1.0 and min_win_rate_pct>=80.0 — owner-decided 'few but high-quality trades' target, additive to existing min_trades/min_expectancy_r criteria."
+  - "No single measured threshold in the fc997b4 evidence table (th=0.60/0.65/0.70) satisfies all three new/recalibrated criteria simultaneously — this is a target-setting change, not a claim that the target has been reached."
+remaining_holds:
+  - "SCALP G1 and G3 remain HOLD — an actual walk-forward run (or meta-labeling/selection improvement) must locate an operating point inside the new {>=1 trade/day, >=80% win, >=0.05R} band, or the target must be revisited via owner review if genuinely unreachable (Gα0 oracle-decomposition protocol referenced for that determination)."
+  - "5 pre-existing v7/tests failures remain unfixed and unrelated to this change (documented in .agent/HANDOFF.md): test_deployment_gates.py rounding test, 4 test_e2e_swing.py action-vocabulary mismatches."
+safe_next_step: "Run alphaforge.train (or the meta-labeling-gated variant once #16 is wired) on the honest 56-symbol harness across a finer threshold sweep (e.g. 0.60-0.70 in 0.01 steps) to search for an operating point inside the new band; feed the result into compute_readiness() for a real G1/G3 score."
+commands_run:
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_readiness_gate.py -v"
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests/test_lite_readiness_gate.py v7/tests/test_lite_candidate_gate.py -q"
+  - "PYTHONPATH=. .venv/bin/python -m pytest v7/tests -q"
+evidence:
+  readiness_gate_tests: "26 passed (22 pre-existing + 4 new)"
+  candidate_gate_regression_check: "16 passed"
+  full_v7_suite: "926 passed, 5 pre-existing failures (unchanged, unrelated)"

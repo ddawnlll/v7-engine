@@ -1999,3 +1999,55 @@ but still far below the 100% SHADOW-eligibility bar.
 - `reports/accp/v7_lite_checkpoint_019_aggressive_scalp_readiness_2026-07-13.accp.yaml`
 - Remote logs: `/root/train_scalp_v3.log`, `/root/train_aggr_v3.log`,
   `/root/train_scalp_regression_wfv.log`, `/root/train_aggr_regression_wfv.log`
+
+---
+
+## SCALP Threshold Recalibration: "Few But High-Quality Trades" (2026-07-15)
+
+**What changed:** Owner decision to redefine SCALP's target profile from
+"generalist, high-frequency" to "few but high-quality" trading, grounded in
+the honest `fc997b4`/`7f717fd` 56-symbol evidence table (1042 days) showing
+per-trade expectancy *improves* as trade frequency drops
+(th=0.60: 2.7 trades/day, R=0.021 → th=0.65: 0.7/day, R=0.026 →
+th=0.70: 0.1/day, R=0.039).
+
+Changes to `v7/lite/readiness_gate.py` MODE_THRESHOLDS["SCALP"] (SWING and
+AGGRESSIVE_SCALP untouched — new fields default to 0.0/no-op there):
+
+1. **`min_cost_adjusted_expectancy_r`: 0.10R → 0.05R.** The 0.10R figure was
+   never empirically grounded (initial conservative placeholder); no
+   honest-harness run ever approached it. 0.05R matches the upper end of what
+   has actually been measured.
+2. **New: `min_daily_trade_rate ≥ 1.0`, `min_win_rate_pct ≥ 80.0`** — additive
+   to the existing `min_trades ≥ 500` / `min_expectancy_r ≥ 0.05R`, wired into
+   G1 (RESEARCH_BACKTEST).
+3. **Bug fix, incidental:** G1's `min_expectancy_r` threshold (0.05R for
+   SCALP) was declared in `MODE_THRESHOLDS` since the gate's original
+   construction but never actually checked by `evaluate_gate()` — G1 only
+   checked `expectancy_r <= 0` (any positive value passed). Now enforces the
+   documented floor.
+
+**Honest caveat:** no single measured threshold in the `fc997b4` table
+satisfies all three of {≥1 trade/day, ≥80% win, ≥0.05R} *simultaneously* —
+th=0.60 clears trade-rate but not win-rate/expectancy; th=0.65 clears
+win-rate but falls under the trade-rate floor; th=0.70 clears win-rate and
+expectancy but trade-rate is 0.1/day. This recalibration sets the target;
+it does not claim the target has been hit. Full rationale and recalibration
+log: `v7/docs/pipeline/evaluation.md` § SCALP Threshold Recalibration Log.
+
+**Lock status:** `min_cost_adjusted_expectancy_r`, `min_daily_trade_rate`,
+`min_win_rate_pct` promoted to `RECALIBRATED`/`NEW` (2026-07-15), still under
+the same LOCKED_INITIAL_BASELINE governance (owner-reviewed, not permanent —
+see evaluation.md Lock Semantics). Does not constitute empirical validation;
+G1/G3 remain `HOLD` until a real operating point inside the new band is found.
+
+**Evidence:**
+- `v7/lite/readiness_gate.py` — MODE_THRESHOLDS + evaluate_gate + _gate_quality updated
+- `v7/tests/test_lite_readiness_gate.py` — 4 new tests (recalibration value pin,
+  win-rate/daily-rate enforcement, SWING/AGGRESSIVE_SCALP non-regression,
+  expectancy-floor-now-enforced), 26/26 passed
+- `v7/docs/pipeline/evaluation.md` — gate table, threshold table, rationale
+  table, and new Recalibration Log section updated
+- `PYTHONPATH=. python3 -m pytest v7/tests -q` → 926 passed, 5 pre-existing
+  failures (unchanged, unrelated — HANDOFF.md documented list)
+- `reports/accp/scalp-threshold-recalibration-2026-07-15.accp.yaml`
