@@ -1674,6 +1674,8 @@ def walk_forward_validate(
         )
         fold_payload["val_confidence"] = y_pred_prob_max.tolist()
         fold_payload["val_correct"] = (y_pred == y_val).astype(np.float64).tolist()
+        fold_payload["val_softmax"] = y_pred_prob.tolist()
+        fold_payload["val_labels"] = y_val.tolist()
         if ab_comparison is not None:
             fold_payload["ab_comparison"] = ab_comparison
 
@@ -1998,15 +2000,75 @@ def collect_metrics(
     if val_confidence and len(val_confidence) == len(val_correct):
         from alphaforge.reports.ic_metrics import compute_calibration_error
 
-        ece, mce = compute_calibration_error(
+        ece_raw, mce_raw = compute_calibration_error(
             np.asarray(val_confidence, dtype=np.float64),
             np.asarray(val_correct, dtype=np.float64),
         )
         calibration = {
             "available": True,
-            "expected_calibration_error_pct": round(ece * 100, 4),
-            "max_calibration_error_pct": round(mce * 100, 4),
+            "expected_calibration_error_pct": round(ece_raw * 100, 4),
+            "max_calibration_error_pct": round(mce_raw * 100, 4),
+            "method": "raw_confidence",
         }
+
+        # Try calibrated ECE using per-fold softmax probabilities
+        try:
+            from alphaforge.calibration.engine import Calibrator
+
+            # Collect full softmax + true labels from all folds
+            all_softmax = []
+            all_labels = []
+            for fr in wfv_results:
+                if "val_softmax" in fr and "val_labels" in fr:
+                    all_softmax.extend(fr["val_softmax"])
+                    all_labels.extend(fr["val_labels"])
+
+            if len(all_softmax) >= 200:
+                softmax_arr = np.asarray(all_softmax, dtype=np.float64)
+                labels_arr = np.asarray(all_labels, dtype=np.int64)
+
+                # Use last 30% of (concatenated) folds for calibration
+                n = len(softmax_arr)
+                split = int(n * 0.7)
+                if split >= 100 and n - split >= 100:
+                    cal_sm = softmax_arr[split:]
+                    cal_lbl = labels_arr[split:]
+                    eval_sm = softmax_arr[:split]
+                    eval_lbl = labels_arr[:split]
+
+                    # Try Platt first
+                    calib = Calibrator(method="platt")
+                    calib.fit(cal_sm, cal_lbl)
+                    cal_probs = calib.predict(eval_sm)
+
+                    # Compute ECE on calibrated probabilities
+                    cal_max = np.max(cal_probs, axis=1)
+                    cal_correct = (np.argmax(cal_probs, axis=1) == eval_lbl).astype(np.float64)
+                    ece_cal, mce_cal = compute_calibration_error(cal_max, cal_correct)
+
+                    calibration["calibrated_ece_pct"] = round(ece_cal * 100, 4)
+                    calibration["calibrated_mce_pct"] = round(mce_cal * 100, 4)
+                    calibration["calibrated_method"] = "platt"
+                    calibration["calibration_n"] = len(cal_sm)
+
+                    # Also try isotonic
+                    try:
+                        calib2 = Calibrator(method="isotonic")
+                        calib2.fit(cal_sm[:min(len(cal_sm), 1000)], cal_lbl[:min(len(cal_lbl), 1000)])
+                        cal_probs2 = calib2.predict(eval_sm[:min(len(eval_sm), 5000)])
+                        if len(cal_probs2) == len(cal_probs):
+                            cal_max2 = np.max(cal_probs2, axis=1)
+                            cal_correct2 = (np.argmax(cal_probs2, axis=1) == eval_lbl[:len(cal_probs2)]).astype(np.float64)
+                            ece_cal2, mce_cal2 = compute_calibration_error(cal_max2, cal_correct2)
+                            if ece_cal2 < ece_cal:
+                                calibration["calibrated_ece_pct"] = round(ece_cal2 * 100, 4)
+                                calibration["calibrated_mce_pct"] = round(mce_cal2 * 100, 4)
+                                calibration["calibrated_method"] = "isotonic"
+                    except Exception:
+                        pass
+
+        except Exception as e:
+            calibration["calibration_error"] = str(e)[:200]
 
     if decision_labels and len(decision_labels) == len(decision_gross_r):
         trade_metrics = compute_oos_metrics(decision_labels, decision_gross_r, fee_pct=fee_pct)
