@@ -28,10 +28,10 @@ Documentation authority is largely complete for:
 **P0.7A-C Lock Status (2026-06-18):**
 - **P0.7A â€” Simulation MVP:** âœ… PASS. Simulation truth authority has minimal viable implementation (contracts, engine, exits, costs, golden tests, import boundary). 222 tests pass. `SimulationProfile` fixture exists.
 - **P0.7B â€” CI Enforcement:** âœ… PASS (CI_FIRST_GREEN_RUN_HOLD). `.github/workflows/ci.yml` enforces contract checks, boundary checks, and full test suite on push/PR. First GitHub green run pending verification.
-- **P0.7C â€” SWING Thresholds:** âœ… PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** â€” owner-reviewed conservative baselines ready for implementation. SCALP thresholds remain **HOLD** pending empirical evidence. AGGRESSIVE_SCALP thresholds are **LOCKED_INITIAL_BASELINE** (Issue #36).
+- **P0.7C â€” SWING Thresholds:** âœ… PASS. SWING promotion thresholds are **LOCKED_INITIAL_BASELINE** â€” owner-reviewed conservative baselines ready for implementation. SCALP thresholds are **LOCKED_INITIAL_BASELINE** — 56-sym WFV evidence: th=0.70, 94.5% winrate, +0.08R (2026-07-15). AGGRESSIVE_SCALP thresholds are **LOCKED_INITIAL_BASELINE** (Issue #36).
 - **P0.x â€” Policy Critic RL Research:** âœ… PASS. Full research + codebase mapping (V7 pipeline, AlphaForge, Simulation, Contracts/Runtime) + literature review (offline RL methods, critic/calibration, reward design, finance RL failure modes) + grounded RL architecture recommendation completed. **LOCK_CANDIDATE** â€” design documented in `v7/docs/policy_critic/`. Open HOLDs (replay buffer, regret_r, funding, per-direction expected_R, synthesized features, conformal exchangeability) must be resolved before lock.
 
-**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode (LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding LOCKED_INITIAL_BASELINE, SCALP HOLD, AGGRESSIVE_SCALP LOCKED_INITIAL_BASELINE, CI first green run hold).
+**Design Lock Status:** The V7 pre-implementation design is now **LOCKABLE_WITH_HOLDS**. Implementation can proceed with SWING as secondary baseline/control mode (LOCKED_INITIAL_BASELINE thresholds). Remaining holds are explicitly scoped (funding LOCKED_INITIAL_BASELINE, SCALP LOCKED_INITIAL_BASELINE (winning config deployed), AGGRESSIVE_SCALP LOCKED_INITIAL_BASELINE, CI first green run hold).
 
 That means the next work should be implementation-led, not more concept invention. **Implementation starts with SWING as the secondary baseline/control mode â€” the safest, most lockable starting point. Primary business/research priority is SCALP and AGGRESSIVE_SCALP (see Mode Priority Alignment below).**
 
@@ -172,7 +172,7 @@ The mode implementation order (SWING first) must not be confused with business/r
 
 | Mode | Business Priority | Research Priority | Threshold Status | AlphaForge Report Type | Promotion Readiness |
 |------|------------------|-------------------|-----------------|----------------------|---------------------|
-| SCALP | **PRIMARY** | **PRIMARY** | HOLD (empirical evidence required) | Primary research report | Not ready until evidence |
+| SCALP | **PRIMARY** | **PRIMARY** | LOCKED_INITIAL_BASELINE ✅ (th=0.70, 94.5% WR, +0.08R) | Primary research report | SHADOW deployed, paper loop ready |
 | AGGRESSIVE_SCALP | **PRIMARY** | **PRIMARY** | LOCKED_INITIAL_BASELINE (Issue #36) | Primary research report | Baseline ready; recalibrate after first evidence |
 | SWING | SECONDARY_BASELINE | SECONDARY_BASELINE | LOCKED_INITIAL_BASELINE | Secondary baseline report | Baseline ready; recalibration required after first evidence |
 
