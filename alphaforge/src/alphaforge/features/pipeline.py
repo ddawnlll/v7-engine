@@ -210,6 +210,7 @@ class FeatureGroup(Enum):
     PREMIUM_INDEX = "premium_index"    # Premium index / basis features (#280)
     RESIDUAL_MOMENTUM = "residual_momentum"  # Milestone C — beta-adjusted residual momentum
     TIME_FEATURES = "time_features"  # Calendar/time-based features (hour_of_day, day_of_week, us_hours)
+    TAKER_FLOW = "taker_flow"  # Taker volume / CVD features (Phase 5a)
 
 
 # ---------------------------------------------------------------------------
@@ -786,6 +787,7 @@ FEATURE_GROUP_MAP: Dict[FeatureGroup, str] = {
     FeatureGroup.OPEN_INTEREST: "compute_open_interest_group",
     FeatureGroup.PREMIUM_INDEX: "compute_premium_index_group",
     FeatureGroup.TIME_FEATURES: "compute_time_features_group",
+    FeatureGroup.TAKER_FLOW: "compute_taker_flow_group",
 }
 
 
@@ -2118,6 +2120,125 @@ _MODE_DEFAULTS = {
 _SUPPORTED_MODES = frozenset({"SWING", "SCALP", "AGGRESSIVE_SCALP"})
 
 
+
+# ---------------------------------------------------------------------------
+# TAKER-FLOW Feature Group — CVD, imbalance, and divergence (Phase 5a)
+# ---------------------------------------------------------------------------
+
+def _compute_price_velocity(close: np.ndarray, n: int) -> np.ndarray:
+    """Cumulative price displacement over n bars as fraction of entry price."""
+    result = np.full(len(close), np.nan, dtype=np.float32)
+    if len(close) <= n:
+        return result
+    result[n:] = ((close[n:] / close[:-n]) - 1.0).astype(np.float32)
+    return result
+
+
+def _compute_volume_zscore_spike(volume: np.ndarray, window: int) -> np.ndarray:
+    """Current volume vs rolling mean, z-scored — spike detection."""
+    result = np.full(len(volume), np.nan, dtype=np.float32)
+    for t in range(window, len(volume)):
+        seg = volume[t - window + 1 : t + 1]
+        seg_valid = seg[np.isfinite(seg)]
+        if len(seg_valid) > 5 and np.std(seg_valid) > 1e-10:
+            result[t] = np.float32((seg_valid[-1] - np.mean(seg_valid)) / np.std(seg_valid))
+    return result
+
+
+
+def compute_taker_flow_group(
+    ohlcv_data: dict,
+    **kwargs,
+) -> Dict[str, np.ndarray]:
+    """Compute taker-flow features: CVD, imbalance, and price divergence.
+
+    When 'taker_buy_volume' is present in ohlcv_data, uses real taker data.
+    When absent (or only OHLCV columns available), computes a proxy:
+      taker_buy_volume ≈ volume * (close - low) / (high - low)  # volume-weighted
+      taker_ratio = 1.0 + (close - (high + low)/2) / ((high - low) + 1e-10)  # position-based
+
+    Features (5):
+      - taker_buy_ratio:       taker_buy_volume / total_volume [0, 1]
+      - taker_sell_ratio:      1 - taker_buy_ratio
+      - cvd:                   Cumulative volume delta (taker_buy - taker_sell),
+                               reset at each 'cvd_window' boundary.
+      - cvd_divergence:        CVD z-score minus price z-score over trailing window.
+      - taker_imbalance_zscore: Rolling z-score of taker_buy_ratio.
+
+    All features are causal (bar[t] uses bars [t-lookback+1..t]),
+    NaN-fill at series start.
+    """
+    close = np.asarray(ohlcv_data["close"], dtype=np.float64)
+    high = np.asarray(ohlcv_data.get("high", close), dtype=np.float64)
+    low = np.asarray(ohlcv_data.get("low", close), dtype=np.float64)
+    volume = np.asarray(ohlcv_data.get("volume", np.ones_like(close)), dtype=np.float64)
+    n = len(close)
+
+    # Taker buy volume: real or proxy
+    if "taker_buy_volume" in ohlcv_data:
+        taker_buy = np.asarray(ohlcv_data["taker_buy_volume"], dtype=np.float64)
+    else:
+        # OHLCV proxy: taker_buy ≈ volume * (close - low) / (high - low)
+        hl_range = np.where(high > low, high - low, 1e-10)
+        taker_buy = volume * (close - low) / hl_range
+        taker_buy = np.clip(taker_buy, 0.0, volume)  # clip to [0, volume]
+
+    taker_sell = volume - taker_buy
+    taker_buy_ratio = np.full(n, np.nan, dtype=np.float32)
+    valid = volume > 0
+    taker_buy_ratio[valid] = (taker_buy[valid] / volume[valid]).astype(np.float32)
+
+    # CVD (resettable cumulative volume delta)
+    cvd_window = kwargs.get("cvd_window", 24)
+    cvd = np.full(n, np.nan, dtype=np.float32)
+    cvd_reset = np.full(n, np.nan, dtype=np.float32)
+    cvd_val = 0.0
+    for t in range(n):
+        if t % cvd_window == 0:
+            cvd_val = 0.0
+            cvd_reset[t] = 0.0
+        if np.isfinite(taker_buy[t]) and np.isfinite(taker_sell[t]):
+            cvd_val += float(taker_buy[t] - taker_sell[t])
+        cvd[t] = np.float32(cvd_val)
+
+    # CVD divergence: z-score(CVD) - z-score(price) over trailing window
+    div_window = kwargs.get("divergence_window", 48)
+    cvd_divergence = np.full(n, np.nan, dtype=np.float32)
+    for t in range(div_window, n):
+        cvd_seg = cvd[t - div_window + 1 : t + 1]
+        price_seg = close[t - div_window + 1 : t + 1]
+        cvd_valid = cvd_seg[np.isfinite(cvd_seg)]
+        price_valid = price_seg[np.isfinite(price_seg)]
+        if len(cvd_valid) > 5 and np.std(cvd_valid) > 1e-10 and np.std(price_valid) > 1e-10:
+            cvd_z = (cvd_seg[-1] - np.mean(cvd_valid)) / np.std(cvd_valid)
+            price_z = (price_seg[-1] - np.mean(price_valid)) / np.std(price_valid)
+            cvd_divergence[t] = np.float32(cvd_z - price_z)
+
+    # Taker imbalance z-score
+    imb_window = kwargs.get("imbalance_window", 24)
+    taker_imbalance_zscore = np.full(n, np.nan, dtype=np.float32)
+    for t in range(imb_window, n):
+        seg = taker_buy_ratio[t - imb_window + 1 : t + 1]
+        seg_valid = seg[np.isfinite(seg)]
+        if len(seg_valid) > 5 and np.std(seg_valid) > 1e-10:
+            taker_imbalance_zscore[t] = np.float32(
+                (seg_valid[-1] - np.mean(seg_valid)) / np.std(seg_valid)
+            )
+
+    return {
+        "taker_buy_ratio": taker_buy_ratio,
+        "taker_sell_ratio": (1.0 - taker_buy_ratio).astype(np.float32),
+        "cvd": cvd,
+        "cvd_divergence": cvd_divergence,
+        "taker_imbalance_zscore": taker_imbalance_zscore,
+        # Cascade-fade proxy (Phase 5b)
+        "price_velocity_5bar": _compute_price_velocity(close, 5),
+        "price_velocity_10bar": _compute_price_velocity(close, 10),
+        "volume_zscore_spike": _compute_volume_zscore_spike(volume, 24),
+    }
+
+
+
 def compute_features(
     ohlcv_data: dict,
     mode: str = "SWING",
@@ -2131,7 +2252,7 @@ def compute_features(
       RETURNS, VOLATILITY, ATR, MOMENTUM, VOLUME, BREAKOUT, ORDERBOOK,
       REGIME, CANDLE_PATTERN, MTF, SCALP_MOMENTUM, OPEN_INTEREST,
       PREMIUM_INDEX, RESIDUAL_MOMENTUM, PERPETUAL_FUNDING,
-      TIME_FEATURES.
+      TIME_FEATURES, TAKER_FLOW.
     Lead-Lag is NOT computed (DEFERRED).
 
     Args:
@@ -2415,6 +2536,13 @@ def compute_features(
             )
         else:
             logger.warning("Time features skipped: no timestamp data available")
+
+    # 16. Taker-Flow + Cascade-Fade Group (Phase 5a/5b)
+    # Taker-volume-derived (when real data available) or OHLCV-proxy features.
+    if "taker_flow" in (feature_groups or ["taker_flow"]):
+        features.update(
+            compute_taker_flow_group(ohlcv_data, cvd_window=24, divergence_window=48, imbalance_window=24)
+        )
 
     # Filter to requested feature groups if specified
     if feature_groups is not None:
