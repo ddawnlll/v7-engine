@@ -1512,6 +1512,19 @@ def walk_forward_validate(
             )
             continue
 
+        # Hybrid: pre-train regression on net_r, augment features with prediction
+        if _HYBRID_ENABLED:
+            _hybrid_reg = XGBoostTrainer(mode=mode, objective="reg:squarederror")
+            _hybrid_reg_result = _hybrid_reg.train(X_train, net_r_values[:effective_train_end])
+            _hybrid_pred_train = np.asarray(
+                _hybrid_reg_result.model.inplace_predict(X_train), dtype=np.float64
+            ).reshape(-1, 1)
+            _hybrid_pred_val = np.asarray(
+                _hybrid_reg_result.model.inplace_predict(X_val), dtype=np.float64
+            ).reshape(-1, 1)
+            X_train = np.column_stack([X_train, _hybrid_pred_train])
+            X_val = np.column_stack([X_val, _hybrid_pred_val])
+
         trainer = XGBoostTrainer(mode=mode)
         fold_result = trainer.train(X_train, y_train)
         y_pred_prob = fold_result.model.inplace_predict(X_val)
@@ -2408,6 +2421,8 @@ def main():
                              "Trains a regression model on net R instead of classification.")
     parser.add_argument("--regression-to-decision", action="store_true",
                         help="Train regression model, convert predictions to trade decisions.")
+    parser.add_argument("--hybrid", action="store_true",
+                        help="Hybrid: train regression first, add predictions as features, then classify.")
     parser.add_argument("--feature-selection", action="store_true",
                         help="Run IC-based factor selection A/B comparison each fold.")
     parser.add_argument("--profile-version", default=None,
@@ -2422,6 +2437,9 @@ def main():
     # Config init
     _fs_config = None
     _reg2dec = getattr(args, "regression_to_decision", False)
+    _hybrid = getattr(args, "hybrid", False)
+    global _HYBRID_ENABLED
+    _HYBRID_ENABLED = _hybrid
     _profile_version = getattr(args, "profile_version", None)
     if getattr(args, "feature_selection", False):
         from alphaforge.factor_selection import FactorSelectionConfig

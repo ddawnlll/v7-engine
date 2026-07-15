@@ -13,7 +13,7 @@ def run_reg2dec_analysis(X, net_r_values, y_int, mode, min_folds=6, timestamps=N
     purge_bars = 2 * label_horizon
     embargo_bars = 2 * label_horizon
 
-    thresholds = [0.001, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.05]
+    thresholds = [0.001, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50]
     all_thr_results = {thr: [] for thr in thresholds}
 
     for fold in range(min_folds):
