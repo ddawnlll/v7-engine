@@ -47,15 +47,17 @@ _training_config_cache: dict[str, TrainingConfig] = {}
 
 
 def _get_training_config(mode: str, profile_version: str | None = None) -> TrainingConfig:
-    """Get cached training config for mode.
+    """Get cached training config for mode (and optional profile version).
 
     Loads from simulation profile registry + configs/training.yaml.
-    Replaces old MODE_CONFIG lookups.
+    Caches by (mode, profile_version) so different profiles don't conflict.
     """
-    mode_upper = mode.upper()
-    if mode_upper not in _training_config_cache:
-        _training_config_cache[mode_upper] = load_training_config(mode_upper)
-    return _training_config_cache[mode_upper]
+    cache_key = (mode.upper(), profile_version)
+    if cache_key not in _training_config_cache:
+        _training_config_cache[cache_key] = load_training_config(
+            mode.upper(), profile_hash=profile_version,
+        )
+    return _training_config_cache[cache_key]
 
 
 # ── Backward-compatible MODE_CONFIG dict ────────────────────────────
@@ -520,7 +522,7 @@ def generate_labels(ohlcv: dict, mode: str) -> Tuple[np.ndarray, np.ndarray, np.
     Label DECISION uses net_R (cost-aware); gross_R is exported for analysis
     and net_R is exported for downstream economic metrics.
     """
-    cfg = _get_training_config(mode, profile_version)
+    cfg = _get_training_config(mode, None)
     label_horizon = cfg.label_horizon
     label_threshold = cfg.label_threshold
     min_edge_r = cfg.min_action_edge_r
@@ -626,7 +628,7 @@ def _compute_single_symbol_frame(
             ohlcv_input["open_interest"] = open_interest
         if premium_index is not None:
             ohlcv_input["premium_index"] = premium_index
-        _cfg = _get_training_config(mode, profile_version)
+        _cfg = _get_training_config(mode, None)
         _interval = _cfg.primary_interval
         fm = cached_compute_features(
             ohlcv_input, mode=mode, interval=_interval,
@@ -761,6 +763,7 @@ def build_aligned_training_frame(
     mode: str,
     feature_groups: Optional[List[str]] = None,
     precomputed_features: Optional[dict[str, np.ndarray]] = None,
+    profile_version: Optional[str] = None,
 ) -> dict:
     """Build a timestamp-aligned training frame.
 
@@ -804,7 +807,7 @@ def build_aligned_training_frame(
     close_price_parts: list[np.ndarray] = []
     feat_names: list[str] | None = None
 
-    _cfg_t = _get_training_config(mode, profile_version)
+    _cfg_t = _get_training_config(mode, None)
     min_edge_r = _cfg_t.min_action_edge_r
     ambiguity_margin_r = _cfg_t.ambiguity_margin_r
 
@@ -1404,7 +1407,7 @@ def walk_forward_validate(
     # amount of history loaded.  Scaling them with ``fold_size`` discarded weeks
     # of usable validation data in short runs and over a year in long panels,
     # without removing any additional label overlap.
-    _wfv_cfg = _get_training_config(mode, profile_version)
+    _wfv_cfg = _get_training_config(mode, None)
     label_horizon = _wfv_cfg.label_horizon
     k = 2  # HOLD: multiplier requires empirical calibration
     purge_bars = k * label_horizon
@@ -1560,7 +1563,7 @@ def walk_forward_validate(
             walk_forward_validate._fold_y_val.append(y_val.copy())
 
         # Apply confidence threshold: force NO_TRADE when model is uncertain
-        _default_threshold = _get_training_config(mode, profile_version).confidence_threshold
+        _default_threshold = _get_training_config(mode, None).confidence_threshold
         _threshold = threshold if threshold is not None else float(_default_threshold)
         low_conf_count = int(np.sum(y_pred_prob_max < _threshold))
         low_conf_pct = float(low_conf_count / len(y_pred_prob_max) * 100)
@@ -2114,7 +2117,7 @@ def collect_metrics(
         "symbol_stability": symbol_stability,
         "calibration": calibration,
         "cost_stress": cost_stress,
-        "confidence_threshold": _get_training_config(mode, profile_version).confidence_threshold,
+        "confidence_threshold": _get_training_config(mode, None).confidence_threshold,
         "low_conf_rate_pct": round(low_conf_rate, 2),
         "cost_decomposition": {
             "fee_pct (already in decision_gross_r)": 0.0,
@@ -2260,7 +2263,7 @@ def evaluate_frozen_holdout(
     threshold = (
         float(confidence_threshold)
         if confidence_threshold is not None
-        else float(_get_training_config(mode, profile_version).confidence_threshold)
+        else float(_get_training_config(mode, None).confidence_threshold)
     )
     predicted[confidence < threshold] = 2
     holdout_actions = action_net_r[holdout_mask]
@@ -2354,6 +2357,17 @@ def main():
                         help="Output path for discovery pipeline results (default: auto-generated)")
     args = parser.parse_args()
 
+    # Config init
+    _fs_config = None
+    _reg2dec = getattr(args, "regression_to_decision", False)
+    _profile_version = getattr(args, "profile_version", None)
+    if getattr(args, "feature_selection", False):
+        from alphaforge.factor_selection import FactorSelectionConfig
+        _fs_config = FactorSelectionConfig(
+            max_features=20, corr_threshold=0.5, min_ic=0.005,
+            enable_dynamic_weighting=True,
+        )
+
     global mode
     mode = args.mode.upper()
     symbols = [s.strip().upper() for s in args.symbols.split(",")]
@@ -2399,7 +2413,7 @@ def main():
         feature_groups = [g.strip() for g in feature_groups_arg.split(",")]
     # Step 2/3: Build aligned dataset
     print("\n[2/6] Building aligned label + feature frame...")
-    training_frame = build_aligned_training_frame(ohlcv, mode, feature_groups=feature_groups)
+    training_frame = build_aligned_training_frame(ohlcv, mode, feature_groups=feature_groups, profile_version=_profile_version)
     X = training_frame["X"]
     feat_names = training_frame["feature_names"]
     y_int = training_frame["y_int"]
