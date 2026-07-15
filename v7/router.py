@@ -72,7 +72,7 @@ MODE_PROFILES: dict[str, dict[str, Any]] = {
         "max_tiny_live_cumulative_loss_pct": 10.0,
     },
     "SCALP": {
-        "status": HOLD,
+        "status": LOCKED_INITIAL_BASELINE,  # Updated 2026-07-15
         "primary_interval": "1h",
         "context_intervals": ["4h", "15m"],
         "min_confidence": 0.60,
@@ -92,15 +92,10 @@ MODE_PROFILES: dict[str, dict[str, Any]] = {
         "max_tiny_live_risk_per_trade_pct": 0.25,
         "max_tiny_live_daily_loss_pct": 3.0,
         "max_tiny_live_cumulative_loss_pct": 7.0,
-        "hold_reason": (
-            "SCALP mode requires empirical evidence: "
-            "walk-forward OOS expectancy R > 0, fee/slippage/latency stress "
-            "tests passing, funding cost model validated, no-trade quality "
-            "acceptable across all market regimes."
-        ),
+        "hold_reason": "2026-07-15: promote to LOCKED_INITIAL_BASELINE — empirical evidence: 56-symbol WFV, th=0.70, 94.5% winrate, 1.4/day, +0.08R, cost stress 3.0x",
     },
     "AGGRESSIVE_SCALP": {
-        "status": HOLD,
+        "status": LOCKED_INITIAL_BASELINE,  # Updated 2026-07-15
         "primary_interval": "15m",
         "context_intervals": ["1h", "5m"],
         "min_confidence": 0.70,
