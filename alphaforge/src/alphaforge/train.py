@@ -2773,12 +2773,18 @@ def main():
         artifact_uri=f"file://{artifact_path.resolve()}",
         model_artifact_id=run_id,
         training_run_id=run_id,
-        feature_set_id=f"{mode.lower()}_v1_features",
-        label_dataset_id=f"{mode.lower()}_v1_labels",
-        validation_report_id=f"WFV-{mode}-{_ts}",
     )
 
-    metadata_path = Path(artifact_dir) / f"model_artifact_{mode.lower()}_{_ts}.json"
+    # Convert numpy keys to native Python types so json.dump works.
+    # JSON requires string keys; default=str only covers values.
+    # build_model_artifact_metadata() can embed numpy int64 keys at
+    # any nesting level.
+    def _str_keys(d: dict) -> dict:
+        return {str(k): _str_keys(v) if isinstance(v, dict) else v for k, v in d.items()}
+
+    metadata = _str_keys(metadata)
+
+    metadata_path = Path(artifact_dir) / f"metadata_{mode.lower()}_{_ts}.json"
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     def _convert_keys(obj):
         """Recursively convert dict keys to strings for JSON serialization."""
@@ -2938,8 +2944,13 @@ def main():
             with open(pp_path, "w") as f:
                 json.dump(asdict(passport), f, indent=2, default=str)
             print(f"  EvidencePassport saved: {pp_path.resolve()}")
-        except (ImportError, AttributeError, TypeError, OSError, json.JSONDecodeError) as e:
-            logger.warning("Could not build EvidencePassport: %s", e)
+        except Exception as e:
+            logger.error(
+                "CRITICAL: EvidencePassport build FAILED — requested via --passport %s "
+                "but builder raised: %s: %s",
+                args.passport, type(e).__name__, e,
+            )
+            sys.exit(1)
 
     # Save report if requested
     if args.output:
