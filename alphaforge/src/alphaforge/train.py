@@ -79,6 +79,66 @@ for _m in ["SWING", "SCALP", "AGGRESSIVE_SCALP"]:
     }
 
 
+# ---------------------------------------------------------------------------
+# Feature pruning helper (Issue #268)
+# ---------------------------------------------------------------------------
+
+
+def prune_features_by_importance(
+    X: np.ndarray,
+    feature_names: list[str],
+    importance: dict[str, Any],
+    threshold: float,
+) -> tuple[np.ndarray, list[str], list[str]]:
+    """Prune features below *threshold* importance and return reduced arrays.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Feature matrix of shape ``(n_samples, n_features)``.
+    feature_names : list[str]
+        Names corresponding to each column of *X*.
+    importance : dict[str, Any]
+        Mapping of feature name -> importance score (e.g. XGBoost gain).
+    threshold : float
+        Minimum importance to retain a feature.  Must be > 0 to activate.
+
+    Returns
+    -------
+    X_pruned : np.ndarray
+        Reduced feature matrix.
+    kept_names : list[str]
+        Retained feature names.
+    dropped_names : list[str]
+        Names of features that fell below *threshold*.
+
+    Raises
+    ------
+    ValueError
+        If *threshold* <= 0 (caller should check before calling).
+    """
+    if threshold <= 0:
+        raise ValueError(
+            f"prune_features_by_importance called with threshold={threshold} "
+            "(must be > 0)"
+        )
+
+    _keep = [n for n, v in importance.items() if v >= threshold]
+    _drop = len(feature_names) - len(_keep)
+
+    if _drop == 0:
+        return X, feature_names, []
+
+    if not _keep:
+        return X, feature_names, feature_names[:]
+
+    _keep_set = set(_keep)
+    _keep_idx = [i for i, n in enumerate(feature_names) if n in _keep_set]
+    return X[:, _keep_idx], [feature_names[i] for i in _keep_idx], [
+        n for n in feature_names if n not in _keep_set
+    ]
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s %(message)s",
@@ -2712,10 +2772,20 @@ def main():
     # Feature importance
     try:
         bst = final_result.model
+        imp: dict[str, float] = {}
         if hasattr(bst, 'get_score'):
-            imp = bst.get_score(importance_type='gain')
+            raw_imp = bst.get_score(importance_type='gain')
+            for k, v in raw_imp.items():
+                try:
+                    idx = int(k[1:])
+                    if 0 <= idx < len(feat_names):
+                        imp[feat_names[idx]] = float(v)
+                    else:
+                        imp[k] = float(v)
+                except (ValueError, IndexError):
+                    imp[k] = float(v)
         elif hasattr(bst, 'feature_importances_'):
-            imp = dict(zip(feat_names, bst.feature_importances_))
+            imp = dict(zip(feat_names, map(float, bst.feature_importances_)))
         else:
             imp = {}
         if imp:
@@ -2732,15 +2802,13 @@ def main():
     # Feature importance pruning (Issue #268)
     _pruned = False
     if args.prune_features > 0 and feat_names and imp:
-        _keep = [n for n, v in imp.items() if v >= args.prune_features]
-        _drop = len(feat_names) - len(_keep)
-        if _drop > 0 and _keep:
-            _keep_set = set(_keep)
-            _keep_idx = [i for i, n in enumerate(feat_names) if n in _keep_set]
-            X_clean = X_clean[:, _keep_idx]
-            feat_names = [feat_names[i] for i in _keep_idx]
+        X_clean, feat_names, _dropped = prune_features_by_importance(
+            X_clean, feat_names, imp, args.prune_features,
+        )
+        if _dropped and len(feat_names) > 0:
             print(f"  Feature pruning (threshold={args.prune_features}): "
-                  f"dropped {_drop}/{len(imp)}, kept {len(_keep)}")
+                  f"dropped {len(_dropped)}/{len(imp)+len(_dropped)}, "
+                  f"kept {len(feat_names)}")
             # Retrain with pruned features
             _obj = "reg:squarederror" if args.regression_objective else "multi:softprob"
             _y_final = label_net_clean if args.regression_objective else y_clean
@@ -2749,7 +2817,10 @@ def main():
             final_acc = float(final_result.val_metrics.get("accuracy", 0))
             print(f"  Retrained (pruned) model accuracy: {final_acc:.4f}")
             _pruned = True
-        elif _drop == 0:
+        elif _dropped and len(feat_names) == 0:
+            print(f"  Feature pruning (threshold={args.prune_features}): "
+                  f"ALL features below threshold — keeping original feature set")
+        else:
             print(f"  Feature pruning: all {len(feat_names)} features above threshold "
                   f"{args.prune_features} — no pruning needed")
     elif args.prune_features > 0 and not imp:
